@@ -1,0 +1,31 @@
+name: PinArchive Refresh
+
+on:
+  schedule:
+    - cron: '0 3 */2 * *'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Probe single pin fetch
+        run: node scripts/test-pin-fetch.mjs 1079245498222414527
+
+      - name: Run PinArchive Refresh
+        env:
+          PINARCHIVE_SUPABASE_URL: ${{ secrets.PINARCHIVE_SUPABASE_URL }}
+          PINARCHIVE_SUPABASE_KEY: ${{ secrets.PINARCHIVE_SUPABASE_KEY }}
+          PINORBIT_WORKER_URL: ${{ secrets.PINORBIT_WORKER_URL }}
+          PINARCHIVE_INGEST_SECRET: ${{ secrets.PINARCHIVE_INGEST_SECRET }}
+        run: node scripts/pinarchive-refresh.mjs
