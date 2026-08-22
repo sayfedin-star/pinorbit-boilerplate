@@ -14,7 +14,9 @@
     "SCHEDULING_SUPABASE_URL": "https://eygdoetdwqllvsxpvoex.supabase.co",
     "SCHEDULING_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_efxKrwXCOaj9CM5oxD-WjA_jqvB5iGD",
     "COMPETITORS_SUPABASE_URL": "https://guycnhvwfzdzbpgsnavg.supabase.co",
-    "ANALYTICS_SUPABASE_URL": "https://jxdkbwnwtjelznmauwpc.supabase.co"
+    "ANALYTICS_SUPABASE_URL": "https://jxdkbwnwtjelznmauwpc.supabase.co",
+    "PINARCHIVE_SUPABASE_URL": "https://kuuugffvyokywtgmdrfk.supabase.co",
+    "PINARCHIVE_GAS_URL": "https://script.google.com/macros/s/AKfycbwBFmyisJ59ejbOLimfgLHAfPcGx4E_WhIiSEI56BhFSJ6HkHrM2wfoPeO-v3nJa5CA/exec"
   },
   "kv_namespaces": [
     { "binding": "ANALYTICS_KV",      "id": "2b5df391f55a48dc88b3ac9a37ca1e91" },
