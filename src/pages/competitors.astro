@@ -30,11 +30,6 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
         class="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition-all">
         <span>⚙️ Ops Console</span>
       </a>
-      <button id="open-paste-payload-modal"
-        class="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition-all">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-        <span>Paste DevTools Payload</span>
-      </button>
       <button id="open-add-competitor-modal"
         class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary/90 transition-all">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -127,6 +122,10 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
         </label>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
+        <button id="update-selected-btn" class="rounded-lg bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+          <svg id="update-selected-icon" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span id="update-selected-label">⚡ Update selected</span>
+        </button>
         <button id="send-selected-to-pinarchive-btn" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-[11px] font-bold shadow-sm transition-all flex items-center gap-1">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
           <span>Send to PinArchive</span>
@@ -792,13 +791,19 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
 
   // ─── Selection bar ────────────────────────────────────────────────────────
   function updateSelectionBar() {
+    const runUpdateLabel = $('run-full-update-label');
+    const updateSelectedLabel = $('update-selected-label');
     if (selectedIds.size > 0) {
       selectionBar.classList.remove('hidden'); selectionBar.classList.add('flex');
       selectionCount.textContent = `${selectedIds.size} selected`;
       compareBtn.disabled = selectedIds.size < 2 || selectedIds.size > 4;
       compareBtn.title = selectedIds.size < 2 ? 'Select at least 2 profiles to compare' : (selectedIds.size > 4 ? 'Select up to 4 profiles' : 'Compare selected profiles');
+      if (runUpdateLabel) runUpdateLabel.textContent = `⚡ Update Selected (${selectedIds.size})`;
+      if (updateSelectedLabel) updateSelectedLabel.textContent = `⚡ Update selected (${selectedIds.size})`;
     } else {
       selectionBar.classList.add('hidden'); selectionBar.classList.remove('flex');
+      if (runUpdateLabel) runUpdateLabel.textContent = '⚡ Run Full Update Now';
+      if (updateSelectedLabel) updateSelectedLabel.textContent = '⚡ Update selected';
     }
   }
 
@@ -1154,12 +1159,13 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
     $('detected-payload-type').className = 'rounded bg-muted px-2 py-0.5 text-[10px] font-semibold text-foreground';
     showOverlay($('paste-payload-modal'));
   }
-  $('open-paste-payload-modal').addEventListener('click', () => openPasteModal());
+  $('open-paste-payload-modal')?.addEventListener('click', () => openPasteModal());
 
   const rawPayloadTextarea = $('raw-payload-textarea') as HTMLTextAreaElement;
-  rawPayloadTextarea.addEventListener('input', () => {
+  rawPayloadTextarea?.addEventListener('input', () => {
     const text = rawPayloadTextarea.value.trim();
     const tag = $('detected-payload-type');
+    if (!tag) return;
     if (!text) { tag.textContent = 'Waiting for paste...'; tag.className = 'rounded bg-muted px-2 py-0.5 text-[10px] font-semibold text-foreground'; return; }
     const p = parsePinterestPayload(text);
     if (p.type === 'user_profile') {
@@ -1174,15 +1180,14 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
     }
   });
 
-  $('paste-payload-form').addEventListener('submit', async (e) => {
+  $('paste-payload-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const sel = $('payload-target-competitor-select') as HTMLSelectElement;
-    const targetId = sel.value;
-    const text = rawPayloadTextarea.value.trim();
+    const targetId = sel?.value;
+    const text = rawPayloadTextarea?.value.trim() || '';
     if (!targetId) {
       const er = $('paste-payload-error');
-      er.textContent = 'Please select a target profile';
-      er.classList.remove('hidden');
+      if (er) { er.textContent = 'Please select a target profile'; er.classList.remove('hidden'); }
       return;
     }
     const res = await ingestDevToolsPayload(targetId, text);
@@ -1192,25 +1197,29 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
       await loadWorkspaceData();
     } else {
       const er = $('paste-payload-error');
-      er.textContent = res.message;
-      er.classList.remove('hidden');
+      if (er) { er.textContent = res.message; er.classList.remove('hidden'); }
     }
   });
 
   // ─── Run Full / Targeted Update ──────────────────────────────────────────
-  const runUpdateBtn = $('run-full-update-btn') as HTMLButtonElement;
-  const runUpdateIcon = $('run-full-update-icon');
+  async function executeCompetitorUpdate(targetIds?: string[]) {
+    const ids = targetIds ?? (selectedIds.size > 0 ? Array.from(selectedIds) : []);
+    const runBtn = $('run-full-update-btn') as HTMLButtonElement;
+    const runIcon = $('run-full-update-icon');
+    const selBtn = $('update-selected-btn') as HTMLButtonElement;
+    const selIcon = $('update-selected-icon');
 
-  runUpdateBtn?.addEventListener('click', async () => {
-    runUpdateBtn.disabled = true;
-    runUpdateIcon?.classList.add('animate-spin');
+    if (runBtn) runBtn.disabled = true;
+    if (selBtn) selBtn.disabled = true;
+    runIcon?.classList.add('animate-spin');
+    selIcon?.classList.add('animate-spin');
 
     try {
       const workspaceId = getActiveWorkspaceId();
 
-      if (selectedIds.size > 0) {
+      if (ids.length > 0) {
         const jobIds: string[] = [];
-        for (const competitorId of selectedIds) {
+        for (const competitorId of ids) {
           const res = await apiJSON('/api/admin/competitor-ops', {
             method: 'POST',
             body: JSON.stringify({ workspace_id: workspaceId, competitor_id: competitorId }),
@@ -1235,10 +1244,15 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
     } catch (err: any) {
       toast(`Failed to dispatch update: ${err.message || 'Server error'}`, 'error');
     } finally {
-      runUpdateIcon?.classList.remove('animate-spin');
-      runUpdateBtn.disabled = false;
+      runIcon?.classList.remove('animate-spin');
+      selIcon?.classList.remove('animate-spin');
+      if (runBtn) runBtn.disabled = false;
+      if (selBtn) selBtn.disabled = false;
     }
-  });
+  }
+
+  $('run-full-update-btn')?.addEventListener('click', () => executeCompetitorUpdate());
+  $('update-selected-btn')?.addEventListener('click', () => executeCompetitorUpdate());
 
   // ─── Refresh button ───────────────────────────────────────────────────────
   $('refresh-btn').addEventListener('click', async () => {
