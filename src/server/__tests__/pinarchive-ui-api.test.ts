@@ -150,8 +150,18 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
       const notMock = vi.fn().mockReturnValue({ order: orderMock });
       const eqMock = vi.fn().mockReturnValue({ not: notMock });
       const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
-
-      mockPinArchiveClient.from.mockReturnValue({ select: selectMock });
+      mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_pin_metrics') {
+          return {
+            select: vi.fn().mockReturnValue({
+              in: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }
+        return { select: selectMock };
+      });
 
       const req = new Request('http://localhost:4321/api/pinarchive/pins?sort=velocity&limit=25');
       const res = await pinsHandler({

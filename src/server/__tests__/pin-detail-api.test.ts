@@ -137,7 +137,9 @@ describe('PinArchive Pin Detail API Suite (GET /api/pinarchive/pin)', () => {
             return {
               eq: vi.fn().mockReturnValue({
                 eq: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockResolvedValue({ data: mockSiblings, error: null }),
+                  order: vi.fn().mockReturnValue({
+                    limit: vi.fn().mockResolvedValue({ data: mockSiblings, error: null }),
+                  }),
                 }),
               }),
             };

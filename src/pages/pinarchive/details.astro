@@ -4,14 +4,32 @@ import Layout from '../../layouts/Layout.astro';
 ---
 
 <Layout title="Pin Deep-Dive & Metrics History" description="Archived pin performance, historical saves/repins growth, SEO annotations, and canonical cluster variations.">
-  <!-- Back Button & Breadcrumbs Header -->
-  <div class="mb-4 flex items-center justify-between">
+  <!-- ═══ Sticky Mini-bar on Scroll (T1) ═══ -->
+  <div
+    id="sticky-mini-bar"
+    class="fixed top-0 left-0 right-0 z-40 bg-card/90 backdrop-blur-md border-b border-border shadow-md px-6 py-2.5 flex items-center justify-between transition-all duration-300 -translate-y-full opacity-0 pointer-events-none"
+  >
+    <div class="flex items-center gap-3 min-w-0 max-w-xl">
+      <a href="/pinarchive" class="text-xs font-semibold text-muted-foreground hover:text-foreground shrink-0">← Back</a>
+      <span class="text-xs text-border shrink-0">|</span>
+      <h3 id="sticky-title" class="text-xs font-bold text-foreground truncate"></h3>
+    </div>
+    <div class="flex items-center gap-4 text-xs shrink-0">
+      <div>Saves: <strong id="sticky-saves" class="text-rose-500 font-bold">-</strong></div>
+      <div>Velocity: <strong id="sticky-velocity" class="text-emerald-500 font-bold">-</strong></div>
+      <div id="sticky-stage-badge"></div>
+    </div>
+  </div>
+
+  <!-- Back Button & Refresh Header -->
+  <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
     <a href="/pinarchive" class="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
       <span>Back to PinArchive Intelligence</span>
     </a>
 
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-3">
+      <span id="pin-refresh-meta" class="text-xs text-muted-foreground hidden sm:inline-block"></span>
       <button
         id="refresh-pin-btn"
         type="button"
@@ -51,7 +69,7 @@ import Layout from '../../layouts/Layout.astro';
 
   <!-- Pin Detail Main Container -->
   <div id="pin-main-content" class="hidden space-y-8">
-    <!-- ═══ Pin Header Card ═══ -->
+    <!-- ═══ Pin Header Hero Card (T1 + T2) ═══ -->
     <div class="rounded-2xl border border-border bg-card p-6 shadow-sm overflow-hidden">
       <div class="flex flex-col md:flex-row items-start gap-6">
         <!-- Pin Image Preview -->
@@ -72,6 +90,8 @@ import Layout from '../../layouts/Layout.astro';
         <div class="flex-1 space-y-4 min-w-0">
           <div>
             <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span id="pin-stage-badge"></span>
+              <span id="pin-anomaly-badge"></span>
               <span id="pin-board-badge" class="rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground border border-border/60"></span>
               <span id="pin-canonical-badge" class="hidden rounded-full bg-purple-500/10 px-2.5 py-0.5 text-xs font-bold text-purple-500 border border-purple-500/20"></span>
             </div>
@@ -79,8 +99,36 @@ import Layout from '../../layouts/Layout.astro';
             <p id="pin-detail-description" class="mt-2 text-xs text-muted-foreground line-clamp-3"></p>
           </div>
 
+          <!-- Quick Copy Buttons Toolbar (T1) -->
+          <div class="flex flex-wrap items-center gap-2 pt-1">
+            <button
+              id="copy-id-btn"
+              type="button"
+              class="inline-flex items-center gap-1 text-[11px] font-semibold bg-muted hover:bg-muted/80 text-foreground px-2.5 py-1 rounded-lg border border-border transition-all"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+              <span>Copy Pin ID</span>
+            </button>
+            <button
+              id="copy-url-btn"
+              type="button"
+              class="inline-flex items-center gap-1 text-[11px] font-semibold bg-muted hover:bg-muted/80 text-foreground px-2.5 py-1 rounded-lg border border-border transition-all"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              <span>Copy URL</span>
+            </button>
+            <button
+              id="copy-title-btn"
+              type="button"
+              class="inline-flex items-center gap-1 text-[11px] font-semibold bg-muted hover:bg-muted/80 text-foreground px-2.5 py-1 rounded-lg border border-border transition-all"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+              <span>Copy Title</span>
+            </button>
+          </div>
+
           <!-- Metadata row -->
-          <div class="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-1 border-t border-border/60">
+          <div class="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border/60">
             <div class="flex items-center gap-1.5">
               <span>Pin ID:</span>
               <strong class="font-mono text-foreground" id="pin-id-str"></strong>
@@ -103,58 +151,87 @@ import Layout from '../../layouts/Layout.astro';
             </a>
           </div>
 
-          <!-- Annotation Tags -->
+          <!-- Annotation Tags with Direct Links (T1) -->
           <div class="pt-2">
-            <span class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">Annotations & SEO Keywords</span>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Annotations & SEO Keywords</span>
+              <span id="annotations-counter" class="text-[10px] text-muted-foreground font-medium"></span>
+            </div>
             <div id="pin-annotations-container" class="flex flex-wrap items-center gap-1.5"></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ═══ KPI Stats Grid (6 Chips) ═══ -->
+    <!-- ═══ KPI Stats Grid with Snapshot Deltas (T1) ═══ -->
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <!-- Saves -->
       <div class="rounded-xl border border-border bg-card p-4 shadow-sm text-center">
         <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Total Saves</span>
-        <div class="text-xl font-bold text-rose-500 mt-1" id="kpi-detail-saves">-</div>
+        <div class="flex items-baseline justify-center gap-1.5 mt-1">
+          <span class="text-xl font-bold text-rose-500" id="kpi-detail-saves">-</span>
+          <span id="kpi-delta-saves" class="text-[10px] font-bold"></span>
+        </div>
         <span class="text-[9px] text-muted-foreground block mt-0.5">Cumulative</span>
       </div>
+
+      <!-- Repins -->
       <div class="rounded-xl border border-border bg-card p-4 shadow-sm text-center">
         <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Repins</span>
-        <div class="text-xl font-bold text-foreground mt-1" id="kpi-detail-repins">-</div>
+        <div class="flex items-baseline justify-center gap-1.5 mt-1">
+          <span class="text-xl font-bold text-foreground" id="kpi-detail-repins">-</span>
+          <span id="kpi-delta-repins" class="text-[10px] font-bold"></span>
+        </div>
         <span class="text-[9px] text-muted-foreground block mt-0.5">Re-pin shares</span>
       </div>
+
+      <!-- Comments -->
       <div class="rounded-xl border border-border bg-card p-4 shadow-sm text-center">
         <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Comments</span>
-        <div class="text-xl font-bold text-foreground mt-1" id="kpi-detail-comments">-</div>
+        <div class="flex items-baseline justify-center gap-1.5 mt-1">
+          <span class="text-xl font-bold text-foreground" id="kpi-detail-comments">-</span>
+          <span id="kpi-delta-comments" class="text-[10px] font-bold"></span>
+        </div>
         <span class="text-[9px] text-muted-foreground block mt-0.5">User comments</span>
       </div>
+
+      <!-- Shares -->
       <div class="rounded-xl border border-border bg-card p-4 shadow-sm text-center">
         <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Shares</span>
-        <div class="text-xl font-bold text-blue-500 mt-1" id="kpi-detail-shares">-</div>
+        <div class="flex items-baseline justify-center gap-1.5 mt-1">
+          <span class="text-xl font-bold text-blue-500" id="kpi-detail-shares">-</span>
+          <span id="kpi-delta-shares" class="text-[10px] font-bold"></span>
+        </div>
         <span class="text-[9px] text-muted-foreground block mt-0.5">Social shares</span>
       </div>
+
+      <!-- Velocity -->
       <div class="rounded-xl border border-border bg-card p-4 shadow-sm text-center">
         <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Velocity</span>
         <div class="text-xl font-bold text-emerald-500 mt-1" id="kpi-detail-velocity">-</div>
         <span class="text-[9px] text-muted-foreground block mt-0.5">Saves / day</span>
       </div>
+
+      <!-- Reactions -->
       <div class="rounded-xl border border-border bg-card p-4 shadow-sm text-center">
         <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Reactions</span>
-        <div class="text-xl font-bold text-purple-500 mt-1" id="kpi-detail-reactions">-</div>
+        <div class="flex items-baseline justify-center gap-1.5 mt-1">
+          <span class="text-xl font-bold text-purple-500" id="kpi-detail-reactions">-</span>
+          <span id="kpi-delta-reactions" class="text-[10px] font-bold"></span>
+        </div>
         <span class="text-[9px] text-muted-foreground block mt-0.5">Total reactions</span>
       </div>
     </div>
 
-    <!-- ═══ Performance Trend Chart & History ═══ -->
-    <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <!-- ═══ Performance Trend Chart & History (T1) ═══ -->
+    <div class="rounded-2xl border border-border bg-card p-6 shadow-sm relative">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
         <div>
           <h2 class="text-base font-bold text-foreground flex items-center gap-2">
             <span>📈 Performance Trajectory</span>
             <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500" id="metrics-count-badge">0 Snapshots</span>
           </h2>
-          <p class="text-xs text-muted-foreground mt-0.5">Historical saves growth tracked during automated refresh cycles.</p>
+          <p class="text-xs text-muted-foreground mt-0.5">Historical growth curve tracked during automated refresh cycles.</p>
         </div>
         <div class="flex items-center gap-3 text-xs">
           <div class="flex items-center gap-1.5">
@@ -169,30 +246,65 @@ import Layout from '../../layouts/Layout.astro';
       </div>
 
       <!-- Chart / Notice Container -->
-      <div id="chart-wrapper" class="w-full">
-        <div id="chart-notice" class="hidden py-16 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
-          Not enough history yet — refresh cycle will build history.
-        </div>
+      <div id="chart-wrapper" class="w-full relative">
+        <div id="chart-notice" class="hidden py-12 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border"></div>
         <div id="svg-chart-container" class="w-full h-64 overflow-hidden relative"></div>
       </div>
     </div>
 
-    <!-- ═══ Canonical Duplicates / Siblings Section ═══ -->
-    <div id="canonical-siblings-section" class="hidden rounded-2xl border border-border bg-card p-6 shadow-sm">
-      <div class="mb-4">
-        <h2 class="text-base font-bold text-foreground flex items-center gap-2">
-          <span>🧬 Canonical Variations in Cluster</span>
-          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500" id="siblings-count-badge">0 Variations</span>
-        </h2>
-        <p class="text-xs text-muted-foreground mt-0.5">Other pins in this workspace that share the same Pinterest canonical root ID.</p>
+    <!-- ═══ Canonical Asset Consolidation Card (T2) ═══ -->
+    <div id="canonical-consolidation-section" class="hidden rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 pb-4 border-b border-border">
+        <div>
+          <h2 class="text-base font-bold text-foreground flex items-center gap-2">
+            <span>🧬 Canonical Asset Consolidation</span>
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500" id="cluster-rank-badge">Rank #1</span>
+          </h2>
+          <p id="cluster-summary-text" class="text-xs text-muted-foreground mt-0.5"></p>
+        </div>
       </div>
 
       <div id="canonical-siblings-list" class="divide-y divide-border/60 bg-muted/20 rounded-xl border border-border/60 overflow-hidden"></div>
+    </div>
+
+    <!-- ═══ Pin Editorial Notes Section (T3-notes) ═══ -->
+    <div class="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-bold text-foreground flex items-center gap-2">
+            <span>📝 Editorial Notes & Strategy</span>
+          </h2>
+          <p class="text-xs text-muted-foreground mt-0.5">Private workspace notes regarding content angle, imagery iteration, or performance.</p>
+        </div>
+        <span id="notes-status-caption" class="text-xs text-muted-foreground"></span>
+      </div>
+
+      <div class="space-y-2">
+        <textarea
+          id="pin-notes-textarea"
+          rows="4"
+          maxlength="2000"
+          placeholder="Add strategic notes about this pin..."
+          class="w-full rounded-xl border border-border bg-background p-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-y"
+        ></textarea>
+        <div class="flex items-center justify-between">
+          <span id="notes-char-count" class="text-[11px] text-muted-foreground font-mono">0 / 2000</span>
+          <button
+            id="save-notes-btn"
+            type="button"
+            class="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all disabled:opacity-50"
+          >
+            Save Notes
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </Layout>
 
 <script>
+  let currentPin: any = null;
+
   function escapeHtml(str?: string | null): string {
     if (!str) return '';
     return String(str)
@@ -221,18 +333,50 @@ import Layout from '../../layouts/Layout.astro';
     }
   }
 
+  function renderStageBadge(stage?: string | null): string {
+    switch (stage) {
+      case 'NEW':
+        return '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">🟢 NEW (≤14d)</span>';
+      case 'GROWING':
+        return '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">🚀 GROWING (≥10/d)</span>';
+      case 'MATURE':
+        return '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">🟣 MATURE (>14d)</span>';
+      case 'COOLING':
+        return '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">❄️ COOLING (<2/d)</span>';
+      default:
+        return '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-500/10 text-slate-500 border border-slate-500/20">⚪ DORMANT (<0.5/d)</span>';
+    }
+  }
+
+  function renderDelta(val: number, label: string): string {
+    if (val > 0) {
+      return `<span class="text-emerald-500" aria-label="${label} increased by ${val}">(+${fmtNumber(val)})</span>`;
+    }
+    if (val < 0) {
+      return `<span class="text-rose-500" aria-label="${label} decreased by ${Math.abs(val)}">(−${fmtNumber(Math.abs(val))})</span>`;
+    }
+    return '';
+  }
+
   function renderSvgChart(metrics: any[]) {
     const container = document.getElementById('svg-chart-container');
     const notice = document.getElementById('chart-notice');
     if (!container || !notice) return;
 
     if (!Array.isArray(metrics) || metrics.length < 2) {
+      notice.innerHTML = 'Not enough history yet — refresh cycle will build history (1 snapshot recorded).';
       notice.classList.remove('hidden');
       container.classList.add('hidden');
       return;
     }
 
-    notice.classList.add('hidden');
+    if (metrics.length < 4) {
+      notice.innerHTML = `Building history — refresh cycle will complete the curve (${metrics.length} of 4 snapshots).`;
+      notice.classList.remove('hidden');
+    } else {
+      notice.classList.add('hidden');
+    }
+
     container.classList.remove('hidden');
 
     const width = container.clientWidth || 800;
@@ -257,10 +401,8 @@ import Layout from '../../layouts/Layout.astro';
       .map((m, i) => `${i === 0 ? 'M' : 'L'} ${getX(i).toFixed(1)} ${getY(Number(m.repins || 0)).toFixed(1)}`)
       .join(' ');
 
-    // Area path for saves
     const savesArea = `${savesPath} L ${getX(ptsCount - 1)} ${height - padY} L ${getX(0)} ${height - padY} Z`;
 
-    // Grid lines
     const gridY1 = height - padY;
     const gridY2 = height - padY - (height - padY * 2) * 0.5;
     const gridY3 = padY;
@@ -293,22 +435,114 @@ import Layout from '../../layouts/Layout.astro';
         <!-- Saves Line -->
         <path d="${savesPath}" fill="none" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
 
-        <!-- Data points -->
+        <!-- Interactive Data Points with Tooltips -->
         ${metrics
           .map(
             (m, i) => `
-              <circle cx="${getX(i).toFixed(1)}" cy="${getY(Number(m.saves || 0)).toFixed(1)}" r="4" fill="#f43f5e" stroke="var(--color-card, #fff)" stroke-width="2">
-                <title>${fmtDate(m.recorded_at)}: ${fmtNumber(m.saves)} saves</title>
-              </circle>
+              <g class="group cursor-pointer">
+                <circle cx="${getX(i).toFixed(1)}" cy="${getY(Number(m.saves || 0)).toFixed(1)}" r="4.5" fill="#f43f5e" stroke="var(--color-card, #fff)" stroke-width="2" class="group-hover:r-6 transition-all" />
+                <title>${fmtDate(m.recorded_at)}: ${fmtNumber(m.saves)} saves · ${fmtNumber(m.repins)} repins</title>
+              </g>
             `
           )
           .join('')}
 
-        <!-- X Axis Labels (first and last) -->
+        <!-- X Axis Labels -->
         <text x="${padX}" y="${height - 10}" text-anchor="start" class="fill-muted-foreground text-[10px]">${fmtDate(metrics[0]?.recorded_at)}</text>
         <text x="${width - padX}" y="${height - 10}" text-anchor="end" class="fill-muted-foreground text-[10px]">${fmtDate(metrics[metrics.length - 1]?.recorded_at)}</text>
       </svg>
     `;
+  }
+
+  function setupCopyButton(id: string, textFn: () => string) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+      try {
+        const text = textFn();
+        await navigator.clipboard.writeText(text);
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span>Copied ✓</span>';
+        btn.classList.add('bg-emerald-500/20', 'text-emerald-600', 'dark:text-emerald-400');
+        setTimeout(() => {
+          btn.innerHTML = originalHtml;
+          btn.classList.remove('bg-emerald-500/20', 'text-emerald-600', 'dark:text-emerald-400');
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to copy to clipboard', err);
+      }
+    });
+  }
+
+  function setupStickyBar(pin: any) {
+    const stickyBar = document.getElementById('sticky-mini-bar');
+    const stickyTitle = document.getElementById('sticky-title');
+    const stickySaves = document.getElementById('sticky-saves');
+    const stickyVelocity = document.getElementById('sticky-velocity');
+    const stickyStage = document.getElementById('sticky-stage-badge');
+
+    if (!stickyBar || !pin) return;
+
+    if (stickyTitle) stickyTitle.textContent = pin.title || `Pin ${pin.pin_id}`;
+    if (stickySaves) stickySaves.textContent = fmtNumber(pin.saves);
+    if (stickyVelocity) stickyVelocity.textContent = `${Number(pin.velocity || 0).toFixed(1)}/d`;
+    if (stickyStage) stickyStage.innerHTML = renderStageBadge(pin.stage);
+
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 400) {
+        stickyBar.classList.remove('-translate-y-full', 'opacity-0', 'pointer-events-none');
+        stickyBar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+      } else {
+        stickyBar.classList.add('-translate-y-full', 'opacity-0', 'pointer-events-none');
+        stickyBar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+      }
+    });
+  }
+
+  function setupNotes(pin: any) {
+    const textarea = document.getElementById('pin-notes-textarea') as HTMLTextAreaElement | null;
+    const charCount = document.getElementById('notes-char-count');
+    const saveBtn = document.getElementById('save-notes-btn') as HTMLButtonElement | null;
+    const statusCaption = document.getElementById('notes-status-caption');
+
+    if (!textarea || !saveBtn || !pin) return;
+
+    textarea.value = pin.notes || '';
+    if (charCount) charCount.textContent = `${textarea.value.length} / 2000`;
+    if (statusCaption && pin.notes_updated_at) {
+      statusCaption.textContent = `Last saved ${fmtDate(pin.notes_updated_at)}`;
+    }
+
+    textarea.addEventListener('input', () => {
+      if (charCount) charCount.textContent = `${textarea.value.length} / 2000`;
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      try {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+        const res = await fetch('/api/pinarchive/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pin_id: pin.id,
+            notes: textarea.value,
+          }),
+        });
+
+        const json = await res.json();
+        if (!res.ok || !json.success) {
+          throw new Error(json.error || 'Failed to save notes');
+        }
+
+        if (statusCaption) statusCaption.textContent = 'Saved just now ✓';
+      } catch (err: any) {
+        alert(`Error saving notes: ${err.message}`);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Notes';
+      }
+    });
   }
 
   async function loadPinDetail() {
@@ -344,10 +578,12 @@ import Layout from '../../layouts/Layout.astro';
       }
 
       const pin = json.pin;
+      currentPin = pin;
       const metrics: any[] = json.metrics || [];
       const siblings: any[] = json.canonical_siblings || [];
+      const clusterStats = json.cluster_stats || { total_saves: pin.saves, variations_count: 1, rank: 1, share_pct: 100 };
 
-      // 1. Populate Header Card
+      // 1. Header Hero Card
       const img = document.getElementById('pin-detail-image') as HTMLImageElement | null;
       const fallbackIcon = document.getElementById('pin-detail-fallback-icon');
       if (img) {
@@ -360,6 +596,20 @@ import Layout from '../../layouts/Layout.astro';
         } else {
           img.style.display = 'none';
           if (fallbackIcon) fallbackIcon.classList.remove('hidden');
+        }
+      }
+
+      const stageBadge = document.getElementById('pin-stage-badge');
+      if (stageBadge) stageBadge.innerHTML = renderStageBadge(pin.stage);
+
+      const anomalyBadge = document.getElementById('pin-anomaly-badge');
+      if (anomalyBadge) {
+        if (pin.anomaly === 'SPIKE') {
+          anomalyBadge.innerHTML = '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20 animate-pulse">🔥 SPIKE</span>';
+        } else if (pin.anomaly === 'COOLING') {
+          anomalyBadge.innerHTML = '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">❄️ COOLING</span>';
+        } else {
+          anomalyBadge.innerHTML = '';
         }
       }
 
@@ -405,39 +655,78 @@ import Layout from '../../layouts/Layout.astro';
         extLink.href = pin.link || `https://www.pinterest.com/pin/${pin.pin_id}/`;
       }
 
-      // Annotations
+      // Copy buttons
+      setupCopyButton('copy-id-btn', () => pin.pin_id || pin.id);
+      setupCopyButton('copy-url-btn', () => pin.link || `https://www.pinterest.com/pin/${pin.pin_id}/`);
+      setupCopyButton('copy-title-btn', () => pin.title || `Pin ${pin.pin_id}`);
+
+      // Annotations with real links & counter
       const annContainer = document.getElementById('pin-annotations-container');
+      const annCounter = document.getElementById('annotations-counter');
       if (annContainer) {
         const annotations = Array.isArray(pin.annotations) ? pin.annotations : [];
+        let linkedCount = 0;
+        let visualCount = 0;
+
         if (annotations.length === 0) {
           annContainer.innerHTML = '<span class="text-xs text-muted-foreground">No annotations stored</span>';
+          if (annCounter) annCounter.textContent = '';
         } else {
-          const visible = annotations.slice(0, 10);
-          const overflow = annotations.length > 10 ? annotations.length - 10 : 0;
-          annContainer.innerHTML = `
-            ${visible
-              .map((a: any) => {
-                const name = typeof a === 'string' ? a : a.name;
-                return `<span class="inline-block text-xs bg-muted px-2.5 py-1 rounded-lg text-foreground font-medium border border-border/60">${escapeHtml(name)}</span>`;
-              })
-              .join('')}
-            ${overflow > 0 ? `<span class="text-xs text-muted-foreground font-bold px-2 py-1">+${overflow} more</span>` : ''}
-          `;
+          annContainer.innerHTML = annotations
+            .map((a: any) => {
+              const name = typeof a === 'string' ? a : a.name;
+              const url = typeof a === 'object' && a?.url ? a.url : null;
+              if (url) {
+                linkedCount++;
+                const fullUrl = `https://www.pinterest.com${url.startsWith('/') ? url : '/' + url}`;
+                return `
+                  <a
+                    href="${escapeHtml(fullUrl)}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-1 text-xs bg-primary/10 hover:bg-primary/20 text-primary px-2.5 py-1 rounded-lg font-medium border border-primary/20 transition-colors"
+                    title="${escapeHtml(name)} (Pinterest Idea)"
+                  >
+                    <span>${escapeHtml(name)}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  </a>
+                `;
+              }
+              visualCount++;
+              return `
+                <span class="inline-flex items-center gap-1 text-xs bg-muted px-2.5 py-1 rounded-lg text-foreground font-medium border border-border/60">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <span>${escapeHtml(name)}</span>
+                </span>
+              `;
+            })
+            .join('');
+
+          if (annCounter) annCounter.textContent = `${linkedCount} linked · ${visualCount} visual`;
         }
       }
 
-      // 2. Populate KPI Chips
+      // 2. KPI Deltas
+      const deltas = pin.deltas || {};
       const savesEl = document.getElementById('kpi-detail-saves');
       if (savesEl) savesEl.textContent = fmtNumber(pin.saves);
+      const deltaSavesEl = document.getElementById('kpi-delta-saves');
+      if (deltaSavesEl) deltaSavesEl.innerHTML = renderDelta(deltas.saves || 0, 'Saves');
 
       const repinsEl = document.getElementById('kpi-detail-repins');
       if (repinsEl) repinsEl.textContent = fmtNumber(pin.repins);
+      const deltaRepinsEl = document.getElementById('kpi-delta-repins');
+      if (deltaRepinsEl) deltaRepinsEl.innerHTML = renderDelta(deltas.repins || 0, 'Repins');
 
       const commentsEl = document.getElementById('kpi-detail-comments');
       if (commentsEl) commentsEl.textContent = fmtNumber(pin.comments);
+      const deltaCommentsEl = document.getElementById('kpi-delta-comments');
+      if (deltaCommentsEl) deltaCommentsEl.innerHTML = renderDelta(deltas.comments || 0, 'Comments');
 
       const sharesEl = document.getElementById('kpi-detail-shares');
       if (sharesEl) sharesEl.textContent = fmtNumber(pin.share_count);
+      const deltaSharesEl = document.getElementById('kpi-delta-shares');
+      if (deltaSharesEl) deltaSharesEl.innerHTML = renderDelta(deltas.shares || 0, 'Shares');
 
       const velocityEl = document.getElementById('kpi-detail-velocity');
       if (velocityEl) velocityEl.textContent = `${Number(pin.velocity || 0).toFixed(1)}/d`;
@@ -445,51 +734,71 @@ import Layout from '../../layouts/Layout.astro';
       const reactionsEl = document.getElementById('kpi-detail-reactions');
       const totalReactions = Number((pin.reactions as any)?.total || 0);
       if (reactionsEl) reactionsEl.textContent = fmtNumber(totalReactions);
+      const deltaReactionsEl = document.getElementById('kpi-delta-reactions');
+      if (deltaReactionsEl) deltaReactionsEl.innerHTML = renderDelta(deltas.reactions || 0, 'Reactions');
 
-      // 3. Render Chart
+      // 3. SVG Trajectory Chart
       const metricsBadge = document.getElementById('metrics-count-badge');
       if (metricsBadge) metricsBadge.textContent = `${metrics.length} Snapshot${metrics.length === 1 ? '' : 's'}`;
       renderSvgChart(metrics);
 
-      // 4. Canonical Siblings
-      const siblingsSection = document.getElementById('canonical-siblings-section');
-      const siblingsBadge = document.getElementById('siblings-count-badge');
+      // 4. Canonical Asset Consolidation Card (T2)
+      const consSection = document.getElementById('canonical-consolidation-section');
+      const rankBadge = document.getElementById('cluster-rank-badge');
+      const clusterSummary = document.getElementById('cluster-summary-text');
       const siblingsList = document.getElementById('canonical-siblings-list');
 
-      if (siblingsSection && siblingsList) {
-        if (siblings.length > 0) {
-          if (siblingsBadge) siblingsBadge.textContent = `${siblings.length} Variation${siblings.length === 1 ? '' : 's'}`;
-          siblingsSection.classList.remove('hidden');
-          siblingsList.innerHTML = siblings
-            .map(
-              (s: any) => `
-                <a
-                  href="/pinarchive/details?id=${escapeHtml(s.id)}"
-                  class="flex items-center justify-between p-3.5 hover:bg-muted/40 transition-colors group"
-                >
-                  <div class="flex items-center gap-3 min-w-0">
-                    <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500 shrink-0">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
-                    </span>
-                    <div class="min-w-0">
-                      <span class="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate block">
-                        ${escapeHtml(s.title || `Pin ${s.pin_id}`)}
-                      </span>
-                      <span class="text-[10px] text-muted-foreground font-mono">Pin ID: ${escapeHtml(s.pin_id)}</span>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-3 shrink-0">
-                    <span class="text-xs font-bold text-rose-500">${fmtNumber(s.saves)} saves</span>
-                    <span class="text-muted-foreground group-hover:text-primary transition-colors text-xs font-bold">→</span>
-                  </div>
-                </a>
-              `
-            )
-            .join('');
-        } else {
-          siblingsSection.classList.add('hidden');
+      if (consSection && pin.canonical_pin_id) {
+        consSection.classList.remove('hidden');
+        if (rankBadge) rankBadge.textContent = `Rank #${clusterStats.rank} of ${clusterStats.variations_count}`;
+        if (clusterSummary) {
+          clusterSummary.textContent = `This asset: ${fmtNumber(clusterStats.total_saves)} saves across ${clusterStats.variations_count} variation${clusterStats.variations_count === 1 ? '' : 's'} — your copy ranks #${clusterStats.rank} (${clusterStats.share_pct}% share).`;
         }
+
+        if (siblingsList) {
+          if (siblings.length > 0) {
+            siblingsList.innerHTML = siblings
+              .map(
+                (s: any, idx: number) => {
+                  const sSaves = Number(s.saves || 0);
+                  const share = clusterStats.total_saves > 0 ? Math.round((sSaves / clusterStats.total_saves) * 100) : 0;
+                  return `
+                    <a
+                      href="/pinarchive/details?id=${escapeHtml(s.id)}"
+                      class="flex items-center justify-between p-3.5 hover:bg-muted/40 transition-colors group focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      <div class="flex items-center gap-3 min-w-0">
+                        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500 font-bold text-xs shrink-0">
+                          #${idx + 2}
+                        </span>
+                        <div class="min-w-0">
+                          <span class="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate block">
+                            ${escapeHtml(s.title || `Pin ${s.pin_id}`)}
+                          </span>
+                          <span class="text-[10px] text-muted-foreground font-mono">Pin ID: ${escapeHtml(s.pin_id)}</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-3 shrink-0">
+                        <span class="text-[10px] text-muted-foreground font-mono">(${share}%)</span>
+                        <span class="text-xs font-bold text-rose-500">${fmtNumber(sSaves)} saves</span>
+                        <span class="text-muted-foreground group-hover:text-primary transition-colors text-xs font-bold">→</span>
+                      </div>
+                    </a>
+                  `;
+                }
+              )
+              .join('');
+          } else {
+            siblingsList.innerHTML = '<div class="p-4 text-center text-xs text-muted-foreground">No other pin variations in this cluster.</div>';
+          }
+        }
+      } else if (consSection) {
+        consSection.classList.add('hidden');
       }
+
+      // 5. Sticky bar & Notes
+      setupStickyBar(pin);
+      setupNotes(pin);
 
       if (skeleton) skeleton.classList.add('hidden');
       if (mainContent) mainContent.classList.remove('hidden');

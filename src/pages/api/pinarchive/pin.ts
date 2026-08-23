@@ -71,26 +71,105 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return json({ success: false, error: metErr.message }, 500);
     }
 
-    // c) Fetch canonical siblings if canonical_pin_id is present
+    const metricsList = metrics || [];
+    let deltaSaves = 0;
+    let deltaRepins = 0;
+    let deltaComments = 0;
+    let deltaShares = 0;
+    let deltaReactions = 0;
+    let daysBetween = 1;
+
+    if (metricsList.length >= 2) {
+      const latest = metricsList[metricsList.length - 1];
+      const prior = metricsList[metricsList.length - 2];
+      deltaSaves = Number(latest.saves || 0) - Number(prior.saves || 0);
+      deltaRepins = Number(latest.repins || 0) - Number(prior.repins || 0);
+      deltaComments = Number(latest.comments || 0) - Number(prior.comments || 0);
+      deltaShares = Number(latest.shares || 0) - Number(prior.shares || 0);
+      deltaReactions = Number(latest.reactions_total || 0) - Number(prior.reactions_total || 0);
+
+      const t0 = new Date(latest.recorded_at).getTime();
+      const t1 = new Date(prior.recorded_at).getTime();
+      daysBetween = Math.max(0.01, (t0 - t1) / 86400000);
+    }
+
+    const ageDays = Math.max(0, (Date.now() - new Date(pin.created_at_pinterest || pin.archived_at || Date.now()).getTime()) / 86400000);
+    const velocity = Number(pin.velocity || 0);
+
+    // Stage computation
+    let stage: 'NEW' | 'GROWING' | 'MATURE' | 'COOLING' | 'DORMANT' = 'DORMANT';
+    if (velocity < 0.5) {
+      stage = 'DORMANT';
+    } else if (velocity < 2 && deltaSaves < 0) {
+      stage = 'COOLING';
+    } else if (ageDays <= 14) {
+      stage = 'NEW';
+    } else if (velocity >= 10) {
+      stage = 'GROWING';
+    } else if (velocity >= 2 && ageDays > 14) {
+      stage = 'MATURE';
+    } else {
+      stage = velocity >= 2 ? 'MATURE' : 'DORMANT';
+    }
+
+    // Anomaly detection
+    let anomaly: 'SPIKE' | 'COOLING' | null = null;
+    if (metricsList.length >= 2) {
+      if (deltaSaves >= Math.max(20, 3 * velocity * daysBetween)) {
+        anomaly = 'SPIKE';
+      } else if (deltaSaves <= -Math.max(10, 0.5 * velocity * daysBetween)) {
+        anomaly = 'COOLING';
+      }
+    }
+
+    pin.age_days = Math.round(ageDays * 10) / 10;
+    pin.stage = stage;
+    pin.anomaly = anomaly;
+    pin.deltas = {
+      saves: deltaSaves,
+      repins: deltaRepins,
+      comments: deltaComments,
+      shares: deltaShares,
+      reactions: deltaReactions,
+    };
+
+    // c) Fetch canonical siblings and cluster consolidation if canonical_pin_id is present
     let canonical_siblings: any[] = [];
+    let cluster_stats = {
+      total_saves: Number(pin.saves || 0),
+      variations_count: 1,
+      rank: 1,
+      share_pct: 100,
+    };
+
     if (pin.canonical_pin_id) {
-      const { data: siblings, error: sibErr } = await db
+      const { data: clusterRows, error: sibErr } = await db
         .from('pa_pins')
         .select('id, pin_id, title, saves, archived_at, image_url')
         .eq('canonical_pin_id', pin.canonical_pin_id)
         .eq('workspace_id', wsCtx.workspaceId)
-        .limit(10);
+        .order('saves', { ascending: false })
+        .limit(50);
 
-      if (!sibErr && Array.isArray(siblings)) {
-        canonical_siblings = siblings.filter((s: any) => s.id !== id);
+      if (!sibErr && Array.isArray(clusterRows)) {
+        canonical_siblings = clusterRows.filter((s: any) => s.id !== id);
+        const totalClusterSaves = clusterRows.reduce((acc, r) => acc + Number(r.saves || 0), 0);
+        const pinRank = clusterRows.findIndex((r) => r.id === id) + 1;
+        cluster_stats = {
+          total_saves: totalClusterSaves,
+          variations_count: clusterRows.length,
+          rank: pinRank > 0 ? pinRank : 1,
+          share_pct: totalClusterSaves > 0 ? Math.round((Number(pin.saves || 0) / totalClusterSaves) * 100) : 100,
+        };
       }
     }
 
     return json({
       success: true,
       pin,
-      metrics: metrics || [],
+      metrics: metricsList,
       canonical_siblings,
+      cluster_stats,
     });
   } catch (e: any) {
     return json({ success: false, error: e.message || 'Internal Server Error' }, 500);
