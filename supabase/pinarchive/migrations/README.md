@@ -1,0 +1,1 @@
+| 2 | 20260823000000_pinarchive_relay_enrichment.sql | annotations/SEO/social/board/follower enrichment, pa_runs trigger includes 'refresh' | 20260822000000 | Apply manually via Supabase SQL Editor (Project kuuugffvyokywtgmdrfk) |

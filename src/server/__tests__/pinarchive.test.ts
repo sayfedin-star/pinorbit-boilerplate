@@ -246,6 +246,8 @@ describe('PinArchive Module Test Suite', () => {
                 saves: p.saves,
                 repins: p.repins,
                 comments: p.comments,
+                share_count: p.share_count || 0,
+                reactions: p.reactions || {},
               }));
               return {
                 select: vi.fn().mockResolvedValue({
@@ -331,6 +333,142 @@ describe('PinArchive Module Test Suite', () => {
       // Total metrics rows inserted remains 1 (0 new rows added during second push)
       expect(metricsInserted.length).toBe(1);
       expect(runsInserted.length).toBe(2);
+    });
+
+    it('processes enriched relay payload with refresh trigger, follower_count, annotations, and shares', async () => {
+      mockAdminClient.from.mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: { id: mockWsId }, error: null }),
+      });
+
+      mockKvStore.set(`ingest_secret:ws:${mockWsId}`, mockSecret);
+
+      const mockAccountId = 'acc-uuid-2222';
+      const mockPinRefId = 'pin-uuid-3333';
+      const mockPinId = '1079245498222414527';
+
+      let upsertedAccountData: any = null;
+      let upsertedPinsData: any = null;
+      const metricsInserted: any[] = [];
+      const runsInserted: any[] = [];
+
+      mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_accounts') {
+          return {
+            upsert: vi.fn().mockImplementation((data: any) => {
+              upsertedAccountData = data;
+              return {
+                select: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({
+                    data: { id: mockAccountId, workspace_id: mockWsId, username: 'testuser' },
+                    error: null,
+                  }),
+                }),
+              };
+            }),
+          };
+        }
+        if (table === 'pa_pins') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                in: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+            upsert: vi.fn().mockImplementation((pinsArray: any[]) => {
+              upsertedPinsData = pinsArray;
+              const storedPins = pinsArray.map(p => ({
+                id: mockPinRefId,
+                pin_id: p.pin_id,
+                saves: p.saves,
+                repins: p.repins,
+                comments: p.comments,
+                share_count: p.share_count || 0,
+                reactions: p.reactions || {},
+              }));
+              return {
+                select: vi.fn().mockResolvedValue({
+                  data: storedPins,
+                  error: null,
+                }),
+              };
+            }),
+          };
+        }
+        if (table === 'pa_pin_metrics') {
+          return {
+            upsert: vi.fn().mockImplementation((metricsArray: any[]) => {
+              metricsInserted.push(...metricsArray);
+              return Promise.resolve({ data: metricsArray, error: null });
+            }),
+          };
+        }
+        if (table === 'pa_runs') {
+          return {
+            insert: vi.fn().mockImplementation((runObj: any) => {
+              runsInserted.push(runObj);
+              return Promise.resolve({ data: runObj, error: null });
+            }),
+          };
+        }
+        return {};
+      });
+
+      const enrichedPayload = {
+        run_id: 'run-refresh-100',
+        workspace_id: mockWsId,
+        username: 'testuser',
+        fetched_at: '2026-08-23T00:00:00Z',
+        run_type: 'refresh',
+        trigger: 'refresh',
+        follower_count: 891,
+        pins: [
+          {
+            pin_id: mockPinId,
+            title: 'Best Low Carb Recipes',
+            saves: 23887,
+            repins: 21346,
+            comments: 12,
+            share_count: 1602,
+            reactions: { total: 42, type_1: 40, type_7: 2 },
+            annotations: [
+              { name: 'Easy Bread', idea_id: '900909847694', url: '/ideas/easy-bread/900909847694/' },
+              { name: 'Bread Bun' },
+            ],
+            seo_category: 'Food And Drinks',
+            canonical_pin_id: '1075797429758900343',
+            seo_alt_text: 'Healthy bread baking recipe',
+            board_pin_count: 45,
+            board_last_modified_at: '2026-08-20T12:00:00Z',
+          },
+        ],
+      };
+
+      const req = new Request('http://localhost:4321/api/internal/pinarchive/ingest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-ingest-secret': mockSecret,
+        },
+        body: JSON.stringify(enrichedPayload),
+      });
+
+      const res = await ingestHandler({ request: req, locals: { runtime: { env: mockRuntimeEnv } } } as any);
+      expect(res.status).toBe(200);
+
+      expect(upsertedAccountData.follower_count).toBe(891);
+      expect(upsertedPinsData[0].seo_category).toBe('Food And Drinks');
+      expect(upsertedPinsData[0].canonical_pin_id).toBe('1075797429758900343');
+      expect(upsertedPinsData[0].share_count).toBe(1602);
+      expect(upsertedPinsData[0].annotations.length).toBe(2);
+
+      expect(metricsInserted.length).toBe(1);
+      expect(metricsInserted[0].shares).toBe(1602);
+      expect(metricsInserted[0].reactions_total).toBe(42);
+
+      expect(runsInserted.length).toBe(1);
+      expect(runsInserted[0].trigger).toBe('refresh');
     });
   });
 

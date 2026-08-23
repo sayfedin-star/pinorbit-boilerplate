@@ -111,6 +111,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       promoted_count: promotedCount,
       last_result: accountMeta.last_result || 'success',
     };
+    if (typeof payload.follower_count === 'number') accountData.follower_count = payload.follower_count;
+    if (typeof accountMeta.follower_count === 'number') accountData.follower_count = accountMeta.follower_count;
     if (accountMeta.sheet_id) accountData.sheet_id = accountMeta.sheet_id;
     if (typeof accountMeta.interval_days === 'number') accountData.interval_days = accountMeta.interval_days;
     if (accountMeta.status) accountData.status = accountMeta.status;
@@ -141,11 +143,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Fetch existing pin metric state for comparison
       const { data: existingPins } = await pinArchive
         .from('pa_pins')
-        .select('id, pin_id, saves, repins, comments')
+        .select('id, pin_id, saves, repins, comments, share_count')
         .eq('workspace_id', workspaceId)
         .in('pin_id', pinIds);
 
-      const existingMap = new Map<string, { id: string; saves: number; repins: number; comments: number }>();
+      const existingMap = new Map<string, { id: string; saves: number; repins: number; comments: number; share_count: number }>();
       if (Array.isArray(existingPins)) {
         for (const ep of existingPins) {
           existingMap.set(ep.pin_id, {
@@ -153,6 +155,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             saves: Number(ep.saves || 0),
             repins: Number(ep.repins || 0),
             comments: Number(ep.comments || 0),
+            share_count: Number(ep.share_count || 0),
           });
         }
       }
@@ -194,13 +197,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
           velocity: Number(p.velocity || 0),
           promoted: Boolean(p.promoted),
           last_updated_at: fetchedAt,
+
+          // NEW: enrichment (all nullable)
+          archived_at: p.archived_at || null,
+          annotations: Array.isArray(p.annotations) ? p.annotations : [],
+          seo_category: p.seo_category || null,
+          canonical_pin_id: p.canonical_pin_id || null,
+          seo_alt_text: p.seo_alt_text || null,
+          share_count: Number(p.share_count || 0),
+          board_pin_count: typeof p.board_pin_count === 'number' ? p.board_pin_count : null,
+          board_last_modified_at: p.board_last_modified_at || null,
         };
       });
 
       const { data: upsertedPins, error: pinErr } = await pinArchive
         .from('pa_pins')
         .upsert(pinsToUpsert, { onConflict: 'workspace_id,pin_id' })
-        .select('id, pin_id, saves, repins, comments');
+        .select('id, pin_id, saves, repins, comments, share_count, reactions');
 
       if (pinErr) {
         return new Response(
@@ -209,7 +222,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
       }
 
-      // C) Insert pa_pin_metrics snapshot ONLY when saves or repins differ from stored row
+      // C) Insert pa_pin_metrics snapshot ONLY when saves, repins, or share_count differ from stored row
       const metricsToInsert: Array<{
         workspace_id: string;
         pin_ref: string;
@@ -217,6 +230,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         saves: number;
         repins: number;
         comments: number;
+        shares: number;
+        reactions_total: number;
       }> = [];
 
       if (Array.isArray(upsertedPins)) {
@@ -224,8 +239,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const existing = existingMap.get(up.pin_id);
           const curSaves = Number(up.saves || 0);
           const curRepins = Number(up.repins || 0);
+          const curShares = Number(up.share_count || 0);
 
-          if (!existing || existing.saves !== curSaves || existing.repins !== curRepins) {
+          if (!existing || existing.saves !== curSaves || existing.repins !== curRepins || existing.share_count !== curShares) {
             metricsToInsert.push({
               workspace_id: workspaceId,
               pin_ref: up.id,
@@ -233,6 +249,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
               saves: curSaves,
               repins: curRepins,
               comments: Number(up.comments || 0),
+              shares: curShares,
+              reactions_total: Number((up.reactions as any)?.total || 0),
             });
           }
         }
@@ -246,7 +264,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // D) Insert pa_runs row
-    const triggerVal = (['cron', 'manual', 'backfill'].includes(payload.trigger) ? payload.trigger : 'cron') as 'cron' | 'manual' | 'backfill';
+    const triggerVal = (
+      ['cron', 'manual', 'backfill', 'refresh'].includes(payload.trigger)
+        ? payload.trigger
+        : 'cron'
+    ) as 'cron' | 'manual' | 'backfill' | 'refresh';
     const runRow = {
       workspace_id: workspaceId,
       account_id: accountId,
