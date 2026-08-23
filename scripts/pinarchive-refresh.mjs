@@ -98,105 +98,145 @@ function formatPin(pin) {
     description: pin.description || pin.gridDescription || pin.grid_description || '',
     link: pin.link || '',
     domain: pin.domain || '',
-    board_name: pin.board?.name || '',
-    board_id: pin.board?.entityId || pin.board?.id || '',
-    image_url: pin.images_orig?.url || pin.images?.orig?.url || '',
-    dominant_color: pin.dominantColor || pin.dominant_color || '',
-    image_signature: pin.imageSignature || pin.image_signature || '',
-    node_id: pin.id || '',
-    created_at_pinterest: pin.createdAt || pin.created_at || '',
-    is_video: Boolean(pin.isVideo || pin.is_video),
-    reactions: reactionsMap,
+    board_name: pin.board?.name || pin.pinner?.username || '',
+    board_id: pin.board?.id || null,
+    created_at_pinterest: pin.created_at || null,
+    image_url: pin.images?.orig?.url || pin.image_large_url || '',
+    dominant_color: pin.dominant_color || null,
+    image_signature: pin.image_signature || null,
+    node_id: pin.node_id || null,
+    is_video: Boolean(pin.is_video),
 
-    // NEW enrichment
+    // NEW enriched fields
+    reactions: reactionsMap,
     annotations: mergedAnnotations,
-    seo_category: pin?.pinJoin?.seoBreadcrumbs?.[0]?.name || pin?.pin_join?.seo_breadcrumbs?.[0]?.name || null,
-    canonical_pin_id: pin?.pinJoin?.canonicalPin?.entityId || pin?.pin_join?.canonical_pin?.entity_id || null,
-    seo_alt_text: pin.seoAltText || pin.seo_alt_text || null,
-    share_count: Number(pin.shareCount || pin.share_count || 0),
-    board_pin_count: typeof pin.board?.pinCount === 'number' ? pin.board.pinCount : (typeof pin.board?.pin_count === 'number' ? pin.board.pin_count : null),
-    board_last_modified_at: pin.board?.boardOrderModifiedAt || pin.board?.last_modified_at || null,
-    follower_count: Number(pin?.pinner?.followerCount || pin?.pinner?.follower_count || 0),
+    seo_category: pin?.seo_category || pin?.category || null,
+    canonical_pin_id: pin?.canonical_pin_id ? String(pin.canonical_pin_id) : (pin?.pin_join?.canonical_pin?.id ? String(pin.pin_join.canonical_pin.id) : null),
+    seo_alt_text: pin?.seo_alt_text || pin?.alt_text || null,
+    share_count: Number(pin?.share_count || pin?.pin_join?.share_count || 0),
+    board_pin_count: typeof pin?.board?.pin_count === 'number' ? pin.board.pin_count : null,
+    board_last_modified_at: pin?.board?.last_modified_at || pin?.board?.board_order_updated_at || null,
+    follower_count: typeof pin?.pinner?.follower_count === 'number' ? pin.pinner.follower_count : (typeof pin?.origin_pinner?.follower_count === 'number' ? pin.origin_pinner.follower_count : null),
   };
 }
 
 function extractPinData(html, pinId) {
-  const blocks = [];
-
-  // 1. Relay completed request blocks
-  for (const [, content] of html.matchAll(
-    /window\.__PWS_RELAY_REGISTER_COMPLETED_REQUEST__\("[^"]+",\s*([\s\S]*?)\}\s*\);/g
-  )) {
-    try {
-      const parsed = JSON.parse(content + '}');
-      const pinObj = parsed?.data?.v3GetPinQueryv2?.data;
-      if (pinObj) {
-        const pinB64 = `UGluOj${Buffer.from(pinId).toString('base64').replace(/=+$/, '')}`;
-        if (String(pinObj.entityId) === pinId || String(pinObj.id) === pinId || pinObj.id === pinB64 || pinObj.pinJoin || pinObj.reactionCountsData) {
-          blocks.push(pinObj);
-        }
-      }
-    } catch (e) {}
-  }
-
-  // 2. Application json scripts
-  const jsonBlobs = [...html.matchAll(/<script[^>]*type\s*=\s*"application\/json"[^>]*>([\s\S]*?)<\/script>/gi)];
-  for (const [, content] of jsonBlobs) {
-    if (!content.includes(pinId)) continue;
-    try {
-      const data = JSON.parse(content);
-      const pin = findPinInTree(data, pinId);
-      if (pin) blocks.push(pin);
-    } catch (e) {}
-  }
-
-  // 3. __PWS_DATA__
-  const pwsMatch = html.match(/<script[^>]+id\s*=\s*"__PWS_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
+  // Pattern 1: __PWS_DATA__
+  const pwsMatch = html.match(/id="__PWS_DATA__"[^>]*>([\s\S]*?)<\/script>/);
   if (pwsMatch) {
     try {
       const pws = JSON.parse(pwsMatch[1]);
-      const pin = findPinInTree(pws, pinId);
-      if (pin) blocks.push(pin);
+      const pinObj = pws?.props?.initialReduxState?.pins?.[pinId]
+        || pws?.props?.relayContext?.relayData?.[pinId]
+        || pws?.props?.relayContext?.rootFeed
+        || findPinInTree(pws, pinId);
+      if (pinObj) {
+        const direct = pinObj.aggregated_pin_data || pinObj.saves !== undefined ? pinObj : findPinInTree(pinObj, pinId);
+        if (direct) return formatPin(direct);
+      }
     } catch (e) {}
   }
 
-  if (blocks.length > 0) {
-    const merged = {};
-    for (const b of blocks) {
-      for (const [k, v] of Object.entries(b)) {
-        if (v !== null && v !== undefined) {
-          if (typeof v === 'object' && !Array.isArray(v) && merged[k] && typeof merged[k] === 'object' && !Array.isArray(merged[k])) {
-            merged[k] = { ...merged[k], ...v };
-          } else {
-            merged[k] = v;
-          }
-        }
+  // Pattern 2: relay-preloaded-queries
+  const relayMatch = html.match(/id="relay-preloaded-queries"[^>]*>([\s\S]*?)<\/script>/);
+  if (relayMatch) {
+    try {
+      const queries = JSON.parse(relayMatch[1]);
+      for (const key of Object.keys(queries)) {
+        const found = findPinInTree(queries[key], pinId);
+        if (found) return formatPin(found);
       }
-    }
-    const savesM = html.match(/"saves"\s*:\s*(\d+)/);
-    if (savesM && !merged.saves && !merged.aggregated_pin_data?.aggregated_stats?.saves) {
-      merged.saves = parseInt(savesM[1]);
-    }
-    const commentsM = html.match(/"comment_count"\s*:\s*(\d+)/) || html.match(/"commentCount"\s*:\s*(\d+)/);
-    if (commentsM && !merged.comments && !merged.commentCount && !merged.comment_count && !merged.aggregated_pin_data?.commentCount) {
-      merged.commentCount = parseInt(commentsM[1]);
-    }
-    return formatPin(merged);
+    } catch (e) {}
   }
 
-  // 4. Regex fallback
-  const savesM = html.match(/"saves"\s*:\s*(\d+)/);
-  if (savesM) {
-    const repinsM = html.match(/"repin_count"\s*:\s*(\d+)/);
-    const commentsM = html.match(/"comment_count"\s*:\s*(\d+)/);
-    const annM = html.match(/"visual_annotation"\s*:\s*(\[[^\]]*?\])/);
-    let tags = [];
-    if (annM) try { tags = JSON.parse(annM[1]); } catch (e) {}
+  // Pattern 3: initial-data-feed
+  const feedMatch = html.match(/id="initial-data-feed"[^>]*>([\s\S]*?)<\/script>/);
+  if (feedMatch) {
+    try {
+      const feed = JSON.parse(feedMatch[1]);
+      const found = findPinInTree(feed, pinId);
+      if (found) return formatPin(found);
+    } catch (e) {}
+  }
+
+  // Pattern 4: window.__INITIAL_DATA__
+  const initMatch = html.match(/window\.__INITIAL_DATA__\s*=\s*(\{[\s\S]*?\});<\/script>/);
+  if (initMatch) {
+    try {
+      const init = JSON.parse(initMatch[1]);
+      const found = findPinInTree(init, pinId);
+      if (found) return formatPin(found);
+    } catch (e) {}
+  }
+
+  // Pattern 5: Generic application/json script tags with deep search
+  const scriptRegex = /<script\s+type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi;
+  let match;
+  while ((match = scriptRegex.exec(html)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      const found = findPinInTree(parsed, pinId);
+      if (found) return formatPin(found);
+    } catch (e) {}
+  }
+
+  // Pattern 6: JSON-LD fallback (rich metadata but basic metrics)
+  const jsonLdMatch = html.match(/<script\s+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i);
+  if (jsonLdMatch) {
+    try {
+      const ld = JSON.parse(jsonLdMatch[1]);
+      if (ld && (ld['@type'] === 'SocialMediaPosting' || ld['@type'] === 'ImageObject' || ld.interactionStatistic)) {
+        let saves = 0;
+        let comments = 0;
+        const stats = Array.isArray(ld.interactionStatistic) ? ld.interactionStatistic : (ld.interactionStatistic ? [ld.interactionStatistic] : []);
+        for (const s of stats) {
+          if (s.interactionType && s.interactionType.includes('LikeAction')) saves = Number(s.userInteractionCount || 0);
+          if (s.interactionType && s.interactionType.includes('CommentAction')) comments = Number(s.userInteractionCount || 0);
+        }
+        return {
+          saves,
+          repins: saves,
+          comments,
+          title: ld.headline || ld.name || '',
+          description: ld.articleBody || ld.description || '',
+          link: ld.url || '',
+          domain: '',
+          board_name: '',
+          board_id: null,
+          created_at_pinterest: ld.datePublished || null,
+          image_url: Array.isArray(ld.image) ? ld.image[0] : (typeof ld.image === 'string' ? ld.image : (ld.image?.url || '')),
+          dominant_color: null,
+          image_signature: null,
+          node_id: null,
+          is_video: ld['@type'] === 'VideoObject',
+          reactions: { total: 0 },
+          annotations: [],
+          seo_category: ld.articleSection || null,
+          canonical_pin_id: null,
+          seo_alt_text: null,
+          share_count: 0,
+          board_pin_count: null,
+          board_last_modified_at: null,
+          follower_count: null,
+        };
+      }
+    } catch (e) {}
+  }
+
+  // Fallback: meta tags regex
+  const saveMeta = html.match(/name="pinterest:saves"\s+content="(\d+)"/i) || html.match(/property="pinterest:saves"\s+content="(\d+)"/i);
+  const repinMeta = html.match(/name="pinterest:repins"\s+content="(\d+)"/i) || html.match(/property="pinterest:repins"\s+content="(\d+)"/i);
+  const titleMeta = html.match(/property="og:title"\s+content="([^"]*)"/i);
+  const descMeta = html.match(/property="og:description"\s+content="([^"]*)"/i);
+  const imgMeta = html.match(/property="og:image"\s+content="([^"]*)"/i);
+
+  if (saveMeta || repinMeta || titleMeta) {
     return formatPin({
-      aggregated_pin_data: { aggregated_stats: { saves: parseInt(savesM[1]) } },
-      repin_count: repinsM ? parseInt(repinsM[1]) : 0,
-      comment_count: commentsM ? parseInt(commentsM[1]) : 0,
-      visual_annotation: tags,
+      saves: saveMeta ? parseInt(saveMeta[1], 10) : 0,
+      repins: repinMeta ? parseInt(repinMeta[1], 10) : 0,
+      title: titleMeta ? titleMeta[1] : '',
+      description: descMeta ? descMeta[1] : '',
+      image_large_url: imgMeta ? imgMeta[1] : '',
     });
   }
 
@@ -235,19 +275,63 @@ async function pushBatch(workspaceId, username, pins, followerCount, totalPins) 
   });
   if (res.status >= 200 && res.status < 300) return { ok: true, pushed: pins.length };
   let error = '';
-  try { error = (await res.json()).error || ''; } catch (e) { error = await res.text(); }
+  try {
+    const json = await res.json();
+    error = json.error || '';
+    if (res.status === 409 && error === 'ingest_disabled') {
+      return { ok: false, code: 409, terminal: true, error: 'ingest_disabled (terminal)' };
+    }
+  } catch (e) {
+    error = await res.text();
+  }
   return { ok: false, code: res.status, error: error || `http ${res.status}` };
 }
 
 async function main() {
   checkEnv();
   console.log('\nPinArchive Refresh starting...\n');
-  const accounts = await supaQuery('pa_accounts', 'select=workspace_id,username,follower_count');
+
+  // Load workspace settings to map gating controls
+  const settingsMap = new Map();
+  try {
+    const wsSettings = await supaQuery('pa_workspace_settings', 'select=workspace_id,ingest_enabled,paused_account_policy');
+    if (Array.isArray(wsSettings)) {
+      for (const s of wsSettings) {
+        settingsMap.set(s.workspace_id, s);
+      }
+    }
+  } catch (e) {
+    console.warn('Could not query pa_workspace_settings (using defaults):', e.message);
+  }
+
+  const accounts = await supaQuery('pa_accounts', 'select=workspace_id,username,follower_count,status,ingest_enabled');
   if (!accounts.length) { console.log('No accounts found.'); return; }
   console.log(`Found ${accounts.length} account(s)\n`);
   const summary = { refreshed: 0, updated: 0, pushed: 0, errors: [] };
 
   for (const acc of accounts) {
+    const wsSetting = settingsMap.get(acc.workspace_id);
+    const wsIngestEnabled = wsSetting ? wsSetting.ingest_enabled : true;
+    const pausedPolicy = wsSetting ? wsSetting.paused_account_policy : 'reject';
+
+    // Check workspace-level ingest gate
+    if (wsIngestEnabled === false) {
+      console.log(`[SKIP] Workspace ${acc.workspace_id} ingest is disabled.`);
+      continue;
+    }
+
+    // Check account-level ingest gate
+    if (acc.ingest_enabled === false) {
+      console.log(`[SKIP] Account @${acc.username} ingest is disabled (ingest_enabled=false).`);
+      continue;
+    }
+
+    // Check paused policy gate
+    if (acc.status === 'paused' && pausedPolicy === 'reject') {
+      console.log(`[SKIP] Account @${acc.username} is paused (policy=reject).`);
+      continue;
+    }
+
     const pins = await supaQuery('pa_pins', `select=pin_id,saves,repins,comments,share_count,reactions,annotations,seo_category,canonical_pin_id,seo_alt_text,board_pin_count,board_last_modified_at,archived_at,title,description,link,domain,board_name,board_id,created_at_pinterest,image_url,dominant_color,image_signature,node_id,is_video,velocity&workspace_id=eq.${acc.workspace_id}&order=saves.desc&limit=${CFG.MAX_PINS}`);
     if (!pins.length) continue;
     console.log(`${acc.username}: ${pins.length} pins to refresh`);
@@ -325,8 +409,12 @@ async function main() {
 
       if (changedBatch.length >= CFG.BATCH_SIZE) {
         const result = await pushBatch(acc.workspace_id, acc.username, changedBatch.splice(0, changedBatch.length), accountFollowerCount, pins.length);
-        if (result.ok) summary.pushed += result.pushed;
-        else summary.errors.push(`push: ${result.error}`);
+        if (result.ok) {
+          summary.pushed += result.pushed;
+        } else {
+          summary.errors.push(`push: ${result.error}`);
+          if (result.terminal) break;
+        }
         await sleep(2000);
       }
       await sleep(CFG.SLEEP_MS);
