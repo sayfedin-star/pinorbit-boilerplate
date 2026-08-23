@@ -55,17 +55,29 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const accounts = accRes.data || [];
 
+    // 1. Get exact total pins count once via lightweight HEAD request
+    const { count: totalPinsCount, error: countErr } = await db
+      .from('pa_pins')
+      .select('*', { count: 'exact', head: true })
+      .eq('workspace_id', ws);
+
+    if (countErr) {
+      return json({ success: false, error: countErr.message }, 500);
+    }
+
+    const totalPins = totalPinsCount ?? 0;
+
+    // 2. Paginate over rows without count calculation
     const PAGE = 1000, MAX_PAGES = 20;
-    let offset = 0, archived = 0, sumSaves = 0, sumShares = 0, totalPins = 0;
+    let offset = 0, archived = 0, sumSaves = 0, sumShares = 0;
     while (offset < PAGE * MAX_PAGES) {
-      const { data, count, error } = await db
+      const { data, error } = await db
         .from('pa_pins')
-        .select('saves, share_count, archived_at', { count: 'exact' })
+        .select('saves, share_count, archived_at')
         .eq('workspace_id', ws)
         .order('pin_id', { ascending: true })
         .range(offset, offset + PAGE - 1);
       if (error) return json({ success: false, error: error.message }, 500);
-      totalPins = count ?? totalPins;
       for (const p of data || []) {
         if (p.archived_at !== null) archived++;
         sumSaves += Number(p.saves || 0);
