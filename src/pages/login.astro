@@ -122,20 +122,29 @@ if (Astro.locals.isAuthenticated) {
       const errorBanner = document.getElementById('error-banner');
       const errorMessage = document.getElementById('error-message');
 
+      function getSafeRedirect(): string {
+        const params = new URLSearchParams(window.location.search);
+        const raw = params.get('redirect');
+        if (!raw) return '/dashboard';
+        try {
+          const decoded = decodeURIComponent(raw).trim();
+          if (decoded.startsWith('/') && !decoded.startsWith('//') && !decoded.includes('\\')) {
+            return decoded;
+          }
+        } catch {}
+        return '/dashboard';
+      }
+
       demoBtn?.addEventListener('click', () => {
         localStorage.setItem('pinorbit_demo_auth', 'true');
-        const params = new URLSearchParams(window.location.search);
-        const redirect = params.get('redirect') || '/dashboard';
-        window.location.href = decodeURIComponent(redirect);
+        window.location.href = getSafeRedirect();
       });
 
       // Check if user is already logged in
       async function checkExistingAuth() {
         const session = await getCurrentSession();
         if (session) {
-          const params = new URLSearchParams(window.location.search);
-          const redirect = params.get('redirect') || '/dashboard';
-          window.location.href = decodeURIComponent(redirect);
+          window.location.href = getSafeRedirect();
         }
       }
 
@@ -157,9 +166,7 @@ if (Astro.locals.isAuthenticated) {
 
         try {
           await signIn(email, password);
-          const params = new URLSearchParams(window.location.search);
-          const redirect = params.get('redirect') || '/dashboard';
-          window.location.href = decodeURIComponent(redirect);
+          window.location.href = getSafeRedirect();
         } catch (err: any) {
           if (errorBanner && errorMessage) {
             let errorText = 'Authentication failed. Please verify your credentials.';

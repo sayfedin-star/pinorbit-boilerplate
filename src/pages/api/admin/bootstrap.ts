@@ -67,7 +67,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const result = await bootstrapAdminUser(bodyOptions, runtimeEnv);
+    const result = await bootstrapAdminUser({}, runtimeEnv);
 
     let statusCode = 200;
     if (result.status === 'ALREADY_INITIALIZED' || result.status === 'CONFIG_ERROR') {

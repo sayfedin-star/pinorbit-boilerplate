@@ -1,6 +1,8 @@
 const pipelineConnectionEl = document.querySelector('[data-connection-id]');
 const pipeConnId = pipelineConnectionEl?.getAttribute('data-connection-id');
 
+const escapeHtml = (s: any) => String(s ?? '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m] as string));
+
 const humanizeCron = (expr: string, tz: string) => {
   const m = /^(\d{1,2})\s+(\d{1,2})\s+\*\s+\*\s+\*$/.exec((expr || '').trim());
   return m ? `Daily at ${String(m[2]).padStart(2, '0')}:${String(m[1]).padStart(2, '0')} ${tz}` : (expr || '—');
@@ -1097,11 +1099,11 @@ if (pipeConnId) {
           <tbody>
             ${logs.slice(0, 50).map(l => `
               <tr class="border-b border-border/50 hover:bg-muted/20">
-                <td class="py-2 pr-2 font-mono whitespace-nowrap">${relativeTime(l.date || l.started_at || l.time)}</td>
-                <td class="py-2 pr-2 font-mono font-bold">#${l.job_id}</td>
-                <td class="py-2 pr-2"><span class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold ${l.status === 'OK' || l.status === 'success' || (l.http_code && l.http_code < 400) ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}">${l.status || 'Done'}</span></td>
-                <td class="py-2 pr-2 font-mono">${l.http_code || l.code || '200'}</td>
-                <td class="py-2 font-mono text-muted-foreground">${l.duration ? `${l.duration}s` : '—'}</td>
+                <td class="py-2 pr-2 font-mono whitespace-nowrap">${escapeHtml(relativeTime(l.date || l.started_at || l.time))}</td>
+                <td class="py-2 pr-2 font-mono font-bold">#${escapeHtml(l.job_id)}</td>
+                <td class="py-2 pr-2"><span class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold ${l.status === 'OK' || l.status === 'success' || (l.http_code && l.http_code < 400) ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}">${escapeHtml(l.status || 'Done')}</span></td>
+                <td class="py-2 pr-2 font-mono">${escapeHtml(l.http_code || l.code || '200')}</td>
+                <td class="py-2 font-mono text-muted-foreground">${l.duration ? `${escapeHtml(l.duration)}s` : '—'}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -1156,10 +1158,10 @@ if (pipeConnId) {
           <tbody>
             ${failures.map(f => `
               <tr class="border-b border-border/50 hover:bg-muted/20">
-                <td class="py-2 pr-2 font-mono whitespace-nowrap text-red-500">${relativeTime(f.date || f.started_at || f.time)}</td>
-                <td class="py-2 pr-2 font-mono font-bold">#${f.job_id}</td>
-                <td class="py-2 pr-2 font-mono text-red-500">${f.http_code || f.code || '500'}</td>
-                <td class="py-2 text-slate-700 dark:text-foreground font-mono text-[11px]">${f.message || f.error || 'Request failure'}</td>
+                <td class="py-2 pr-2 font-mono whitespace-nowrap text-red-500">${escapeHtml(relativeTime(f.date || f.started_at || f.time))}</td>
+                <td class="py-2 pr-2 font-mono font-bold">#${escapeHtml(f.job_id)}</td>
+                <td class="py-2 pr-2 font-mono text-red-500">${escapeHtml(f.http_code || f.code || '500')}</td>
+                <td class="py-2 text-slate-700 dark:text-foreground font-mono text-[11px]">${escapeHtml(f.message || f.error || 'Request failure')}</td>
               </tr>
             `).join('')}
           </tbody>

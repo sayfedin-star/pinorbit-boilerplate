@@ -185,6 +185,7 @@ vi.mock('../../server/services/webhook-secrets', () => ({
   getSecretForWorkspace: vi.fn().mockResolvedValue({ secret: 'test_sec', source: 'global', hasOverride: false }),
   getEffectiveSecret: vi.fn().mockResolvedValue({ value: 'test_sec', source: 'global' }),
   removeWorkspaceOverride: vi.fn().mockResolvedValue(true),
+  maskSecret: vi.fn((s: string) => (s ? `••••${s.slice(-4)}` : '••••')),
 }));
 
 vi.mock('../../server/services/kv-webhook-secrets', () => ({

@@ -126,7 +126,8 @@ export const pinnerAnalyticsService = {
       30,
       fromDate,
       toDate,
-      bypassCache
+      bypassCache,
+      limit
     );
     let cached: any = { status: 'MISS', data: null };
 
@@ -185,7 +186,9 @@ export const pinnerAnalyticsService = {
       fromDate,
       toDate,
       30,
-      bypassCache
+      bypassCache,
+      pageSize,
+      page
     );
     let cached: any = { status: 'MISS', data: null };
 

@@ -23,8 +23,10 @@ export async function batchedDelete(
 ): Promise<number> {
   let totalDeleted = 0;
   const batchSize = options.batchSize || 500;
+  const MAX_BATCH_ITERATIONS = 50;
+  let iterations = 0;
 
-  while (true) {
+  while (iterations++ < MAX_BATCH_ITERATIONS) {
     let query = client
       .from(table)
       .select('id')

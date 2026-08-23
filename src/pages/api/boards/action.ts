@@ -84,7 +84,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const extra: Record<string, any> = { workspace_id: workspaceId };
     if (board_name) extra.board_name = board_name;
     if (board_id) extra.board_id = board_id;
-    if (webhook_id) extra.webhook_id = webhook_id;
+    if (webhook_id) {
+      const { data: wh } = await adminClient
+        .from('account_webhooks')
+        .select('id')
+        .eq('id', webhook_id)
+        .eq('account_id', account_id)
+        .maybeSingle();
+
+      if (!wh) {
+        return new Response(JSON.stringify({ error: 'Forbidden: webhook does not belong to this account.' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      extra.webhook_id = webhook_id;
+    }
 
     // Call the existing trigger function
     const result = await triggerBoardAction(account_id, action as 'create' | 'list' | 'delete', extra, runtimeEnv);

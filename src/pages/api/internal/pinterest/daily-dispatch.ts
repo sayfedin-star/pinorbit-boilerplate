@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { dbClients, isKnownDefaultIngestSecret, isProductionEnv } from '../../../../server/db/clients';
 import { getEffectiveSecret } from '../../../../server/services/webhook-secrets';
 import { SORT_MODES } from '../../../../server/services/fastcron-service';
+import { timingSafeEqual } from '../../../../server/lib/timing-safe';
 
 /**
  * Server-Only Internal Daily Dispatch Endpoint (F1, X4, X5, X6).
@@ -91,7 +92,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
   }
 
-  // 3. Look up connection in Project 3 (deleted_at IS NULL)
+  // 3. Authenticate pre-check against global/env secret before detailed queries
+  const ingestSecret = request.headers.get('x-ingest-secret');
+  const legacyDispatchSecret = request.headers.get('x-dispatch-secret');
+  if (legacyDispatchSecret && !ingestSecret) {
+    console.warn('[DailyDispatch] Deprecation warning: Header x-dispatch-secret is deprecated. Use x-ingest-secret instead.');
+  }
+  const providedSecret = ingestSecret || legacyDispatchSecret;
+
+  if (!providedSecret) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: 'Unauthorized: missing authentication header.',
+      }),
+      {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+
+  // 4. Look up connection in Project 3 (deleted_at IS NULL)
   let connection: any = null;
   try {
     const analyticsClient = dbClients.getAnalytics(runtimeEnv);
@@ -128,7 +150,32 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
   }
 
-  // 4. Check if connection is disabled
+  // 5. Resolve expected secret via getEffectiveSecret for the connection's workspace
+  const effectiveSecretResult = await getEffectiveSecret(
+    connection.workspace_id,
+    runtimeEnv
+  );
+  const expectedSecret = effectiveSecretResult?.value;
+
+  if (isProductionEnv(runtimeEnv) && effectiveSecretResult?.source === 'env' && isKnownDefaultIngestSecret(expectedSecret)) {
+    return new Response(JSON.stringify({ success: false, error: 'Service unavailable: ingest secret not configured on server.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // 6. Timing-safe authentication
+  if (!expectedSecret || !(await timingSafeEqual(providedSecret, expectedSecret))) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: 'Unauthorized: invalid authentication header.',
+      }),
+      {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+
+  // 7. Check if connection is disabled
   if (connection.analytics_enabled === false) {
     return new Response(
       JSON.stringify({
@@ -142,7 +189,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
   }
 
-  // 5. Check webhook URL configured (X6)
+  // 8. Check webhook URL configured (X6)
   const isAnalytics = canonicalChannel === 'account_analytics';
   const targetWebhookUrl = isAnalytics
     ? connection.analytics_webhook_url
@@ -156,37 +203,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }),
       {
         status: 409,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-  }
-
-  // 6. Resolve expected secret via getEffectiveSecret (same import ingest.ts uses)
-  const effectiveSecretResult = await getEffectiveSecret(
-    connection.workspace_id,
-    runtimeEnv
-  );
-  const expectedSecret = effectiveSecretResult?.value;
-
-  if (isProductionEnv(runtimeEnv) && effectiveSecretResult?.source === 'env' && isKnownDefaultIngestSecret(expectedSecret)) {
-    return new Response(JSON.stringify({ success: false, error: 'Service unavailable: ingest secret not configured on server.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
-  }
-
-  // 7. Authenticate: accept header x-ingest-secret (or legacy x-dispatch-secret) equal to expectedSecret
-  const ingestSecret = request.headers.get('x-ingest-secret');
-  const legacyDispatchSecret = request.headers.get('x-dispatch-secret');
-  if (legacyDispatchSecret && !ingestSecret) {
-    console.warn('[DailyDispatch] Deprecation warning: Header x-dispatch-secret is deprecated. Use x-ingest-secret instead.');
-  }
-  const providedSecret = ingestSecret || legacyDispatchSecret;
-  if (!providedSecret || !expectedSecret || providedSecret !== expectedSecret) {
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: 'Unauthorized: missing or invalid authentication header.',
-      }),
-      {
-        status: 401,
         headers: { 'Content-Type': 'application/json' },
       }
     );

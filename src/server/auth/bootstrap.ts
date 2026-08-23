@@ -37,7 +37,20 @@ export async function bootstrapAdminUser(
     ...(runtimeEnv || {}),
   } as Record<string, string | undefined>;
 
-  // 1. Resolve Project 1 service role credentials
+  // 1. Resolve admin bootstrap credentials (options or environment)
+  const email = options?.email || envSource.BOOTSTRAP_ADMIN_EMAIL;
+  const password = options?.password || envSource.BOOTSTRAP_ADMIN_PASSWORD;
+
+  if (!email || !password) {
+    return {
+      success: false,
+      status: 'CONFIG_ERROR',
+      message: 'Missing BOOTSTRAP_ADMIN_EMAIL or BOOTSTRAP_ADMIN_PASSWORD in server environment.',
+      timestamp,
+    };
+  }
+
+  // 2. Resolve Project 1 service role credentials
   const supabaseUrl =
     options?.supabaseUrl ||
     envSource.SCHEDULING_SUPABASE_URL ||
@@ -70,19 +83,6 @@ export async function bootstrapAdminUser(
         },
       },
     });
-  }
-
-  // 2. Resolve admin bootstrap credentials
-  const email = options?.email || envSource.BOOTSTRAP_ADMIN_EMAIL;
-  const password = options?.password || envSource.BOOTSTRAP_ADMIN_PASSWORD;
-
-  if (!email || !password) {
-    return {
-      success: false,
-      status: 'CONFIG_ERROR',
-      message: 'Missing BOOTSTRAP_ADMIN_EMAIL or BOOTSTRAP_ADMIN_PASSWORD in environment/options.',
-      timestamp,
-    };
   }
 
   try {
