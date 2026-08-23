@@ -73,6 +73,8 @@ export async function createWorkspace(payload: {
     ]);
     if (memError) {
       console.error('Failed to create owner membership for workspace:', memError);
+      // Attempt rollback to avoid orphaned workspace
+      await supabase.from('workspaces').delete().eq('id', createdWs.id);
       throw new Error(`Failed to create owner membership: ${memError.message}`);
     }
   }
