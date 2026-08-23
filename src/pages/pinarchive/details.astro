@@ -127,7 +127,7 @@ import Layout from '../../layouts/Layout.astro';
             </button>
           </div>
 
-          <!-- Metadata row -->
+          <!-- Metadata row with Created Date (T1 + Created Date directive) -->
           <div class="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border/60">
             <div class="flex items-center gap-1.5">
               <span>Pin ID:</span>
@@ -135,8 +135,13 @@ import Layout from '../../layouts/Layout.astro';
             </div>
             <span>•</span>
             <div class="flex items-center gap-1.5">
+              <span>Created:</span>
+              <span class="font-medium text-foreground" id="pin-created-date-str">—</span>
+            </div>
+            <span>•</span>
+            <div class="flex items-center gap-1.5">
               <span>Archived:</span>
-              <span class="font-medium text-foreground" id="pin-archived-date-str"></span>
+              <span class="font-medium text-foreground" id="pin-archived-date-str">—</span>
             </div>
             <span>•</span>
             <a
@@ -163,7 +168,7 @@ import Layout from '../../layouts/Layout.astro';
       </div>
     </div>
 
-    <!-- ═══ KPI Stats Grid with Snapshot Deltas (T1) ═══ -->
+    <!-- ═══ KPI Stats Grid with Full Numbers & Snapshot Deltas (T1) ═══ -->
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       <!-- Saves -->
       <div class="rounded-xl border border-border bg-card p-4 shadow-sm text-center">
@@ -315,21 +320,28 @@ import Layout from '../../layouts/Layout.astro';
       .replace(/'/g, '&#039;');
   }
 
+  // Full numbers formatting everywhere
   function fmtNumber(n: number | string | null | undefined): string {
+    const num = Number(n) || 0;
+    return num.toLocaleString('en-US');
+  }
+
+  // Compact abbreviation ONLY allowed for SVG chart axis ticks
+  function fmtCompact(n: number | string | null | undefined): string {
     const num = Number(n) || 0;
     if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
     if (num >= 1_000) return (num / 1_000).toFixed(1) + 'k';
-    return num.toLocaleString();
+    return num.toLocaleString('en-US');
   }
 
   function fmtDate(isoString?: string | null): string {
-    if (!isoString) return 'N/A';
+    if (!isoString) return '—';
     try {
       const d = new Date(isoString);
-      if (isNaN(d.getTime())) return 'N/A';
+      if (isNaN(d.getTime())) return '—';
       return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
     } catch {
-      return 'N/A';
+      return '—';
     }
   }
 
@@ -421,10 +433,10 @@ import Layout from '../../layouts/Layout.astro';
         <line x1="${padX}" y1="${gridY2}" x2="${width - padX}" y2="${gridY2}" stroke="currentColor" class="text-border" stroke-dasharray="4 4" stroke-width="1" />
         <line x1="${padX}" y1="${gridY3}" x2="${width - padX}" y2="${gridY3}" stroke="currentColor" class="text-border" stroke-dasharray="4 4" stroke-width="1" />
 
-        <!-- Y Axis Labels -->
-        <text x="${padX - 8}" y="${gridY1}" text-anchor="end" class="fill-muted-foreground text-[10px]" dominant-baseline="middle">${fmtNumber(minVal)}</text>
-        <text x="${padX - 8}" y="${gridY2}" text-anchor="end" class="fill-muted-foreground text-[10px]" dominant-baseline="middle">${fmtNumber(Math.round(maxVal / 2))}</text>
-        <text x="${padX - 8}" y="${gridY3}" text-anchor="end" class="fill-muted-foreground text-[10px]" dominant-baseline="middle">${fmtNumber(maxVal)}</text>
+        <!-- Y Axis Labels (compact formatting allowed only here) -->
+        <text x="${padX - 8}" y="${gridY1}" text-anchor="end" class="fill-muted-foreground text-[10px]" dominant-baseline="middle">${fmtCompact(minVal)}</text>
+        <text x="${padX - 8}" y="${gridY2}" text-anchor="end" class="fill-muted-foreground text-[10px]" dominant-baseline="middle">${fmtCompact(Math.round(maxVal / 2))}</text>
+        <text x="${padX - 8}" y="${gridY3}" text-anchor="end" class="fill-muted-foreground text-[10px]" dominant-baseline="middle">${fmtCompact(maxVal)}</text>
 
         <!-- Area Fill -->
         <path d="${savesArea}" fill="url(#savesGrad)" />
@@ -435,7 +447,7 @@ import Layout from '../../layouts/Layout.astro';
         <!-- Saves Line -->
         <path d="${savesPath}" fill="none" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
 
-        <!-- Interactive Data Points with Tooltips -->
+        <!-- Interactive Data Points with Full Number Tooltips -->
         ${metrics
           .map(
             (m, i) => `
@@ -647,8 +659,12 @@ import Layout from '../../layouts/Layout.astro';
       const idStr = document.getElementById('pin-id-str');
       if (idStr) idStr.textContent = pin.pin_id || pin.id;
 
+      // Created and Archived dates
+      const createdDateStr = document.getElementById('pin-created-date-str');
+      if (createdDateStr) createdDateStr.textContent = fmtDate(pin.created_at_pinterest);
+
       const dateStr = document.getElementById('pin-archived-date-str');
-      if (dateStr) dateStr.textContent = fmtDate(pin.archived_at || pin.created_at_pinterest);
+      if (dateStr) dateStr.textContent = fmtDate(pin.archived_at);
 
       const extLink = document.getElementById('pin-external-link') as HTMLAnchorElement | null;
       if (extLink) {
@@ -660,13 +676,12 @@ import Layout from '../../layouts/Layout.astro';
       setupCopyButton('copy-url-btn', () => pin.link || `https://www.pinterest.com/pin/${pin.pin_id}/`);
       setupCopyButton('copy-title-btn', () => pin.title || `Pin ${pin.pin_id}`);
 
-      // Annotations with real links & counter
+      // Annotations with linked clickable URLs for all chips
       const annContainer = document.getElementById('pin-annotations-container');
       const annCounter = document.getElementById('annotations-counter');
       if (annContainer) {
         const annotations = Array.isArray(pin.annotations) ? pin.annotations : [];
         let linkedCount = 0;
-        let visualCount = 0;
 
         if (annotations.length === 0) {
           annContainer.innerHTML = '<span class="text-xs text-muted-foreground">No annotations stored</span>';
@@ -674,39 +689,38 @@ import Layout from '../../layouts/Layout.astro';
         } else {
           annContainer.innerHTML = annotations
             .map((a: any) => {
-              const name = typeof a === 'string' ? a : a.name;
-              const url = typeof a === 'object' && a?.url ? a.url : null;
-              if (url) {
-                linkedCount++;
-                const fullUrl = `https://www.pinterest.com${url.startsWith('/') ? url : '/' + url}`;
-                return `
-                  <a
-                    href="${escapeHtml(fullUrl)}"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="inline-flex items-center gap-1 text-xs bg-primary/10 hover:bg-primary/20 text-primary px-2.5 py-1 rounded-lg font-medium border border-primary/20 transition-colors"
-                    title="${escapeHtml(name)} (Pinterest Idea)"
-                  >
-                    <span>${escapeHtml(name)}</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                  </a>
-                `;
+              const name = typeof a === 'string' ? a : a?.name || '';
+              if (!name) return '';
+              let fullUrl = '';
+              if (typeof a === 'object' && a?.url) {
+                fullUrl = `https://www.pinterest.com${a.url.startsWith('/') ? a.url : '/' + a.url}`;
+              } else if (typeof a === 'object' && a?.idea_id) {
+                fullUrl = `https://www.pinterest.com/ideas/${encodeURIComponent(name)}/${a.idea_id}/`;
+              } else {
+                fullUrl = `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(name)}`;
               }
-              visualCount++;
+              linkedCount++;
+
               return `
-                <span class="inline-flex items-center gap-1 text-xs bg-muted px-2.5 py-1 rounded-lg text-foreground font-medium border border-border/60">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                <a
+                  href="${escapeHtml(fullUrl)}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-1 text-xs bg-primary/10 hover:bg-primary/20 text-primary px-2.5 py-1 rounded-lg font-medium border border-primary/20 transition-colors"
+                  title="${escapeHtml(name)} (Pinterest Idea)"
+                >
                   <span>${escapeHtml(name)}</span>
-                </span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>
               `;
             })
             .join('');
 
-          if (annCounter) annCounter.textContent = `${linkedCount} linked · ${visualCount} visual`;
+          if (annCounter) annCounter.textContent = `${linkedCount} linked annotation${linkedCount === 1 ? '' : 's'}`;
         }
       }
 
-      // 2. KPI Deltas
+      // 2. KPI Deltas with Full Numbers
       const deltas = pin.deltas || {};
       const savesEl = document.getElementById('kpi-detail-saves');
       if (savesEl) savesEl.textContent = fmtNumber(pin.saves);

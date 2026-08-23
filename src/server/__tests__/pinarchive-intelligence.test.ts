@@ -2,8 +2,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { POST as notesHandler } from '../../pages/api/pinarchive/notes';
 import { GET as pinsHandler } from '../../pages/api/pinarchive/pins';
 import { GET as pinDetailHandler } from '../../pages/api/pinarchive/pin';
+import { POST as accountsDeleteHandler } from '../../pages/api/pinarchive/accounts-delete';
 import { dbClients } from '../db/clients';
 import { assertWorkspaceAccess } from '../auth/workspace-guard';
+import { HttpError } from '../lib/http-error';
 
 vi.mock('../auth/workspace-guard', () => ({
   assertWorkspaceAccess: vi.fn(),
@@ -286,6 +288,93 @@ describe('PinArchive Intelligence Upgrade Test Suite (T1, T2, T3)', () => {
       expect(json.cluster_stats.variations_count).toBe(2);
       expect(json.cluster_stats.rank).toBe(1);
       expect(json.cluster_stats.share_pct).toBe(70);
+    });
+  });
+
+  describe('4. Bulk Accounts Delete Endpoint (POST /api/pinarchive/accounts-delete)', () => {
+    const mockAccId1 = '00000000-0000-0000-0000-000000000010';
+    const mockAccId2 = '00000000-0000-0000-0000-000000000020';
+
+    it('returns 401 when session is missing', async () => {
+      const req = new Request('http://localhost:4321/api/pinarchive/accounts-delete', {
+        method: 'POST',
+        body: JSON.stringify({ account_ids: [mockAccId1] }),
+      });
+      const res = await accountsDeleteHandler({
+        request: req,
+        locals: { user: null, supabase: {}, activeWorkspaceId: mockWsId },
+      } as any);
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 403 when user is not an admin', async () => {
+      vi.mocked(assertWorkspaceAccess).mockRejectedValueOnce(new HttpError(403, 'Forbidden: Admin access required'));
+
+      const req = new Request('http://localhost:4321/api/pinarchive/accounts-delete', {
+        method: 'POST',
+        body: JSON.stringify({ account_ids: [mockAccId1] }),
+      });
+      const res = await accountsDeleteHandler({
+        request: req,
+        locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
+      } as any);
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 400 when account_ids is missing or invalid', async () => {
+      const req1 = new Request('http://localhost:4321/api/pinarchive/accounts-delete', {
+        method: 'POST',
+        body: JSON.stringify({ account_ids: [] }),
+      });
+      const res1 = await accountsDeleteHandler({
+        request: req1,
+        locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
+      } as any);
+      expect(res1.status).toBe(400);
+
+      const req2 = new Request('http://localhost:4321/api/pinarchive/accounts-delete', {
+        method: 'POST',
+        body: JSON.stringify({ account_ids: ['not-a-uuid'] }),
+      });
+      const res2 = await accountsDeleteHandler({
+        request: req2,
+        locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
+      } as any);
+      expect(res2.status).toBe(400);
+    });
+
+    it('deletes accounts and returns 200 with deleted count', async () => {
+      mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_accounts') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                in: vi.fn().mockResolvedValue({ count: 2, error: null }),
+              }),
+            }),
+            delete: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                in: vi.fn().mockResolvedValue({ error: null }),
+              }),
+            }),
+          };
+        }
+        return {};
+      });
+
+      const req = new Request('http://localhost:4321/api/pinarchive/accounts-delete', {
+        method: 'POST',
+        body: JSON.stringify({ account_ids: [mockAccId1, mockAccId2] }),
+      });
+      const res = await accountsDeleteHandler({
+        request: req,
+        locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
+      } as any);
+
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.deleted).toBe(2);
     });
   });
 });
