@@ -212,13 +212,22 @@ describe('PinArchive Module Test Suite', () => {
       const metricsInserted: any[] = [];
       const runsInserted: any[] = [];
 
-      // Setup pa_accounts upsert
+      // Setup pa_accounts mock
       const mockAccountsQuery = {
-        upsert: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { id: mockAccountId, workspace_id: mockWsId, username: 'testuser' },
-          error: null,
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
+          }),
+        }),
+        upsert: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: { id: mockAccountId, workspace_id: mockWsId, username: 'testuser' },
+              error: null,
+            }),
+          }),
         }),
       };
 
@@ -226,6 +235,15 @@ describe('PinArchive Module Test Suite', () => {
       let storedPins: any[] = [];
 
       mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_workspace_settings') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            }),
+          };
+        }
         if (table === 'pa_accounts') {
           return mockAccountsQuery;
         }
@@ -354,8 +372,24 @@ describe('PinArchive Module Test Suite', () => {
       const runsInserted: any[] = [];
 
       mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_workspace_settings') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            }),
+          };
+        }
         if (table === 'pa_accounts') {
           return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+                }),
+              }),
+            }),
             upsert: vi.fn().mockImplementation((data: any) => {
               upsertedAccountData = data;
               return {
@@ -482,8 +516,24 @@ describe('PinArchive Module Test Suite', () => {
 
       let upsertedAccountData: any = null;
       mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_workspace_settings') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            }),
+          };
+        }
         if (table === 'pa_accounts') {
           return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+                }),
+              }),
+            }),
             upsert: vi.fn().mockImplementation((data: any) => {
               upsertedAccountData = data;
               return {
@@ -548,8 +598,24 @@ describe('PinArchive Module Test Suite', () => {
 
       let upsertedAccountData: any = null;
       mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_workspace_settings') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            }),
+          };
+        }
         if (table === 'pa_accounts') {
           return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+                }),
+              }),
+            }),
             upsert: vi.fn().mockImplementation((data: any) => {
               upsertedAccountData = data;
               return {

@@ -10,6 +10,9 @@ import { timingSafeEqual } from '../../../../server/lib/timing-safe';
  *
  * Accepts batches of Pinterest account and pin data pushed from the GAS Web App.
  *
+ * Route-header contract:
+ * 409 ingest_disabled is TERMINAL — callers must NOT retry.
+ *
  * Security & RLS:
  * - Scoped strictly to workspace_id.
  * - Authenticates via x-ingest-secret using the getEffectiveSecret cascade and timingSafeEqual.
@@ -95,11 +98,64 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // 5. Ingest into Project 4 (PinArchive)
   try {
     const pinArchive = dbClients.getPinArchive(runtimeEnv);
+
+    // Gating 1: Load pa_workspace_settings (defaults when absent)
+    const { data: wsSettings } = await pinArchive
+      .from('pa_workspace_settings')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .maybeSingle();
+
+    const ingestEnabled = wsSettings?.ingest_enabled ?? true;
+    const pausedAccountPolicy = wsSettings?.paused_account_policy ?? 'reject';
+    const defaultIntervalDays = wsSettings?.default_interval_days ?? 3;
+    const maxBatchPins = wsSettings?.max_batch_pins ?? 500;
+
+    // Gating 2: Workspace disabled -> 409
+    if (!ingestEnabled) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'ingest_disabled', skipped: true }),
+        { status: 409, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const account_meta = payload.account_meta || {};
-    const accountMeta = account_meta;
     const username = String(payload.username || account_meta.username || '').trim() || 'default';
     const fetchedAt = payload.fetched_at || new Date().toISOString();
-    const pins: any[] = Array.isArray(payload.pins) ? payload.pins : [];
+    const rawPins: any[] = Array.isArray(payload.pins) ? payload.pins : [];
+
+    // Gating 3: Fetch current pa_accounts row before upsert
+    const { data: existingAccount } = await pinArchive
+      .from('pa_accounts')
+      .select('id, status, ingest_enabled, interval_days')
+      .eq('workspace_id', workspaceId)
+      .eq('username', username)
+      .maybeSingle();
+
+    // Account ingest_enabled = false -> write NOTHING
+    if (existingAccount && existingAccount.ingest_enabled === false) {
+      return new Response(
+        JSON.stringify({ success: true, skipped: 'account_ingest_disabled' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Account status = 'paused' and policy = 'reject' -> write NOTHING
+    if (existingAccount && existingAccount.status === 'paused' && pausedAccountPolicy === 'reject') {
+      return new Response(
+        JSON.stringify({ success: true, skipped: 'account_paused' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Gating 4: max_batch_pins truncation
+    let pins = rawPins;
+    let truncatedCount: number | undefined;
+    if (rawPins.length > maxBatchPins) {
+      truncatedCount = rawPins.length;
+      pins = rawPins.slice(0, maxBatchPins);
+    }
+
     const promotedCount = pins.filter((p: any) => Boolean(p.promoted)).length;
 
     // A) Upsert pa_accounts
@@ -118,7 +174,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (typeof payload.follower_count === 'number') accountData.follower_count = payload.follower_count;
     if (typeof account_meta.follower_count === 'number') accountData.follower_count = account_meta.follower_count;
     if (account_meta.sheet_id) accountData.sheet_id = account_meta.sheet_id;
-    if (typeof account_meta.interval_days === 'number') accountData.interval_days = account_meta.interval_days;
+
+    if (typeof account_meta.interval_days === 'number') {
+      accountData.interval_days = account_meta.interval_days;
+    } else if (!existingAccount) {
+      // Apply workspace default_interval_days on new accounts
+      accountData.interval_days = defaultIntervalDays;
+    }
+
     if (account_meta.status) accountData.status = account_meta.status;
     if (account_meta.backfill_status) accountData.backfill_status = account_meta.backfill_status;
     if (account_meta.backfill_cursor !== undefined) accountData.backfill_cursor = account_meta.backfill_cursor;
@@ -202,7 +265,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           promoted: Boolean(p.promoted),
           last_updated_at: fetchedAt,
 
-          // NEW: enrichment (all nullable)
+          // Enrichment (all nullable)
           archived_at: p.archived_at || null,
           annotations: Array.isArray(p.annotations) ? p.annotations : [],
           seo_category: p.seo_category || null,
@@ -289,12 +352,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     await pinArchive.from('pa_runs').insert(runRow);
 
+    const responseData: Record<string, any> = {
+      success: true,
+      accepted: pins.length,
+      archived_pin_ids: pinIds,
+    };
+    if (truncatedCount !== undefined) {
+      responseData.truncated = truncatedCount;
+    }
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        accepted: pins.length,
-        archived_pin_ids: pinIds,
-      }),
+      JSON.stringify(responseData),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {
