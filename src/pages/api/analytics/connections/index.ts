@@ -4,6 +4,15 @@ import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../../server/auth/workspace-guard';
 import { analyticsDb } from '../../../../server/db/analytics';
 
+function sanitizeConnection(conn: any) {
+  if (!conn || typeof conn !== 'object') return conn;
+  const copy = { ...conn };
+  delete copy.fastcron_token;
+  delete copy.analytics_fastcron_token;
+  delete copy.top_pins_fastcron_token;
+  return copy;
+}
+
 export const GET: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
   const schedulingClient = locals.supabase;
@@ -39,7 +48,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       windowDays
     );
 
-    return new Response(JSON.stringify({ success: true, data: connections }), {
+    return new Response(JSON.stringify({ success: true, data: connections.map(sanitizeConnection) }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -130,12 +139,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       analyticsEnabled
     );
 
+    const sanitized = sanitizeConnection(connection);
     return new Response(
       JSON.stringify({
         success: true,
         connection_id: connection.id,
-        account: connection, // for backward compatibility
-        connection,
+        account: sanitized, // for backward compatibility
+        connection: sanitized,
         message: 'Pinterest connection created successfully.',
       }),
       {

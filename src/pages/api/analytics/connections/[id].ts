@@ -5,6 +5,15 @@ import { assertWorkspaceAccess } from '../../../../server/auth/workspace-guard';
 import { analyticsDb } from '../../../../server/db/analytics';
 import { fastcronService } from '../../../../server/services/fastcron-service';
 
+function sanitizeConnection(conn: any) {
+  if (!conn || typeof conn !== 'object') return conn;
+  const copy = { ...conn };
+  delete copy.fastcron_token;
+  delete copy.analytics_fastcron_token;
+  delete copy.top_pins_fastcron_token;
+  return copy;
+}
+
 export const PATCH: APIRoute = async ({ params, request, locals }) => {
   const user = locals.user;
   const schedulingClient = locals.supabase;
@@ -134,11 +143,12 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       updates
     );
 
+    const sanitized = sanitizeConnection(updated);
     return new Response(
       JSON.stringify({
         success: true,
-        account: updated, // backward compatibility
-        connection: updated,
+        account: sanitized, // backward compatibility
+        connection: sanitized,
         message: 'Pinterest connection updated successfully.',
       }),
       {

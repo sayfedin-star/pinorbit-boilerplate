@@ -46,8 +46,12 @@ export const GET: APIRoute = async ({ url, locals }) => {
       data = basicData;
     }
 
-    // Fetch account_webhooks map for robust label resolution
-    const { data: webhooksData } = await adminClient.from('account_webhooks').select('id, label');
+    // Fetch account_webhooks map for robust label resolution (scoped to workspace accounts)
+    const { data: wsAccounts } = await adminClient.from('accounts').select('id').eq('workspace_id', workspaceId);
+    const wsAccountIds = (wsAccounts || []).map((a: any) => a.id);
+    const { data: webhooksData } = wsAccountIds.length > 0
+      ? await adminClient.from('account_webhooks').select('id, label').in('account_id', wsAccountIds)
+      : { data: [] };
     const webhookMap = new Map<string, string>();
     (webhooksData || []).forEach((w: any) => {
       if (w.id && w.label) webhookMap.set(w.id, w.label);
@@ -174,7 +178,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } else {
       await adminClient.from('posting_schedules').update({ status: 'active', fastcron_job_id: syncResult.job_id }).eq('id', inserted.id);
     }
-    return new Response(JSON.stringify({ ...inserted, job_id: syncResult.job_id }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+    const responseSchedule = { ...inserted };
+    delete responseSchedule.fastcron_token_encrypted;
+    return new Response(JSON.stringify({ ...responseSchedule, job_id: syncResult.job_id }), { status: 201, headers: { 'Content-Type': 'application/json' } });
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message || 'Failed to create schedule' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }

@@ -676,6 +676,12 @@ export const prerender = false;
   var connectionsList = [];
   var currentSelectedConnection = null;
 
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, function (m) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+    });
+  }
+
   function showToast(message, type) {
     if (type === undefined) type = 'info';
     var container = document.getElementById('toast-container');
@@ -691,7 +697,13 @@ export const prerender = false;
         ? 'bg-red-950 text-red-100 border-red-700'
         : 'bg-card text-foreground border-border'
     );
-    toast.innerHTML = '<span>' + message + '</span><button class="text-xs opacity-70 hover:opacity-100 ml-2 font-bold">&times;</button>';
+    var span = document.createElement('span');
+    span.textContent = message;
+    var closeBtn = document.createElement('button');
+    closeBtn.className = 'text-xs opacity-70 hover:opacity-100 ml-2 font-bold';
+    closeBtn.innerHTML = '&times;';
+    toast.appendChild(span);
+    toast.appendChild(closeBtn);
     container.appendChild(toast);
     requestAnimationFrame(function () {
       toast.classList.remove('translate-y-2', 'opacity-0');
@@ -700,8 +712,7 @@ export const prerender = false;
       toast.classList.add('opacity-0', 'translate-y-2');
       setTimeout(function () { toast.remove(); }, 300);
     };
-    var closeBtn = toast.querySelector('button');
-    if (closeBtn) closeBtn.addEventListener('click', dismiss);
+    closeBtn.addEventListener('click', dismiss);
     setTimeout(dismiss, 5000);
   }
 
@@ -770,10 +781,13 @@ export const prerender = false;
             ? '<span class="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Active</span>'
             : '<span class="inline-flex items-center rounded-full bg-slate-500/10 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-400">Disabled</span>';
 
+          var safeId = escapeHtml(conn.id);
+          var safeName = escapeHtml(conn.display_name || 'Account');
+
           return '<tr class="hover:bg-muted/30 transition-colors">' +
             '<td class="py-3.5 px-4 font-semibold">' +
-              '<a href="/analytics/' + conn.id + '" class="text-primary hover:underline flex items-center gap-1.5 group">' +
-                '<span class="font-bold text-foreground group-hover:text-primary transition-colors">' + (conn.display_name || 'Account') + '</span>' +
+              '<a href="/analytics/' + safeId + '" class="text-primary hover:underline flex items-center gap-1.5 group">' +
+                '<span class="font-bold text-foreground group-hover:text-primary transition-colors">' + safeName + '</span>' +
                 '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>' +
               '</a>' +
             '</td>' +
@@ -786,8 +800,8 @@ export const prerender = false;
             '<td class="py-3.5 px-4 text-right font-medium text-foreground">' + formatNumber(stats.saves) + '</td>' +
             '<td class="py-3.5 px-4 text-right">' +
               '<div class="flex items-center justify-end gap-1.5">' +
-                '<a href="/analytics/' + conn.id + '" class="rounded-lg border border-border bg-card px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted transition-all" title="View Detailed Analytics">View</a>' +
-                '<button data-settings-id="' + conn.id + '" class="settings-trigger-btn rounded-lg border border-border bg-card p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-all" title="Configure Settings & Schedules">' +
+                '<a href="/analytics/' + safeId + '" class="rounded-lg border border-border bg-card px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted transition-all" title="View Detailed Analytics">View</a>' +
+                '<button data-settings-id="' + safeId + '" class="settings-trigger-btn rounded-lg border border-border bg-card p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-all" title="Configure Settings & Schedules">' +
                   '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>' +
                 '</button>' +
               '</div>' +

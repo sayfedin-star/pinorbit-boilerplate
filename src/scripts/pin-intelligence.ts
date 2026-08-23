@@ -60,10 +60,10 @@ if (intelConnId) {
   function renderTrendBadge(trend: string): string {
     if (!trend) return `<span class="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">▬</span>`;
     if (trend.startsWith('▲')) {
-      return `<span class="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">${trend}</span>`;
+      return `<span class="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">${escapeHtml(trend)}</span>`;
     }
     if (trend.startsWith('▼')) {
-      return `<span class="inline-flex items-center gap-0.5 rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-bold text-rose-600 dark:text-rose-400 border border-rose-500/20">${trend}</span>`;
+      return `<span class="inline-flex items-center gap-0.5 rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-bold text-rose-600 dark:text-rose-400 border border-rose-500/20">${escapeHtml(trend)}</span>`;
     }
     if (trend === 'NEW') {
       return `<span class="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary border border-primary/20">NEW</span>`;

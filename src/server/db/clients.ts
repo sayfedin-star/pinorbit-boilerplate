@@ -256,7 +256,10 @@ export function createAnalyticsClient(runtimeEnv?: Record<string, any>): Supabas
  */
 export function createPinArchiveClient(runtimeEnv?: Record<string, any>): SupabaseClient {
   const env = getServerEnv(runtimeEnv);
-  const key = env.PINARCHIVE_SUPABASE_SECRET_KEY || env.SCHEDULING_SUPABASE_PUBLISHABLE_KEY;
+  const key = env.PINARCHIVE_SUPABASE_SECRET_KEY;
+  if (!key) {
+    throw new Error('Missing PINARCHIVE_SUPABASE_SECRET_KEY in server environment.');
+  }
   return createClient(env.PINARCHIVE_SUPABASE_URL, key, {
     auth: {
       persistSession: false,

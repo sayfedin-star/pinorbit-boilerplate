@@ -13,7 +13,7 @@ const asNumber = (v: any)          => { const n = Number(v); return Number.isFin
 function getStatusBadge(status: any) {
   const s = asStatus(status);
   if (s === 'READY') return '<span class="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold text-emerald-500">READY</span>';
-  return `<span class="rounded bg-yellow-500/10 px-1.5 py-0.5 text-[9px] font-bold text-yellow-600">${s}</span>`;
+  return `<span class="rounded bg-yellow-500/10 px-1.5 py-0.5 text-[9px] font-bold text-yellow-600">${escapeHtml(s)}</span>`;
 }
 
 // State

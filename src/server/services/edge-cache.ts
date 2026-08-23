@@ -55,13 +55,15 @@ export const edgeCache = {
       windowDays = 30,
       fromDate?: string,
       toDate?: string,
-      bypassCache = false
+      bypassCache = false,
+      limit = 50
     ): string {
       const bypassPart = bypassCache ? ':bypass' : '';
+      const limitPart = limit !== 50 ? `:l${limit}` : '';
       if (fromDate && toDate) {
-        return `analytics:${workspaceId}:${connectionId}:top-pins:${fromDate}_${toDate}:${sortBy}${bypassPart}`;
+        return `analytics:${workspaceId}:${connectionId}:top-pins:${fromDate}_${toDate}:${sortBy}${limitPart}${bypassPart}`;
       }
-      return `analytics:${workspaceId}:${connectionId}:top-pins:${windowDays}d:${sortBy}${bypassPart}`;
+      return `analytics:${workspaceId}:${connectionId}:top-pins:${windowDays}d:${sortBy}${limitPart}${bypassPart}`;
     },
     topPinsPaged(
       workspaceId: string,
@@ -70,13 +72,16 @@ export const edgeCache = {
       fromDate?: string,
       toDate?: string,
       windowDays = 30,
-      bypassCache = false
+      bypassCache = false,
+      pageSize = 25,
+      page = 1
     ): string {
       const bypassPart = bypassCache ? ':bypass' : '';
+      const pagePart = (page !== 1 || pageSize !== 25) ? `:p${page}_ps${pageSize}` : '';
       if (fromDate && toDate) {
-        return `analytics:${workspaceId}:${connectionId}:top-pins:paged:v1:${fromDate}_${toDate}:${sortBy}${bypassPart}`;
+        return `analytics:${workspaceId}:${connectionId}:top-pins:paged:v1:${fromDate}_${toDate}:${sortBy}${pagePart}${bypassPart}`;
       }
-      return `analytics:${workspaceId}:${connectionId}:top-pins:paged:v1:${windowDays}d:${sortBy}${bypassPart}`;
+      return `analytics:${workspaceId}:${connectionId}:top-pins:paged:v1:${windowDays}d:${sortBy}${pagePart}${bypassPart}`;
     },
     timeseries(workspaceId: string, connectionId: string, windowDays = 30): string {
       return `analytics:${workspaceId}:${connectionId}:timeseries:${windowDays}d`;
@@ -194,7 +199,7 @@ export const edgeCache = {
       try {
         let cursor: string | undefined = undefined;
         do {
-          const list = await kvNamespace.list({ prefix, cursor });
+          const list: any = await kvNamespace.list({ prefix, cursor });
           for (const k of list.keys || []) {
             await kvNamespace.delete(k.name);
           }

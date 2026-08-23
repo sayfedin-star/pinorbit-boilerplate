@@ -9,23 +9,39 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const schedulingClient = locals.supabase;
   const runtimeEnv = (locals as any)?.runtime?.env || (locals as any)?.runtimeEnv || {};
 
+  if (!user || !schedulingClient) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   let body: any = {};
   try {
     body = JSON.parse((await request.text()) || '{}');
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 });
+    return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   const workspaceId = body.workspace_id;
   if (!workspaceId) {
-    return new Response(JSON.stringify({ error: 'workspace_id required' }), { status: 400 });
+    return new Response(JSON.stringify({ error: 'workspace_id required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   try {
     // Must be workspace owner to delete
     const access = await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'owner');
     if (!access.isOwner) {
-      return new Response(JSON.stringify({ error: 'Only workspace owners can delete workspaces' }), { status: 403 });
+      return new Response(JSON.stringify({ error: 'Only workspace owners can delete workspaces' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // Check P1 tables
@@ -37,14 +53,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     ]);
 
     // Check P2 tables
-    const p2Admin = dbClients.getCompetitorsAdmin(runtimeEnv);
+    const p2Admin = dbClients.getCompetitors(runtimeEnv);
     const [compRes, compBoardRes] = await Promise.all([
       p2Admin.from('competitors').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
       p2Admin.from('competitor_boards').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
     ]);
 
     // Check P3 tables
-    const p3Admin = dbClients.getAnalyticsAdmin(runtimeEnv);
+    const p3Admin = dbClients.getAnalytics(runtimeEnv);
     const connRes = await p3Admin
       .from('analytics_connections')
       .select('id', { count: 'exact', head: true })
@@ -57,15 +73,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return new Response(JSON.stringify({
         success: false,
         error: `Workspace is not empty (${total} records across P1/P2/P3). Delete all data first.`
-      }), { status: 400 });
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // Delete workspace
     const { error } = await schedulingClient.from('workspaces').delete().eq('id', workspaceId);
     if (error) throw error;
 
-    return new Response(JSON.stringify({ success: true, deleted: workspaceId }), { status: 200 });
+    return new Response(JSON.stringify({ success: true, deleted: workspaceId }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    const isAuth = err.message?.includes('Forbidden') || err.message?.includes('Unauthorized');
+    return new Response(JSON.stringify({ error: err.message || 'Failed to delete workspace' }), {
+      status: isAuth ? (err.status || 403) : (err.status || 500),
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 };

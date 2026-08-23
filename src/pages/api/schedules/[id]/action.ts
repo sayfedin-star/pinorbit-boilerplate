@@ -99,7 +99,9 @@ export const POST: APIRoute = async ({ request, params, locals }) => {
     if (action === 'clone') {
       const result = await clonePublishingSchedule(id, runtimeEnv);
       if (!result.success) throw new Error(result.error);
-      return new Response(JSON.stringify({ success: true, new_schedule: result.new_schedule }), { status: 200 });
+      const sanitized = { ...result.new_schedule };
+      delete sanitized.fastcron_token_encrypted;
+      return new Response(JSON.stringify({ success: true, new_schedule: sanitized }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
     if (action === 'delete') {
       const result = await deletePublishingSchedule(id, schedule.fastcron_job_id, runtimeEnv);

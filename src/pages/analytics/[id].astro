@@ -5,15 +5,29 @@ import FastCronOptionsCard from '../../components/analytics/FastCronOptionsCard.
 import ConnectionHealthBanner from '../../components/analytics/ConnectionHealthBanner.astro';
 
 import { dbClients } from '../../server/db/clients';
-import { assertWorkspaceAccess } from '../../lib/auth';
+import { assertWorkspaceAccess } from '../../server/auth/workspace-guard';
 import type { Database } from '../../lib/database.types';
 
 export const prerender = false;
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const { id: connectionId } = Astro.params;
 const workspaceId = Astro.locals.activeWorkspaceId || '';
+const user = Astro.locals.user;
+const schedulingClient = Astro.locals.supabase;
 
-if (!workspaceId || !connectionId) {
+if (!workspaceId || !connectionId || !UUID_REGEX.test(workspaceId) || !UUID_REGEX.test(connectionId)) {
+  return Astro.redirect('/analytics');
+}
+
+if (!user || !schedulingClient) {
+  return Astro.redirect('/login');
+}
+
+try {
+  await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'member');
+} catch {
   return Astro.redirect('/analytics');
 }
 

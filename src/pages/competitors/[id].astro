@@ -481,6 +481,8 @@ export async function getStaticPaths() {
   import type { Competitor, CompetitorBoard, CompetitorSnapshot, CompetitorDeltaStats } from '../../lib/types';
   import { formatNumber } from '../../lib/ui-helpers';
 
+  const escHtml = (s: any) => String(s ?? '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m] as string));
+
   // Get Competitor ID from URL pathname
   const pathname = window.location.pathname;
   const pathParts = pathname.split('/');
@@ -948,13 +950,14 @@ export async function getStaticPaths() {
     // Render table rows
     boardsTableBody.innerHTML = paginatedSlice
       .map((b) => {
-        const boardUrl = b.url ? (b.url.startsWith('http') ? b.url : `https://www.pinterest.com${b.url}`) : `https://www.pinterest.com/${competitorData?.username}/`;
+        const rawBoardUrl = b.url ? (b.url.startsWith('http') ? b.url : `https://www.pinterest.com${b.url}`) : `https://www.pinterest.com/${competitorData?.username}/`;
+        const boardUrl = /^https?:\/\//i.test(rawBoardUrl) ? rawBoardUrl : '#';
         return `
           <tr class="hover:bg-muted/30 transition-colors">
             <td class="py-4 px-6">
               <div class="flex flex-col min-w-0">
-                <span class="text-xs font-bold text-foreground truncate">${b.name}</span>
-                <p class="text-[11px] text-muted-foreground line-clamp-2 max-w-md">${b.description || 'No description'}</p>
+                <span class="text-xs font-bold text-foreground truncate">${escHtml(b.name)}</span>
+                <p class="text-[11px] text-muted-foreground line-clamp-2 max-w-md">${escHtml(b.description || 'No description')}</p>
               </div>
             </td>
             <td class="py-4 px-4 font-semibold text-foreground">
@@ -971,7 +974,7 @@ export async function getStaticPaths() {
             </td>
             <td class="py-4 px-6 text-right">
               <a
-                href="${boardUrl}"
+                href="${escHtml(boardUrl)}"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted hover:text-primary transition-all"
@@ -1199,7 +1202,7 @@ export async function getStaticPaths() {
     if (tagsContainer) {
       if (Array.isArray(competitorData.tags) && competitorData.tags.length > 0) {
         tagsContainer.innerHTML = competitorData.tags
-          .map(t => `<span class="rounded bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground border border-border/50">#${t}</span>`)
+          .map(t => `<span class="rounded bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground border border-border/50">#${escHtml(t)}</span>`)
           .join('');
       } else {
         tagsContainer.innerHTML = '';
@@ -1207,11 +1210,11 @@ export async function getStaticPaths() {
     }
 
     if (competitorPinterestLink) {
-      competitorPinterestLink.href = `https://www.pinterest.com/${competitorData.username}/`;
+      competitorPinterestLink.href = `https://www.pinterest.com/${encodeURIComponent(competitorData.username)}/`;
     }
 
     // Website & Domain Verified Status
-    if (competitorData.website_url) {
+    if (competitorData.website_url && /^https?:\/\//i.test(competitorData.website_url)) {
       if (competitorWebsiteContainer) competitorWebsiteContainer.classList.remove('hidden');
       if (competitorWebsiteLink) competitorWebsiteLink.href = competitorData.website_url;
       if (competitorWebsiteText) competitorWebsiteText.textContent = competitorData.website_url.replace(/^https?:\/\//, '').replace(/\/$/, '');
