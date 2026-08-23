@@ -46,7 +46,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const [accRes, pinsRes] = await Promise.all([
       db
         .from('pa_accounts')
-        .select('id, username, status, pins_count, follower_count, last_run_at, sheet_id, interval_days, next_run_at')
+        .select('id, username, status, pins_count, follower_count, last_run_at, sheet_id, interval_days, next_run_at, ingest_enabled')
         .eq('workspace_id', ws)
         .limit(100),
       db

@@ -120,6 +120,93 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
     </div>
   </div>
 
+  <!-- ═══ Ingestion Controls Card (Unit A4) ═══ -->
+  <section class="mb-8 rounded-xl border border-border bg-card p-5 shadow-sm space-y-4" aria-labelledby="ingest-settings-heading">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-border">
+      <div>
+        <h2 id="ingest-settings-heading" class="text-sm font-bold text-foreground flex items-center gap-2">
+          <span>⚙️ GAS Ingestion Controls</span>
+          <span id="settings-role-badge" class="hidden text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Admin Only</span>
+        </h2>
+        <p class="text-xs text-muted-foreground mt-0.5">Workspace-level gatekeeper limits and paused account ingestion policy.</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="settings-status-msg" class="text-xs font-semibold"></span>
+        <button
+          id="save-ingest-settings-btn"
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span>Save Settings</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Master Ingestion Switch -->
+      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
+        <div>
+          <span class="text-xs font-bold text-foreground block">Master Ingest</span>
+          <span class="text-[11px] text-muted-foreground">Enable/pause all GAS ingestion.</span>
+        </div>
+        <div class="mt-2.5 flex items-center gap-2">
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="setting-ingest-enabled" checked class="sr-only peer" />
+            <div class="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+          </label>
+          <span id="setting-ingest-label" class="text-xs font-bold text-emerald-500">Active</span>
+        </div>
+      </div>
+
+      <!-- Paused Account Policy -->
+      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
+        <div>
+          <label for="setting-paused-policy" class="text-xs font-bold text-foreground block">Paused Policy</label>
+          <span class="text-[11px] text-muted-foreground">Behavior for paused accounts.</span>
+        </div>
+        <select
+          id="setting-paused-policy"
+          class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none cursor-pointer"
+        >
+          <option value="reject">Reject (Skip Paused)</option>
+          <option value="accept">Accept (Allow Ingest)</option>
+        </select>
+      </div>
+
+      <!-- Default Interval Days -->
+      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
+        <div>
+          <label for="setting-default-interval" class="text-xs font-bold text-foreground block">Default Interval</label>
+          <span class="text-[11px] text-muted-foreground">For newly imported accounts (1-30d).</span>
+        </div>
+        <input
+          id="setting-default-interval"
+          type="number"
+          min="1"
+          max="30"
+          value="3"
+          class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none"
+        />
+      </div>
+
+      <!-- Max Batch Pins -->
+      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
+        <div>
+          <label for="setting-max-batch" class="text-xs font-bold text-foreground block">Max Batch Pins</label>
+          <span class="text-[11px] text-muted-foreground">Safety cap per push (1-5000).</span>
+        </div>
+        <input
+          id="setting-max-batch"
+          type="number"
+          min="1"
+          max="5000"
+          value="500"
+          class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none"
+        />
+      </div>
+    </div>
+  </section>
+
   <!-- ═══ View A: Accounts Strip with Bulk Delete Action Bar ═══ -->
   <section class="mb-8" aria-labelledby="accounts-section-heading">
     <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -558,6 +645,151 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
     }
   }
 
+  let canAdminSettings = true;
+
+  async function loadSettings() {
+    try {
+      const res = await fetch('/api/pinarchive/settings');
+      if (res.status === 401 || res.status === 403) {
+        canAdminSettings = false;
+        disableSettingsForm();
+        return;
+      }
+      const json = await res.json();
+      if (!json.success) return;
+
+      const ingestCb = document.getElementById('setting-ingest-enabled') as HTMLInputElement | null;
+      const ingestLabel = document.getElementById('setting-ingest-label');
+      const policySel = document.getElementById('setting-paused-policy') as HTMLSelectElement | null;
+      const intervalInp = document.getElementById('setting-default-interval') as HTMLInputElement | null;
+      const maxBatchInp = document.getElementById('setting-max-batch') as HTMLInputElement | null;
+
+      if (ingestCb) {
+        ingestCb.checked = Boolean(json.ingest_enabled);
+        if (ingestLabel) {
+          ingestLabel.textContent = ingestCb.checked ? 'Active' : 'Disabled';
+          ingestLabel.className = `text-xs font-bold ${ingestCb.checked ? 'text-emerald-500' : 'text-rose-500'}`;
+        }
+      }
+      if (policySel) policySel.value = json.paused_account_policy || 'reject';
+      if (intervalInp) intervalInp.value = String(json.default_interval_days || 3);
+      if (maxBatchInp) maxBatchInp.value = String(json.max_batch_pins || 500);
+    } catch (e) {
+      console.error('Failed to load settings:', e);
+    }
+  }
+
+  function disableSettingsForm() {
+    const saveBtn = document.getElementById('save-ingest-settings-btn') as HTMLButtonElement | null;
+    const roleBadge = document.getElementById('settings-role-badge');
+    const inputs = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+      '#setting-ingest-enabled, #setting-paused-policy, #setting-default-interval, #setting-max-batch'
+    );
+    inputs.forEach((el) => {
+      el.disabled = true;
+    });
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.classList.add('hidden');
+    }
+    if (roleBadge) roleBadge.classList.remove('hidden');
+  }
+
+  async function saveSettings() {
+    const ingestCb = document.getElementById('setting-ingest-enabled') as HTMLInputElement | null;
+    const policySel = document.getElementById('setting-paused-policy') as HTMLSelectElement | null;
+    const intervalInp = document.getElementById('setting-default-interval') as HTMLInputElement | null;
+    const maxBatchInp = document.getElementById('setting-max-batch') as HTMLInputElement | null;
+    const statusMsg = document.getElementById('settings-status-msg');
+    const saveBtn = document.getElementById('save-ingest-settings-btn') as HTMLButtonElement | null;
+
+    if (!ingestCb || !policySel || !intervalInp || !maxBatchInp) return;
+
+    if (saveBtn) saveBtn.disabled = true;
+    if (statusMsg) {
+      statusMsg.textContent = 'Saving...';
+      statusMsg.className = 'text-xs font-semibold text-muted-foreground';
+    }
+
+    try {
+      const res = await fetch('/api/pinarchive/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ingest_enabled: ingestCb.checked,
+          paused_account_policy: policySel.value,
+          default_interval_days: parseInt(intervalInp.value, 10) || 3,
+          max_batch_pins: parseInt(maxBatchInp.value, 10) || 500,
+        }),
+      });
+
+      if (res.status === 403) {
+        canAdminSettings = false;
+        disableSettingsForm();
+        if (statusMsg) {
+          statusMsg.textContent = 'Forbidden: Admin access required.';
+          statusMsg.className = 'text-xs font-semibold text-rose-500';
+        }
+        return;
+      }
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to save settings');
+      }
+
+      if (statusMsg) {
+        statusMsg.textContent = 'Settings saved!';
+        statusMsg.className = 'text-xs font-semibold text-emerald-500';
+        setTimeout(() => {
+          if (statusMsg) statusMsg.textContent = '';
+        }, 3000);
+      }
+    } catch (e: any) {
+      if (statusMsg) {
+        statusMsg.textContent = e.message || 'Save failed';
+        statusMsg.className = 'text-xs font-semibold text-rose-500';
+      }
+    } finally {
+      if (saveBtn && canAdminSettings) saveBtn.disabled = false;
+    }
+  }
+
+  function attachAccountIngestToggleListeners() {
+    document.querySelectorAll<HTMLInputElement>('[data-acc-ingest-toggle]').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const id = cb.getAttribute('data-acc-ingest-toggle');
+        if (!id) return;
+        const enabled = cb.checked;
+        cb.disabled = true;
+
+        try {
+          const res = await fetch('/api/pinarchive/accounts-ingest-toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ account_ids: [id], ingest_enabled: enabled }),
+          });
+
+          if (res.status === 403) {
+            cb.checked = !enabled;
+            alert('Admin access required to toggle account ingestion.');
+            return;
+          }
+
+          const json = await res.json();
+          if (!res.ok || !json.success) {
+            cb.checked = !enabled;
+            alert(json.error || 'Failed to update account ingest status.');
+          }
+        } catch {
+          cb.checked = !enabled;
+        } finally {
+          cb.disabled = false;
+        }
+      });
+    });
+  }
+
   function renderAccountsStrip(accounts: any[]) {
     const strip = document.getElementById('accounts-strip');
     const stripCount = document.getElementById('accounts-strip-count');
@@ -609,6 +841,19 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
                   <span class="font-semibold text-foreground">${fmtNumber(acc.pins_count)}</span>
                 </div>
               </div>
+              <div class="mt-3 pt-2 text-[10px] text-muted-foreground flex items-center justify-between border-t border-border/40">
+                <span>Accept GAS Data:</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    data-acc-ingest-toggle="${escapeHtml(acc.id)}"
+                    ${acc.ingest_enabled !== false ? 'checked' : ''}
+                    class="sr-only peer"
+                    id="toggle-ingest-${escapeHtml(acc.id)}"
+                  />
+                  <div class="w-7 h-4 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
             </div>
             <div class="mt-3 pt-2 text-[10px] text-muted-foreground flex items-center justify-between">
               <span>Last run:</span>
@@ -620,6 +865,7 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
       .join('');
 
     attachAccountSelectionListeners();
+    attachAccountIngestToggleListeners();
   }
 
   function attachAccountSelectionListeners() {
@@ -1340,10 +1586,28 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
   }
 
   function init() {
+    loadSettings();
     loadOverview();
     loadPins();
     loadTopics();
     setupAccountDeleteModal();
+
+    // Ingestion Settings Save & Toggle
+    const saveSettingsBtn = document.getElementById('save-ingest-settings-btn');
+    if (saveSettingsBtn) {
+      saveSettingsBtn.addEventListener('click', saveSettings);
+    }
+
+    const masterIngestCb = document.getElementById('setting-ingest-enabled') as HTMLInputElement | null;
+    if (masterIngestCb) {
+      masterIngestCb.addEventListener('change', () => {
+        const label = document.getElementById('setting-ingest-label');
+        if (label) {
+          label.textContent = masterIngestCb.checked ? 'Active' : 'Disabled';
+          label.className = `text-xs font-bold ${masterIngestCb.checked ? 'text-emerald-500' : 'text-rose-500'}`;
+        }
+      });
+    }
 
     // View toggles
     const gridBtn = document.getElementById('view-grid-btn');
