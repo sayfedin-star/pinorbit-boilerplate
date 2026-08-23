@@ -177,6 +177,10 @@ function extractPinData(html, pinId) {
     if (savesM && !merged.saves && !merged.aggregated_pin_data?.aggregated_stats?.saves) {
       merged.saves = parseInt(savesM[1]);
     }
+    const commentsM = html.match(/"comment_count"\s*:\s*(\d+)/) || html.match(/"commentCount"\s*:\s*(\d+)/);
+    if (commentsM && !merged.comments && !merged.commentCount && !merged.comment_count && !merged.aggregated_pin_data?.commentCount) {
+      merged.commentCount = parseInt(commentsM[1]);
+    }
     return formatPin(merged);
   }
 
@@ -240,7 +244,7 @@ async function main() {
   const summary = { refreshed: 0, updated: 0, pushed: 0, errors: [] };
 
   for (const acc of accounts) {
-    const pins = await supaQuery('pa_pins', `select=pin_id,saves,repins,comments,share_count,title,description,link,domain,board_name,created_at,image_url,tags&workspace_id=eq.${acc.workspace_id}&order=saves.desc&limit=${CFG.MAX_PINS}`);
+    const pins = await supaQuery('pa_pins', `select=pin_id,saves,repins,comments,share_count,reactions,annotations,seo_category,canonical_pin_id,seo_alt_text,board_pin_count,board_last_modified_at,archived_at,title,description,link,domain,board_name,board_id,created_at_pinterest,image_url,dominant_color,image_signature,node_id,is_video,velocity&workspace_id=eq.${acc.workspace_id}&order=saves.desc&limit=${CFG.MAX_PINS}`);
     if (!pins.length) continue;
     console.log(`${acc.username}: ${pins.length} pins to refresh`);
     let consecutive403 = 0;
@@ -281,7 +285,7 @@ async function main() {
         fresh.share_count !== oldShares ||
         fresh.annotations?.length > 0
       ) {
-        const ageDays = Math.max(1, (Date.now() - new Date(p.created_at || Date.now()).getTime()) / 86400000);
+        const ageDays = Math.max(1, (Date.now() - new Date(p.created_at_pinterest || Date.now()).getTime()) / 86400000);
         changedBatch.push({
           pin_id: pinId,
           title: fresh.title || p.title || '',
@@ -290,7 +294,7 @@ async function main() {
           domain: fresh.domain || p.domain || '',
           board_name: fresh.board_name || p.board_name || '',
           board_id: fresh.board_id || null,
-          created_at: p.created_at || '',
+          created_at_pinterest: p.created_at_pinterest || '',
           image_url: fresh.image_url || p.image_url || '',
           dominant_color: fresh.dominant_color || null,
           image_signature: fresh.image_signature || null,
@@ -309,7 +313,7 @@ async function main() {
           board_pin_count: fresh.board_pin_count ?? null,
           board_last_modified_at: fresh.board_last_modified_at || null,
           archived_at: new Date().toISOString(),
-          tags: (fresh.annotations?.length ? fresh.annotations.map(a => a.name) : (p.tags ? [p.tags] : [])).join(', '),
+          tags: (fresh.annotations?.length ? fresh.annotations.map(a => a.name) : []).join(', '),
           refreshed_at: new Date().toISOString(),
         });
         summary.updated++;

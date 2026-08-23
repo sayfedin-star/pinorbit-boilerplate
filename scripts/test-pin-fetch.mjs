@@ -155,6 +155,10 @@ function extractPinData(html, pinId) {
     if (savesM && !merged.saves && !merged.aggregated_pin_data?.aggregated_stats?.saves) {
       merged.saves = parseInt(savesM[1]);
     }
+    const commentsM = html.match(/"comment_count"\s*:\s*(\d+)/) || html.match(/"commentCount"\s*:\s*(\d+)/);
+    if (commentsM && !merged.comments && !merged.commentCount && !merged.comment_count && !merged.aggregated_pin_data?.commentCount) {
+      merged.commentCount = parseInt(commentsM[1]);
+    }
     return { method: 'relay-merged', ...formatPin(merged) };
   }
 
