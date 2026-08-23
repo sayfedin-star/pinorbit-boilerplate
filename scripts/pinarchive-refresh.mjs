@@ -242,7 +242,7 @@ async function pushBatch(workspaceId, username, pins, followerCount, totalPins) 
 async function main() {
   checkEnv();
   console.log('\nPinArchive Refresh starting...\n');
-  const accounts = await supaQuery('pa_accounts', 'select=workspace_id,username,follower_count');
+  const accounts = await supaQuery('pa_accounts', 'select=workspace_id,username,follower_count&status=eq.active');
   if (!accounts.length) { console.log('No accounts found.'); return; }
   console.log(`Found ${accounts.length} account(s)\n`);
   const summary = { refreshed: 0, updated: 0, pushed: 0, errors: [] };

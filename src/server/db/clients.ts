@@ -324,6 +324,13 @@ export const dbClients = {
   },
 
   /**
+   * Returns the server-only administrative client for Project 2 (Competitors).
+   */
+  getCompetitorsAdmin(runtimeEnv?: Record<string, any>): SupabaseClient {
+    return this.getCompetitors(runtimeEnv);
+  },
+
+  /**
    * Returns the server-only client for Project 3 (Analytics).
    * MUST only be called after verifying workspace membership via Project 1.
    */
@@ -332,6 +339,13 @@ export const dbClients = {
       analyticsClientInstance = createAnalyticsClient(runtimeEnv);
     }
     return analyticsClientInstance;
+  },
+
+  /**
+   * Returns the server-only administrative client for Project 3 (Analytics).
+   */
+  getAnalyticsAdmin(runtimeEnv?: Record<string, any>): SupabaseClient {
+    return this.getAnalytics(runtimeEnv);
   },
 
   /**

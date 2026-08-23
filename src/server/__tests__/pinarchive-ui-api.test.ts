@@ -96,12 +96,15 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnValue({
-                limit: vi.fn().mockResolvedValue({
-                  data: [
-                    { saves: 100, share_count: 20, archived_at: '2026-08-23T00:00:00Z' },
-                    { saves: 50, share_count: 5, archived_at: null },
-                  ],
-                  error: null,
+                order: vi.fn().mockReturnValue({
+                  range: vi.fn().mockResolvedValue({
+                    data: [
+                      { saves: 100, share_count: 20, archived_at: '2026-08-23T00:00:00Z' },
+                      { saves: 50, share_count: 5, archived_at: null },
+                    ],
+                    count: 2,
+                    error: null,
+                  }),
                 }),
               }),
             }),
@@ -125,6 +128,7 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
       expect(json.totals.archived_pins).toBe(1);
       expect(json.totals.sum_saves).toBe(150);
       expect(json.totals.sum_shares).toBe(25);
+      expect(json.totals.total_pins).toBe(2);
     });
   });
 
