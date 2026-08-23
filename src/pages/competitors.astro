@@ -117,7 +117,7 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
       <div class="flex items-center gap-3">
         <span class="text-xs font-semibold text-primary" id="selection-count">0 selected</span>
         <label class="inline-flex items-center gap-1.5 text-[11px] text-foreground font-medium cursor-pointer">
-          <input type="checkbox" id="bulk-dispatch-now" class="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5" />
+          <input type="checkbox" id="bulk-dispatch" class="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5" />
           <span>Fetch now (dispatch)</span>
         </label>
       </div>
@@ -803,9 +803,9 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
   $('send-selected-to-pinarchive-btn')?.addEventListener('click', async () => {
     const selectedComps = competitorsList.filter(c => selectedIds.has(c.id));
     if (selectedComps.length === 0) return;
-    const dispatchNow = ($('bulk-dispatch-now') as HTMLInputElement)?.checked || false;
-    if (dispatchNow && selectedComps.length > 5) {
-      toast('Dispatch now is limited to 5 accounts max.', 'error');
+    const dispatchActive = ($('bulk-dispatch') as HTMLInputElement)?.checked || false;
+    if (dispatchActive && selectedComps.length > 5) {
+      toast('Dispatch is limited to 5 accounts max.', 'error');
       return;
     }
     if (selectedComps.length > 50) {
@@ -820,7 +820,7 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           accounts: selectedComps.map(c => ({ username: c.username })),
-          dispatch_now: dispatchNow,
+          dispatch: dispatchActive,
         }),
       });
       const json = await res.json();

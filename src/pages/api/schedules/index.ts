@@ -180,6 +180,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     const responseSchedule = { ...inserted };
     delete responseSchedule.fastcron_token_encrypted;
+    delete responseSchedule.dispatch_token;
     return new Response(JSON.stringify({ ...responseSchedule, job_id: syncResult.job_id }), { status: 201, headers: { 'Content-Type': 'application/json' } });
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message || 'Failed to create schedule' }), { status: 500, headers: { 'Content-Type': 'application/json' } });

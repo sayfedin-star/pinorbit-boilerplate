@@ -3,7 +3,14 @@ import '../styles/global.css';
 
 if (Astro.locals.isAuthenticated) {
   const redirectParam = Astro.url.searchParams.get('redirect');
-  return Astro.redirect(redirectParam ? decodeURIComponent(redirectParam) : '/dashboard');
+  let ssrRedirect = '/dashboard';
+  if (redirectParam) {
+    try {
+      const d = decodeURIComponent(redirectParam).trim();
+      if (d.startsWith('/') && !d.startsWith('//') && !d.includes('\\')) ssrRedirect = d;
+    } catch {}
+  }
+  return Astro.redirect(ssrRedirect);
 }
 ---
 

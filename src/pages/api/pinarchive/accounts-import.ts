@@ -8,7 +8,7 @@ import { gasCall } from '../../../server/lib/gas-bridge';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_IMPORT_ACCOUNTS = 50;
-const MAX_DISPATCH_NOW = 5;
+const MAX_DISPATCH_ACCOUNTS = 5;
 
 function json(data: any, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -24,10 +24,10 @@ function json(data: any, status = 200) {
  * the Google Apps Script (GAS) Control Sheet bridge.
  *
  * Hard Rules:
- * - Tenant isolated via assertWorkspaceAccess(locals, workspaceId, 'admin').
+ * - Tenant isolated via assertWorkspaceAccess(supabase, workspaceId, user.id, 'admin').
  * - R1: Never overwrites existing account rows (status, interval_days, ingest_enabled).
  * - Caps: <= 50 accounts per batch.
- * - dispatch_now: <= 5 accounts per request; respects FEATURE_DISPATCH_NOW secret flag.
+ * - dispatch defers to FEATURE_DISPATCH_NOW; executes GAS 'run' per account.
  */
 export const POST: APIRoute = async ({ request, locals }) => {
   const user = (locals as any).user;
@@ -67,11 +67,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }, 422);
   }
 
-  const dispatchNow = Boolean(body.dispatch_now);
-  if (dispatchNow && rawAccounts.length > MAX_DISPATCH_NOW) {
+  const dispatchActive = Boolean(body.dispatch);
+  if (dispatchActive && rawAccounts.length > MAX_DISPATCH_ACCOUNTS) {
     return json({
       success: false,
-      error: `dispatch_now limit exceeded: max ${MAX_DISPATCH_NOW} accounts allowed when dispatch_now is true`,
+      error: `dispatch limit exceeded: max ${MAX_DISPATCH_ACCOUNTS} accounts allowed when dispatch is true`,
     }, 422);
   }
 
@@ -82,7 +82,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     // Requires admin or owner role to import accounts
-    await assertWorkspaceAccess(locals, workspaceId, 'admin');
+    await assertWorkspaceAccess(supabase, workspaceId, user.id, 'admin');
 
     const pinArchive = dbClients.getPinArchive(runtimeEnv);
 
@@ -136,11 +136,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           interval_days: existing.interval_days,
         };
 
-        if (dispatchNow) {
+        if (dispatchActive) {
           if (featureDispatchNowActive) {
-            const dispRes = await gasCall(runtimeEnv, workspaceId, 'dispatch_now', {
+            const dispRes = await gasCall(runtimeEnv, workspaceId, 'run', {
               username: acc.username,
-              workspace_id: workspaceId,
             });
             itemResult.dispatch_status = dispRes.ok ? 'dispatched' : 'dispatch_failed';
             if (dispRes.error) itemResult.dispatch_error = dispRes.error;
@@ -206,11 +205,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // Trigger real-time dispatch if requested and feature flag active
-      if (dispatchNow) {
+      if (dispatchActive) {
         if (featureDispatchNowActive) {
-          const dispRes = await gasCall(runtimeEnv, workspaceId, 'dispatch_now', {
+          const dispRes = await gasCall(runtimeEnv, workspaceId, 'run', {
             username: acc.username,
-            workspace_id: workspaceId,
           });
           itemResult.dispatch_status = dispRes.ok ? 'dispatched' : 'dispatch_failed';
           if (dispRes.error) itemResult.dispatch_error = dispRes.error;

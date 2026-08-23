@@ -72,6 +72,30 @@ describe('PinArchive Competitor Import & Bridge Test Suite', () => {
       expect(res.status).toBe(400);
     });
 
+    it('guard is invoked with (client, workspaceId, userId, "member") — never (locals, ...)', async () => {
+      mockPinArchiveClient.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        }),
+      });
+
+      const mockSupabase = { from: vi.fn() };
+      const req = new Request(`http://localhost:4321/api/pinarchive/archived-usernames?workspace_id=${mockWsId}`);
+      await getArchivedUsernamesHandler({
+        request: req,
+        locals: { user: mockUser, supabase: mockSupabase, activeWorkspaceId: mockWsId },
+      } as any);
+
+      expect(assertWorkspaceAccess).toHaveBeenCalledWith(
+        mockSupabase,
+        mockWsId,
+        mockUser.id,
+        'member'
+      );
+    });
+
     it('returns normalized unique archived usernames scoped to workspace', async () => {
       let queriedWsId: string | null = null;
 
@@ -109,6 +133,60 @@ describe('PinArchive Competitor Import & Bridge Test Suite', () => {
   });
 
   describe('2. POST /api/pinarchive/accounts-import', () => {
+    it('guard is invoked with (client, workspaceId, userId, "admin") — never (locals, ...)', async () => {
+      mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_workspace_settings') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'pa_accounts') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                in: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+            upsert: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { id: 'acc-uuid-1', username: 'testuser' },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        return {};
+      });
+
+      const mockSupabase = { from: vi.fn() };
+      const req = new Request('http://localhost:4321/api/pinarchive/accounts-import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workspace_id: mockWsId,
+          accounts: [{ username: 'testuser' }],
+        }),
+      });
+
+      await importAccountsHandler({
+        request: req,
+        locals: { user: mockUser, supabase: mockSupabase, activeWorkspaceId: mockWsId },
+      } as any);
+
+      expect(assertWorkspaceAccess).toHaveBeenCalledWith(
+        mockSupabase,
+        mockWsId,
+        mockUser.id,
+        'admin'
+      );
+    });
+
     it('returns 403 when user does not have admin permissions', async () => {
       vi.mocked(assertWorkspaceAccess).mockRejectedValueOnce(
         new HttpError(403, 'Forbidden: insufficient workspace role.')
@@ -171,7 +249,7 @@ describe('PinArchive Competitor Import & Bridge Test Suite', () => {
       expect(json.error).toContain('max 50');
     });
 
-    it('returns 422 when dispatch_now is true and accounts count > 5', async () => {
+    it('returns 422 when dispatch is true and accounts count > 5', async () => {
       const accounts = Array.from({ length: 6 }, (_, i) => ({ username: `user_${i}` }));
 
       const req = new Request('http://localhost:4321/api/pinarchive/accounts-import', {
@@ -180,7 +258,7 @@ describe('PinArchive Competitor Import & Bridge Test Suite', () => {
         body: JSON.stringify({
           workspace_id: mockWsId,
           accounts,
-          dispatch_now: true,
+          dispatch: true,
         }),
       });
 
@@ -393,7 +471,7 @@ describe('PinArchive Competitor Import & Bridge Test Suite', () => {
       expect(json.results[0].gas_error).toContain('timeout');
     });
 
-    it('FEATURE_DISPATCH_NOW flag active -> triggers dispatch_now GAS action', async () => {
+    it('FEATURE_DISPATCH_NOW flag active -> triggers run GAS action', async () => {
       mockPinArchiveClient.from.mockImplementation((table: string) => {
         if (table === 'pa_workspace_settings') {
           return {
@@ -430,7 +508,7 @@ describe('PinArchive Competitor Import & Bridge Test Suite', () => {
         body: JSON.stringify({
           workspace_id: mockWsId,
           accounts: [{ username: 'fast_creator' }],
-          dispatch_now: true,
+          dispatch: true,
         }),
       });
 
@@ -452,10 +530,9 @@ describe('PinArchive Competitor Import & Bridge Test Suite', () => {
       expect(gasCall).toHaveBeenCalledWith(
         expect.anything(),
         mockWsId,
-        'dispatch_now',
+        'run',
         expect.objectContaining({
           username: 'fast_creator',
-          workspace_id: mockWsId,
         })
       );
     });
@@ -497,7 +574,7 @@ describe('PinArchive Competitor Import & Bridge Test Suite', () => {
         body: JSON.stringify({
           workspace_id: mockWsId,
           accounts: [{ username: 'fast_creator' }],
-          dispatch_now: true,
+          dispatch: true,
         }),
       });
 

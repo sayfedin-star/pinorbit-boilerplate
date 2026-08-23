@@ -76,6 +76,7 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
     const syncResult = await syncPublishingSchedule(updated, runtimeEnv);
     const responseSchedule = { ...updated };
     delete responseSchedule.fastcron_token_encrypted;
+    delete responseSchedule.dispatch_token;
     return new Response(JSON.stringify({ ...responseSchedule, job_id: syncResult.job_id }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message || 'Failed to update schedule' }), { status: 500, headers: { 'Content-Type': 'application/json' } });

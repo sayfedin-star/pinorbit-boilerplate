@@ -42,8 +42,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     (locals as { runtimeEnv?: Record<string, any> })?.runtimeEnv;
 
   try {
-    // Requires viewer or higher workspace access
-    await assertWorkspaceAccess(locals, workspaceId, 'viewer');
+    // Requires member or higher workspace access
+    await assertWorkspaceAccess(supabase, workspaceId, user.id, 'member');
 
     const pinArchive = dbClients.getPinArchive(runtimeEnv);
     const { data: rows, error: dbErr } = await pinArchive
