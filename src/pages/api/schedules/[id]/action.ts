@@ -101,6 +101,7 @@ export const POST: APIRoute = async ({ request, params, locals }) => {
       if (!result.success) throw new Error(result.error);
       const sanitized = { ...result.new_schedule };
       delete sanitized.fastcron_token_encrypted;
+      delete sanitized.dispatch_token;
       return new Response(JSON.stringify({ success: true, new_schedule: sanitized }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
     if (action === 'delete') {
