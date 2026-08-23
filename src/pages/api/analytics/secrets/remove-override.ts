@@ -5,6 +5,7 @@ import { assertWorkspaceAccess } from '../../../../server/auth/workspace-guard';
 import {
   removeWorkspaceOverride,
   getEffectiveSecret,
+  maskSecret,
 } from '../../../../server/services/webhook-secrets';
 
 export const POST: APIRoute = async ({ locals }) => {
@@ -54,13 +55,13 @@ export const POST: APIRoute = async ({ locals }) => {
     return new Response(
       JSON.stringify({
         success: true,
-        secret: effective.value,
+        masked: maskSecret(effective.value),
         source: effective.source,
         message: 'Workspace override removed. Active secret is now the global default.',
       }),
       {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
       }
     );
   } catch (err: any) {

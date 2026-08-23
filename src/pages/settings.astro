@@ -34,31 +34,11 @@ if (supabase && currentWorkspace) {
       if (myMem) {
         currentRole = myMem.role;
       }
-    } else {
-      // Fallback display
-      members = [
-        {
-          id: 'mem-self',
-          user_id: user.id,
-          role: 'owner',
-          created_at: currentWorkspace.created_at || new Date().toISOString(),
-          email: user.email || 'Admin',
-        },
-      ];
-      currentRole = 'owner';
     }
   } catch (err) {
     console.warn('Error fetching workspace memberships:', err);
-    members = [
-      {
-        id: 'mem-self',
-        user_id: user.id,
-        role: 'owner',
-        created_at: currentWorkspace?.created_at || new Date().toISOString(),
-        email: user.email || 'Admin',
-      },
-    ];
-    currentRole = 'owner';
+    members = [];
+    currentRole = 'member';
   }
 }
 

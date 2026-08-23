@@ -655,7 +655,8 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
 
     // tbody
     tbody.innerHTML = pageRows.map(c => {
-      const avatar = c.avatar_url || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80`;
+      const rawAvatar = c.avatar_url && /^https?:\/\//i.test(c.avatar_url) ? c.avatar_url : `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80`;
+      const avatar = escHtml(rawAvatar);
       const isOwn = c.account_type === 'own';
       const act = activityOf(c);
       const isSel = selectedIds.has(c.id);
@@ -945,9 +946,10 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
     const c = competitorsList.find(x => x.id === id);
     if (!c) return;
 
+    const drawerAvatar = c.avatar_url && /^https?:\/\//i.test(c.avatar_url) ? c.avatar_url : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80';
     drawerBody.innerHTML = `
       <div class="flex items-center gap-3 pb-3 border-b border-border">
-        <img src="${c.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80'}" class="h-12 w-12 rounded-full object-cover border border-border" />
+        <img src="${escHtml(drawerAvatar)}" class="h-12 w-12 rounded-full object-cover border border-border" />
         <div class="min-w-0 flex-1">
           <div class="text-sm font-bold text-foreground truncate">${escHtml(c.full_name || c.username)}</div>
           <div class="text-xs text-muted-foreground">@${escHtml(c.username)}</div>
@@ -1027,13 +1029,16 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
         <thead>
           <tr class="bg-muted border-b border-border">
             <th class="py-3 px-4 text-muted-foreground font-semibold">Metric</th>
-            ${list.map(c => `
+            ${list.map(c => {
+              const compAvatar = c.avatar_url && /^https?:\/\//i.test(c.avatar_url) ? c.avatar_url : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80';
+              return `
               <th class="py-3 px-4 font-bold text-foreground">
                 <div class="flex items-center gap-2">
-                  <img src="${c.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80'}" class="h-6 w-6 rounded-full" />
+                  <img src="${escHtml(compAvatar)}" class="h-6 w-6 rounded-full" />
                   <span>@${escHtml(c.username)}</span>
                 </div>
-              </th>`).join('')}
+              </th>`;
+            }).join('')}
           </tr>
         </thead>
         <tbody class="divide-y divide-border bg-card">

@@ -143,6 +143,8 @@ export const PUT: APIRoute = async ({ request, locals }) => {
   }
 };
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const PATCH: APIRoute = async ({ request, locals }) => {
   let body: any = {};
   try {
@@ -158,11 +160,23 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
   const { workspaceId, competitorsClient } = auth.ok!;
   const { competitor_id, is_active, update_frequency_hours } = body;
 
-  if (!competitor_id) {
-    return jsonResponse({ success: false, error: 'competitor_id is required' }, 400);
+  if (!competitor_id || !UUID_REGEX.test(competitor_id)) {
+    return jsonResponse({ success: false, error: 'Valid competitor_id (UUID) is required' }, 400);
   }
 
   try {
+    // Verify competitor belongs to caller's workspace
+    const { data: comp, error: compErr } = await competitorsClient
+      .from('competitors')
+      .select('id')
+      .eq('id', competitor_id)
+      .eq('workspace_id', workspaceId)
+      .maybeSingle();
+
+    if (compErr || !comp) {
+      return jsonResponse({ success: false, error: 'Competitor not found in active workspace' }, 404);
+    }
+
     // 1. If is_active is provided, update competitors table
     if (is_active !== undefined) {
       await competitorsClient
@@ -228,6 +242,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const username = body.username || null;
 
   try {
+    if (competitorId) {
+      if (!UUID_REGEX.test(competitorId)) {
+        return jsonResponse({ success: false, error: 'Invalid competitor_id (UUID) format' }, 400);
+      }
+      const { data: comp, error: compErr } = await competitorsClient
+        .from('competitors')
+        .select('id')
+        .eq('id', competitorId)
+        .eq('workspace_id', workspaceId)
+        .maybeSingle();
+
+      if (compErr || !comp) {
+        return jsonResponse({ success: false, error: 'Competitor not found in active workspace' }, 404);
+      }
+    }
+
     // 1. Insert job with queued status
     const { data: job, error: jobErr } = await competitorsClient
       .from('competitor_ingestion_jobs')

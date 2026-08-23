@@ -53,7 +53,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const workspaceId = payload.workspace_id.trim();
 
-  // 3. Verify workspace existence in Project 1 (Scheduling / Auth Authority)
+  // 3. Authenticate via getEffectiveSecret + timingSafeEqual FIRST
+  const eff = await getEffectiveSecret(workspaceId, runtimeEnv);
+  if (isProductionEnv(runtimeEnv) && eff.source === 'env' && isKnownDefaultIngestSecret(eff.value)) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Service unavailable: ingest secret not configured on server.' }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const providedSecret =
+    request.headers.get('x-ingest-secret') ||
+    (typeof payload.ingest_secret === 'string' ? payload.ingest_secret : null);
+
+  if (!providedSecret || !eff.value || !(await timingSafeEqual(providedSecret, eff.value))) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Unauthorized: missing or invalid x-ingest-secret header.' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // 4. Verify workspace existence in Project 1 (Scheduling / Auth Authority)
   try {
     const admin = dbClients.getSchedulingAdmin(runtimeEnv);
     const { data: ws, error: wsErr } = await admin
@@ -72,26 +92,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(
       JSON.stringify({ success: false, error: 'Workspace verification failed.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // 4. Authenticate via getEffectiveSecret + timingSafeEqual
-  const eff = await getEffectiveSecret(workspaceId, runtimeEnv);
-  if (isProductionEnv(runtimeEnv) && eff.source === 'env' && isKnownDefaultIngestSecret(eff.value)) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Service unavailable: ingest secret not configured on server.' }),
-      { status: 503, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  const providedSecret =
-    request.headers.get('x-ingest-secret') ||
-    (typeof payload.ingest_secret === 'string' ? payload.ingest_secret : null);
-
-  if (!providedSecret || !eff.value || !(await timingSafeEqual(providedSecret, eff.value))) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Unauthorized: missing or invalid x-ingest-secret header.' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } }
     );
   }
 

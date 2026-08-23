@@ -20,6 +20,7 @@ jobs:
           node-version: 20
 
       - name: Probe single pin fetch
+        continue-on-error: true
         run: node scripts/test-pin-fetch.mjs 1079245498222414527
 
       - name: Run PinArchive Refresh

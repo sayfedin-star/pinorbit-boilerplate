@@ -94,16 +94,28 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
         }
         if (table === 'pa_pins') {
           return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                limit: vi.fn().mockResolvedValue({
-                  data: [
-                    { saves: 100, share_count: 20, archived_at: '2026-08-23T00:00:00Z' },
-                    { saves: 50, share_count: 5, archived_at: null },
-                  ],
-                  error: null,
+            select: vi.fn().mockImplementation((fields: string, options?: any) => {
+              if (options?.head) {
+                return {
+                  eq: vi.fn().mockResolvedValue({
+                    count: 2,
+                    error: null,
+                  }),
+                };
+              }
+              return {
+                eq: vi.fn().mockReturnValue({
+                  order: vi.fn().mockReturnValue({
+                    range: vi.fn().mockResolvedValue({
+                      data: [
+                        { saves: 100, share_count: 20, archived_at: '2026-08-23T00:00:00Z' },
+                        { saves: 50, share_count: 5, archived_at: null },
+                      ],
+                      error: null,
+                    }),
+                  }),
                 }),
-              }),
+              };
             }),
           };
         }
@@ -125,6 +137,7 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
       expect(json.totals.archived_pins).toBe(1);
       expect(json.totals.sum_saves).toBe(150);
       expect(json.totals.sum_shares).toBe(25);
+      expect(json.totals.total_pins).toBe(2);
     });
   });
 

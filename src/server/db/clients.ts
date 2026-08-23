@@ -256,7 +256,10 @@ export function createAnalyticsClient(runtimeEnv?: Record<string, any>): Supabas
  */
 export function createPinArchiveClient(runtimeEnv?: Record<string, any>): SupabaseClient {
   const env = getServerEnv(runtimeEnv);
-  const key = env.PINARCHIVE_SUPABASE_SECRET_KEY || env.SCHEDULING_SUPABASE_PUBLISHABLE_KEY;
+  const key = env.PINARCHIVE_SUPABASE_SECRET_KEY;
+  if (!key) {
+    throw new Error('Missing PINARCHIVE_SUPABASE_SECRET_KEY in server environment.');
+  }
   return createClient(env.PINARCHIVE_SUPABASE_URL, key, {
     auth: {
       persistSession: false,
@@ -324,6 +327,13 @@ export const dbClients = {
   },
 
   /**
+   * Returns the server-only administrative client for Project 2 (Competitors).
+   */
+  getCompetitorsAdmin(runtimeEnv?: Record<string, any>): SupabaseClient {
+    return this.getCompetitors(runtimeEnv);
+  },
+
+  /**
    * Returns the server-only client for Project 3 (Analytics).
    * MUST only be called after verifying workspace membership via Project 1.
    */
@@ -332,6 +342,13 @@ export const dbClients = {
       analyticsClientInstance = createAnalyticsClient(runtimeEnv);
     }
     return analyticsClientInstance;
+  },
+
+  /**
+   * Returns the server-only administrative client for Project 3 (Analytics).
+   */
+  getAnalyticsAdmin(runtimeEnv?: Record<string, any>): SupabaseClient {
+    return this.getAnalytics(runtimeEnv);
   },
 
   /**

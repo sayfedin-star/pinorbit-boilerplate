@@ -3,6 +3,9 @@ import { cleanupWorkspaceAnalytics } from '../services/workspace-cleanup';
 import { analyticsDb } from '../db/analytics';
 import { fastcronService } from '../services/fastcron-service';
 import { GLOBAL_KEY, wsKey } from '../services/webhook-secrets';
+import { POST as deleteWorkspaceHandler } from '../../pages/api/workspaces/delete';
+import { assertWorkspaceAccess } from '../auth/workspace-guard';
+import { dbClients } from '../db/clients';
 
 vi.mock('../db/analytics', () => ({
   analyticsDb: {
@@ -16,6 +19,23 @@ vi.mock('../services/fastcron-service', () => ({
     disableFastCronJob: vi.fn().mockResolvedValue(true),
   },
 }));
+
+vi.mock('../auth/workspace-guard', () => ({
+  assertWorkspaceAccess: vi.fn(),
+}));
+
+vi.mock('../db/clients', async () => {
+  const actual = await vi.importActual<any>('../db/clients');
+  return {
+    ...actual,
+    dbClients: {
+      ...actual.dbClients,
+      getSchedulingAdmin: vi.fn(),
+      getCompetitorsAdmin: vi.fn(),
+      getAnalyticsAdmin: vi.fn(),
+    },
+  };
+});
 
 describe('Safety-Critical Workspace Cleanup Suite (V19 Strict Mandate C)', () => {
   const targetWsId = '00000000-0000-0000-0000-000000000001';
@@ -94,5 +114,85 @@ describe('Safety-Critical Workspace Cleanup Suite (V19 Strict Mandate C)', () =>
       mockRuntimeEnv
     );
     expect(result.disabledJobsCount).toBe(3);
+  });
+
+  describe('POST /api/workspaces/delete (F1 Fatal Fix Regression)', () => {
+    it('rejects deletion when user is not workspace owner', async () => {
+      (assertWorkspaceAccess as any).mockResolvedValue({
+        isOwner: false,
+        isAdmin: true,
+        role: 'admin',
+        workspaceId: targetWsId,
+      });
+
+      const req = new Request('http://localhost:4321/api/workspaces/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspace_id: targetWsId }),
+      });
+
+      const res = await deleteWorkspaceHandler({
+        request: req,
+        locals: { user: { id: 'user-2' }, supabase: {} },
+      } as any);
+
+      expect(res.status).toBe(403);
+      const data = await res.json();
+      expect(data.error).toContain('Only workspace owners can delete workspaces');
+    });
+
+    it('successfully deletes empty workspace calling getCompetitorsAdmin and getAnalyticsAdmin', async () => {
+      (assertWorkspaceAccess as any).mockResolvedValue({
+        isOwner: true,
+        isAdmin: true,
+        role: 'owner',
+        workspaceId: targetWsId,
+      });
+
+      const createTableMock = () => ({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ count: 0, error: null }),
+        }),
+      });
+
+      const mockP1Admin = {
+        from: vi.fn().mockImplementation(() => createTableMock()),
+      };
+      const mockP2Admin = {
+        from: vi.fn().mockImplementation(() => createTableMock()),
+      };
+      const mockP3Admin = {
+        from: vi.fn().mockImplementation(() => createTableMock()),
+      };
+
+      const mockSchedulingClient = {
+        from: vi.fn().mockReturnValue({
+          delete: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ error: null }),
+          }),
+        }),
+      };
+
+      (dbClients.getSchedulingAdmin as any).mockReturnValue(mockP1Admin);
+      (dbClients.getCompetitorsAdmin as any).mockReturnValue(mockP2Admin);
+      (dbClients.getAnalyticsAdmin as any).mockReturnValue(mockP3Admin);
+
+      const req = new Request('http://localhost:4321/api/workspaces/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspace_id: targetWsId }),
+      });
+
+      const res = await deleteWorkspaceHandler({
+        request: req,
+        locals: { user: { id: 'owner-1' }, supabase: mockSchedulingClient },
+      } as any);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data).toEqual({ success: true, deleted: targetWsId });
+      expect(dbClients.getCompetitorsAdmin).toHaveBeenCalled();
+      expect(dbClients.getAnalyticsAdmin).toHaveBeenCalled();
+    });
   });
 });

@@ -2,7 +2,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../server/auth/workspace-guard';
 import { dbClients, isKnownDefaultIngestSecret, isProductionEnv } from '../../../server/db/clients';
-import { getSecretStatus } from '../../../server/services/webhook-secrets';
+import { getSecretStatus, regenerate } from '../../../server/services/webhook-secrets';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const runtimeEnv = (locals as any)?.runtime?.env || (locals as any)?.runtimeEnv || {};
@@ -19,7 +19,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message || 'Forbidden' }), { status: e.status || 403, headers: { 'Content-Type': 'application/json' } });
   }
-  const st = await getSecretStatus(wsId, runtimeEnv);
+  let st = await getSecretStatus(wsId, runtimeEnv);
+  
+  // Guarantee a per-workspace override exists before revealing so global fallback is never exposed
+  if (!st.hasOverride && runtimeEnv?.INGEST_SECRETS_KV) {
+    try {
+      const generated = await regenerate('workspace', wsId, runtimeEnv);
+      st = { secret: generated, source: 'workspace', hasOverride: true };
+    } catch {}
+  }
+
   if (isProductionEnv(runtimeEnv) && st.source === 'env' && isKnownDefaultIngestSecret(st.secret)) {
     return new Response(JSON.stringify({ error: 'Service unavailable: ingest secret not configured on server.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
   }
@@ -30,5 +39,5 @@ export const POST: APIRoute = async ({ request, locals }) => {
       action: 'SECRET_REVEAL', new_data: { source: st.source }, changed_by: user.id,
     });
   } catch {}
-  return new Response(JSON.stringify({ success: true, secret: st.secret, source: st.source }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  return new Response(JSON.stringify({ success: true, secret: st.secret, source: st.source }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 };

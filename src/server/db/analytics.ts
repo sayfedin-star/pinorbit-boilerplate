@@ -562,7 +562,7 @@ export const analyticsDb = {
     }
 
     const analyticsClient = dbClients.getAnalytics();
-    const cleanSearch = search && search.trim().length > 0 ? (search || '').trim().replace(/[\\%_]/g, '\\$&') : null;
+    const cleanSearch = search && search.trim().length > 0 ? (search || '').trim().replace(/[\\%_(),.]/g, '\\$&') : null;
     
     // Fetch candidate aggregated records (up to 1000 for client filtering & pagination)
     const { data, error } = await analyticsClient.rpc('get_pin_leaderboard', {
@@ -1275,7 +1275,7 @@ export const analyticsDb = {
       .eq('window_end', w1);
 
     if (q && q.trim()) {
-      const term = (q || '').trim().replace(/[\\%_]/g, '\\$&');
+      const term = (q || '').trim().replace(/[\\%_(),.]/g, '\\$&');
       query = query.or(`pin_id.ilike.%${term}%,title.ilike.%${term}%`);
     }
 
