@@ -1,0 +1,617 @@
+---
+export const prerender = false;
+import Layout from '../layouts/Layout.astro';
+import SectionHeader from '../components/ui/SectionHeader.astro';
+---
+
+<Layout title="PinArchive Intelligence" description="Historical pin performance, winning recipe clusters, SEO topics, and canonical variations.">
+  <!-- ═══ Header & Primary Controls ═══ -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+    <SectionHeader
+      title="PinArchive Intelligence"
+      description="Historical pin performance archive, high-velocity winners, SEO topic clusters, and canonical groupings."
+    />
+    <div class="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+      <div class="flex items-center gap-1.5 bg-card border border-border rounded-xl px-2.5 py-1.5 shadow-sm">
+        <label for="pins-sort-select" class="text-xs font-semibold text-muted-foreground">Sort:</label>
+        <select id="pins-sort-select" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer">
+          <option value="saves">Total Saves</option>
+          <option value="velocity">Velocity (Saves/Day)</option>
+        </select>
+      </div>
+
+      <div class="flex items-center gap-1.5 bg-card border border-border rounded-xl px-2.5 py-1.5 shadow-sm">
+        <label for="pins-limit-select" class="text-xs font-semibold text-muted-foreground">Limit:</label>
+        <select id="pins-limit-select" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer">
+          <option value="25">25 Pins</option>
+          <option value="50" selected>50 Pins</option>
+          <option value="100">100 Pins</option>
+        </select>
+      </div>
+
+      <button
+        id="refresh-btn"
+        type="button"
+        title="Refresh PinArchive data"
+        class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition-all"
+      >
+        <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/>
+        </svg>
+        <span>Refresh</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ KPI Totals Bar ═══ -->
+  <div class="mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-all">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Archived Accounts</span>
+        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </span>
+      </div>
+      <div class="text-2xl font-bold tracking-tight text-foreground mt-2" id="kpi-accounts-count">
+        <div class="h-7 w-12 bg-muted/60 rounded animate-pulse"></div>
+      </div>
+      <div class="mt-1 text-[11px] text-muted-foreground" id="kpi-accounts-sub">Tracked in archive</div>
+    </div>
+
+    <div class="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-all">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Archived Pins</span>
+        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
+        </span>
+      </div>
+      <div class="text-2xl font-bold tracking-tight text-emerald-500 mt-2" id="kpi-archived-pins">
+        <div class="h-7 w-16 bg-muted/60 rounded animate-pulse"></div>
+      </div>
+      <div class="mt-1 text-[11px] text-muted-foreground" id="kpi-archived-sub">With verified metrics</div>
+    </div>
+
+    <div class="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-all">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Saves</span>
+        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+        </span>
+      </div>
+      <div class="text-2xl font-bold tracking-tight text-foreground mt-2" id="kpi-total-saves">
+        <div class="h-7 w-20 bg-muted/60 rounded animate-pulse"></div>
+      </div>
+      <div class="mt-1 text-[11px] text-muted-foreground" id="kpi-saves-sub">Cumulative pin saves</div>
+    </div>
+
+    <div class="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-all">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Shares</span>
+        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </span>
+      </div>
+      <div class="text-2xl font-bold tracking-tight text-foreground mt-2" id="kpi-total-shares">
+        <div class="h-7 w-16 bg-muted/60 rounded animate-pulse"></div>
+      </div>
+      <div class="mt-1 text-[11px] text-muted-foreground" id="kpi-shares-sub">Social engagement signals</div>
+    </div>
+  </div>
+
+  <!-- ═══ View A: Accounts Strip ═══ -->
+  <section class="mb-10" aria-labelledby="accounts-section-heading">
+    <div class="flex items-center justify-between mb-4">
+      <h2 id="accounts-section-heading" class="text-base font-bold text-foreground flex items-center gap-2">
+        <span>👤 Tracked Accounts</span>
+        <span class="text-xs font-normal text-muted-foreground" id="accounts-strip-count"></span>
+      </h2>
+    </div>
+    <div class="overflow-x-auto pb-2">
+      <div id="accounts-strip" class="flex gap-4 min-w-full">
+        <!-- Skeleton cards -->
+        <div class="w-72 shrink-0 rounded-xl border border-border bg-card p-4 shadow-sm animate-pulse space-y-3">
+          <div class="h-4 w-28 bg-muted rounded"></div>
+          <div class="h-3 w-40 bg-muted rounded"></div>
+          <div class="h-3 w-20 bg-muted rounded"></div>
+        </div>
+        <div class="w-72 shrink-0 rounded-xl border border-border bg-card p-4 shadow-sm animate-pulse space-y-3">
+          <div class="h-4 w-28 bg-muted rounded"></div>
+          <div class="h-3 w-40 bg-muted rounded"></div>
+          <div class="h-3 w-20 bg-muted rounded"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 2-Column Section: View B (Winners Grid) & View C (Topics List) ═══ -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
+    <!-- View B: Winners Grid (8 cols on lg) -->
+    <section class="lg:col-span-8" aria-labelledby="winners-section-heading">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 id="winners-section-heading" class="text-base font-bold text-foreground flex items-center gap-2">
+            <span>🏆 Winning Pins</span>
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary" id="winners-badge-count">0</span>
+          </h2>
+          <p class="text-xs text-muted-foreground mt-0.5">Top performing archived pins ranked by selected metric.</p>
+        </div>
+      </div>
+
+      <div id="winners-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-4">
+        <!-- Shimmer skeletons -->
+        <div class="rounded-xl border border-border bg-card p-4 shadow-sm animate-pulse space-y-3">
+          <div class="h-44 bg-muted rounded-lg"></div>
+          <div class="h-4 w-3/4 bg-muted rounded"></div>
+          <div class="h-3 w-1/2 bg-muted rounded"></div>
+        </div>
+        <div class="rounded-xl border border-border bg-card p-4 shadow-sm animate-pulse space-y-3">
+          <div class="h-44 bg-muted rounded-lg"></div>
+          <div class="h-4 w-3/4 bg-muted rounded"></div>
+          <div class="h-3 w-1/2 bg-muted rounded"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- View C: Topics Bar List (4 cols on lg) -->
+    <section class="lg:col-span-4" aria-labelledby="topics-section-heading">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 id="topics-section-heading" class="text-base font-bold text-foreground flex items-center gap-2">
+            <span>🏷️ Top Topics</span>
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500" id="topics-badge-count">0</span>
+          </h2>
+          <p class="text-xs text-muted-foreground mt-0.5">Aggregated SEO and visual annotation clusters.</p>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-border bg-card shadow-sm p-4">
+        <div id="topics-list" class="space-y-3 max-h-[700px] overflow-y-auto pr-1">
+          <!-- Shimmer skeletons -->
+          <div class="space-y-1 animate-pulse">
+            <div class="flex justify-between h-3 bg-muted rounded w-full"></div>
+            <div class="h-2 bg-muted/60 rounded w-full"></div>
+          </div>
+          <div class="space-y-1 animate-pulse">
+            <div class="flex justify-between h-3 bg-muted rounded w-full"></div>
+            <div class="h-2 bg-muted/60 rounded w-full"></div>
+          </div>
+          <div class="space-y-1 animate-pulse">
+            <div class="flex justify-between h-3 bg-muted rounded w-full"></div>
+            <div class="h-2 bg-muted/60 rounded w-full"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══ View D: Canonical Duplicate Clusters ═══ -->
+  <section class="mb-12" aria-labelledby="canonical-section-heading">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 id="canonical-section-heading" class="text-base font-bold text-foreground flex items-center gap-2">
+          <span>🧬 Canonical Clusters</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500" id="canonical-badge-count">0 Clusters</span>
+        </h2>
+        <p class="text-xs text-muted-foreground mt-0.5">Grouped pin variations sharing the same underlying Pinterest canonical ID.</p>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+      <div id="canonical-container" class="divide-y divide-border">
+        <!-- Skeleton -->
+        <div class="p-4 animate-pulse space-y-2">
+          <div class="h-4 w-48 bg-muted rounded"></div>
+          <div class="h-3 w-72 bg-muted rounded"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  let currentSort = 'saves';
+  let currentLimit = 50;
+
+  function fmtNumber(n: number | string | null | undefined): string {
+    const num = Number(n) || 0;
+    if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
+    if (num >= 1_000) return (num / 1_000).toFixed(1) + 'k';
+    return num.toLocaleString();
+  }
+
+  function fmtDate(isoString?: string | null): string {
+    if (!isoString) return 'Never';
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return 'Never';
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return 'Never';
+    }
+  }
+
+  function escapeHtml(str?: string | null): string {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  async function loadOverview() {
+    try {
+      const res = await fetch('/api/pinarchive/overview');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Failed to load overview');
+
+      const totals = json.totals || {};
+      const accounts = json.accounts || [];
+
+      // Update KPI cards
+      const kpiAccounts = document.getElementById('kpi-accounts-count');
+      if (kpiAccounts) kpiAccounts.textContent = fmtNumber(totals.accounts);
+
+      const kpiArchived = document.getElementById('kpi-archived-pins');
+      if (kpiArchived) kpiArchived.textContent = fmtNumber(totals.archived_pins);
+
+      const kpiSaves = document.getElementById('kpi-total-saves');
+      if (kpiSaves) kpiSaves.textContent = fmtNumber(totals.sum_saves);
+
+      const kpiShares = document.getElementById('kpi-total-shares');
+      if (kpiShares) kpiShares.textContent = fmtNumber(totals.sum_shares);
+
+      // Render Accounts Strip
+      const strip = document.getElementById('accounts-strip');
+      const stripCount = document.getElementById('accounts-strip-count');
+      if (stripCount) stripCount.textContent = `(${accounts.length} total)`;
+
+      if (strip) {
+        if (accounts.length === 0) {
+          strip.innerHTML = `
+            <div class="w-full text-center py-6 text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
+              No Pinterest accounts tracked in archive yet.
+            </div>
+          `;
+        } else {
+          strip.innerHTML = accounts
+            .map((acc: any) => {
+              const isActive = acc.status === 'active';
+              const dotClass = isActive ? 'bg-emerald-500' : acc.status === 'paused' ? 'bg-amber-500' : 'bg-rose-500';
+              return `
+                <div class="w-72 shrink-0 rounded-xl border border-border bg-card p-4 shadow-sm hover:border-primary/40 transition-all flex flex-col justify-between">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <span class="h-2 w-2 rounded-full ${dotClass} shrink-0" aria-hidden="true"></span>
+                        <span class="text-sm font-bold text-foreground truncate" title="@${escapeHtml(acc.username)}">@${escapeHtml(acc.username)}</span>
+                      </div>
+                      <span class="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${isActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}">
+                        ${escapeHtml(acc.status)}
+                      </span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs mt-3 pt-3 border-t border-border/60">
+                      <div>
+                        <span class="text-[10px] text-muted-foreground uppercase block font-medium">Followers</span>
+                        <span class="font-semibold text-foreground">${fmtNumber(acc.follower_count)}</span>
+                      </div>
+                      <div>
+                        <span class="text-[10px] text-muted-foreground uppercase block font-medium">Pins Total</span>
+                        <span class="font-semibold text-foreground">${fmtNumber(acc.pins_count)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mt-3 pt-2 text-[10px] text-muted-foreground flex items-center justify-between">
+                    <span>Last run:</span>
+                    <span class="font-medium">${fmtDate(acc.last_run_at)}</span>
+                  </div>
+                </div>
+              `;
+            })
+            .join('');
+        }
+      }
+    } catch (e: any) {
+      console.error('Error loading PinArchive overview:', e);
+    }
+  }
+
+  async function loadPins() {
+    const grid = document.getElementById('winners-grid');
+    const badge = document.getElementById('winners-badge-count');
+    const canonicalContainer = document.getElementById('canonical-container');
+    const canonicalBadge = document.getElementById('canonical-badge-count');
+
+    try {
+      const res = await fetch(`/api/pinarchive/pins?sort=${encodeURIComponent(currentSort)}&limit=${encodeURIComponent(currentLimit)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Failed to load pins');
+
+      const pins: any[] = json.pins || [];
+      if (badge) badge.textContent = `${pins.length} shown`;
+
+      // Render Winners Grid
+      if (grid) {
+        if (pins.length === 0) {
+          grid.innerHTML = `
+            <div class="col-span-full py-12 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
+              No archived pins found.
+            </div>
+          `;
+        } else {
+          grid.innerHTML = pins
+            .map((p) => {
+              const saves = Number(p.saves || 0);
+              const repins = Number(p.repins || 0);
+              const velocity = Number(p.velocity || 0);
+              const shares = Number(p.share_count || 0);
+              const annotations = Array.isArray(p.annotations) ? p.annotations : [];
+              const category = p.seo_category || p.board_name || null;
+              const pinUrl = p.link || `https://www.pinterest.com/pin/${p.pin_id}/`;
+              const imageUrl = p.image_url || '';
+
+              const tagsHtml = annotations.slice(0, 3).map((a: any) => {
+                const name = typeof a === 'string' ? a : a.name;
+                return `<span class="inline-block text-[10px] bg-muted px-2 py-0.5 rounded-md text-muted-foreground truncate max-w-[130px]" title="${escapeHtml(name)}">${escapeHtml(name)}</span>`;
+              }).join('');
+
+              const moreTagsCount = annotations.length > 3 ? annotations.length - 3 : 0;
+
+              return `
+                <div class="group rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between">
+                  <div>
+                    <!-- Image preview -->
+                    <div class="relative w-full h-44 bg-muted/50 overflow-hidden flex items-center justify-center">
+                      ${imageUrl ? `
+                        <img
+                          src="${escapeHtml(imageUrl)}"
+                          alt="${escapeHtml(p.title || 'Pinterest Pin')}"
+                          loading="lazy"
+                          class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                          onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"
+                        />
+                        <div class="hidden absolute inset-0 flex items-center justify-center text-muted-foreground">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                        </div>
+                      ` : `
+                        <div class="flex items-center justify-center text-muted-foreground">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                        </div>
+                      `}
+                      ${category ? `
+                        <span class="absolute top-2 left-2 text-[10px] font-bold bg-background/90 backdrop-blur-xs text-foreground px-2 py-0.5 rounded-md shadow-xs max-w-[160px] truncate" title="${escapeHtml(category)}">
+                          ${escapeHtml(category)}
+                        </span>
+                      ` : ''}
+                    </div>
+
+                    <!-- Content -->
+                    <div class="p-4 space-y-2.5">
+                      <a href="${escapeHtml(pinUrl)}" target="_blank" rel="noopener noreferrer" class="block group/link">
+                        <h3 class="text-xs font-bold text-foreground line-clamp-2 group-hover/link:text-primary transition-colors" title="${escapeHtml(p.title || 'Untitled Pin')}">
+                          ${escapeHtml(p.title || `Pin ${p.pin_id}`)}
+                        </h3>
+                      </a>
+
+                      <!-- Metrics Row -->
+                      <div class="grid grid-cols-3 gap-1.5 pt-1">
+                        <div class="bg-muted/40 rounded-lg p-1.5 text-center border border-border/40">
+                          <span class="text-[9px] text-muted-foreground uppercase block font-semibold">Saves</span>
+                          <span class="text-xs font-bold text-rose-500">${fmtNumber(saves)}</span>
+                        </div>
+                        <div class="bg-muted/40 rounded-lg p-1.5 text-center border border-border/40">
+                          <span class="text-[9px] text-muted-foreground uppercase block font-semibold">Repins</span>
+                          <span class="text-xs font-bold text-foreground">${fmtNumber(repins)}</span>
+                        </div>
+                        <div class="bg-muted/40 rounded-lg p-1.5 text-center border border-border/40">
+                          <span class="text-[9px] text-muted-foreground uppercase block font-semibold">Velocity</span>
+                          <span class="text-xs font-bold text-emerald-500">${velocity.toFixed(1)}/d</span>
+                        </div>
+                      </div>
+
+                      <!-- Social & Tags -->
+                      ${shares > 0 ? `
+                        <div class="flex items-center gap-1 text-[10px] text-blue-500 font-medium">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                          <span>${fmtNumber(shares)} shares</span>
+                        </div>
+                      ` : ''}
+
+                      ${tagsHtml ? `
+                        <div class="flex flex-wrap items-center gap-1 pt-1">
+                          ${tagsHtml}
+                          ${moreTagsCount > 0 ? `<span class="text-[9px] text-muted-foreground font-semibold">+${moreTagsCount}</span>` : ''}
+                        </div>
+                      ` : ''}
+                    </div>
+                  </div>
+
+                  <!-- Footer link -->
+                  <div class="px-4 py-2.5 bg-muted/20 border-t border-border/60 flex items-center justify-between text-[11px]">
+                    <span class="text-muted-foreground text-[10px] truncate max-w-[120px]">${p.board_name ? escapeHtml(p.board_name) : ''}</span>
+                    <a href="${escapeHtml(pinUrl)}" target="_blank" rel="noopener noreferrer" class="font-semibold text-primary hover:underline inline-flex items-center gap-1">
+                      <span>View on Pinterest</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </a>
+                  </div>
+                </div>
+              `;
+            })
+            .join('');
+        }
+      }
+
+      // Group by canonical_pin_id for View D
+      if (canonicalContainer) {
+        const canonicalGroups = new Map<string, any[]>();
+        for (const p of pins) {
+          if (p.canonical_pin_id) {
+            const list = canonicalGroups.get(p.canonical_pin_id) || [];
+            list.push(p);
+            canonicalGroups.set(p.canonical_pin_id, list);
+          }
+        }
+
+        // Filter groups with count > 1
+        const multiClusters = Array.from(canonicalGroups.entries())
+          .filter(([, group]) => group.length > 1)
+          .sort((a, b) => b[1].length - a[1].length);
+
+        if (canonicalBadge) canonicalBadge.textContent = `${multiClusters.length} Clusters`;
+
+        if (multiClusters.length === 0) {
+          canonicalContainer.innerHTML = `
+            <div class="p-8 text-center text-xs text-muted-foreground">
+              No multi-pin canonical clusters detected in current sample.
+            </div>
+          `;
+        } else {
+          canonicalContainer.innerHTML = multiClusters
+            .map(([canonicalId, clusterPins]) => {
+              const clusterTotalSaves = clusterPins.reduce((acc, p) => acc + Number(p.saves || 0), 0);
+              const itemsList = clusterPins
+                .map((cp) => `
+                  <li class="flex items-center justify-between text-xs py-1.5 px-3 rounded-lg hover:bg-muted/40 transition-colors">
+                    <a href="${escapeHtml(cp.link || `https://www.pinterest.com/pin/${cp.pin_id}/`)}" target="_blank" rel="noopener noreferrer" class="font-medium text-foreground hover:text-primary truncate max-w-md">
+                      ${escapeHtml(cp.title || `Pin ${cp.pin_id}`)}
+                    </a>
+                    <span class="font-bold text-rose-500 shrink-0 ml-2">${fmtNumber(cp.saves)} saves</span>
+                  </li>
+                `)
+                .join('');
+
+              return `
+                <div class="p-5 hover:bg-muted/10 transition-colors">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                    <div class="flex items-center gap-2">
+                      <span class="flex h-6 w-6 items-center justify-center rounded-md bg-purple-500/10 text-purple-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+                      </span>
+                      <span class="font-bold text-xs text-foreground font-mono">Canonical #${escapeHtml(canonicalId)}</span>
+                      <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500">
+                        ${clusterPins.length} Pin Variations
+                      </span>
+                    </div>
+                    <span class="text-xs font-semibold text-muted-foreground">
+                      Cluster Saves: <strong class="text-foreground">${fmtNumber(clusterTotalSaves)}</strong>
+                    </span>
+                  </div>
+                  <ul class="space-y-0.5 bg-muted/20 rounded-xl p-2 border border-border/40">
+                    ${itemsList}
+                  </ul>
+                </div>
+              `;
+            })
+            .join('');
+        }
+      }
+    } catch (e: any) {
+      console.error('Error loading PinArchive pins:', e);
+      if (grid) {
+        grid.innerHTML = `
+          <div class="col-span-full py-8 text-center text-xs text-rose-500 bg-rose-500/5 rounded-xl border border-rose-500/20">
+            Failed to load winning pins: ${escapeHtml(e.message)}
+          </div>
+        `;
+      }
+    }
+  }
+
+  async function loadTopics() {
+    const list = document.getElementById('topics-list');
+    const badge = document.getElementById('topics-badge-count');
+
+    try {
+      const res = await fetch('/api/pinarchive/topics');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Failed to load topics');
+
+      const topics: any[] = json.topics || [];
+      if (badge) badge.textContent = `${topics.length}`;
+
+      if (list) {
+        if (topics.length === 0) {
+          list.innerHTML = `
+            <div class="py-8 text-center text-xs text-muted-foreground">
+              No SEO topics identified yet.
+            </div>
+          `;
+        } else {
+          const maxSaves = Math.max(...topics.map((t) => Number(t.sum_saves) || 1), 1);
+          list.innerHTML = topics
+            .map((t) => {
+              const saves = Number(t.sum_saves || 0);
+              const pct = Math.round((saves / maxSaves) * 100);
+              return `
+                <div class="group p-2 rounded-lg hover:bg-muted/40 transition-colors">
+                  <div class="flex items-center justify-between text-xs mb-1">
+                    <span class="font-semibold text-foreground truncate max-w-[200px]" title="${escapeHtml(t.name)}">
+                      ${escapeHtml(t.name)}
+                    </span>
+                    <div class="flex items-center gap-2 shrink-0">
+                      <span class="text-[10px] text-muted-foreground font-medium">${t.pins} pin${t.pins === 1 ? '' : 's'}</span>
+                      <span class="font-bold text-rose-500">${fmtNumber(saves)}</span>
+                    </div>
+                  </div>
+                  <div class="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                    <div class="h-full bg-primary/70 rounded-full group-hover:bg-primary transition-all duration-300" style="width: ${pct}%"></div>
+                  </div>
+                </div>
+              `;
+            })
+            .join('');
+        }
+      }
+    } catch (e: any) {
+      console.error('Error loading PinArchive topics:', e);
+    }
+  }
+
+  function init() {
+    loadOverview();
+    loadPins();
+    loadTopics();
+
+    // Sort selector
+    const sortSelect = document.getElementById('pins-sort-select') as HTMLSelectElement | null;
+    if (sortSelect) {
+      sortSelect.addEventListener('change', () => {
+        currentSort = sortSelect.value;
+        loadPins();
+      });
+    }
+
+    // Limit selector
+    const limitSelect = document.getElementById('pins-limit-select') as HTMLSelectElement | null;
+    if (limitSelect) {
+      limitSelect.addEventListener('change', () => {
+        currentLimit = parseInt(limitSelect.value, 10) || 50;
+        loadPins();
+      });
+    }
+
+    // Refresh button
+    const refreshBtn = document.getElementById('refresh-btn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        const icon = document.getElementById('refresh-icon');
+        if (icon) icon.classList.add('animate-spin');
+        Promise.all([loadOverview(), loadPins(), loadTopics()]).finally(() => {
+          setTimeout(() => {
+            if (icon) icon.classList.remove('animate-spin');
+          }, 400);
+        });
+      });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+</script>
