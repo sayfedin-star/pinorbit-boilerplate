@@ -19,6 +19,16 @@ let currentRole = 'member';
 
 if (supabase && currentWorkspace) {
   try {
+    const { data: adminData } = await supabase
+      .from('admin_users')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (adminData) {
+      currentRole = 'owner';
+    }
+
     const { data: memberData } = await supabase
       .from('workspace_memberships')
       .select('id, user_id, role, created_at')
