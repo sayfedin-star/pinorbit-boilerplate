@@ -53,14 +53,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     ]);
 
     // Check P2 tables
-    const p2Admin = dbClients.getCompetitors(runtimeEnv);
+    const p2Admin = dbClients.getCompetitorsAdmin(runtimeEnv);
     const [compRes, compBoardRes] = await Promise.all([
       p2Admin.from('competitors').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
       p2Admin.from('competitor_boards').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
     ]);
 
     // Check P3 tables
-    const p3Admin = dbClients.getAnalytics(runtimeEnv);
+    const p3Admin = dbClients.getAnalyticsAdmin(runtimeEnv);
     const connRes = await p3Admin
       .from('analytics_connections')
       .select('id', { count: 'exact', head: true })
