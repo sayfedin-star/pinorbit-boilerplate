@@ -212,7 +212,7 @@ async function fetchPinFromPinterest(pinId) {
   return { ok: true, ...data };
 }
 
-async function pushBatch(workspaceId, username, pins, followerCount) {
+async function pushBatch(workspaceId, username, pins, followerCount, totalPins) {
   if (!pins.length) return { ok: true, pushed: 0 };
   const body = {
     run_id: crypto.randomUUID(),
@@ -222,6 +222,10 @@ async function pushBatch(workspaceId, username, pins, followerCount) {
     run_type: 'refresh',
     trigger: 'refresh',
     follower_count: typeof followerCount === 'number' ? followerCount : undefined,
+    account_meta: {
+      pins_count: Number.isFinite(totalPins) ? totalPins : undefined,
+      last_result: 'refresh',
+    },
     pins,
   };
   const res = await fetch(`${PINORBIT_WORKER_URL.replace(/\/+$/, '')}/api/internal/pinarchive/ingest`, {
@@ -320,7 +324,7 @@ async function main() {
       }
 
       if (changedBatch.length >= CFG.BATCH_SIZE) {
-        const result = await pushBatch(acc.workspace_id, acc.username, changedBatch.splice(0, changedBatch.length), accountFollowerCount);
+        const result = await pushBatch(acc.workspace_id, acc.username, changedBatch.splice(0, changedBatch.length), accountFollowerCount, pins.length);
         if (result.ok) summary.pushed += result.pushed;
         else summary.errors.push(`push: ${result.error}`);
         await sleep(2000);
@@ -329,7 +333,7 @@ async function main() {
     }
 
     if (changedBatch.length) {
-      const result = await pushBatch(acc.workspace_id, acc.username, changedBatch, accountFollowerCount);
+      const result = await pushBatch(acc.workspace_id, acc.username, changedBatch, accountFollowerCount, pins.length);
       if (result.ok) summary.pushed += result.pushed;
       else summary.errors.push(`push: ${result.error}`);
     }

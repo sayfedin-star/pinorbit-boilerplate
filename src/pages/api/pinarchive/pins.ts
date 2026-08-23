@@ -51,7 +51,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   try {
     const { data, error } = await db
       .from('pa_pins')
-      .select('pin_id, title, image_url, link, saves, repins, comments, share_count, velocity, annotations, seo_category, canonical_pin_id, archived_at, board_name, board_id, dominant_color, node_id, is_video')
+      .select('id, pin_id, title, image_url, link, saves, repins, comments, share_count, velocity, annotations, seo_category, canonical_pin_id, archived_at, board_name, board_id, dominant_color, node_id, is_video')
       .eq('workspace_id', ws)
       .not('archived_at', 'is', null)
       .order(sortCol, { ascending: false })

@@ -95,30 +95,34 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // 5. Ingest into Project 4 (PinArchive)
   try {
     const pinArchive = dbClients.getPinArchive(runtimeEnv);
-    const accountMeta = payload.account_meta || {};
-    const username = String(payload.username || accountMeta.username || '').trim() || 'default';
+    const account_meta = payload.account_meta || {};
+    const accountMeta = account_meta;
+    const username = String(payload.username || account_meta.username || '').trim() || 'default';
     const fetchedAt = payload.fetched_at || new Date().toISOString();
     const pins: any[] = Array.isArray(payload.pins) ? payload.pins : [];
     const promotedCount = pins.filter((p: any) => Boolean(p.promoted)).length;
-    const pinsCount = pins.length;
 
     // A) Upsert pa_accounts
     const accountData: Record<string, any> = {
       workspace_id: workspaceId,
       username,
       last_run_at: fetchedAt,
-      pins_count: pinsCount,
-      promoted_count: promotedCount,
-      last_result: accountMeta.last_result || 'success',
+      last_result: account_meta.last_result || 'success',
     };
+    if (typeof account_meta.pins_count === 'number' && Number.isFinite(account_meta.pins_count)) {
+      accountData.pins_count = Math.max(0, Math.round(account_meta.pins_count));
+    }
+    if (typeof account_meta.promoted_count === 'number' && Number.isFinite(account_meta.promoted_count)) {
+      accountData.promoted_count = Math.max(0, Math.round(account_meta.promoted_count));
+    }
     if (typeof payload.follower_count === 'number') accountData.follower_count = payload.follower_count;
-    if (typeof accountMeta.follower_count === 'number') accountData.follower_count = accountMeta.follower_count;
-    if (accountMeta.sheet_id) accountData.sheet_id = accountMeta.sheet_id;
-    if (typeof accountMeta.interval_days === 'number') accountData.interval_days = accountMeta.interval_days;
-    if (accountMeta.status) accountData.status = accountMeta.status;
-    if (accountMeta.backfill_status) accountData.backfill_status = accountMeta.backfill_status;
-    if (accountMeta.backfill_cursor !== undefined) accountData.backfill_cursor = accountMeta.backfill_cursor;
-    if (accountMeta.next_run_at) accountData.next_run_at = accountMeta.next_run_at;
+    if (typeof account_meta.follower_count === 'number') accountData.follower_count = account_meta.follower_count;
+    if (account_meta.sheet_id) accountData.sheet_id = account_meta.sheet_id;
+    if (typeof account_meta.interval_days === 'number') accountData.interval_days = account_meta.interval_days;
+    if (account_meta.status) accountData.status = account_meta.status;
+    if (account_meta.backfill_status) accountData.backfill_status = account_meta.backfill_status;
+    if (account_meta.backfill_cursor !== undefined) accountData.backfill_cursor = account_meta.backfill_cursor;
+    if (account_meta.next_run_at) accountData.next_run_at = account_meta.next_run_at;
 
     const { data: accountRow, error: accErr } = await pinArchive
       .from('pa_accounts')

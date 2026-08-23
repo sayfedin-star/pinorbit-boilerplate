@@ -470,6 +470,138 @@ describe('PinArchive Module Test Suite', () => {
       expect(runsInserted.length).toBe(1);
       expect(runsInserted[0].trigger).toBe('refresh');
     });
+
+    it('ingest WITHOUT account_meta.pins_count -> pa_accounts upsert payload must NOT contain pins_count nor promoted_count', async () => {
+      mockAdminClient.from.mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: { id: mockWsId }, error: null }),
+      });
+
+      mockKvStore.set(`ingest_secret:ws:${mockWsId}`, mockSecret);
+
+      let upsertedAccountData: any = null;
+      mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_accounts') {
+          return {
+            upsert: vi.fn().mockImplementation((data: any) => {
+              upsertedAccountData = data;
+              return {
+                select: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({
+                    data: { id: 'acc-1', workspace_id: mockWsId, username: 'testuser' },
+                    error: null,
+                  }),
+                }),
+              };
+            }),
+          };
+        }
+        if (table === 'pa_pins') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                in: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+            upsert: vi.fn().mockReturnValue({
+              select: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+        if (table === 'pa_pin_metrics') {
+          return { upsert: vi.fn().mockResolvedValue({ data: [], error: null }) };
+        }
+        if (table === 'pa_runs') {
+          return { insert: vi.fn().mockResolvedValue({ data: {}, error: null }) };
+        }
+        return {};
+      });
+
+      const req = new Request('http://localhost:4321/api/internal/pinarchive/ingest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-ingest-secret': mockSecret,
+        },
+        body: JSON.stringify({
+          workspace_id: mockWsId,
+          username: 'testuser',
+          pins: [{ pin_id: 'p1', title: 'P1', saves: 10 }],
+        }),
+      });
+
+      const res = await ingestHandler({ request: req, locals: { runtime: { env: mockRuntimeEnv } } } as any);
+      expect(res.status).toBe(200);
+      expect(upsertedAccountData).not.toHaveProperty('pins_count');
+      expect(upsertedAccountData).not.toHaveProperty('promoted_count');
+    });
+
+    it('ingest WITH account_meta.pins_count=107 -> upsert payload pins_count === 107', async () => {
+      mockAdminClient.from.mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: { id: mockWsId }, error: null }),
+      });
+
+      mockKvStore.set(`ingest_secret:ws:${mockWsId}`, mockSecret);
+
+      let upsertedAccountData: any = null;
+      mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_accounts') {
+          return {
+            upsert: vi.fn().mockImplementation((data: any) => {
+              upsertedAccountData = data;
+              return {
+                select: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({
+                    data: { id: 'acc-1', workspace_id: mockWsId, username: 'testuser' },
+                    error: null,
+                  }),
+                }),
+              };
+            }),
+          };
+        }
+        if (table === 'pa_pins') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                in: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+            upsert: vi.fn().mockReturnValue({
+              select: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+        if (table === 'pa_pin_metrics') {
+          return { upsert: vi.fn().mockResolvedValue({ data: [], error: null }) };
+        }
+        if (table === 'pa_runs') {
+          return { insert: vi.fn().mockResolvedValue({ data: {}, error: null }) };
+        }
+        return {};
+      });
+
+      const req = new Request('http://localhost:4321/api/internal/pinarchive/ingest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-ingest-secret': mockSecret,
+        },
+        body: JSON.stringify({
+          workspace_id: mockWsId,
+          username: 'testuser',
+          account_meta: { pins_count: 107 },
+          pins: [{ pin_id: 'p1', title: 'P1', saves: 10 }],
+        }),
+      });
+
+      const res = await ingestHandler({ request: req, locals: { runtime: { env: mockRuntimeEnv } } } as any);
+      expect(res.status).toBe(200);
+      expect(upsertedAccountData.pins_count).toBe(107);
+    });
   });
 
   describe('4. POST /api/internal/pinarchive/dispatch', () => {

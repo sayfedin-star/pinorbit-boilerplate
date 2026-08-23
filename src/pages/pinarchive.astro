@@ -364,7 +364,7 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
                 <div class="group rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between">
                   <div>
                     <!-- Image preview -->
-                    <div class="relative w-full h-44 bg-muted/50 overflow-hidden flex items-center justify-center">
+                    <a href="/pinarchive/details?id=${encodeURIComponent(p.id || '')}" class="relative w-full h-44 bg-muted/50 overflow-hidden flex items-center justify-center block">
                       ${imageUrl ? `
                         <img
                           src="${escapeHtml(imageUrl)}"
@@ -386,11 +386,11 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
                           ${escapeHtml(category)}
                         </span>
                       ` : ''}
-                    </div>
+                    </a>
 
                     <!-- Content -->
                     <div class="p-4 space-y-2.5">
-                      <a href="${escapeHtml(pinUrl)}" target="_blank" rel="noopener noreferrer" class="block group/link">
+                      <a href="/pinarchive/details?id=${encodeURIComponent(p.id || '')}" class="block group/link">
                         <h3 class="text-xs font-bold text-foreground line-clamp-2 group-hover/link:text-primary transition-colors" title="${escapeHtml(p.title || 'Untitled Pin')}">
                           ${escapeHtml(p.title || `Pin ${p.pin_id}`)}
                         </h3>
@@ -475,7 +475,7 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
               const itemsList = clusterPins
                 .map((cp) => `
                   <li class="flex items-center justify-between text-xs py-1.5 px-3 rounded-lg hover:bg-muted/40 transition-colors">
-                    <a href="${escapeHtml(cp.link || `https://www.pinterest.com/pin/${cp.pin_id}/`)}" target="_blank" rel="noopener noreferrer" class="font-medium text-foreground hover:text-primary truncate max-w-md">
+                    <a href="/pinarchive/details?id=${encodeURIComponent(cp.id || '')}" class="font-medium text-foreground hover:text-primary truncate max-w-md">
                       ${escapeHtml(cp.title || `Pin ${cp.pin_id}`)}
                     </a>
                     <span class="font-bold text-rose-500 shrink-0 ml-2">${fmtNumber(cp.saves)} saves</span>
