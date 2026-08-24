@@ -545,6 +545,7 @@ function refreshArchived() {
 
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ctl = ensureControl_(ss);
     const accounts = readAccounts_();
     const cfgCache = {};
     const summary = { accountsProcessed: 0, matched: 0, pushed: 0,
