@@ -360,6 +360,7 @@ async function main() {
       if (!fresh.ok) {
         if (fresh.code === 403 || fresh.code === 429) consecutive403++;
         else consecutive403 = 0;
+        console.warn(`[FAIL] ${pinId}: ${fresh.error || 'http ' + fresh.code} (code=${fresh.code})`);
         summary.errors.push(`${pinId}: ${fresh.error || 'http ' + fresh.code}`);
         await sleep(CFG.SLEEP_MS);
         continue;
