@@ -88,3 +88,25 @@ To diagnose a filtered run that shows errors=51/checked=0, copy one pin_id from 
 ```bash
 node scripts/test-pin-fetch.mjs <pin_id>
 ```
+
+---
+
+## 7. Account Attribution Verification & Integrity Diagnostics (SQL)
+
+To verify pin attribution counts per account and ensure data integrity across multi-account workspaces:
+
+```sql
+-- A) VERIFY attribution counts for the affected workspace:
+select a.username, count(p.id) as pins
+from pa_accounts a
+left join pa_pins p on p.account_id = a.id
+where a.workspace_id = '46afe19d-f16f-4d75-9164-41614616da27'
+group by a.username order by pins desc;
+-- EXPECT: cindymay3977=21, denisevigliottarecipes=30, others=0.
+-- If cindymay shows >21 → misattribution occurred → corrective path:
+-- re-point pins using the per-account GAS sheets (pins_<username> tab
+-- pin_id lists), since pa_pins stores no username column.
+-- (No corruption is expected: both refresh runs failed extraction before
+--  any push, so zero writes happened.)
+```
+
