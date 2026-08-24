@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * PinArchive Refresh: fetches updated metrics & relay enrichment for archived pins and pushes deltas.
  * Env Vars: PINARCHIVE_SUPABASE_URL, PINARCHIVE_SUPABASE_KEY, PINORBIT_WORKER_URL, PINARCHIVE_INGEST_SECRET
