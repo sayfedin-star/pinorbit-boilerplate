@@ -107,7 +107,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return json({ success: false, error: error.message }, 500);
     }
 
-    const pins = data || [];
+    const pins: any[] = data || [];
 
     if (pins.length > 0) {
       const pinIds = pins.map((p: any) => p.id).filter(Boolean);
