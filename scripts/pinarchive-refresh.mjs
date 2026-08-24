@@ -257,6 +257,7 @@ function extractPinData(html, pinId) {
           title: ld.headline || ld.name || '',
           description: ld.articleBody || ld.description || '',
           link: ld.url || '',
+          utm_link: null,
           domain: '',
           board_name: '',
           board_id: null,
