@@ -2,9 +2,12 @@
 export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import SectionHeader from '../components/ui/SectionHeader.astro';
+
+const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
 ---
 
 <Layout title="PinArchive Intelligence" description="Historical pin performance, winning recipe clusters, SEO topics, and canonical variations.">
+  <div id="pinarchive-page-root" data-workspace-id={activeWorkspaceId}>
   <!-- ═══ Header & Primary Controls ═══ -->
   <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
     <div>
@@ -394,6 +397,7 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
       </div>
     </div>
   </div>
+  </div>
 </Layout>
 
 <script>
@@ -408,6 +412,34 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  function toast(message: string, type: 'success' | 'error' | 'info' = 'success') {
+    let root = document.getElementById('toast-root');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'toast-root';
+      root.setAttribute('aria-live', 'polite');
+      root.className = 'fixed bottom-4 right-4 z-[70] flex flex-col gap-2 w-80 max-w-[calc(100vw-2rem)]';
+      document.body.appendChild(root);
+    }
+    const colors = {
+      success: 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400',
+      error: 'border-rose-500/40 text-rose-600 dark:text-rose-400',
+      info: 'border-primary/40 text-primary',
+    };
+    const icons = { success: '✓', error: '✕', info: 'ℹ' };
+    const el = document.createElement('div');
+    el.className = `flex items-start gap-2.5 rounded-xl border bg-card p-3 text-xs font-semibold shadow-lg ${colors[type]}`;
+    el.innerHTML = `<span class="flex-shrink-0">${icons[type]}</span><span class="flex-1 text-foreground">${escapeHtml(message)}</span>
+      <button class="text-muted-foreground hover:text-foreground cursor-pointer" aria-label="Dismiss">✕</button>`;
+    el.querySelector('button')?.addEventListener('click', () => el.remove());
+    root.appendChild(el);
+    setTimeout(() => {
+      el.style.opacity = '0';
+      el.style.transition = 'opacity .3s';
+      setTimeout(() => el.remove(), 300);
+    }, 4200);
   }
 
   // Full numbers formatting (no k/M abbreviations)
@@ -1010,16 +1042,43 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
     }
 
     // Refresh button
-    const refreshBtn = document.getElementById('refresh-btn');
+    const refreshBtn = document.getElementById('refresh-btn') as HTMLButtonElement | null;
     if (refreshBtn) {
-      refreshBtn.addEventListener('click', () => {
+      refreshBtn.addEventListener('click', async () => {
+        const root = document.getElementById('pinarchive-page-root');
+        const workspaceId = root?.getAttribute('data-workspace-id') || '';
+
+        if (!confirm('Run archive refresh for this workspace? This will dispatch the GitHub Actions background refresh to sync metrics and visual annotations.')) {
+          return;
+        }
+
         const icon = document.getElementById('refresh-icon');
+        refreshBtn.disabled = true;
         if (icon) icon.classList.add('animate-spin');
-        Promise.all([loadOverview(), loadTopics()]).finally(() => {
-          setTimeout(() => {
-            if (icon) icon.classList.remove('animate-spin');
-          }, 400);
-        });
+
+        try {
+          const res = await fetch('/api/internal/pinarchive/refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ workspace_id: workspaceId }),
+          });
+
+          if (res.status === 202 || res.ok) {
+            toast('Refresh queued', 'success');
+          } else if (res.status === 403) {
+            toast('Admin required', 'error');
+          } else if (res.status === 503) {
+            toast('Refresh not configured on server yet', 'error');
+          } else {
+            const data = await res.json().catch(() => ({}));
+            toast(data.error || 'Failed to dispatch refresh', 'error');
+          }
+        } catch (err: any) {
+          toast(err?.message || 'Network error triggering refresh', 'error');
+        } finally {
+          refreshBtn.disabled = false;
+          if (icon) icon.classList.remove('animate-spin');
+        }
       });
     }
   }
