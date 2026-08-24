@@ -7,6 +7,7 @@ This document contains the deployed, canonical Google Apps Script (GAS) Collecto
 ## 1. Changelog (v2.6.1)
 
 - **[A2] `mapPin_`**: `annotations: []` — The GitHub refresh workflow is the sole DB annotation writer. GAS emits `annotations: []`.
+- **[A3] `refreshArchived`**: Updates Control sheet with run telemetry per account (`last_run_at`, `last_result: 'sync: matched=... pushed=... skipped=...'`).
 - **[T1] `cellToStr_`**: Sheet `Date` cells are formatted via `fmtDate_` instead of `String()` to prevent Postgres timestamp parsing errors in sync pushes.
 - **[S1] `refreshArchived`**: Zero-cookie fast sync directly from Sheet rows to Postgres database applying OR filtering rules.
 - **Architecture Law**: GAS owns Google Sheets. The GitHub refresh workflow owns DB enrichment (by `pin_id`, no cookie). Independent pipelines.
@@ -579,6 +580,11 @@ function refreshArchived() {
       const batch = [];
       const batchRows = [];
 
+      let accMatched = 0;
+      let accPushed = 0;
+      let accSkipped = 0;
+      let accErrors = 0;
+
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         const pinId = String(getF_(row, map, 'pin_id') || '').trim();
@@ -605,7 +611,9 @@ function refreshArchived() {
         const updMs  = updV instanceof Date ? updV.getTime()
           : (updV ? (Date.parse(String(updV)) || 0) : 0);
         if (archMs && updMs && archMs >= updMs) {
-          summary.skippedUnchanged++; continue;
+          accSkipped++;
+          summary.skippedUnchanged++;
+          continue;
         }
 
         batch.push({
@@ -630,28 +638,40 @@ function refreshArchived() {
           tags: cellToStr_(getF_(row, map, 'tags'))
         });
         batchRows.push(i + 2);
+        accMatched++;
         summary.matched++;
       }
 
-      if (batch.length === 0) continue;
-
-      for (let b = 0; b < batch.length; b += SYNC_CONFIG.BATCH_SIZE) {
-        const slice = batch.slice(b, b + SYNC_CONFIG.BATCH_SIZE);
-        const sliceRows = batchRows.slice(b, b + SYNC_CONFIG.BATCH_SIZE);
-        const pr = pushSyncBatch_(item.acc, slice);
-        if (pr.ok && pr.skipped === 'ingest_disabled') {
-          summary.batchesSkipped++;
-        } else if (pr.ok) {
-          summary.pushed += slice.length;
-          const nowHuman = fmtDate_(new Date());
-          sliceRows.forEach(sheetRow => {
-            sh.getRange(sheetRow, map.archived_at).setValue(nowHuman);
-          });
-        } else {
-          summary.errors.push('push: ' + (pr.error || ('http ' + pr.code)));
+      if (batch.length > 0) {
+        for (let b = 0; b < batch.length; b += SYNC_CONFIG.BATCH_SIZE) {
+          const slice = batch.slice(b, b + SYNC_CONFIG.BATCH_SIZE);
+          const sliceRows = batchRows.slice(b, b + SYNC_CONFIG.BATCH_SIZE);
+          const pr = pushSyncBatch_(item.acc, slice);
+          if (pr.ok && pr.skipped === 'ingest_disabled') {
+            summary.batchesSkipped++;
+          } else if (pr.ok) {
+            accPushed += slice.length;
+            summary.pushed += slice.length;
+            const nowHuman = fmtDate_(new Date());
+            sliceRows.forEach(sheetRow => {
+              sh.getRange(sheetRow, map.archived_at).setValue(nowHuman);
+            });
+          } else {
+            accErrors++;
+            summary.errors.push('push: ' + (pr.error || ('http ' + pr.code)));
+          }
+          Utilities.sleep(SYNC_CONFIG.SLEEP_BETWEEN_BATCHES_MS);
         }
-        Utilities.sleep(SYNC_CONFIG.SLEEP_BETWEEN_BATCHES_MS);
       }
+
+      const nowIso = new Date().toISOString();
+      updateControl_(ctl, item.row, {
+        last_run_at: nowIso,
+        last_result: 'sync: matched=' + accMatched
+                   + ' pushed=' + accPushed
+                   + ' skipped=' + accSkipped
+                   + (accErrors ? ' | errors: ' + accErrors : '')
+      });
     }
 
     Logger.log(JSON.stringify(summary, null, 2));
