@@ -1,0 +1,514 @@
+---
+export const prerender = false;
+import Layout from '../../../layouts/Layout.astro';
+import SectionHeader from '../../../components/ui/SectionHeader.astro';
+import { dbClients } from '../../../server/db/clients';
+
+const { username } = Astro.params;
+const USERNAME_REGEX = /^[a-zA-Z0-9_]{1,30}$/;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+if (!username || !USERNAME_REGEX.test(username)) {
+  return Astro.redirect('/pinarchive');
+}
+
+const user = Astro.locals.user;
+const workspaceId = Astro.locals.activeWorkspaceId;
+
+if (!user || !workspaceId || !UUID_REGEX.test(workspaceId)) {
+  return Astro.redirect('/login?redirect=' + encodeURIComponent(Astro.url.pathname));
+}
+
+const db = dbClients.getPinArchive(Astro.locals.runtime?.env);
+const { data: account, error } = await db
+  .from('pa_accounts')
+  .select('*')
+  .eq('workspace_id', workspaceId)
+  .eq('username', username)
+  .maybeSingle();
+
+if (!account || error) {
+  return Astro.redirect('/pinarchive');
+}
+
+const isActive = account.status === 'active';
+const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg-amber-500' : 'bg-rose-500';
+---
+
+<Layout title={`@${account.username} — PinArchive Account`} description={`Tracked performance, top pins, and archive history for @${account.username}.`}>
+  <!-- ═══ Back Link & Top Bar ═══ -->
+  <div class="mb-4">
+    <a
+      href="/pinarchive"
+      class="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors group mb-3"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      <span>Back to PinArchive Dashboard</span>
+    </a>
+
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <SectionHeader
+        title={`@${account.username}`}
+        description={`Tracked Pinterest creator profile, top historical pins, and synchronization telemetry.`}
+      />
+
+      <div class="flex items-center gap-2.5">
+        <a
+          href={`https://www.pinterest.com/${encodeURIComponent(account.username)}/`}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition-all"
+        >
+          <span>View on Pinterest</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
+
+        <button
+          id="refresh-account-btn"
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-primary text-primary-foreground px-3.5 py-2 text-xs font-bold shadow-xs hover:bg-primary/90 transition-all cursor-pointer"
+        >
+          <svg id="refresh-account-icon" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+          <span>Refresh Pins</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Account Summary Card ═══ -->
+  <div id="account-card-root" data-account-id={account.id} class="mb-8 rounded-2xl border border-border bg-card p-6 shadow-sm space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border/80">
+      <div class="flex items-center gap-3">
+        <span class={`h-3 w-3 rounded-full ${dotClass} shrink-0`} aria-hidden="true"></span>
+        <div class="flex items-center gap-2">
+          <h2 class="text-xl font-bold text-foreground">@{account.username}</h2>
+          <span class={`text-xs font-semibold uppercase px-2.5 py-0.5 rounded-full ${isActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}`}>
+            {account.status}
+          </span>
+        </div>
+      </div>
+
+      <!-- Accept GAS Data Toggle -->
+      <div class="flex items-center gap-3 bg-muted/30 rounded-xl px-3.5 py-2 border border-border/60">
+        <span class="text-xs font-semibold text-foreground">Accept GAS Data:</span>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            id="account-ingest-toggle"
+            data-acc-id={account.id}
+            checked={account.ingest_enabled !== false}
+            class="sr-only peer"
+          />
+          <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
+        </label>
+        <span id="account-ingest-status-text" class={`text-xs font-bold ${account.ingest_enabled !== false ? 'text-emerald-500' : 'text-rose-500'}`}>
+          {account.ingest_enabled !== false ? 'Enabled' : 'Disabled'}
+        </span>
+      </div>
+    </div>
+
+    <!-- Metrics Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div class="bg-background rounded-xl border border-border p-3.5">
+        <span class="text-[11px] font-medium text-muted-foreground uppercase block">Followers</span>
+        <span class="text-lg font-bold text-foreground mt-1 block">{(account.follower_count || 0).toLocaleString('en-US')}</span>
+      </div>
+
+      <div class="bg-background rounded-xl border border-border p-3.5">
+        <span class="text-[11px] font-medium text-muted-foreground uppercase block">Pins Total</span>
+        <span class="text-lg font-bold text-foreground mt-1 block">{(account.pins_count || 0).toLocaleString('en-US')}</span>
+      </div>
+
+      <div class="bg-background rounded-xl border border-border p-3.5">
+        <span class="text-[11px] font-medium text-muted-foreground uppercase block">Interval</span>
+        <span class="text-lg font-bold text-foreground mt-1 block">{account.interval_days || 3} days</span>
+      </div>
+
+      <div class="bg-background rounded-xl border border-border p-3.5">
+        <span class="text-[11px] font-medium text-muted-foreground uppercase block">Last Run</span>
+        <span class="text-xs font-bold text-foreground mt-1 block truncate" title={account.last_run_at || 'Never'}>
+          {account.last_run_at ? new Date(account.last_run_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Never'}
+        </span>
+      </div>
+
+      <div class="bg-background rounded-xl border border-border p-3.5">
+        <span class="text-[11px] font-medium text-muted-foreground uppercase block">Next Run</span>
+        <span class="text-xs font-bold text-foreground mt-1 block truncate" title={account.next_run_at || 'Automatic'}>
+          {account.next_run_at ? new Date(account.next_run_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Pending'}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Top Pins Section ═══ -->
+  <section class="mb-12" aria-labelledby="top-pins-heading">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+      <div>
+        <h3 id="top-pins-heading" class="text-base font-bold text-foreground flex items-center gap-2">
+          <span>📌 Top Pins</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary" id="account-pins-badge">0</span>
+        </h3>
+        <p class="text-xs text-muted-foreground mt-0.5">Top performing archived pins for @{account.username}.</p>
+      </div>
+
+      <!-- Controls: Sort & Limit -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-1.5 bg-card border border-border rounded-xl px-2.5 py-1.5 shadow-xs">
+          <label for="account-pins-sort" class="text-xs font-semibold text-muted-foreground">Sort:</label>
+          <select id="account-pins-sort" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer">
+            <option value="saves" selected>Total Saves</option>
+            <option value="velocity">Velocity (Saves/Day)</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-1.5 bg-card border border-border rounded-xl px-2.5 py-1.5 shadow-xs">
+          <label for="account-pins-limit" class="text-xs font-semibold text-muted-foreground">Limit:</label>
+          <select id="account-pins-limit" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pins Grid -->
+    <div id="account-pins-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <!-- Skeletons -->
+      <div class="rounded-xl border border-border bg-card p-4 shadow-sm animate-pulse space-y-3">
+        <div class="h-44 bg-muted rounded-lg"></div>
+        <div class="h-4 w-3/4 bg-muted rounded"></div>
+        <div class="h-3 w-1/2 bg-muted rounded"></div>
+      </div>
+      <div class="rounded-xl border border-border bg-card p-4 shadow-sm animate-pulse space-y-3">
+        <div class="h-44 bg-muted rounded-lg"></div>
+        <div class="h-4 w-3/4 bg-muted rounded"></div>
+        <div class="h-3 w-1/2 bg-muted rounded"></div>
+      </div>
+      <div class="rounded-xl border border-border bg-card p-4 shadow-sm animate-pulse space-y-3">
+        <div class="h-44 bg-muted rounded-lg"></div>
+        <div class="h-4 w-3/4 bg-muted rounded"></div>
+        <div class="h-3 w-1/2 bg-muted rounded"></div>
+      </div>
+      <div class="rounded-xl border border-border bg-card p-4 shadow-sm animate-pulse space-y-3">
+        <div class="h-44 bg-muted rounded-lg"></div>
+        <div class="h-4 w-3/4 bg-muted rounded"></div>
+        <div class="h-3 w-1/2 bg-muted rounded"></div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  let accountId = '';
+  let currentSort = 'saves';
+  let currentLimit = 50;
+
+  function escapeHtml(str?: string | null): string {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function fmtNumber(n: number | string | null | undefined): string {
+    const num = Number(n) || 0;
+    return num.toLocaleString('en-US');
+  }
+
+  function fmtDate(isoString?: string | null): string {
+    if (!isoString) return '—';
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return '—';
+    }
+  }
+
+  function renderStageBadge(stage?: string | null): string {
+    switch (stage) {
+      case 'NEW':
+        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">🟢 NEW</span>';
+      case 'GROWING':
+        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">🚀 GROWING</span>';
+      case 'MATURE':
+        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">🟣 MATURE</span>';
+      case 'COOLING':
+        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">❄️ COOLING</span>';
+      default:
+        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-500/10 text-slate-500 border border-slate-500/20">⚪ DORMANT</span>';
+    }
+  }
+
+  function renderAnomalyBadge(anomaly?: string | null): string {
+    if (anomaly === 'SPIKE') {
+      return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20 animate-pulse">🔥 SPIKE</span>';
+    }
+    if (anomaly === 'COOLING') {
+      return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">❄️ COOLING</span>';
+    }
+    return '';
+  }
+
+  function renderSinglePinCard(p: any): string {
+    const saves = Number(p.saves || 0);
+    const repins = Number(p.repins || 0);
+    const velocity = Number(p.velocity || 0);
+    const shares = Number(p.share_count || 0);
+    const annotations = Array.isArray(p.annotations) ? p.annotations : [];
+    const category = p.seo_category || p.board_name || null;
+    const pinUrl = p.link || `https://www.pinterest.com/pin/${p.pin_id}/`;
+    const imageUrl = p.image_url || '';
+    const pinId = p.id || '';
+    const createdDate = fmtDate(p.created_at_pinterest);
+
+    const tagsHtml = annotations.slice(0, 4).map((a: any) => {
+      const name = typeof a === 'string' ? a : a?.name || '';
+      if (!name) return '';
+      let targetUrl = '';
+      if (typeof a === 'object' && a?.url) {
+        targetUrl = `https://www.pinterest.com${a.url.startsWith('/') ? a.url : '/' + a.url}`;
+      } else if (typeof a === 'object' && a?.idea_id) {
+        targetUrl = `https://www.pinterest.com/ideas/${encodeURIComponent(name)}/${a.idea_id}/`;
+      } else {
+        targetUrl = `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(name)}`;
+      }
+
+      return `
+        <a
+          href="${escapeHtml(targetUrl)}"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1 text-[10px] bg-primary/10 hover:bg-primary/20 text-primary px-2 py-0.5 rounded-md font-medium truncate max-w-[130px] transition-colors"
+          title="${escapeHtml(name)} (Pinterest Idea)"
+        >
+          <span class="truncate">${escapeHtml(name)}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
+      `;
+    }).join('');
+
+    const moreTagsCount = annotations.length > 4 ? annotations.length - 4 : 0;
+
+    return `
+      <div class="group rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between relative">
+        <div>
+          <!-- Image preview -->
+          <a href="/pinarchive/details?id=${encodeURIComponent(pinId)}" class="relative w-full h-44 bg-muted/50 overflow-hidden flex items-center justify-center block">
+            ${imageUrl ? `
+              <img
+                src="${escapeHtml(imageUrl)}"
+                alt="${escapeHtml(p.title || 'Pinterest Pin')}"
+                loading="lazy"
+                class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"
+              />
+              <div class="hidden absolute inset-0 flex items-center justify-center text-muted-foreground">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              </div>
+            ` : `
+              <div class="flex items-center justify-center text-muted-foreground">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              </div>
+            `}
+            ${category ? `
+              <span class="absolute top-2.5 left-2.5 text-[10px] font-bold bg-background/90 backdrop-blur-xs text-foreground px-2 py-0.5 rounded-md shadow-xs max-w-[140px] truncate" title="${escapeHtml(category)}">
+                ${escapeHtml(category)}
+              </span>
+            ` : ''}
+          </a>
+
+          <!-- Content -->
+          <div class="p-4 space-y-2.5">
+            <div class="flex flex-wrap items-center gap-1.5">
+              ${renderStageBadge(p.stage)}
+              ${renderAnomalyBadge(p.anomaly)}
+            </div>
+
+            <div>
+              <a href="/pinarchive/details?id=${encodeURIComponent(pinId)}" class="block group/link">
+                <h3 class="text-xs font-bold text-foreground line-clamp-2 group-hover/link:text-primary transition-colors" title="${escapeHtml(p.title || 'Untitled Pin')}">
+                  ${escapeHtml(p.title || `Pin ${p.pin_id}`)}
+                </h3>
+              </a>
+              <div class="text-[10px] text-muted-foreground mt-0.5">
+                Created: <span class="font-medium text-foreground">${createdDate}</span>
+              </div>
+            </div>
+
+            <!-- Metrics Row -->
+            <div class="grid grid-cols-3 gap-1.5 pt-1">
+              <div class="bg-muted/40 rounded-lg p-1.5 text-center border border-border/40">
+                <span class="text-[9px] text-muted-foreground uppercase block font-semibold">Saves</span>
+                <span class="text-xs font-bold text-rose-500">${fmtNumber(saves)}</span>
+              </div>
+              <div class="bg-muted/40 rounded-lg p-1.5 text-center border border-border/40">
+                <span class="text-[9px] text-muted-foreground uppercase block font-semibold">Repins</span>
+                <span class="text-xs font-bold text-foreground">${fmtNumber(repins)}</span>
+              </div>
+              <div class="bg-muted/40 rounded-lg p-1.5 text-center border border-border/40">
+                <span class="text-[9px] text-muted-foreground uppercase block font-semibold">Velocity</span>
+                <span class="text-xs font-bold text-emerald-500">${velocity.toFixed(1)}/d</span>
+              </div>
+            </div>
+
+            <!-- Social & Tags -->
+            ${shares > 0 ? `
+              <div class="flex items-center gap-1 text-[10px] text-blue-500 font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                <span>${fmtNumber(shares)} shares</span>
+              </div>
+            ` : ''}
+
+            ${tagsHtml ? `
+              <div class="flex flex-wrap items-center gap-1 pt-1">
+                ${tagsHtml}
+                ${moreTagsCount > 0 ? `<span class="text-[9px] text-muted-foreground font-semibold">+${moreTagsCount}</span>` : ''}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Footer link -->
+        <div class="px-4 py-2.5 bg-muted/20 border-t border-border/60 flex items-center justify-between text-[11px]">
+          <span class="text-muted-foreground text-[10px] truncate max-w-[120px]">${p.board_name ? escapeHtml(p.board_name) : ''}</span>
+          <a href="${escapeHtml(pinUrl)}" target="_blank" rel="noopener noreferrer" class="font-semibold text-primary hover:underline inline-flex items-center gap-1">
+            <span>View on Pinterest</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+        </div>
+      </div>
+    `;
+  }
+
+  async function loadAccountPins() {
+    const grid = document.getElementById('account-pins-grid');
+    const badge = document.getElementById('account-pins-badge');
+    if (!grid || !accountId) return;
+
+    try {
+      const params = new URLSearchParams({
+        account_id: accountId,
+        sort: currentSort,
+        limit: String(currentLimit),
+      });
+
+      const res = await fetch(`/api/pinarchive/pins?${params.toString()}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Failed to load pins');
+
+      const pins: any[] = json.pins || [];
+      if (badge) badge.textContent = `${pins.length}`;
+
+      if (pins.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-12 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
+            No archived pins found for this account matching active settings.
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = pins.map((p) => renderSinglePinCard(p)).join('');
+    } catch (err: any) {
+      console.error('Error loading account pins:', err);
+      grid.innerHTML = `
+        <div class="col-span-full py-8 text-center text-xs text-rose-500 bg-rose-500/10 rounded-xl border border-rose-500/20">
+          Failed to load pins: ${escapeHtml(err.message)}
+        </div>
+      `;
+    }
+  }
+
+  function setupIngestToggle() {
+    const toggle = document.getElementById('account-ingest-toggle') as HTMLInputElement | null;
+    const statusText = document.getElementById('account-ingest-status-text');
+
+    if (toggle && accountId) {
+      toggle.addEventListener('change', async () => {
+        const enabled = toggle.checked;
+        toggle.disabled = true;
+
+        try {
+          const res = await fetch('/api/pinarchive/accounts-ingest-toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ account_ids: [accountId], ingest_enabled: enabled }),
+          });
+
+          if (res.status === 403) {
+            toggle.checked = !enabled;
+            alert('Admin access required to toggle account ingestion.');
+            return;
+          }
+
+          const json = await res.json();
+          if (!res.ok || !json.success) {
+            toggle.checked = !enabled;
+            alert(json.error || 'Failed to update account ingest status.');
+          } else {
+            if (statusText) {
+              statusText.textContent = enabled ? 'Enabled' : 'Disabled';
+              statusText.className = `text-xs font-bold ${enabled ? 'text-emerald-500' : 'text-rose-500'}`;
+            }
+          }
+        } catch {
+          toggle.checked = !enabled;
+        } finally {
+          toggle.disabled = false;
+        }
+      });
+    }
+  }
+
+  function init() {
+    const root = document.getElementById('account-card-root');
+    if (root) {
+      accountId = root.getAttribute('data-account-id') || '';
+    }
+
+    setupIngestToggle();
+    loadAccountPins();
+
+    const sortSelect = document.getElementById('account-pins-sort') as HTMLSelectElement | null;
+    if (sortSelect) {
+      sortSelect.addEventListener('change', () => {
+        currentSort = sortSelect.value;
+        loadAccountPins();
+      });
+    }
+
+    const limitSelect = document.getElementById('account-pins-limit') as HTMLSelectElement | null;
+    if (limitSelect) {
+      limitSelect.addEventListener('change', () => {
+        currentLimit = parseInt(limitSelect.value, 10) || 50;
+        loadAccountPins();
+      });
+    }
+
+    const refreshBtn = document.getElementById('refresh-account-btn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        const icon = document.getElementById('refresh-account-icon');
+        if (icon) icon.classList.add('animate-spin');
+        loadAccountPins().finally(() => {
+          setTimeout(() => {
+            if (icon) icon.classList.remove('animate-spin');
+          }, 400);
+        });
+      });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+</script>
