@@ -85,7 +85,8 @@ describe('PinArchive Internal Config Endpoint Suite (/api/internal/pinarchive/co
             data: {
               pin_filter_min_saves: 500,
               pin_filter_min_repins: 100,
-              pin_filter_max_age_days: 90,
+              pin_filter_rising_age_days: 7,
+              pin_filter_rising_saves: 25,
             },
             error: null,
           }),
@@ -103,10 +104,12 @@ describe('PinArchive Internal Config Endpoint Suite (/api/internal/pinarchive/co
     expect(json.success).toBe(true);
     expect(json.pin_filter_min_saves).toBe(500);
     expect(json.pin_filter_min_repins).toBe(100);
-    expect(json.pin_filter_max_age_days).toBe(90);
+    expect(json.pin_filter_rising_age_days).toBe(7);
+    expect(json.pin_filter_rising_saves).toBe(25);
+    expect(json.pin_filter_max_age_days).toBeUndefined();
   });
 
-  it('FAIL-LAZY: returns 200 with fallback {0,0,0} when row is absent or on any DB query error', async () => {
+  it('FAIL-LAZY: returns 200 with fallback {0,0,14,34} when row is absent or on any DB query error', async () => {
     mockPinArchiveClient.from.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
@@ -128,6 +131,8 @@ describe('PinArchive Internal Config Endpoint Suite (/api/internal/pinarchive/co
     expect(json.success).toBe(true);
     expect(json.pin_filter_min_saves).toBe(0);
     expect(json.pin_filter_min_repins).toBe(0);
-    expect(json.pin_filter_max_age_days).toBe(0);
+    expect(json.pin_filter_rising_age_days).toBe(14);
+    expect(json.pin_filter_rising_saves).toBe(34);
+    expect(json.pin_filter_max_age_days).toBeUndefined();
   });
 });

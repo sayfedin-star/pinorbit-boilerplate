@@ -162,6 +162,7 @@ describe('PinArchive Intelligence Upgrade Test Suite (T1, T2, T3)', () => {
         not: vi.fn().mockReturnThis(),
         ilike: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue({ data: mockRawPins, error: null }),
       };
@@ -175,7 +176,8 @@ describe('PinArchive Intelligence Upgrade Test Suite (T1, T2, T3)', () => {
                   data: {
                     pin_filter_min_saves: 50,
                     pin_filter_min_repins: 10,
-                    pin_filter_max_age_days: 365,
+                    pin_filter_rising_age_days: 14,
+                    pin_filter_rising_saves: 34,
                   },
                   error: null,
                 }),
@@ -210,8 +212,13 @@ describe('PinArchive Intelligence Upgrade Test Suite (T1, T2, T3)', () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       expect(json.pins.length).toBe(3);
-      expect(queryBuilder.gte).toHaveBeenCalledWith('saves', 50);
-      expect(queryBuilder.gte).toHaveBeenCalledWith('repins', 10);
+      expect(queryBuilder.or).toHaveBeenCalled();
+      const orArg = queryBuilder.or.mock.calls[0][0];
+      expect(orArg).toContain('saves.gte.50');
+      expect(orArg).toContain('repins.gte.10');
+      expect(orArg).toContain('and(created_at_pinterest.gte.');
+      expect(orArg).toContain('saves.gte.34');
+      expect(json.filters).toEqual({ minSaves: 50, minRepins: 10, risingAgeDays: 14, risingSaves: 34 });
 
       // Verify computed properties
       const pin1 = json.pins[0];
@@ -242,6 +249,7 @@ describe('PinArchive Intelligence Upgrade Test Suite (T1, T2, T3)', () => {
         not: vi.fn().mockReturnThis(),
         ilike: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue({ data: [], error: null }),
       };

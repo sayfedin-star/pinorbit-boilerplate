@@ -161,7 +161,11 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
 
       const limitMock = vi.fn().mockResolvedValue({ data: mockPins, error: null });
       const orderMock = vi.fn().mockReturnValue({ limit: limitMock });
-      const eqMock = vi.fn().mockReturnValue({ order: orderMock });
+      const queryMock: any = {
+        order: orderMock,
+        or: vi.fn().mockImplementation(() => queryMock),
+      };
+      const eqMock = vi.fn().mockReturnValue(queryMock);
       const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
       mockPinArchiveClient.from.mockImplementation((table: string) => {
         if (table === 'pa_workspace_settings') {
