@@ -436,12 +436,14 @@ async function main() {
       const oldComments = Number(p.comments) || 0;
       const oldShares = Number(p.share_count) || 0;
 
+      const existingAnnotationsEmpty = !(p.annotations || []).length;
       if (
         fresh.saves !== oldSaves ||
         fresh.repins !== oldRepins ||
         fresh.comments !== oldComments ||
         fresh.share_count !== oldShares ||
-        fresh.annotations?.length > 0
+        fresh.annotations?.length > 0 ||
+        existingAnnotationsEmpty // retry enrichment until the page serves withLinks
       ) {
         const ageDays = Math.max(1, (Date.now() - new Date(p.created_at_pinterest || Date.now()).getTime()) / 86400000);
         changedBatch.push({
