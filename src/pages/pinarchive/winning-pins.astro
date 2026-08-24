@@ -317,7 +317,8 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     const shares = Number(p.share_count || 0);
     const annotations = Array.isArray(p.annotations) ? p.annotations : [];
     const category = p.seo_category || p.board_name || null;
-    const pinUrl = p.link || `https://www.pinterest.com/pin/${p.pin_id}/`;
+    const pinterestUrl = `https://www.pinterest.com/pin/${p.pin_id}/`;
+    const destinationUrl = p.link ? p.link : null;
     const imageUrl = p.image_url || '';
     const pinId = p.id || '';
     const isSelected = selectedForCompare.has(pinId);
@@ -444,12 +445,19 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         </div>
 
         <!-- Footer link -->
-        <div class="px-4 py-2.5 bg-muted/20 border-t border-border/60 flex items-center justify-between text-[11px]">
-          <span class="text-muted-foreground text-[10px] truncate max-w-[120px]">${p.board_name ? escapeHtml(p.board_name) : ''}</span>
-          <a href="${escapeHtml(pinUrl)}" target="_blank" rel="noopener noreferrer" class="font-semibold text-primary hover:underline inline-flex items-center gap-1">
-            <span>View on Pinterest</span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          </a>
+        <div class="px-4 py-2.5 bg-muted/20 border-t border-border/60 flex items-center justify-between text-[11px] gap-2">
+          <span class="text-muted-foreground text-[10px] truncate max-w-[100px]">${p.board_name ? escapeHtml(p.board_name) : ''}</span>
+          <div class="flex items-center gap-2">
+            ${destinationUrl ? `
+              <a href="${escapeHtml(destinationUrl)}" target="_blank" rel="noopener noreferrer nofollow" class="text-[10px] font-medium text-muted-foreground hover:text-foreground hover:underline">
+                Visit Site ↗
+              </a>
+            ` : ''}
+            <a href="${escapeHtml(pinterestUrl)}" target="_blank" rel="noopener noreferrer" class="font-semibold text-primary hover:underline inline-flex items-center gap-1">
+              <span>View on Pinterest</span>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+          </div>
         </div>
       </div>
     `;
