@@ -41,7 +41,8 @@ describe('PinArchive Intelligence Upgrade Test Suite (T1, T2, T3)', () => {
     vi.mocked(assertWorkspaceAccess).mockResolvedValue({
       workspaceId: mockWsId,
       role: 'member',
-      membershipId: 'mem-1',
+      isAdmin: false,
+      isOwner: false,
     });
   });
 
@@ -166,6 +167,22 @@ describe('PinArchive Intelligence Upgrade Test Suite (T1, T2, T3)', () => {
       };
 
       mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_workspace_settings') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: {
+                    pin_filter_min_saves: 50,
+                    pin_filter_min_repins: 10,
+                    pin_filter_max_age_days: 365,
+                  },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
         if (table === 'pa_pins') {
           return {
             select: vi.fn().mockReturnValue(queryBuilder),
@@ -183,7 +200,7 @@ describe('PinArchive Intelligence Upgrade Test Suite (T1, T2, T3)', () => {
         return {};
       });
 
-      const req = new Request('http://localhost:4321/api/pinarchive/pins?q=Keto&min_saves=50&in_cluster=1');
+      const req = new Request('http://localhost:4321/api/pinarchive/pins?q=Keto&in_cluster=1');
       const res = await pinsHandler({
         request: req,
         locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
@@ -193,6 +210,8 @@ describe('PinArchive Intelligence Upgrade Test Suite (T1, T2, T3)', () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       expect(json.pins.length).toBe(3);
+      expect(queryBuilder.gte).toHaveBeenCalledWith('saves', 50);
+      expect(queryBuilder.gte).toHaveBeenCalledWith('repins', 10);
 
       // Verify computed properties
       const pin1 = json.pins[0];

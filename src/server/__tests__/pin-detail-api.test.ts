@@ -41,7 +41,8 @@ describe('PinArchive Pin Detail API Suite (GET /api/pinarchive/pin)', () => {
     vi.mocked(assertWorkspaceAccess).mockResolvedValue({
       workspaceId: mockWsId,
       role: 'member',
-      membershipId: 'mem-1',
+      isAdmin: false,
+      isOwner: false,
     });
   });
 

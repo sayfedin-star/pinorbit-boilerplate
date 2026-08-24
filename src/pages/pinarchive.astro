@@ -204,6 +204,57 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
           class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none"
         />
       </div>
+
+      <!-- Archive Filter: Min Saves -->
+      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
+        <div>
+          <label for="setting-min-saves" class="text-xs font-bold text-foreground block">Archive Filter: Min Saves</label>
+          <span class="text-[11px] text-muted-foreground">Min saves required (0 = off).</span>
+        </div>
+        <input
+          id="setting-min-saves"
+          type="number"
+          min="0"
+          max="1000000"
+          value="0"
+          class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none"
+        />
+      </div>
+
+      <!-- Archive Filter: Min Repins -->
+      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
+        <div>
+          <label for="setting-min-repins" class="text-xs font-bold text-foreground block">Archive Filter: Min Repins</label>
+          <span class="text-[11px] text-muted-foreground">Min repins required (0 = off).</span>
+        </div>
+        <input
+          id="setting-min-repins"
+          type="number"
+          min="0"
+          max="1000000"
+          value="0"
+          class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none"
+        />
+      </div>
+
+      <!-- Archive Filter: Max Pin Age (days) -->
+      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between sm:col-span-2 lg:col-span-2" title="Pins older than this are excluded from display AND not archived. 0 = disabled. WARNING: old competitor backlogs may match nothing.">
+        <div>
+          <label for="setting-max-age" class="text-xs font-bold text-foreground flex items-center gap-1.5">
+            <span>Max Pin Age (days)</span>
+            <span class="text-[10px] text-amber-500 font-mono" title="Pins older than this are excluded from display AND not archived. 0 = disabled. WARNING: old competitor backlogs may match nothing.">ℹ️ (0 = off)</span>
+          </label>
+          <span class="text-[11px] text-muted-foreground">Pins older than this are excluded from display AND not archived. 0 = disabled. WARNING: old competitor backlogs may match nothing.</span>
+        </div>
+        <input
+          id="setting-max-age"
+          type="number"
+          min="0"
+          max="3650"
+          value="0"
+          class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none"
+        />
+      </div>
     </div>
   </section>
 
@@ -289,18 +340,6 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
             <option value="COOLING">❄️ COOLING (&lt;2/d)</option>
             <option value="DORMANT">⚪ DORMANT (&lt;0.5/d)</option>
           </select>
-        </div>
-
-        <!-- Min Saves -->
-        <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5">
-          <label for="filter-min-saves" class="text-xs font-semibold text-muted-foreground">Min Saves:</label>
-          <input
-            id="filter-min-saves"
-            type="number"
-            placeholder="0"
-            min="0"
-            class="w-16 bg-transparent text-xs font-medium text-foreground focus:outline-none"
-          />
         </div>
 
         <!-- In-Cluster Toggle -->
@@ -663,6 +702,9 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
       const policySel = document.getElementById('setting-paused-policy') as HTMLSelectElement | null;
       const intervalInp = document.getElementById('setting-default-interval') as HTMLInputElement | null;
       const maxBatchInp = document.getElementById('setting-max-batch') as HTMLInputElement | null;
+      const minSavesInp = document.getElementById('setting-min-saves') as HTMLInputElement | null;
+      const minRepinsInp = document.getElementById('setting-min-repins') as HTMLInputElement | null;
+      const maxAgeInp = document.getElementById('setting-max-age') as HTMLInputElement | null;
 
       if (ingestCb) {
         ingestCb.checked = Boolean(json.ingest_enabled);
@@ -674,6 +716,9 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
       if (policySel) policySel.value = json.paused_account_policy || 'reject';
       if (intervalInp) intervalInp.value = String(json.default_interval_days || 3);
       if (maxBatchInp) maxBatchInp.value = String(json.max_batch_pins || 500);
+      if (minSavesInp) minSavesInp.value = String(json.pin_filter_min_saves ?? 0);
+      if (minRepinsInp) minRepinsInp.value = String(json.pin_filter_min_repins ?? 0);
+      if (maxAgeInp) maxAgeInp.value = String(json.pin_filter_max_age_days ?? 0);
     } catch (e) {
       console.error('Failed to load settings:', e);
     }
@@ -683,7 +728,7 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
     const saveBtn = document.getElementById('save-ingest-settings-btn') as HTMLButtonElement | null;
     const roleBadge = document.getElementById('settings-role-badge');
     const inputs = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
-      '#setting-ingest-enabled, #setting-paused-policy, #setting-default-interval, #setting-max-batch'
+      '#setting-ingest-enabled, #setting-paused-policy, #setting-default-interval, #setting-max-batch, #setting-min-saves, #setting-min-repins, #setting-max-age'
     );
     inputs.forEach((el) => {
       el.disabled = true;
@@ -700,10 +745,13 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
     const policySel = document.getElementById('setting-paused-policy') as HTMLSelectElement | null;
     const intervalInp = document.getElementById('setting-default-interval') as HTMLInputElement | null;
     const maxBatchInp = document.getElementById('setting-max-batch') as HTMLInputElement | null;
+    const minSavesInp = document.getElementById('setting-min-saves') as HTMLInputElement | null;
+    const minRepinsInp = document.getElementById('setting-min-repins') as HTMLInputElement | null;
+    const maxAgeInp = document.getElementById('setting-max-age') as HTMLInputElement | null;
     const statusMsg = document.getElementById('settings-status-msg');
     const saveBtn = document.getElementById('save-ingest-settings-btn') as HTMLButtonElement | null;
 
-    if (!ingestCb || !policySel || !intervalInp || !maxBatchInp) return;
+    if (!ingestCb || !policySel || !intervalInp || !maxBatchInp || !minSavesInp || !minRepinsInp || !maxAgeInp) return;
 
     if (saveBtn) saveBtn.disabled = true;
     if (statusMsg) {
@@ -720,6 +768,9 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
           paused_account_policy: policySel.value,
           default_interval_days: parseInt(intervalInp.value, 10) || 3,
           max_batch_pins: parseInt(maxBatchInp.value, 10) || 500,
+          pin_filter_min_saves: parseInt(minSavesInp.value, 10) || 0,
+          pin_filter_min_repins: parseInt(minRepinsInp.value, 10) || 0,
+          pin_filter_max_age_days: parseInt(maxAgeInp.value, 10) || 0,
         }),
       });
 
@@ -745,6 +796,9 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
           if (statusMsg) statusMsg.textContent = '';
         }, 3000);
       }
+
+      // Refresh winning pins to reflect saved filters
+      await loadPins();
     } catch (e: any) {
       if (statusMsg) {
         statusMsg.textContent = e.message || 'Save failed';
@@ -1195,13 +1249,11 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
     const searchInput = document.getElementById('filter-search-input') as HTMLInputElement | null;
     const boardSelect = document.getElementById('filter-board-select') as HTMLSelectElement | null;
     const stageSelect = document.getElementById('filter-stage-select') as HTMLSelectElement | null;
-    const minSavesInput = document.getElementById('filter-min-saves') as HTMLInputElement | null;
     const clusterToggle = document.getElementById('filter-cluster-toggle') as HTMLInputElement | null;
 
     const q = searchInput?.value.trim() || '';
     const board = boardSelect?.value || '';
     const stage = stageSelect?.value || '';
-    const minSaves = minSavesInput?.value.trim() || '';
     const inCluster = clusterToggle?.checked ? '1' : '';
 
     const params = new URLSearchParams();
@@ -1209,7 +1261,6 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
     params.set('limit', String(currentLimit));
     if (q) params.set('q', q);
     if (board) params.set('board', board);
-    if (minSaves) params.set('min_saves', minSaves);
     if (inCluster) params.set('in_cluster', inCluster);
 
     try {
@@ -1631,7 +1682,6 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
     const searchInput = document.getElementById('filter-search-input') as HTMLInputElement | null;
     const boardSelect = document.getElementById('filter-board-select');
     const stageSelect = document.getElementById('filter-stage-select');
-    const minSavesInput = document.getElementById('filter-min-saves');
     const clusterToggle = document.getElementById('filter-cluster-toggle');
     const clearBtn = document.getElementById('clear-filters-btn');
 
@@ -1645,12 +1695,6 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
 
     if (boardSelect) boardSelect.addEventListener('change', loadPins);
     if (stageSelect) stageSelect.addEventListener('change', loadPins);
-    if (minSavesInput) {
-      minSavesInput.addEventListener('input', () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(loadPins, 400);
-      });
-    }
     if (clusterToggle) clusterToggle.addEventListener('change', loadPins);
 
     if (clearBtn) {
@@ -1658,7 +1702,6 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
         if (searchInput) searchInput.value = '';
         if (boardSelect) (boardSelect as HTMLSelectElement).value = '';
         if (stageSelect) (stageSelect as HTMLSelectElement).value = '';
-        if (minSavesInput) (minSavesInput as HTMLInputElement).value = '';
         if (clusterToggle) (clusterToggle as HTMLInputElement).checked = false;
         loadPins();
       });

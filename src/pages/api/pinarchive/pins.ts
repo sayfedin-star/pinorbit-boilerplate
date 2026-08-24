@@ -50,15 +50,37 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   const q = searchParams.get('q')?.trim();
   const board = searchParams.get('board')?.trim();
-  const rawMinSaves = parseInt(searchParams.get('min_saves') || '', 10);
-  const minSaves = !isNaN(rawMinSaves) && rawMinSaves > 0 ? rawMinSaves : undefined;
   const inCluster = searchParams.get('in_cluster') === '1' || searchParams.get('in_cluster') === 'true';
 
   try {
+    // 1. Load pa_workspace_settings for persisted filters
+    const { data: wsSettings } = await db
+      .from('pa_workspace_settings')
+      .select('pin_filter_min_saves, pin_filter_min_repins, pin_filter_max_age_days')
+      .eq('workspace_id', ws)
+      .maybeSingle();
+
+    const minSaves = Number(wsSettings?.pin_filter_min_saves || 0);
+    const minRepins = Number(wsSettings?.pin_filter_min_repins || 0);
+    const maxAgeDays = Number(wsSettings?.pin_filter_max_age_days || 0);
+
     let query = db
       .from('pa_pins')
       .select('id, pin_id, title, image_url, link, saves, repins, comments, share_count, velocity, annotations, seo_category, canonical_pin_id, archived_at, board_name, board_id, dominant_color, node_id, is_video, created_at_pinterest, notes, notes_updated_at')
       .eq('workspace_id', ws);
+
+    if (minSaves > 0) {
+      query = query.gte('saves', minSaves);
+    }
+
+    if (minRepins > 0) {
+      query = query.gte('repins', minRepins);
+    }
+
+    if (maxAgeDays > 0) {
+      const cutoffDate = new Date(Date.now() - maxAgeDays * 86400000).toISOString();
+      query = query.gte('created_at_pinterest', cutoffDate);
+    }
 
     if (q) {
       const escaped = q.replace(/[%_\\]/g, '\\$&');
@@ -67,10 +89,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     if (board) {
       query = query.eq('board_name', board);
-    }
-
-    if (minSaves !== undefined) {
-      query = query.gte('saves', minSaves);
     }
 
     if (inCluster) {

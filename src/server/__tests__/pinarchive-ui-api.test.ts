@@ -42,7 +42,8 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
     vi.mocked(assertWorkspaceAccess).mockResolvedValue({
       workspaceId: mockWsId,
       role: 'member',
-      membershipId: 'mem-1',
+      isAdmin: false,
+      isOwner: false,
     });
   });
 
@@ -163,6 +164,15 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
       const eqMock = vi.fn().mockReturnValue({ order: orderMock });
       const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
       mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_workspace_settings') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            }),
+          };
+        }
         if (table === 'pa_pins') {
           return { select: selectMock };
         }

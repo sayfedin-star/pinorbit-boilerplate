@@ -18,6 +18,9 @@ const DEFAULT_SETTINGS = {
   paused_account_policy: 'reject' as const,
   default_interval_days: 3,
   max_batch_pins: 500,
+  pin_filter_min_saves: 0,
+  pin_filter_min_repins: 0,
+  pin_filter_max_age_days: 0,
 };
 
 const ALLOWED_PATCH_KEYS = new Set([
@@ -26,6 +29,9 @@ const ALLOWED_PATCH_KEYS = new Set([
   'paused_account_policy',
   'default_interval_days',
   'max_batch_pins',
+  'pin_filter_min_saves',
+  'pin_filter_min_repins',
+  'pin_filter_max_age_days',
 ]);
 
 export const GET: APIRoute = async ({ request, locals }) => {
@@ -80,6 +86,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
       paused_account_policy: settings.paused_account_policy ?? DEFAULT_SETTINGS.paused_account_policy,
       default_interval_days: settings.default_interval_days ?? DEFAULT_SETTINGS.default_interval_days,
       max_batch_pins: settings.max_batch_pins ?? DEFAULT_SETTINGS.max_batch_pins,
+      pin_filter_min_saves: settings.pin_filter_min_saves ?? DEFAULT_SETTINGS.pin_filter_min_saves,
+      pin_filter_min_repins: settings.pin_filter_min_repins ?? DEFAULT_SETTINGS.pin_filter_min_repins,
+      pin_filter_max_age_days: settings.pin_filter_max_age_days ?? DEFAULT_SETTINGS.pin_filter_max_age_days,
       is_default: false,
       updated_at: settings.updated_at,
     });
@@ -150,6 +159,30 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
     }
   }
 
+  // Validate pin_filter_min_saves
+  if (body.pin_filter_min_saves !== undefined) {
+    const s = Number(body.pin_filter_min_saves);
+    if (!Number.isInteger(s) || s < 0 || s > 1000000) {
+      return json({ success: false, error: 'pin_filter_min_saves must be an integer between 0 and 1000000.' }, 422);
+    }
+  }
+
+  // Validate pin_filter_min_repins
+  if (body.pin_filter_min_repins !== undefined) {
+    const r = Number(body.pin_filter_min_repins);
+    if (!Number.isInteger(r) || r < 0 || r > 1000000) {
+      return json({ success: false, error: 'pin_filter_min_repins must be an integer between 0 and 1000000.' }, 422);
+    }
+  }
+
+  // Validate pin_filter_max_age_days
+  if (body.pin_filter_max_age_days !== undefined) {
+    const a = Number(body.pin_filter_max_age_days);
+    if (!Number.isInteger(a) || a < 0 || a > 3650) {
+      return json({ success: false, error: 'pin_filter_max_age_days must be an integer between 0 and 3650.' }, 422);
+    }
+  }
+
   let wsCtx;
   try {
     wsCtx = await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
@@ -185,6 +218,18 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
         body.max_batch_pins !== undefined
           ? Number(body.max_batch_pins)
           : (existing?.max_batch_pins ?? DEFAULT_SETTINGS.max_batch_pins),
+      pin_filter_min_saves:
+        body.pin_filter_min_saves !== undefined
+          ? Number(body.pin_filter_min_saves)
+          : (existing?.pin_filter_min_saves ?? DEFAULT_SETTINGS.pin_filter_min_saves),
+      pin_filter_min_repins:
+        body.pin_filter_min_repins !== undefined
+          ? Number(body.pin_filter_min_repins)
+          : (existing?.pin_filter_min_repins ?? DEFAULT_SETTINGS.pin_filter_min_repins),
+      pin_filter_max_age_days:
+        body.pin_filter_max_age_days !== undefined
+          ? Number(body.pin_filter_max_age_days)
+          : (existing?.pin_filter_max_age_days ?? DEFAULT_SETTINGS.pin_filter_max_age_days),
       updated_at: new Date().toISOString(),
     };
 
@@ -205,6 +250,9 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
       paused_account_policy: saved.paused_account_policy,
       default_interval_days: saved.default_interval_days,
       max_batch_pins: saved.max_batch_pins,
+      pin_filter_min_saves: saved.pin_filter_min_saves,
+      pin_filter_min_repins: saved.pin_filter_min_repins,
+      pin_filter_max_age_days: saved.pin_filter_max_age_days,
       is_default: false,
       updated_at: saved.updated_at,
     });
