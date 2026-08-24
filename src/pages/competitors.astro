@@ -673,7 +673,7 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
         profile: (() => {
           const isArchived = archivedUsernames.has((c.username || '').toLowerCase());
           const pinArchiveBadge = isArchived
-            ? `<a href="/pinarchive?q=${encodeURIComponent(c.username)}" title="View in PinArchive" class="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors">In PinArchive</a>`
+            ? `<a href="/pinarchive/account/${encodeURIComponent(c.username)}" title="View in PinArchive" class="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors">In PinArchive</a>`
             : '';
 
           return `<td class="py-4 px-4">
@@ -706,7 +706,7 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
         actions: (() => {
           const isArchived = archivedUsernames.has((c.username || '').toLowerCase());
           const pinArchiveBtn = isArchived
-            ? `<a href="/pinarchive?q=${encodeURIComponent(c.username)}" class="rounded-lg border border-border p-1.5 text-purple-500 hover:bg-purple-500/10" title="View in PinArchive"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg></a>`
+            ? `<a href="/pinarchive/account/${encodeURIComponent(c.username)}" class="rounded-lg border border-border p-1.5 text-purple-500 hover:bg-purple-500/10" title="View in PinArchive"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg></a>`
             : `<button data-pinarchive-import-id="${c.id}" data-username="${escHtml(c.username)}" class="rounded-lg border border-border p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10" title="Send to PinArchive"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg></button>`;
 
           return `<td class="py-4 px-4 text-right">
