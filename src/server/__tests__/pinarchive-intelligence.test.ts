@@ -225,6 +225,52 @@ describe('PinArchive Intelligence Upgrade Test Suite (T1, T2, T3)', () => {
       const pin3 = json.pins[2];
       expect(pin3.stage).toBe('DORMANT');
     });
+
+    it('validates account_id query param: 422 on invalid UUID, applies .eq on valid UUID', async () => {
+      // Invalid UUID
+      const reqInvalid = new Request('http://localhost:4321/api/pinarchive/pins?account_id=invalid-uuid');
+      const resInvalid = await pinsHandler({
+        request: reqInvalid,
+        locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
+      } as any);
+      expect(resInvalid.status).toBe(422);
+
+      // Valid UUID
+      const mockAccId = '00000000-0000-0000-0000-000000000099';
+      const queryBuilder: any = {
+        eq: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        ilike: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+
+      mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_workspace_settings') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'pa_pins') {
+          return { select: vi.fn().mockReturnValue(queryBuilder) };
+        }
+        return {};
+      });
+
+      const reqValid = new Request(`http://localhost:4321/api/pinarchive/pins?account_id=${mockAccId}`);
+      const resValid = await pinsHandler({
+        request: reqValid,
+        locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
+      } as any);
+
+      expect(resValid.status).toBe(200);
+      expect(queryBuilder.eq).toHaveBeenCalledWith('account_id', mockAccId);
+    });
   });
 
   describe('3. Single Pin Detail with Deltas and Cluster Consolidation (GET /api/pinarchive/pin)', () => {

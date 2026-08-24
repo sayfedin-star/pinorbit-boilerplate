@@ -51,6 +51,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const q = searchParams.get('q')?.trim();
   const board = searchParams.get('board')?.trim();
   const inCluster = searchParams.get('in_cluster') === '1' || searchParams.get('in_cluster') === 'true';
+  const accountId = searchParams.get('account_id')?.trim();
+
+  if (accountId && !UUID_REGEX.test(accountId)) {
+    return json({ success: false, error: 'Invalid account_id format.' }, 422);
+  }
 
   try {
     // 1. Load pa_workspace_settings for persisted filters
@@ -68,6 +73,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
       .from('pa_pins')
       .select('id, pin_id, title, image_url, link, saves, repins, comments, share_count, velocity, annotations, seo_category, canonical_pin_id, archived_at, board_name, board_id, dominant_color, node_id, is_video, created_at_pinterest, notes, notes_updated_at')
       .eq('workspace_id', ws);
+
+    if (accountId) {
+      query = query.eq('account_id', accountId);
+    }
 
     if (minSaves > 0) {
       query = query.gte('saves', minSaves);
