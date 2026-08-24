@@ -1,0 +1,934 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+import SectionHeader from '../../components/ui/SectionHeader.astro';
+---
+
+<Layout title="Winning Pins — PinArchive" description="Historical pin performance archive, high-velocity winners, and canonical groupings.">
+  <!-- ═══ Back Link & Top Bar ═══ -->
+  <div class="mb-4">
+    <a
+      href="/pinarchive"
+      class="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors group mb-3"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      <span>Back to PinArchive Dashboard</span>
+    </a>
+
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <SectionHeader
+          title="🏆 Winning Pins"
+          description="High-velocity winning pins, multi-board breakdown, cluster analysis, and side-by-side trajectory comparisons."
+        />
+        <div id="refresh-meta-line" class="text-xs text-muted-foreground -mt-3 mb-2 flex items-center gap-1.5">
+          <span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
+          <span id="refresh-meta-text">Historical archive active</span>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+        <!-- View Toggle -->
+        <div class="flex items-center bg-card border border-border rounded-xl p-1 shadow-sm">
+          <button
+            id="view-grid-btn"
+            type="button"
+            class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-primary text-primary-foreground shadow-xs transition-all cursor-pointer"
+          >
+            Grid View
+          </button>
+          <button
+            id="view-board-btn"
+            type="button"
+            class="px-2.5 py-1 text-xs font-semibold rounded-lg text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+          >
+            By Board
+          </button>
+        </div>
+
+        <!-- CSV Export Button -->
+        <button
+          id="export-csv-btn"
+          type="button"
+          title="Export current filtered view to CSV"
+          class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition-all cursor-pointer"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span>Export CSV</span>
+        </button>
+
+        <!-- Refresh Button -->
+        <button
+          id="refresh-btn"
+          type="button"
+          title="Refresh pins data"
+          class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition-all cursor-pointer"
+        >
+          <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/>
+          </svg>
+          <span>Refresh</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Filter & Search Control Toolbar ═══ -->
+  <div class="rounded-xl border border-border bg-card p-4 shadow-sm mb-8 space-y-3">
+    <div class="flex flex-wrap items-center gap-3 justify-between">
+      <!-- Left Controls -->
+      <div class="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
+        <!-- Search -->
+        <div class="relative flex-1 min-w-[180px] max-w-xs">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input
+            id="filter-search-input"
+            type="text"
+            placeholder="Search pin title…"
+            class="w-full rounded-xl border border-border bg-background py-1.5 pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          <kbd class="absolute right-2 top-1/2 -translate-y-1/2 rounded border border-border bg-muted px-1 text-[9px] font-bold text-muted-foreground">/</kbd>
+        </div>
+
+        <!-- Board Filter -->
+        <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5">
+          <label for="filter-board-select" class="text-xs font-semibold text-muted-foreground">Board:</label>
+          <select id="filter-board-select" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer max-w-[140px] truncate">
+            <option value="">All Boards</option>
+          </select>
+        </div>
+
+        <!-- Stage Filter -->
+        <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5">
+          <label for="filter-stage-select" class="text-xs font-semibold text-muted-foreground">Stage:</label>
+          <select id="filter-stage-select" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer">
+            <option value="">All Stages</option>
+            <option value="NEW">🟢 NEW (≤14d)</option>
+            <option value="GROWING">🚀 GROWING (≥10/d)</option>
+            <option value="MATURE">🟣 MATURE (&gt;14d)</option>
+            <option value="COOLING">❄️ COOLING (&lt;2/d)</option>
+            <option value="DORMANT">⚪ DORMANT (&lt;0.5/d)</option>
+          </select>
+        </div>
+
+        <!-- In-Cluster Toggle -->
+        <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
+          <input id="filter-cluster-toggle" type="checkbox" class="rounded border-border text-primary focus:ring-primary h-4 w-4" />
+          <span>In Cluster Only</span>
+        </label>
+      </div>
+
+      <!-- Right Controls: Sort & Limit -->
+      <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5">
+          <label for="pins-sort-select" class="text-xs font-semibold text-muted-foreground">Sort:</label>
+          <select id="pins-sort-select" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer">
+            <option value="saves">Total Saves</option>
+            <option value="velocity">Velocity (Saves/Day)</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5">
+          <label for="pins-limit-select" class="text-xs font-semibold text-muted-foreground">Limit:</label>
+          <select id="pins-limit-select" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+          </select>
+        </div>
+
+        <button id="clear-filters-btn" type="button" class="text-xs font-semibold text-muted-foreground hover:text-primary px-2 py-1 cursor-pointer">
+          Clear
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Winners Grid / By Board Section ═══ -->
+  <section class="mb-12" aria-labelledby="winners-section-heading">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 id="winners-section-heading" class="text-base font-bold text-foreground flex items-center gap-2">
+          <span>Pinned Intelligence</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary" id="winners-badge-count">0</span>
+        </h2>
+        <p class="text-xs text-muted-foreground mt-0.5">Top performing archived pins ranked by selected metric (persisted workspace filters apply server-side).</p>
+      </div>
+    </div>
+
+    <!-- Main Pins Container (Grid View or By Board View) -->
+    <div id="winners-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <!-- Shimmer skeletons -->
+      <div class="rounded-xl border border-border bg-card p-4 shadow-sm animate-pulse space-y-3">
+        <div class="h-44 bg-muted rounded-lg"></div>
+        <div class="h-4 w-3/4 bg-muted rounded"></div>
+        <div class="h-3 w-1/2 bg-muted rounded"></div>
+      </div>
+      <div class="rounded-xl border border-border bg-card p-4 shadow-sm animate-pulse space-y-3">
+        <div class="h-44 bg-muted rounded-lg"></div>
+        <div class="h-4 w-3/4 bg-muted rounded"></div>
+        <div class="h-3 w-1/2 bg-muted rounded"></div>
+      </div>
+      <div class="rounded-xl border border-border bg-card p-4 shadow-sm animate-pulse space-y-3">
+        <div class="h-44 bg-muted rounded-lg"></div>
+        <div class="h-4 w-3/4 bg-muted rounded"></div>
+        <div class="h-3 w-1/2 bg-muted rounded"></div>
+      </div>
+      <div class="rounded-xl border border-border bg-card p-4 shadow-sm animate-pulse space-y-3">
+        <div class="h-44 bg-muted rounded-lg"></div>
+        <div class="h-4 w-3/4 bg-muted rounded"></div>
+        <div class="h-3 w-1/2 bg-muted rounded"></div>
+      </div>
+    </div>
+
+    <!-- By Board Container (hidden by default) -->
+    <div id="by-board-container" class="hidden space-y-6"></div>
+  </section>
+
+  <!-- ═══ Canonical Duplicate Clusters Section ═══ -->
+  <section class="mb-12" aria-labelledby="canonical-section-heading">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 id="canonical-section-heading" class="text-base font-bold text-foreground flex items-center gap-2">
+          <span>🧬 Canonical Clusters</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500" id="canonical-badge-count">0 Clusters</span>
+        </h2>
+        <p class="text-xs text-muted-foreground mt-0.5">Grouped pin variations sharing the same underlying Pinterest canonical ID.</p>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+      <div id="canonical-container" class="divide-y divide-border">
+        <!-- Skeleton -->
+        <div class="p-4 animate-pulse space-y-2">
+          <div class="h-4 w-48 bg-muted rounded"></div>
+          <div class="h-3 w-72 bg-muted rounded"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Floating Compare Bar ═══ -->
+  <div id="floating-compare-bar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-card border border-primary/40 rounded-2xl shadow-2xl px-5 py-3 flex items-center gap-4 animate-in fade-in duration-200">
+    <div class="flex items-center gap-2">
+      <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>
+      </span>
+      <span id="compare-count-text" class="text-xs font-bold text-foreground">2 Pins Selected</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="launch-compare-btn" type="button" class="rounded-xl bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all cursor-pointer">
+        Compare Trajectories
+      </button>
+      <button id="clear-compare-btn" type="button" class="rounded-xl border border-border bg-background px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer">
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ Compare Modal Dialog ═══ -->
+  <div id="compare-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div class="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl">
+      <div class="flex items-center justify-between pb-4 border-b border-border mb-4">
+        <div class="flex items-center gap-2">
+          <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/></svg>
+          </span>
+          <h3 class="text-base font-bold text-foreground">Pin Trajectory Comparison</h3>
+        </div>
+        <button id="close-compare-modal" type="button" class="text-muted-foreground hover:text-foreground p-1 rounded-lg cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div id="compare-modal-content" class="space-y-6">
+        <!-- Dynamic comparison content injected here -->
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  let rawPins: any[] = [];
+  let currentSort = 'saves';
+  let currentLimit = 50;
+  let activeView: 'grid' | 'board' = 'grid';
+  const selectedForCompare = new Set<string>();
+
+  function escapeHtml(str?: string | null): string {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // Full numbers formatting (no k/M abbreviations)
+  function fmtNumber(n: number | string | null | undefined): string {
+    const num = Number(n) || 0;
+    return num.toLocaleString('en-US');
+  }
+
+  function fmtDate(isoString?: string | null): string {
+    if (!isoString) return '—';
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return '—';
+    }
+  }
+
+  function renderStageBadge(stage?: string | null): string {
+    switch (stage) {
+      case 'NEW':
+        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">🟢 NEW</span>';
+      case 'GROWING':
+        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">🚀 GROWING</span>';
+      case 'MATURE':
+        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">🟣 MATURE</span>';
+      case 'COOLING':
+        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">❄️ COOLING</span>';
+      default:
+        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-500/10 text-slate-500 border border-slate-500/20">⚪ DORMANT</span>';
+    }
+  }
+
+  function renderAnomalyBadge(anomaly?: string | null): string {
+    if (anomaly === 'SPIKE') {
+      return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20 animate-pulse">🔥 SPIKE</span>';
+    }
+    if (anomaly === 'COOLING') {
+      return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">❄️ COOLING</span>';
+    }
+    return '';
+  }
+
+  function renderSinglePinCard(p: any): string {
+    const saves = Number(p.saves || 0);
+    const repins = Number(p.repins || 0);
+    const velocity = Number(p.velocity || 0);
+    const shares = Number(p.share_count || 0);
+    const annotations = Array.isArray(p.annotations) ? p.annotations : [];
+    const category = p.seo_category || p.board_name || null;
+    const pinUrl = p.link || `https://www.pinterest.com/pin/${p.pin_id}/`;
+    const imageUrl = p.image_url || '';
+    const pinId = p.id || '';
+    const isSelected = selectedForCompare.has(pinId);
+    const createdDate = fmtDate(p.created_at_pinterest);
+
+    // Linked annotations for every chip
+    const tagsHtml = annotations.slice(0, 4).map((a: any) => {
+      const name = typeof a === 'string' ? a : a?.name || '';
+      if (!name) return '';
+      let targetUrl = '';
+      if (typeof a === 'object' && a?.url) {
+        targetUrl = `https://www.pinterest.com${a.url.startsWith('/') ? a.url : '/' + a.url}`;
+      } else if (typeof a === 'object' && a?.idea_id) {
+        targetUrl = `https://www.pinterest.com/ideas/${encodeURIComponent(name)}/${a.idea_id}/`;
+      } else {
+        targetUrl = `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(name)}`;
+      }
+
+      return `
+        <a
+          href="${escapeHtml(targetUrl)}"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1 text-[10px] bg-primary/10 hover:bg-primary/20 text-primary px-2 py-0.5 rounded-md font-medium truncate max-w-[130px] transition-colors"
+          title="${escapeHtml(name)} (Pinterest Idea)"
+        >
+          <span class="truncate">${escapeHtml(name)}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
+      `;
+    }).join('');
+
+    const moreTagsCount = annotations.length > 4 ? annotations.length - 4 : 0;
+
+    return `
+      <div class="group rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between relative">
+        <!-- Compare Checkbox -->
+        <div class="absolute top-2.5 right-2.5 z-20 bg-background/90 backdrop-blur-xs rounded-lg px-2 py-1 border border-border shadow-xs flex items-center gap-1.5">
+          <input
+            type="checkbox"
+            data-pin-compare="${escapeHtml(pinId)}"
+            ${isSelected ? 'checked' : ''}
+            class="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+            id="compare-${escapeHtml(pinId)}"
+          />
+          <label for="compare-${escapeHtml(pinId)}" class="text-[10px] font-semibold text-muted-foreground cursor-pointer select-none">Compare</label>
+        </div>
+
+        <div>
+          <!-- Image preview -->
+          <a href="/pinarchive/details?id=${encodeURIComponent(pinId)}" class="relative w-full h-44 bg-muted/50 overflow-hidden flex items-center justify-center block">
+            ${imageUrl ? `
+              <img
+                src="${escapeHtml(imageUrl)}"
+                alt="${escapeHtml(p.title || 'Pinterest Pin')}"
+                loading="lazy"
+                class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"
+              />
+              <div class="hidden absolute inset-0 flex items-center justify-center text-muted-foreground">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              </div>
+            ` : `
+              <div class="flex items-center justify-center text-muted-foreground">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              </div>
+            `}
+            ${category ? `
+              <span class="absolute top-2.5 left-2.5 text-[10px] font-bold bg-background/90 backdrop-blur-xs text-foreground px-2 py-0.5 rounded-md shadow-xs max-w-[140px] truncate" title="${escapeHtml(category)}">
+                ${escapeHtml(category)}
+              </span>
+            ` : ''}
+          </a>
+
+          <!-- Content -->
+          <div class="p-4 space-y-2.5">
+            <div class="flex flex-wrap items-center gap-1.5">
+              ${renderStageBadge(p.stage)}
+              ${renderAnomalyBadge(p.anomaly)}
+            </div>
+
+            <div>
+              <a href="/pinarchive/details?id=${encodeURIComponent(pinId)}" class="block group/link">
+                <h3 class="text-xs font-bold text-foreground line-clamp-2 group-hover/link:text-primary transition-colors" title="${escapeHtml(p.title || 'Untitled Pin')}">
+                  ${escapeHtml(p.title || `Pin ${p.pin_id}`)}
+                </h3>
+              </a>
+              <div class="text-[10px] text-muted-foreground mt-0.5">
+                Created: <span class="font-medium text-foreground">${createdDate}</span>
+              </div>
+            </div>
+
+            <!-- Metrics Row (Full Numbers) -->
+            <div class="grid grid-cols-3 gap-1.5 pt-1">
+              <div class="bg-muted/40 rounded-lg p-1.5 text-center border border-border/40">
+                <span class="text-[9px] text-muted-foreground uppercase block font-semibold">Saves</span>
+                <span class="text-xs font-bold text-rose-500">${fmtNumber(saves)}</span>
+              </div>
+              <div class="bg-muted/40 rounded-lg p-1.5 text-center border border-border/40">
+                <span class="text-[9px] text-muted-foreground uppercase block font-semibold">Repins</span>
+                <span class="text-xs font-bold text-foreground">${fmtNumber(repins)}</span>
+              </div>
+              <div class="bg-muted/40 rounded-lg p-1.5 text-center border border-border/40">
+                <span class="text-[9px] text-muted-foreground uppercase block font-semibold">Velocity</span>
+                <span class="text-xs font-bold text-emerald-500">${velocity.toFixed(1)}/d</span>
+              </div>
+            </div>
+
+            <!-- Social & Tags -->
+            ${shares > 0 ? `
+              <div class="flex items-center gap-1 text-[10px] text-blue-500 font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                <span>${fmtNumber(shares)} shares</span>
+              </div>
+            ` : ''}
+
+            ${tagsHtml ? `
+              <div class="flex flex-wrap items-center gap-1 pt-1">
+                ${tagsHtml}
+                ${moreTagsCount > 0 ? `<span class="text-[9px] text-muted-foreground font-semibold">+${moreTagsCount}</span>` : ''}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Footer link -->
+        <div class="px-4 py-2.5 bg-muted/20 border-t border-border/60 flex items-center justify-between text-[11px]">
+          <span class="text-muted-foreground text-[10px] truncate max-w-[120px]">${p.board_name ? escapeHtml(p.board_name) : ''}</span>
+          <a href="${escapeHtml(pinUrl)}" target="_blank" rel="noopener noreferrer" class="font-semibold text-primary hover:underline inline-flex items-center gap-1">
+            <span>View on Pinterest</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderPins(pins: any[]) {
+    const grid = document.getElementById('winners-grid');
+    const badge = document.getElementById('winners-badge-count');
+    if (badge) badge.textContent = `${pins.length}`;
+
+    if (!grid) return;
+
+    if (pins.length === 0) {
+      grid.innerHTML = `
+        <div class="col-span-full py-12 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
+          No archived winning pins matched your active filters.
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = pins.map((p) => renderSinglePinCard(p)).join('');
+    attachCompareListeners();
+  }
+
+  function renderByBoard(pins: any[]) {
+    const container = document.getElementById('by-board-container');
+    if (!container) return;
+
+    if (pins.length === 0) {
+      container.innerHTML = `
+        <div class="py-12 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
+          No pins available to group by board.
+        </div>
+      `;
+      return;
+    }
+
+    const groups: Record<string, any[]> = {};
+    pins.forEach((p) => {
+      const b = p.board_name || 'Unassigned Board';
+      if (!groups[b]) groups[b] = [];
+      groups[b].push(p);
+    });
+
+    container.innerHTML = Object.entries(groups)
+      .map(([boardName, boardPins]) => {
+        const boardSaves = boardPins.reduce((acc, p) => acc + Number(p.saves || 0), 0);
+        return `
+          <div class="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-border/60 pb-3">
+              <div class="flex items-center gap-2">
+                <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                </span>
+                <div>
+                  <h3 class="text-sm font-bold text-foreground">${escapeHtml(boardName)}</h3>
+                  <span class="text-[11px] text-muted-foreground">${boardPins.length} pin${boardPins.length === 1 ? '' : 's'} · ${fmtNumber(boardSaves)} total saves</span>
+                </div>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              ${boardPins.map((p) => renderSinglePinCard(p)).join('')}
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
+    attachCompareListeners();
+  }
+
+  function renderCanonicalClusters(pins: any[]) {
+    const container = document.getElementById('canonical-container');
+    const badge = document.getElementById('canonical-badge-count');
+    if (!container) return;
+
+    const clusters: Record<string, any[]> = {};
+    pins.forEach((p) => {
+      if (p.canonical_pin_id) {
+        if (!clusters[p.canonical_pin_id]) clusters[p.canonical_pin_id] = [];
+        clusters[p.canonical_pin_id].push(p);
+      }
+    });
+
+    const clusterEntries = Object.entries(clusters).filter(([_, list]) => list.length >= 1);
+    if (badge) badge.textContent = `${clusterEntries.length} Clusters`;
+
+    if (clusterEntries.length === 0) {
+      container.innerHTML = `
+        <div class="p-8 text-center text-xs text-muted-foreground">
+          No canonical pin clusters found for active filters.
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = clusterEntries
+      .map(([canonicalId, clusterPins]) => {
+        const clusterTotalSaves = clusterPins.reduce((acc, p) => acc + Number(p.saves || 0), 0);
+        clusterPins.sort((a, b) => Number(b.saves || 0) - Number(a.saves || 0));
+
+        const itemsList = clusterPins
+          .map((p) => {
+            const pinSaves = Number(p.saves || 0);
+            const sharePct = clusterTotalSaves > 0 ? Math.round((pinSaves / clusterTotalSaves) * 100) : 0;
+            return `
+              <li class="flex items-center justify-between py-1.5 px-3 text-xs rounded-lg hover:bg-muted/40 transition-colors">
+                <div class="flex items-center gap-2 min-w-0">
+                  <a href="/pinarchive/details?id=${encodeURIComponent(p.id)}" class="font-medium text-foreground hover:text-primary transition-colors truncate max-w-md">
+                    ${escapeHtml(p.title || `Pin ${p.pin_id}`)}
+                  </a>
+                  <span class="text-[10px] text-muted-foreground">(@${escapeHtml(p.board_name || 'board')})</span>
+                </div>
+                <div class="flex items-center gap-2 shrink-0 ml-2">
+                  <span class="text-[10px] text-muted-foreground font-mono">(${sharePct}%)</span>
+                  <span class="font-bold text-rose-500">${fmtNumber(pinSaves)} saves</span>
+                </div>
+              </li>
+            `;
+          })
+          .join('');
+
+        return `
+          <div class="p-5 hover:bg-muted/10 transition-colors">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+              <div class="flex items-center gap-2">
+                <span class="flex h-6 w-6 items-center justify-center rounded-md bg-purple-500/10 text-purple-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+                </span>
+                <span class="font-bold text-xs text-foreground font-mono">Canonical #${escapeHtml(canonicalId)}</span>
+                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500">
+                  ${clusterPins.length} Pin Variations
+                </span>
+              </div>
+              <span class="text-xs font-semibold text-muted-foreground">
+                Cluster Saves: <strong class="text-foreground">${fmtNumber(clusterTotalSaves)}</strong>
+              </span>
+            </div>
+            <ul class="space-y-0.5 bg-muted/20 rounded-xl p-2 border border-border/40">
+              ${itemsList}
+            </ul>
+          </div>
+        `;
+      })
+      .join('');
+  }
+
+  function populateBoardFilter(pins: any[]) {
+    const select = document.getElementById('filter-board-select') as HTMLSelectElement | null;
+    if (!select) return;
+
+    const currentVal = select.value;
+    const boards = Array.from(new Set(pins.map((p) => p.board_name).filter(Boolean))).sort();
+
+    select.innerHTML = '<option value="">All Boards</option>' +
+      boards.map((b) => `<option value="${escapeHtml(b)}" ${b === currentVal ? 'selected' : ''}>${escapeHtml(b)}</option>`).join('');
+  }
+
+  async function loadPins() {
+    const searchInput = document.getElementById('filter-search-input') as HTMLInputElement | null;
+    const boardSelect = document.getElementById('filter-board-select') as HTMLSelectElement | null;
+    const stageSelect = document.getElementById('filter-stage-select') as HTMLSelectElement | null;
+    const clusterToggle = document.getElementById('filter-cluster-toggle') as HTMLInputElement | null;
+
+    const params = new URLSearchParams();
+    if (searchInput?.value) params.set('q', searchInput.value.trim());
+    if (boardSelect?.value) params.set('board', boardSelect.value);
+    if (stageSelect?.value) params.set('stage', stageSelect.value);
+    if (clusterToggle?.checked) params.set('in_cluster', '1');
+    params.set('sort', currentSort);
+    params.set('limit', String(currentLimit));
+
+    try {
+      const res = await fetch(`/api/pinarchive/pins?${params.toString()}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Failed to load pins');
+
+      rawPins = json.pins || [];
+
+      // Populate Board select if not set
+      if (!boardSelect?.value) {
+        populateBoardFilter(rawPins);
+      }
+
+      // Render based on active view
+      if (activeView === 'grid') {
+        renderPins(rawPins);
+      } else {
+        renderByBoard(rawPins);
+      }
+
+      renderCanonicalClusters(rawPins);
+    } catch (e: any) {
+      console.error('Error loading PinArchive pins:', e);
+    }
+  }
+
+  function attachCompareListeners() {
+    document.querySelectorAll<HTMLInputElement>('[data-pin-compare]').forEach((cb) => {
+      cb.addEventListener('change', () => {
+        const id = cb.getAttribute('data-pin-compare');
+        if (!id) return;
+        if (cb.checked) {
+          if (selectedForCompare.size >= 2) {
+            cb.checked = false;
+            alert('You can select a maximum of 2 pins for side-by-side comparison.');
+            return;
+          }
+          selectedForCompare.add(id);
+        } else {
+          selectedForCompare.delete(id);
+        }
+        updateCompareBar();
+      });
+    });
+  }
+
+  function updateCompareBar() {
+    const bar = document.getElementById('floating-compare-bar');
+    const text = document.getElementById('compare-count-text');
+    if (!bar || !text) return;
+
+    if (selectedForCompare.size > 0) {
+      bar.classList.remove('hidden');
+      text.textContent = `${selectedForCompare.size} of 2 Pins Selected`;
+    } else {
+      bar.classList.add('hidden');
+    }
+  }
+
+  async function openCompareModal() {
+    const modal = document.getElementById('compare-modal');
+    const content = document.getElementById('compare-modal-content');
+    if (!modal || !content || selectedForCompare.size < 2) return;
+
+    modal.classList.remove('hidden');
+    content.innerHTML = '<div class="py-12 text-center text-xs text-muted-foreground animate-pulse">Fetching comparison datasets...</div>';
+
+    const ids = Array.from(selectedForCompare);
+    try {
+      const [resA, resB] = await Promise.all([
+        fetch(`/api/pinarchive/pin?id=${encodeURIComponent(ids[0])}`).then((r) => r.json()),
+        fetch(`/api/pinarchive/pin?id=${encodeURIComponent(ids[1])}`).then((r) => r.json()),
+      ]);
+
+      if (!resA.success || !resB.success) throw new Error('Could not fetch one of the compared pins.');
+
+      const pinA = resA.pin;
+      const pinB = resB.pin;
+
+      content.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Pin A -->
+          <div class="rounded-xl border border-border bg-card p-4 space-y-3">
+            <div class="flex items-center gap-3">
+              <img src="${escapeHtml(pinA.image_url)}" class="h-16 w-16 object-cover rounded-lg border border-border" />
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1 mb-1">
+                  ${renderStageBadge(pinA.stage)}
+                  ${renderAnomalyBadge(pinA.anomaly)}
+                </div>
+                <h4 class="text-xs font-bold text-foreground line-clamp-1">${escapeHtml(pinA.title || 'Pin A')}</h4>
+                <span class="text-[10px] text-muted-foreground">@${escapeHtml(pinA.board_name || 'board')}</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2 pt-2 border-t border-border text-center">
+              <div class="bg-muted/30 p-2 rounded-lg">
+                <span class="text-[10px] text-muted-foreground block">Saves</span>
+                <span class="text-sm font-bold text-rose-500">${fmtNumber(pinA.saves)}</span>
+              </div>
+              <div class="bg-muted/30 p-2 rounded-lg">
+                <span class="text-[10px] text-muted-foreground block">Repins</span>
+                <span class="text-sm font-bold text-foreground">${fmtNumber(pinA.repins)}</span>
+              </div>
+              <div class="bg-muted/30 p-2 rounded-lg">
+                <span class="text-[10px] text-muted-foreground block">Velocity</span>
+                <span class="text-sm font-bold text-emerald-500">${Number(pinA.velocity || 0).toFixed(1)}/d</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pin B -->
+          <div class="rounded-xl border border-border bg-card p-4 space-y-3">
+            <div class="flex items-center gap-3">
+              <img src="${escapeHtml(pinB.image_url)}" class="h-16 w-16 object-cover rounded-lg border border-border" />
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1 mb-1">
+                  ${renderStageBadge(pinB.stage)}
+                  ${renderAnomalyBadge(pinB.anomaly)}
+                </div>
+                <h4 class="text-xs font-bold text-foreground line-clamp-1">${escapeHtml(pinB.title || 'Pin B')}</h4>
+                <span class="text-[10px] text-muted-foreground">@${escapeHtml(pinB.board_name || 'board')}</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2 pt-2 border-t border-border text-center">
+              <div class="bg-muted/30 p-2 rounded-lg">
+                <span class="text-[10px] text-muted-foreground block">Saves</span>
+                <span class="text-sm font-bold text-rose-500">${fmtNumber(pinB.saves)}</span>
+              </div>
+              <div class="bg-muted/30 p-2 rounded-lg">
+                <span class="text-[10px] text-muted-foreground block">Repins</span>
+                <span class="text-sm font-bold text-foreground">${fmtNumber(pinB.repins)}</span>
+              </div>
+              <div class="bg-muted/30 p-2 rounded-lg">
+                <span class="text-[10px] text-muted-foreground block">Velocity</span>
+                <span class="text-sm font-bold text-emerald-500">${Number(pinB.velocity || 0).toFixed(1)}/d</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    } catch (err: any) {
+      content.innerHTML = `<div class="p-6 text-center text-xs text-rose-500">Failed to render comparison: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  function exportCSV() {
+    if (!rawPins.length) {
+      alert('No pins available in the current view to export.');
+      return;
+    }
+
+    const headers = ['Pin ID', 'Title', 'Board', 'Saves', 'Repins', 'Velocity', 'Stage', 'Anomaly', 'Pinterest Link', 'Created At'];
+    const rows = rawPins.map((p) => [
+      p.pin_id,
+      `"${(p.title || '').replace(/"/g, '""')}"`,
+      `"${(p.board_name || '').replace(/"/g, '""')}"`,
+      p.saves || 0,
+      p.repins || 0,
+      p.velocity || 0,
+      p.stage || 'DORMANT',
+      p.anomaly || 'NONE',
+      `"https://www.pinterest.com/pin/${p.pin_id}/"`,
+      p.created_at_pinterest || '',
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pinarchive-winning-pins-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function init() {
+    loadPins();
+
+    // View switcher
+    const gridBtn = document.getElementById('view-grid-btn');
+    const boardBtn = document.getElementById('view-board-btn');
+    const winnersGrid = document.getElementById('winners-grid');
+    const byBoardContainer = document.getElementById('by-board-container');
+
+    if (gridBtn && boardBtn && winnersGrid && byBoardContainer) {
+      gridBtn.addEventListener('click', () => {
+        activeView = 'grid';
+        gridBtn.className = 'px-2.5 py-1 text-xs font-semibold rounded-lg bg-primary text-primary-foreground shadow-xs transition-all cursor-pointer';
+        boardBtn.className = 'px-2.5 py-1 text-xs font-semibold rounded-lg text-muted-foreground hover:text-foreground transition-all cursor-pointer';
+        winnersGrid.classList.remove('hidden');
+        byBoardContainer.classList.add('hidden');
+        renderPins(rawPins);
+      });
+
+      boardBtn.addEventListener('click', () => {
+        activeView = 'board';
+        boardBtn.className = 'px-2.5 py-1 text-xs font-semibold rounded-lg bg-primary text-primary-foreground shadow-xs transition-all cursor-pointer';
+        gridBtn.className = 'px-2.5 py-1 text-xs font-semibold rounded-lg text-muted-foreground hover:text-foreground transition-all cursor-pointer';
+        winnersGrid.classList.add('hidden');
+        byBoardContainer.classList.remove('hidden');
+        renderByBoard(rawPins);
+      });
+    }
+
+    // Filter controls
+    const searchInput = document.getElementById('filter-search-input');
+    const boardSelect = document.getElementById('filter-board-select');
+    const stageSelect = document.getElementById('filter-stage-select');
+    const clusterToggle = document.getElementById('filter-cluster-toggle');
+    const clearBtn = document.getElementById('clear-filters-btn');
+
+    let debounceTimer: any = null;
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          loadPins();
+        }, 300);
+      });
+    }
+
+    if (boardSelect) boardSelect.addEventListener('change', loadPins);
+    if (stageSelect) stageSelect.addEventListener('change', loadPins);
+    if (clusterToggle) clusterToggle.addEventListener('change', loadPins);
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        if (searchInput) (searchInput as HTMLInputElement).value = '';
+        if (boardSelect) (boardSelect as HTMLSelectElement).value = '';
+        if (stageSelect) (stageSelect as HTMLSelectElement).value = '';
+        if (clusterToggle) (clusterToggle as HTMLInputElement).checked = false;
+        loadPins();
+      });
+    }
+
+    // Keyboard shortcut '/' to search
+    window.addEventListener('keydown', (e) => {
+      if (e.key === '/' && document.activeElement !== searchInput && !(document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement)) {
+        e.preventDefault();
+        searchInput?.focus();
+      }
+    });
+
+    // Sort & Limit
+    const sortSelect = document.getElementById('pins-sort-select') as HTMLSelectElement | null;
+    if (sortSelect) {
+      sortSelect.addEventListener('change', () => {
+        currentSort = sortSelect.value;
+        loadPins();
+      });
+    }
+
+    const limitSelect = document.getElementById('pins-limit-select') as HTMLSelectElement | null;
+    if (limitSelect) {
+      limitSelect.addEventListener('change', () => {
+        currentLimit = parseInt(limitSelect.value, 10) || 50;
+        loadPins();
+      });
+    }
+
+    // CSV Export
+    const exportBtn = document.getElementById('export-csv-btn');
+    if (exportBtn) exportBtn.addEventListener('click', exportCSV);
+
+    // Compare Controls
+    const launchCompareBtn = document.getElementById('launch-compare-btn');
+    if (launchCompareBtn) launchCompareBtn.addEventListener('click', openCompareModal);
+
+    const clearCompareBtn = document.getElementById('clear-compare-btn');
+    if (clearCompareBtn) {
+      clearCompareBtn.addEventListener('click', () => {
+        selectedForCompare.clear();
+        updateCompareBar();
+        document.querySelectorAll<HTMLInputElement>('[data-pin-compare]').forEach((cb) => {
+          cb.checked = false;
+        });
+      });
+    }
+
+    const closeCompareModal = document.getElementById('close-compare-modal');
+    if (closeCompareModal) {
+      closeCompareModal.addEventListener('click', () => {
+        document.getElementById('compare-modal')?.classList.add('hidden');
+      });
+    }
+
+    // Refresh button
+    const refreshBtn = document.getElementById('refresh-btn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        const icon = document.getElementById('refresh-icon');
+        if (icon) icon.classList.add('animate-spin');
+        loadPins().finally(() => {
+          setTimeout(() => {
+            if (icon) icon.classList.remove('animate-spin');
+          }, 400);
+        });
+      });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+</script>
