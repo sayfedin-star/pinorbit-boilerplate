@@ -82,7 +82,9 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(json.max_batch_pins).toBe(500);
       expect(json.pin_filter_min_saves).toBe(0);
       expect(json.pin_filter_min_repins).toBe(0);
-      expect(json.pin_filter_max_age_days).toBe(0);
+      expect(json.pin_filter_rising_age_days).toBe(14);
+      expect(json.pin_filter_rising_saves).toBe(34);
+      expect(json.pin_filter_max_age_days).toBeUndefined();
       expect(json.is_default).toBe(true);
     });
 
@@ -99,7 +101,8 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
                 max_batch_pins: 1200,
                 pin_filter_min_saves: 500,
                 pin_filter_min_repins: 100,
-                pin_filter_max_age_days: 90,
+                pin_filter_rising_age_days: 10,
+                pin_filter_rising_saves: 50,
                 updated_at: '2026-08-23T12:00:00Z',
               },
               error: null,
@@ -123,7 +126,9 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(json.max_batch_pins).toBe(1200);
       expect(json.pin_filter_min_saves).toBe(500);
       expect(json.pin_filter_min_repins).toBe(100);
-      expect(json.pin_filter_max_age_days).toBe(90);
+      expect(json.pin_filter_rising_age_days).toBe(10);
+      expect(json.pin_filter_rising_saves).toBe(50);
+      expect(json.pin_filter_max_age_days).toBeUndefined();
       expect(json.is_default).toBe(false);
     });
   });
@@ -163,6 +168,23 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(res.status).toBe(422);
       const json = await res.json();
       expect(json.error).toContain('Unknown setting key');
+    });
+
+    it('rejects removed pin_filter_max_age_days key with 422', async () => {
+      const req = new Request('http://localhost:4321/api/pinarchive/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspace_id: mockWsId, pin_filter_max_age_days: 90 }),
+      });
+
+      const res = await patchSettingsHandler({
+        request: req,
+        locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
+      } as any);
+
+      expect(res.status).toBe(422);
+      const json = await res.json();
+      expect(json.error).toContain('Unknown setting key: pin_filter_max_age_days');
     });
 
     it('validates ranges and enums (paused_account_policy, default_interval_days, max_batch_pins, pin_filter_*)', async () => {
@@ -238,17 +260,29 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       } as any);
       expect(res6.status).toBe(422);
 
-      // Invalid max_age_days > 3650
+      // Invalid rising_age_days > 365
       const req7 = new Request('http://localhost:4321/api/pinarchive/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspace_id: mockWsId, pin_filter_max_age_days: 4000 }),
+        body: JSON.stringify({ workspace_id: mockWsId, pin_filter_rising_age_days: 400 }),
       });
       const res7 = await patchSettingsHandler({
         request: req7,
         locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
       } as any);
       expect(res7.status).toBe(422);
+
+      // Invalid rising_saves > 1000000
+      const req8 = new Request('http://localhost:4321/api/pinarchive/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspace_id: mockWsId, pin_filter_rising_saves: 2000000 }),
+      });
+      const res8 = await patchSettingsHandler({
+        request: req8,
+        locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
+      } as any);
+      expect(res8.status).toBe(422);
     });
 
     it('successfully upserts settings for admin and returns saved row', async () => {
@@ -284,7 +318,8 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
           max_batch_pins: 1000,
           pin_filter_min_saves: 250,
           pin_filter_min_repins: 50,
-          pin_filter_max_age_days: 180,
+          pin_filter_rising_age_days: 10,
+          pin_filter_rising_saves: 30,
         }),
       });
 
@@ -302,9 +337,11 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(json.max_batch_pins).toBe(1000);
       expect(json.pin_filter_min_saves).toBe(250);
       expect(json.pin_filter_min_repins).toBe(50);
-      expect(json.pin_filter_max_age_days).toBe(180);
+      expect(json.pin_filter_rising_age_days).toBe(10);
+      expect(json.pin_filter_rising_saves).toBe(30);
       expect(savedPayload.workspace_id).toBe(mockWsId);
-      expect(savedPayload.pin_filter_min_saves).toBe(250);
+      expect(savedPayload.pin_filter_rising_age_days).toBe(10);
+      expect(savedPayload.pin_filter_rising_saves).toBe(30);
     });
   });
 

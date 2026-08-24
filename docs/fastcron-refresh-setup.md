@@ -77,6 +77,7 @@ The refresh script queries pins ordered by `last_updated_at.asc` with a limit of
 
 ## 5. Migration & Fallback Notes
 
+- Archive Filter rules are OR-based and configurable in Dashboard → GAS Ingestion Controls; the collector pulls them live per tick via `/api/internal/pinarchive/config`.
 - The default GitHub Actions scheduled cron (`0 3 */2 * *` in `.github/workflows/pinarchive-refresh.yml`) remains in place as an active backup.
 - Once FastCron per-workspace jobs are verified across two successful cycles, the `schedule:` cron trigger in the workflow file can be safely deprecated while preserving `workflow_dispatch:`.
 

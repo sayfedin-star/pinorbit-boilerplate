@@ -207,14 +207,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let pinsUpdatedCount = 0;
 
     if (pins.length > 0) {
-      // Fetch existing pin metric state for comparison
+      // Fetch existing pin metric & enrichment state for comparison and two-writer protection
       const { data: existingPins } = await pinArchive
         .from('pa_pins')
-        .select('id, pin_id, saves, repins, comments, share_count, archived_at')
+        .select('id, pin_id, saves, repins, comments, share_count, archived_at, annotations, board_pin_count, board_last_modified_at, seo_category, canonical_pin_id, utm_link, image_signature, dominant_color, seo_alt_text')
         .eq('workspace_id', workspaceId)
         .in('pin_id', pinIds);
 
-      const existingMap = new Map<string, { id: string; saves: number; repins: number; comments: number; share_count: number; archived_at: string | null }>();
+      const existingMap = new Map<string, {
+        id: string;
+        saves: number;
+        repins: number;
+        comments: number;
+        share_count: number;
+        archived_at: string | null;
+        annotations: any[] | null;
+        board_pin_count: number | null;
+        board_last_modified_at: string | null;
+        seo_category: string | null;
+        canonical_pin_id: string | null;
+        utm_link: string | null;
+        image_signature: string | null;
+        dominant_color: string | null;
+        seo_alt_text: string | null;
+      }>();
+
       if (Array.isArray(existingPins)) {
         for (const ep of existingPins) {
           existingMap.set(ep.pin_id, {
@@ -224,11 +241,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
             comments: Number(ep.comments || 0),
             share_count: Number(ep.share_count || 0),
             archived_at: ep.archived_at || null,
+            annotations: Array.isArray(ep.annotations) ? ep.annotations : null,
+            board_pin_count: typeof ep.board_pin_count === 'number' ? ep.board_pin_count : null,
+            board_last_modified_at: ep.board_last_modified_at || null,
+            seo_category: ep.seo_category || null,
+            canonical_pin_id: ep.canonical_pin_id || null,
+            utm_link: ep.utm_link || null,
+            image_signature: ep.image_signature || null,
+            dominant_color: ep.dominant_color || null,
+            seo_alt_text: ep.seo_alt_text || null,
           });
         }
       }
 
-      // B) Upsert pa_pins
+      // B) Upsert pa_pins (Enrichment-Preserving Two-Writer Merge)
+      // Architecture Law: GAS owns Google Sheets; the GitHub refresh workflow owns DB enrichment
+      // (works by pin_id against public pinterest.com/pin/<id>/ pages, no cookie). Independent pipelines.
+      // Ingest merge must NEVER let a GAS write downgrade workflow enrichment (idea urls, board details, share counts).
       const pinsToUpsert = pins.map((p: any) => {
         const pinId = String(p.pin_id || p.id);
         const existing = existingMap.get(pinId) || null;
@@ -240,6 +269,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
           pinsAddedCount++;
         }
 
+        // 1. Annotation merge (by name — url/idea_id NEVER lost)
+        const mergedByName = new Map<string, any>();
+        for (const a of (existing?.annotations || [])) {
+          if (a?.name) mergedByName.set(a.name, a);
+        }
+        for (const a of (p.annotations || [])) {
+          if (a?.name) {
+            const prev = mergedByName.get(a.name) || {};
+            mergedByName.set(a.name, {
+              name: a.name,
+              idea_id: a.idea_id ?? prev.idea_id ?? null,
+              url: a.url ?? prev.url ?? null,
+            });
+          }
+        }
+
         return {
           workspace_id: workspaceId,
           account_id: accountId,
@@ -248,14 +293,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           title: p.title || null,
           description: p.description || null,
           link: p.link || null,
-          utm_link: p.utm_link || null,
           domain: p.domain || null,
           board_id: p.board_id || null,
           board_name: p.board_name || null,
           created_at_pinterest: p.created_at_pinterest || p.created_at || null,
           image_url: p.image_url || null,
-          image_signature: p.image_signature || null,
-          dominant_color: p.dominant_color || null,
           is_video: Boolean(p.is_video),
           is_product: Boolean(p.is_product),
           price: p.price !== undefined ? p.price : null,
@@ -268,16 +310,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
           velocity: Number(p.velocity || 0),
           promoted: Boolean(p.promoted),
           last_updated_at: fetchedAt,
-
-          // Enrichment (all nullable)
-          archived_at: p.archived_at || existing?.archived_at || (isNew ? fetchedAt : null),
-          annotations: Array.isArray(p.annotations) ? p.annotations : [],
-          seo_category: p.seo_category || null,
-          canonical_pin_id: p.canonical_pin_id || null,
-          seo_alt_text: p.seo_alt_text || null,
           share_count: Number(p.share_count || 0),
-          board_pin_count: typeof p.board_pin_count === 'number' ? p.board_pin_count : null,
-          board_last_modified_at: p.board_last_modified_at || null,
+
+          // Preserved Enrichment & Scalar non-null fallback
+          archived_at: p.archived_at || existing?.archived_at || (isNew ? fetchedAt : null),
+          annotations: Array.from(mergedByName.values()),
+          board_pin_count: p.board_pin_count ?? existing?.board_pin_count ?? null,
+          board_last_modified_at: p.board_last_modified_at ?? existing?.board_last_modified_at ?? null,
+          seo_category: p.seo_category ?? existing?.seo_category ?? null,
+          canonical_pin_id: p.canonical_pin_id ?? existing?.canonical_pin_id ?? null,
+          utm_link: p.utm_link ?? existing?.utm_link ?? null,
+          image_signature: p.image_signature || existing?.image_signature || null,
+          dominant_color: p.dominant_color || existing?.dominant_color || null,
+          seo_alt_text: p.seo_alt_text ?? existing?.seo_alt_text ?? null,
         };
       });
 
