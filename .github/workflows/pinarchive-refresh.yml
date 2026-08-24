@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: '0 3 */2 * *'
   workflow_dispatch:
+    inputs:
+      workspace_id:
+        description: 'Workspace UUID (empty = all workspaces)'
+        required: false
+        type: string
+      username:
+        description: 'Single account username (empty = all in workspace)'
+        required: false
+        type: string
 
 jobs:
   refresh:
@@ -29,4 +38,6 @@ jobs:
           PINARCHIVE_SUPABASE_KEY: ${{ secrets.PINARCHIVE_SUPABASE_KEY }}
           PINORBIT_WORKER_URL: ${{ secrets.PINORBIT_WORKER_URL }}
           PINARCHIVE_INGEST_SECRET: ${{ secrets.PINARCHIVE_INGEST_SECRET }}
+          REFRESH_WORKSPACE_ID: ${{ github.event.inputs.workspace_id || '' }}
+          REFRESH_USERNAME: ${{ github.event.inputs.username || '' }}
         run: node scripts/pinarchive-refresh.mjs

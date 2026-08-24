@@ -19,6 +19,9 @@ const HEADERS = {
 
 const { PINARCHIVE_SUPABASE_URL, PINARCHIVE_SUPABASE_KEY, PINORBIT_WORKER_URL, PINARCHIVE_INGEST_SECRET } = process.env;
 
+const REFRESH_WORKSPACE_ID = (process.env.REFRESH_WORKSPACE_ID || '').trim();
+const REFRESH_USERNAME = (process.env.REFRESH_USERNAME || '').trim().toLowerCase();
+
 function checkEnv() {
   const missing = [];
   if (!PINARCHIVE_SUPABASE_URL) missing.push('PINARCHIVE_SUPABASE_URL');
@@ -332,7 +335,14 @@ async function main() {
       continue;
     }
 
-    const pins = await supaQuery('pa_pins', `select=pin_id,saves,repins,comments,share_count,reactions,annotations,seo_category,canonical_pin_id,seo_alt_text,board_pin_count,board_last_modified_at,archived_at,title,description,link,domain,board_name,board_id,created_at_pinterest,image_url,dominant_color,image_signature,node_id,is_video,velocity&workspace_id=eq.${acc.workspace_id}&order=saves.desc&limit=${CFG.MAX_PINS}`);
+    if (REFRESH_WORKSPACE_ID && acc.workspace_id !== REFRESH_WORKSPACE_ID) {
+      console.log(`[SKIP] ${acc.username}: outside requested workspace.`); continue;
+    }
+    if (REFRESH_USERNAME && acc.username.toLowerCase() !== REFRESH_USERNAME) {
+      console.log(`[SKIP] ${acc.username}: outside requested account.`); continue;
+    }
+
+    const pins = await supaQuery('pa_pins', `select=pin_id,saves,repins,comments,share_count,reactions,annotations,seo_category,canonical_pin_id,seo_alt_text,board_pin_count,board_last_modified_at,archived_at,title,description,link,domain,board_name,board_id,created_at_pinterest,image_url,dominant_color,image_signature,node_id,is_video,velocity&workspace_id=eq.${acc.workspace_id}&order=last_updated_at.asc&limit=${CFG.MAX_PINS}`);
     if (!pins.length) continue;
     console.log(`${acc.username}: ${pins.length} pins to refresh`);
     let consecutive403 = 0;
