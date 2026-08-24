@@ -108,7 +108,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           <span>⚙️ GAS Ingestion Controls</span>
           <span id="settings-role-badge" class="hidden text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Admin Only</span>
         </h2>
-        <p class="text-xs text-muted-foreground mt-0.5">Workspace-level gatekeeper limits and paused account ingestion policy.</p>
+        <p class="text-xs text-muted-foreground mt-0.5">A pin is archived &amp; shown if it matches ANY rule (OR). 0 disables a rule.</p>
       </div>
       <div class="flex items-center gap-3">
         <span id="settings-status-msg" class="text-xs font-semibold"></span>
@@ -185,10 +185,10 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         />
       </div>
 
-      <!-- Archive Filter: Min Saves -->
+      <!-- Rule 1 — Min Saves ≥ -->
       <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
         <div>
-          <label for="setting-min-saves" class="text-xs font-bold text-foreground block">Archive Filter: Min Saves</label>
+          <label for="setting-min-saves" class="text-xs font-bold text-foreground block">Rule 1 — Min Saves ≥</label>
           <span class="text-[11px] text-muted-foreground">Min saves required (0 = off).</span>
         </div>
         <input
@@ -201,10 +201,10 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         />
       </div>
 
-      <!-- Archive Filter: Min Repins -->
+      <!-- Rule 2 — Min Repins ≥ -->
       <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
         <div>
-          <label for="setting-min-repins" class="text-xs font-bold text-foreground block">Archive Filter: Min Repins</label>
+          <label for="setting-min-repins" class="text-xs font-bold text-foreground block">Rule 2 — Min Repins ≥</label>
           <span class="text-[11px] text-muted-foreground">Min repins required (0 = off).</span>
         </div>
         <input
@@ -217,21 +217,34 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         />
       </div>
 
-      <!-- Archive Filter: Max Pin Age (days) -->
-      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between sm:col-span-2 lg:col-span-2" title="Pins older than this are excluded from display AND not archived. 0 = disabled. WARNING: old competitor backlogs may match nothing.">
+      <!-- Rule 3 — Rising: Age ≤ (days) -->
+      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
         <div>
-          <label for="setting-max-age" class="text-xs font-bold text-foreground flex items-center gap-1.5">
-            <span>Max Pin Age (days)</span>
-            <span class="text-[10px] text-amber-500 font-mono" title="Pins older than this are excluded from display AND not archived. 0 = disabled. WARNING: old competitor backlogs may match nothing.">ℹ️ (0 = off)</span>
-          </label>
-          <span class="text-[11px] text-muted-foreground">Pins older than this are excluded from display AND not archived. 0 = disabled. WARNING: old competitor backlogs may match nothing.</span>
+          <label for="setting-rising-age" class="text-xs font-bold text-foreground block">Rule 3 — Rising: Age ≤ (days)</label>
+          <span class="text-[11px] text-muted-foreground">Max age in days (0 = off).</span>
         </div>
         <input
-          id="setting-max-age"
+          id="setting-rising-age"
           type="number"
           min="0"
-          max="3650"
-          value="0"
+          max="365"
+          value="14"
+          class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none"
+        />
+      </div>
+
+      <!-- Rule 3 — Rising: Min Saves ≥ -->
+      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
+        <div>
+          <label for="setting-rising-saves" class="text-xs font-bold text-foreground block">Rule 3 — Rising: Min Saves ≥</label>
+          <span class="text-[11px] text-muted-foreground">Min saves for rising pins (0 = off).</span>
+        </div>
+        <input
+          id="setting-rising-saves"
+          type="number"
+          min="0"
+          max="1000000"
+          value="34"
           class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none"
         />
       </div>
@@ -532,7 +545,8 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       const maxBatchInp = document.getElementById('setting-max-batch') as HTMLInputElement | null;
       const minSavesInp = document.getElementById('setting-min-saves') as HTMLInputElement | null;
       const minRepinsInp = document.getElementById('setting-min-repins') as HTMLInputElement | null;
-      const maxAgeInp = document.getElementById('setting-max-age') as HTMLInputElement | null;
+      const risingAgeInp = document.getElementById('setting-rising-age') as HTMLInputElement | null;
+      const risingSavesInp = document.getElementById('setting-rising-saves') as HTMLInputElement | null;
 
       if (ingestCb) {
         ingestCb.checked = Boolean(json.ingest_enabled);
@@ -546,7 +560,8 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       if (maxBatchInp) maxBatchInp.value = String(json.max_batch_pins || 500);
       if (minSavesInp) minSavesInp.value = String(json.pin_filter_min_saves ?? 0);
       if (minRepinsInp) minRepinsInp.value = String(json.pin_filter_min_repins ?? 0);
-      if (maxAgeInp) maxAgeInp.value = String(json.pin_filter_max_age_days ?? 0);
+      if (risingAgeInp) risingAgeInp.value = String(json.pin_filter_rising_age_days ?? 14);
+      if (risingSavesInp) risingSavesInp.value = String(json.pin_filter_rising_saves ?? 34);
     } catch (e) {
       console.error('Failed to load settings:', e);
     }
@@ -556,7 +571,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     const saveBtn = document.getElementById('save-ingest-settings-btn') as HTMLButtonElement | null;
     const roleBadge = document.getElementById('settings-role-badge');
     const inputs = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
-      '#setting-ingest-enabled, #setting-paused-policy, #setting-default-interval, #setting-max-batch, #setting-min-saves, #setting-min-repins, #setting-max-age'
+      '#setting-ingest-enabled, #setting-paused-policy, #setting-default-interval, #setting-max-batch, #setting-min-saves, #setting-min-repins, #setting-rising-age, #setting-rising-saves'
     );
     inputs.forEach((el) => {
       el.disabled = true;
@@ -575,11 +590,12 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     const maxBatchInp = document.getElementById('setting-max-batch') as HTMLInputElement | null;
     const minSavesInp = document.getElementById('setting-min-saves') as HTMLInputElement | null;
     const minRepinsInp = document.getElementById('setting-min-repins') as HTMLInputElement | null;
-    const maxAgeInp = document.getElementById('setting-max-age') as HTMLInputElement | null;
+    const risingAgeInp = document.getElementById('setting-rising-age') as HTMLInputElement | null;
+    const risingSavesInp = document.getElementById('setting-rising-saves') as HTMLInputElement | null;
     const statusMsg = document.getElementById('settings-status-msg');
     const saveBtn = document.getElementById('save-ingest-settings-btn') as HTMLButtonElement | null;
 
-    if (!ingestCb || !policySel || !intervalInp || !maxBatchInp || !minSavesInp || !minRepinsInp || !maxAgeInp) return;
+    if (!ingestCb || !policySel || !intervalInp || !maxBatchInp || !minSavesInp || !minRepinsInp || !risingAgeInp || !risingSavesInp) return;
 
     if (saveBtn) saveBtn.disabled = true;
     if (statusMsg) {
@@ -598,7 +614,8 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           max_batch_pins: parseInt(maxBatchInp.value, 10) || 500,
           pin_filter_min_saves: parseInt(minSavesInp.value, 10) || 0,
           pin_filter_min_repins: parseInt(minRepinsInp.value, 10) || 0,
-          pin_filter_max_age_days: parseInt(maxAgeInp.value, 10) || 0,
+          pin_filter_rising_age_days: Number.isInteger(parseInt(risingAgeInp.value, 10)) ? parseInt(risingAgeInp.value, 10) : 14,
+          pin_filter_rising_saves: Number.isInteger(parseInt(risingSavesInp.value, 10)) ? parseInt(risingSavesInp.value, 10) : 34,
         }),
       });
 

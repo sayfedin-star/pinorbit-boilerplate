@@ -61,13 +61,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // 1. Load pa_workspace_settings for persisted filters
     const { data: wsSettings } = await db
       .from('pa_workspace_settings')
-      .select('pin_filter_min_saves, pin_filter_min_repins, pin_filter_max_age_days')
+      .select('pin_filter_min_saves, pin_filter_min_repins, pin_filter_rising_age_days, pin_filter_rising_saves')
       .eq('workspace_id', ws)
       .maybeSingle();
 
     const minSaves = Number(wsSettings?.pin_filter_min_saves || 0);
     const minRepins = Number(wsSettings?.pin_filter_min_repins || 0);
-    const maxAgeDays = Number(wsSettings?.pin_filter_max_age_days || 0);
+    const risA = Number(wsSettings?.pin_filter_rising_age_days ?? 14);
+    const risS = Number(wsSettings?.pin_filter_rising_saves ?? 34);
 
     let query = db
       .from('pa_pins')
@@ -78,18 +79,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       query = query.eq('account_id', accountId);
     }
 
-    if (minSaves > 0) {
-      query = query.gte('saves', minSaves);
+    const orParts: string[] = [];
+    if (minSaves > 0) orParts.push(`saves.gte.${minSaves}`);
+    if (minRepins > 0) orParts.push(`repins.gte.${minRepins}`);
+    if (risA > 0 && risS > 0) {
+      const cutoff = new Date(Date.now() - risA * 86400000).toISOString();
+      orParts.push(`and(created_at_pinterest.gte."${cutoff}",saves.gte.${risS})`);
     }
-
-    if (minRepins > 0) {
-      query = query.gte('repins', minRepins);
-    }
-
-    if (maxAgeDays > 0) {
-      const cutoffDate = new Date(Date.now() - maxAgeDays * 86400000).toISOString();
-      query = query.gte('created_at_pinterest', cutoffDate);
-    }
+    if (orParts.length) query = query.or(orParts.join(','));
 
     if (q) {
       const escaped = q.replace(/[%_\\]/g, '\\$&');
@@ -181,6 +178,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       pins,
       count: pins.length,
       sort: sortCol,
+      filters: { minSaves, minRepins, risingAgeDays: risA, risingSaves: risS },
     });
   } catch (e: any) {
     return json({ success: false, error: e.message || 'Internal Server Error' }, 500);

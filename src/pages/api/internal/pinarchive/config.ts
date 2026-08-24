@@ -1,4 +1,4 @@
-﻿export const prerender = false;
+export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { dbClients, isKnownDefaultIngestSecret, isProductionEnv } from '../../../../server/db/clients';
@@ -14,7 +14,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
  *
  * Header: x-ingest-secret: <PINARCHIVE_SECRET>
  *
- * Fail-Lazy: Returns 200 with fallback {0,0,0} on any DB error so GAS collector
+ * Fail-Lazy: Returns 200 with fallback {0,0,14,34} on any DB error so GAS collector
  * always receives a valid payload and never crashes.
  */
 export const GET: APIRoute = async ({ request, locals }) => {
@@ -55,7 +55,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const pinArchive = dbClients.getPinArchive(runtimeEnv);
     const { data: settings, error } = await pinArchive
       .from('pa_workspace_settings')
-      .select('pin_filter_min_saves, pin_filter_min_repins, pin_filter_max_age_days')
+      .select('pin_filter_min_saves, pin_filter_min_repins, pin_filter_rising_age_days, pin_filter_rising_saves')
       .eq('workspace_id', workspaceId)
       .maybeSingle();
 
@@ -65,7 +65,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
           success: true,
           pin_filter_min_saves: 0,
           pin_filter_min_repins: 0,
-          pin_filter_max_age_days: 0,
+          pin_filter_rising_age_days: 14,
+          pin_filter_rising_saves: 34,
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
@@ -76,7 +77,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
         success: true,
         pin_filter_min_saves: Number(settings.pin_filter_min_saves || 0),
         pin_filter_min_repins: Number(settings.pin_filter_min_repins || 0),
-        pin_filter_max_age_days: Number(settings.pin_filter_max_age_days || 0),
+        pin_filter_rising_age_days: Number(settings.pin_filter_rising_age_days ?? 14),
+        pin_filter_rising_saves: Number(settings.pin_filter_rising_saves ?? 34),
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
@@ -87,7 +89,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
         success: true,
         pin_filter_min_saves: 0,
         pin_filter_min_repins: 0,
-        pin_filter_max_age_days: 0,
+        pin_filter_rising_age_days: 14,
+        pin_filter_rising_saves: 34,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
