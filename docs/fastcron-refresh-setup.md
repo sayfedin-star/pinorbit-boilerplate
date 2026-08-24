@@ -70,6 +70,7 @@ The refresh script queries pins ordered by `last_updated_at.asc` with a limit of
 - In PostgreSQL, `NULLS FIRST` is the default for ascending order. Pins that have never been refreshed (or backfilled) are prioritized first.
 - Every successful refresh updates `last_updated_at` to the current timestamp.
 - Successive runs automatically cycle through older pins, guaranteeing 100% full-coverage rotation across all historical pins without repeatedly fetching the same top 150 pins.
+- Rotation by `last_updated_at.asc` ensures full coverage over successive runs — one workspace with N accounts × 150 pins needs ceil(N*150 / 150) ≈ N runs to cover the backlog; subsequent runs rotate to oldest remaining pins.
 - **Initial Backfill**: For accounts with large backlogs (> 150 pins), manually trigger 2–3 runs from the dashboard to rotate through the entire backlog.
 
 ---
