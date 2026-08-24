@@ -229,9 +229,7 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
       mockPinArchiveClient.from.mockReturnValue({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
-            not: vi.fn().mockReturnValue({
-              limit: vi.fn().mockResolvedValue({ data: mockData, error: null }),
-            }),
+            limit: vi.fn().mockResolvedValue({ data: mockData, error: null }),
           }),
         }),
       });

@@ -47,7 +47,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
       .from('pa_pins')
       .select('pin_id, saves, annotations')
       .eq('workspace_id', ws)
-      .not('archived_at', 'is', null)
       .limit(500);
 
     if (error) {
