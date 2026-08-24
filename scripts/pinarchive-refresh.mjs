@@ -365,7 +365,7 @@ async function main() {
     console.warn('Could not query pa_workspace_settings (using defaults):', e.message);
   }
 
-  const accounts = await supaQuery('pa_accounts', 'select=workspace_id,username,follower_count,status,ingest_enabled');
+  const accounts = await supaQuery('pa_accounts', 'select=id,workspace_id,username,follower_count,status,ingest_enabled');
   if (!accounts.length) { console.log('No accounts found.'); return; }
   console.log(`Found ${accounts.length} account(s)\n`);
   const summary = { refreshed: 0, updated: 0, pushed: 0, errors: [] };
@@ -400,7 +400,7 @@ async function main() {
       console.log(`[SKIP] ${acc.username}: outside requested account.`); continue;
     }
 
-    const pins = await supaQuery('pa_pins', `select=pin_id,saves,repins,comments,share_count,reactions,annotations,seo_category,canonical_pin_id,seo_alt_text,board_pin_count,board_last_modified_at,archived_at,title,description,link,domain,board_name,board_id,created_at_pinterest,image_url,dominant_color,image_signature,node_id,is_video,velocity&workspace_id=eq.${acc.workspace_id}&order=last_updated_at.asc&limit=${CFG.MAX_PINS}`);
+    const pins = await supaQuery('pa_pins', `select=pin_id,saves,repins,comments,share_count,reactions,annotations,seo_category,canonical_pin_id,seo_alt_text,board_pin_count,board_last_modified_at,archived_at,title,description,link,domain,board_name,board_id,created_at_pinterest,image_url,dominant_color,image_signature,node_id,is_video,velocity&workspace_id=eq.${acc.workspace_id}&account_id=eq.${acc.id}&order=last_updated_at.asc&limit=${CFG.MAX_PINS}`);
     if (!pins.length) continue;
     console.log(`${acc.username}: ${pins.length} pins to refresh`);
     let consecutive403 = 0;
