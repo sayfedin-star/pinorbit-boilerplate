@@ -6,7 +6,7 @@
 import { fileURLToPath } from 'url';
 import path from 'path';
 
-const CFG = { SLEEP_MS: 3000, BATCH_SIZE: 25, CIRCUIT_BREAKER: 3, MAX_PINS: 150 };
+const CFG = { SLEEP_MS: 3000, BATCH_SIZE: 12, PUSH_SLEEP_MS: 10000, CIRCUIT_BREAKER: 3, MAX_PINS: 150 };
 
 const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36',
@@ -437,13 +437,13 @@ async function main() {
       const oldShares = Number(p.share_count) || 0;
 
       const existingAnnotationsEmpty = !(p.annotations || []).length;
+      const freshHasAnnotations = (fresh.annotations || []).length > 0;
       if (
         fresh.saves !== oldSaves ||
         fresh.repins !== oldRepins ||
         fresh.comments !== oldComments ||
         fresh.share_count !== oldShares ||
-        fresh.annotations?.length > 0 ||
-        existingAnnotationsEmpty // retry enrichment until the page serves withLinks
+        (existingAnnotationsEmpty && freshHasAnnotations) // enrich exactly once
       ) {
         const ageDays = Math.max(1, (Date.now() - new Date(p.created_at_pinterest || Date.now()).getTime()) / 86400000);
         changedBatch.push({
@@ -488,7 +488,7 @@ async function main() {
           summary.errors.push(`push: ${result.error}`);
           if (result.terminal) break;
         }
-        await sleep(2000);
+        await sleep(CFG.PUSH_SLEEP_MS);
       }
       await sleep(CFG.SLEEP_MS);
     }
