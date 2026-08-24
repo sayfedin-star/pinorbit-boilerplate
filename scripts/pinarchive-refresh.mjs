@@ -4,6 +4,9 @@
  * Env Vars: PINARCHIVE_SUPABASE_URL, PINARCHIVE_SUPABASE_KEY, PINORBIT_WORKER_URL, PINARCHIVE_INGEST_SECRET
  */
 
+import { fileURLToPath } from 'url';
+import path from 'path';
+
 const CFG = { SLEEP_MS: 1800, BATCH_SIZE: 25, CIRCUIT_BREAKER: 3, MAX_PINS: 150 };
 
 const HEADERS = {
@@ -102,88 +105,131 @@ function formatPin(pin) {
     link: pin.link || '',
     domain: pin.domain || '',
     board_name: pin.board?.name || pin.pinner?.username || '',
-    board_id: pin.board?.id || null,
-    created_at_pinterest: pin.created_at || null,
-    image_url: pin.images?.orig?.url || pin.image_large_url || '',
-    dominant_color: pin.dominant_color || null,
-    image_signature: pin.image_signature || null,
-    node_id: pin.node_id || null,
-    is_video: Boolean(pin.is_video),
+    board_id: pin.board?.entityId || pin.board?.id || null,
+    image_url: pin.images_orig?.url || pin.images?.orig?.url || pin.image_large_url || '',
+    dominant_color: pin.dominantColor || pin.dominant_color || null,
+    image_signature: pin.imageSignature || pin.image_signature || null,
+    node_id: pin.id || pin.node_id || null,
+    created_at_pinterest: pin.createdAt || pin.created_at || null,
+    is_video: Boolean(pin.isVideo || pin.is_video),
+    reactions: reactionsMap,
 
     // NEW enriched fields
-    reactions: reactionsMap,
     annotations: mergedAnnotations,
-    seo_category: pin?.seo_category || pin?.category || null,
-    canonical_pin_id: pin?.canonical_pin_id ? String(pin.canonical_pin_id) : (pin?.pin_join?.canonical_pin?.id ? String(pin.pin_join.canonical_pin.id) : null),
-    seo_alt_text: pin?.seo_alt_text || pin?.alt_text || null,
-    share_count: Number(pin?.share_count || pin?.pin_join?.share_count || 0),
-    board_pin_count: typeof pin?.board?.pin_count === 'number' ? pin.board.pin_count : null,
-    board_last_modified_at: pin?.board?.last_modified_at || pin?.board?.board_order_updated_at || null,
-    follower_count: typeof pin?.pinner?.follower_count === 'number' ? pin.pinner.follower_count : (typeof pin?.origin_pinner?.follower_count === 'number' ? pin.origin_pinner.follower_count : null),
+    seo_category: pin?.pinJoin?.seoBreadcrumbs?.[0]?.name || pin?.pin_join?.seo_breadcrumbs?.[0]?.name || pin?.seo_category || pin?.category || null,
+    canonical_pin_id: pin?.pinJoin?.canonicalPin?.entityId || pin?.pin_join?.canonical_pin?.entity_id || (pin?.canonical_pin_id ? String(pin.canonical_pin_id) : (pin?.pin_join?.canonical_pin?.id ? String(pin.pin_join.canonical_pin.id) : null)),
+    seo_alt_text: pin.seoAltText || pin.seo_alt_text || pin?.alt_text || null,
+    share_count: Number(pin.shareCount || pin.share_count || pin?.pin_join?.share_count || 0),
+    board_pin_count: typeof pin.board?.pinCount === 'number' ? pin.board.pinCount : (typeof pin.board?.pin_count === 'number' ? pin.board.pin_count : (typeof pin?.board?.pin_count === 'number' ? pin.board.pin_count : null)),
+    board_last_modified_at: pin.board?.boardOrderModifiedAt || pin.board?.last_modified_at || pin?.board?.board_order_updated_at || null,
+    follower_count: typeof pin?.pinner?.followerCount === 'number' ? pin.pinner.followerCount : (typeof pin?.pinner?.follower_count === 'number' ? pin.pinner.follower_count : (typeof pin?.origin_pinner?.follower_count === 'number' ? pin.origin_pinner.follower_count : null)),
   };
 }
 
 function extractPinData(html, pinId) {
-  // Pattern 1: __PWS_DATA__
-  const pwsMatch = html.match(/id="__PWS_DATA__"[^>]*>([\s\S]*?)<\/script>/);
-  if (pwsMatch) {
+  const blocks = [];
+
+  // 1. Relay completed request blocks (first pattern)
+  for (const [, content] of html.matchAll(
+    /window\.__PWS_RELAY_REGISTER_COMPLETED_REQUEST__\("[^"]+",\s*([\s\S]*?)\}\s*\);/g
+  )) {
     try {
-      const pws = JSON.parse(pwsMatch[1]);
-      const pinObj = pws?.props?.initialReduxState?.pins?.[pinId]
-        || pws?.props?.relayContext?.relayData?.[pinId]
-        || pws?.props?.relayContext?.rootFeed
-        || findPinInTree(pws, pinId);
+      const parsed = JSON.parse(content + '}');
+      const pinObj = parsed?.data?.v3GetPinQueryv2?.data;
       if (pinObj) {
-        const direct = pinObj.aggregated_pin_data || pinObj.saves !== undefined ? pinObj : findPinInTree(pinObj, pinId);
-        if (direct) return formatPin(direct);
+        const pinB64 = `UGluOj${Buffer.from(pinId).toString('base64').replace(/=+$/, '')}`;
+        if (String(pinObj.entityId) === pinId || String(pinObj.id) === pinId
+            || pinObj.id === pinB64 || pinObj.pinJoin || pinObj.reactionCountsData) {
+          blocks.push(pinObj);
+        }
       }
     } catch (e) {}
   }
 
-  // Pattern 2: relay-preloaded-queries
+  // 2. Application json scripts
+  const jsonBlobs = [...html.matchAll(/<script[^>]*type\s*=\s*"application\/json"[^>]*>([\s\S]*?)<\/script>/gi)];
+  for (const [, content] of jsonBlobs) {
+    if (!content.includes(pinId)) continue;
+    try {
+      const data = JSON.parse(content);
+      const pin = findPinInTree(data, pinId);
+      if (pin) blocks.push(pin);
+    } catch (e) {}
+  }
+
+  // 3. __PWS_DATA__
+  const pwsMatch = html.match(/<script[^>]+id\s*=\s*"__PWS_DATA__"[^>]*>([\s\S]*?)<\/script>/i) || html.match(/id="__PWS_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+  if (pwsMatch) {
+    try {
+      const pws = JSON.parse(pwsMatch[1]);
+      const pin = pws?.props?.initialReduxState?.pins?.[pinId]
+        || pws?.props?.relayContext?.relayData?.[pinId]
+        || pws?.props?.relayContext?.rootFeed
+        || findPinInTree(pws, pinId);
+      if (pin) {
+        const direct = pin.aggregated_pin_data || pin.saves !== undefined ? pin : findPinInTree(pin, pinId);
+        if (direct) blocks.push(direct);
+      }
+    } catch (e) {}
+  }
+
+  // 4. relay-preloaded-queries
   const relayMatch = html.match(/id="relay-preloaded-queries"[^>]*>([\s\S]*?)<\/script>/);
   if (relayMatch) {
     try {
       const queries = JSON.parse(relayMatch[1]);
       for (const key of Object.keys(queries)) {
         const found = findPinInTree(queries[key], pinId);
-        if (found) return formatPin(found);
+        if (found) blocks.push(found);
       }
     } catch (e) {}
   }
 
-  // Pattern 3: initial-data-feed
+  // 5. initial-data-feed
   const feedMatch = html.match(/id="initial-data-feed"[^>]*>([\s\S]*?)<\/script>/);
   if (feedMatch) {
     try {
       const feed = JSON.parse(feedMatch[1]);
       const found = findPinInTree(feed, pinId);
-      if (found) return formatPin(found);
+      if (found) blocks.push(found);
     } catch (e) {}
   }
 
-  // Pattern 4: window.__INITIAL_DATA__
+  // 6. window.__INITIAL_DATA__
   const initMatch = html.match(/window\.__INITIAL_DATA__\s*=\s*(\{[\s\S]*?\});<\/script>/);
   if (initMatch) {
     try {
       const init = JSON.parse(initMatch[1]);
       const found = findPinInTree(init, pinId);
-      if (found) return formatPin(found);
+      if (found) blocks.push(found);
     } catch (e) {}
   }
 
-  // Pattern 5: Generic application/json script tags with deep search
-  const scriptRegex = /<script\s+type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi;
-  let match;
-  while ((match = scriptRegex.exec(html)) !== null) {
-    try {
-      const parsed = JSON.parse(match[1]);
-      const found = findPinInTree(parsed, pinId);
-      if (found) return formatPin(found);
-    } catch (e) {}
+  if (blocks.length > 0) {
+    const merged = {};
+    for (const b of blocks) {
+      for (const [k, v] of Object.entries(b)) {
+        if (v !== null && v !== undefined) {
+          if (typeof v === 'object' && !Array.isArray(v) && merged[k] && typeof merged[k] === 'object' && !Array.isArray(merged[k])) {
+            merged[k] = { ...merged[k], ...v };
+          } else {
+            merged[k] = v;
+          }
+        }
+      }
+    }
+    const savesM = html.match(/"saves"\s*:\s*(\d+)/);
+    if (savesM && !merged.saves && !merged.aggregated_pin_data?.aggregated_stats?.saves && !merged.aggregatedStats?.saves) {
+      merged.saves = parseInt(savesM[1]);
+    }
+    const commentsM = html.match(/"comment_count"\s*:\s*(\d+)/) || html.match(/"commentCount"\s*:\s*(\d+)/);
+    if (commentsM && !merged.comments && !merged.commentCount && !merged.comment_count && !merged.aggregated_pin_data?.commentCount) {
+      merged.commentCount = parseInt(commentsM[1]);
+    }
+    return formatPin(merged);
   }
 
-  // Pattern 6: JSON-LD fallback (rich metadata but basic metrics)
+  // Fallback: JSON-LD fallback (rich metadata but basic metrics)
   const jsonLdMatch = html.match(/<script\s+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i);
   if (jsonLdMatch) {
     try {
@@ -251,7 +297,19 @@ async function fetchPinFromPinterest(pinId) {
   if (res.status !== 200) return { ok: false, code: res.status };
   const html = await res.text();
   const data = extractPinData(html, pinId);
-  if (!data) return { ok: false, code: 200, error: 'extraction-failed' };
+  if (!data) {
+    return {
+      ok: false,
+      code: 200,
+      error: 'extraction-failed',
+      diag: {
+        htmlLen: html.length,
+        relay: html.includes('__PWS_RELAY_REGISTER_COMPLETED_REQUEST__'),
+        pws: html.includes('__PWS_DATA__'),
+        hasPinId: html.includes(pinId),
+      },
+    };
+  }
   return { ok: true, ...data };
 }
 
@@ -360,6 +418,9 @@ async function main() {
       if (!fresh.ok) {
         if (fresh.code === 403 || fresh.code === 429) consecutive403++;
         else consecutive403 = 0;
+        if (fresh.code === 200 && fresh.diag) {
+          console.warn(`[DIAG] ${pinId}: html=${Math.round(fresh.diag.htmlLen / 1024)}KB relay=${fresh.diag.relay} pws=${fresh.diag.pws} hasPinId=${fresh.diag.hasPinId}`);
+        }
         console.warn(`[FAIL] ${pinId}: ${fresh.error || 'http ' + fresh.code} (code=${fresh.code})`);
         summary.errors.push(`${pinId}: ${fresh.error || 'http ' + fresh.code}`);
         await sleep(CFG.SLEEP_MS);
@@ -450,4 +511,8 @@ async function main() {
   if (summary.errors.length > summary.refreshed) process.exit(1);
 }
 
-main().catch(err => { console.error('Fatal:', err); process.exit(1); });
+export { extractPinData, formatPin, findPinInTree, fetchPinFromPinterest, pushBatch };
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  main().catch(err => { console.error('Fatal:', err); process.exit(1); });
+}
