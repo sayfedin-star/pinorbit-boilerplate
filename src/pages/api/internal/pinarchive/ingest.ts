@@ -210,11 +210,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Fetch existing pin metric state for comparison
       const { data: existingPins } = await pinArchive
         .from('pa_pins')
-        .select('id, pin_id, saves, repins, comments, share_count')
+        .select('id, pin_id, saves, repins, comments, share_count, archived_at')
         .eq('workspace_id', workspaceId)
         .in('pin_id', pinIds);
 
-      const existingMap = new Map<string, { id: string; saves: number; repins: number; comments: number; share_count: number }>();
+      const existingMap = new Map<string, { id: string; saves: number; repins: number; comments: number; share_count: number; archived_at: string | null }>();
       if (Array.isArray(existingPins)) {
         for (const ep of existingPins) {
           existingMap.set(ep.pin_id, {
@@ -223,6 +223,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             repins: Number(ep.repins || 0),
             comments: Number(ep.comments || 0),
             share_count: Number(ep.share_count || 0),
+            archived_at: ep.archived_at || null,
           });
         }
       }
@@ -230,7 +231,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // B) Upsert pa_pins
       const pinsToUpsert = pins.map((p: any) => {
         const pinId = String(p.pin_id || p.id);
-        if (existingMap.has(pinId)) {
+        const existing = existingMap.get(pinId) || null;
+        const isNew = !existing;
+
+        if (existing) {
           pinsUpdatedCount++;
         } else {
           pinsAddedCount++;
@@ -266,7 +270,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           last_updated_at: fetchedAt,
 
           // Enrichment (all nullable)
-          archived_at: p.archived_at || null,
+          archived_at: p.archived_at || existing?.archived_at || (isNew ? fetchedAt : null),
           annotations: Array.isArray(p.annotations) ? p.annotations : [],
           seo_category: p.seo_category || null,
           canonical_pin_id: p.canonical_pin_id || null,

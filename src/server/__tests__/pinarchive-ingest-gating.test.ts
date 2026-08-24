@@ -425,4 +425,108 @@ describe('PinArchive Ingest Gating & Safety Guardrails Suite', () => {
     expect(res.status).toBe(200);
     expect(upsertedAccountPayload.interval_days).toBe(7);
   });
+
+  it('GATING 6: stamps archived_at with fetchedAt on brand-new pin, and PRESERVES existing archived_at on re-push', async () => {
+    let upsertedPinsPayload: any[] = [];
+    const priorStamp = '2026-08-20T10:00:00.000Z';
+    const currentFetchedAt = '2026-08-24T12:00:00.000Z';
+
+    mockPinArchiveClient.from.mockImplementation((table: string) => {
+      if (table === 'pa_workspace_settings') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { workspace_id: mockWsId, ingest_enabled: true },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'pa_accounts') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            }),
+          }),
+          upsert: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: { id: 'acc-uuid-1', workspace_id: mockWsId, username: 'testuser' },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'pa_pins') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              in: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: 'existing-p1-id',
+                    pin_id: 'p_existing',
+                    saves: 100,
+                    repins: 50,
+                    comments: 5,
+                    share_count: 10,
+                    archived_at: priorStamp,
+                  },
+                ],
+                error: null,
+              }),
+            }),
+          }),
+          upsert: vi.fn().mockImplementation((pins: any[]) => {
+            upsertedPinsPayload = pins;
+            return {
+              select: vi.fn().mockResolvedValue({
+                data: pins.map((p, idx) => ({ id: `p-ref-${idx}`, pin_id: p.pin_id, saves: p.saves })),
+                error: null,
+              }),
+            };
+          }),
+        };
+      }
+      if (table === 'pa_pin_metrics') return { upsert: vi.fn().mockResolvedValue({ data: [], error: null }) };
+      if (table === 'pa_runs') return { insert: vi.fn().mockResolvedValue({ data: {}, error: null }) };
+      return {};
+    });
+
+    const req = new Request('http://localhost:4321/api/internal/pinarchive/ingest', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-ingest-secret': mockSecret,
+      },
+      body: JSON.stringify({
+        workspace_id: mockWsId,
+        username: 'testuser',
+        fetched_at: currentFetchedAt,
+        pins: [
+          { pin_id: 'p_existing', title: 'Existing Pin' },
+          { pin_id: 'p_new', title: 'New Pin' },
+        ],
+      }),
+    });
+
+    const res = await ingestHandler({ request: req, locals: { runtime: { env: mockRuntimeEnv } } } as any);
+    expect(res.status).toBe(200);
+
+    expect(upsertedPinsPayload).toHaveLength(2);
+    const existingPinUpsert = upsertedPinsPayload.find((p) => p.pin_id === 'p_existing');
+    const newPinUpsert = upsertedPinsPayload.find((p) => p.pin_id === 'p_new');
+
+    // (a) re-push WITHOUT archived_at PRESERVES existing stamp
+    expect(existingPinUpsert?.archived_at).toBe(priorStamp);
+
+    // (b) first push STAMPS archived_at = fetchedAt
+    expect(newPinUpsert?.archived_at).toBe(currentFetchedAt);
+  });
 });
