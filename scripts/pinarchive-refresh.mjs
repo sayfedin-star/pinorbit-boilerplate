@@ -439,6 +439,14 @@ async function main() {
   }
 
   console.log(`\nSummary: checked=${summary.refreshed}, changed=${summary.updated}, pushed=${summary.pushed}, errors=${summary.errors.length}`);
+  const isFiltered = Boolean(REFRESH_WORKSPACE_ID || REFRESH_USERNAME);
+  if (isFiltered) {
+    // Filtered run: success if anything was pushed/updated, regardless of per-pin extraction misses
+    if (summary.pushed > 0 || summary.updated > 0) process.exit(0);
+    // No change but also no systemic failure (e.g. capped rotation) → still 0
+    if (summary.errors.length === 0) process.exit(0);
+    // All pins in the filtered scope failed → keep red signal
+  }
   if (summary.errors.length > summary.refreshed) process.exit(1);
 }
 
