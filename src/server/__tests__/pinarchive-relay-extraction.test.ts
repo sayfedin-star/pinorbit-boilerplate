@@ -144,13 +144,13 @@ window.__PWS_RELAY_REGISTER_COMPLETED_REQUEST__("/resource/PinResource/get/", {
 </html>
   `;
 
-  it('correctly extracts saves=265, repins=223, annotations.length=9, seo_category=Food And Drinks, canonical_pin_id=11822017768540414 from relay block', () => {
+  it('correctly extracts saves=265, repins=223, annotations.length=6, seo_category=Food And Drinks, canonical_pin_id=11822017768540414 from relay block', () => {
     const result = extractPinData(relayHtmlFixture, pinId);
 
     expect(result).not.toBeNull();
     expect(result!.saves).toBe(265);
     expect(result!.repins).toBe(223);
-    expect(result!.annotations).toHaveLength(9);
+    expect(result!.annotations).toHaveLength(6);
     expect(result!.seo_category).toBe('Food And Drinks');
     expect(result!.canonical_pin_id).toBe('11822017768540414');
     expect(result!.share_count).toBe(8);
@@ -159,7 +159,7 @@ window.__PWS_RELAY_REGISTER_COMPLETED_REQUEST__("/resource/PinResource/get/", {
     expect(result!.seo_alt_text).toBe('Delicious gluten free keto bread');
   });
 
-  it('UNIT E5: locks relay extraction contract with zucchini fixture (saves=1033, repins=472, share_count=40, board_pin_count=385, board_last_modified_at, seo_category=Food And Drinks, annotations.length=9, canonical_pin_id=878201996107217996, utm_link containing utm_campaign=MCapp13)', () => {
+  it('UNIT E5: locks relay extraction contract with zucchini fixture (saves=1033, repins=472, share_count=40, board_pin_count=385, board_last_modified_at, seo_category=Food And Drinks, annotations.length=6, canonical_pin_id=878201996107217996, utm_link containing utm_campaign=MCapp13)', () => {
     const result = extractPinData(zucchiniRelayHtmlFixture, zucchiniPinId);
 
     expect(result).not.toBeNull();
@@ -169,7 +169,7 @@ window.__PWS_RELAY_REGISTER_COMPLETED_REQUEST__("/resource/PinResource/get/", {
     expect(result!.board_pin_count).toBe(385);
     expect(result!.board_last_modified_at).toBe('2024-06-01T18:00:00Z');
     expect(result!.seo_category).toBe('Food And Drinks');
-    expect(result!.annotations).toHaveLength(9);
+    expect(result!.annotations).toHaveLength(6);
     expect(result!.annotations[0].url).toBe('/ideas/sliced-zucchini-recipes/953453835255/');
     expect(result!.annotations[0].name).toBe('Sliced Zucchini Recipes');
     expect(result!.annotations[0].idea_id).toBe('953453835255');

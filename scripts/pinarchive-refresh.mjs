@@ -58,29 +58,18 @@ function findPinInTree(obj, pinId, depth = 0) {
 
 function formatPin(pin) {
   const st = pin?.aggregated_pin_data?.aggregated_stats || pin?.aggregatedStats || {};
-  const ann = pin?.pin_join?.visual_annotation || pin?.visual_annotation || pin?.pinJoin?.visualAnnotation || pin?.visualAnnotation || [];
 
-  // --- NEW: merged annotations with idea_id/url ---
-  const visual = Array.isArray(ann) ? ann : [];
-  const withLinks = pin?.pin_join?.annotationsWithLinksArray || pin?.pinJoin?.annotationsWithLinksArray || pin?.annotationsWithLinksArray || [];
-  const mergedAnnotations = [];
-  const seen = new Set();
-  for (const item of withLinks) {
-    if (item?.name && !seen.has(item.name)) {
-      mergedAnnotations.push({
-        name: item.name,
-        idea_id: String(item.url || '').match(/\/ideas\/[^/]+\/(\d+)/)?.[1] || null,
-        url: item.url || null,
-      });
-      seen.add(item.name);
-    }
-  }
-  for (const name of visual) {
-    if (typeof name === 'string' && !seen.has(name)) {
-      mergedAnnotations.push({ name });
-      seen.add(name);
-    }
-  }
+  // --- annotations from annotationsWithLinksArray only ---
+  const withLinks = pin?.pin_join?.annotationsWithLinksArray
+    || pin?.pinJoin?.annotationsWithLinksArray
+    || pin?.annotationsWithLinksArray || [];
+  const annotations = (Array.isArray(withLinks) ? withLinks : [])
+    .filter(item => item?.name)
+    .map(item => ({
+      name: item.name,
+      idea_id: String(item.url || '').match(/\/ideas\/[^/]+\/(\d+)/)?.[1] || null,
+      url: item.url || null,
+    }));
 
   // --- NEW: reactions ---
   const reactionsPayload = pin?.reactionCountsData || pin?.reactions || [];
@@ -123,7 +112,7 @@ function formatPin(pin) {
     reactions: reactionsMap,
 
     // NEW enriched fields
-    annotations: mergedAnnotations,
+    annotations: annotations,
     seo_category: pin?.pinJoin?.seoBreadcrumbs?.[0]?.name || pin?.pin_join?.seo_breadcrumbs?.[0]?.name || pin?.seo_category || pin?.category || null,
     canonical_pin_id: canonicalPinId,
     seo_alt_text: pin.seoAltText || pin.seo_alt_text || pin?.alt_text || null,
