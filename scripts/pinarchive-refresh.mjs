@@ -94,6 +94,14 @@ function formatPin(pin) {
   }
   reactionsMap.total = Number(pin?.totalReactionCount || pin?.reactions_total || 0);
 
+  // --- canonical_pin_id: pinJoin.canonicalPin.entityId ?? pin_join.canonical_pin?.id ?? (seoCanonicalUrl match /(\d+)\/?$/ -> id) ---
+  const canonicalPinId = pin?.pinJoin?.canonicalPin?.entityId
+    ?? pin?.pin_join?.canonical_pin?.id
+    ?? (pin?.canonical_pin_id ? String(pin.canonical_pin_id) : null)
+    ?? (typeof pin.seoCanonicalUrl === 'string' ? pin.seoCanonicalUrl.match(/(\d+)\/?$/)?.[1] : null)
+    ?? (typeof pin.seo_canonical_url === 'string' ? pin.seo_canonical_url.match(/(\d+)\/?$/)?.[1] : null)
+    ?? null;
+
   return {
     // existing
     saves: Number(st.saves || pin.saves || 0),
@@ -102,9 +110,10 @@ function formatPin(pin) {
     title: pin.title || pin.gridTitle || pin.grid_title || '',
     description: pin.description || pin.gridDescription || pin.grid_description || '',
     link: pin.link || '',
+    utm_link: pin.utmLink ?? pin.utm_link ?? null,
     domain: pin.domain || '',
     board_name: pin.board?.name || pin.pinner?.username || '',
-    board_id: pin.board?.entityId || pin.board?.id || null,
+    board_id: pin.board?.entityId ?? pin.board?.id ?? null,
     image_url: pin.images_orig?.url || pin.images?.orig?.url || pin.image_large_url || '',
     dominant_color: pin.dominantColor || pin.dominant_color || null,
     image_signature: pin.imageSignature || pin.image_signature || null,
@@ -116,9 +125,9 @@ function formatPin(pin) {
     // NEW enriched fields
     annotations: mergedAnnotations,
     seo_category: pin?.pinJoin?.seoBreadcrumbs?.[0]?.name || pin?.pin_join?.seo_breadcrumbs?.[0]?.name || pin?.seo_category || pin?.category || null,
-    canonical_pin_id: pin?.pinJoin?.canonicalPin?.entityId || pin?.pin_join?.canonical_pin?.entity_id || (pin?.canonical_pin_id ? String(pin.canonical_pin_id) : (pin?.pin_join?.canonical_pin?.id ? String(pin.pin_join.canonical_pin.id) : null)),
+    canonical_pin_id: canonicalPinId,
     seo_alt_text: pin.seoAltText || pin.seo_alt_text || pin?.alt_text || null,
-    share_count: Number(pin.shareCount || pin.share_count || pin?.pin_join?.share_count || 0),
+    share_count: Number(pin.shareCount ?? pin.share_count ?? pin?.pin_join?.share_count ?? 0),
     board_pin_count: typeof pin.board?.pinCount === 'number' ? pin.board.pinCount : (typeof pin.board?.pin_count === 'number' ? pin.board.pin_count : (typeof pin?.board?.pin_count === 'number' ? pin.board.pin_count : null)),
     board_last_modified_at: pin.board?.boardOrderModifiedAt || pin.board?.last_modified_at || pin?.board?.board_order_updated_at || null,
     follower_count: typeof pin?.pinner?.followerCount === 'number' ? pin.pinner.followerCount : (typeof pin?.pinner?.follower_count === 'number' ? pin.pinner.follower_count : (typeof pin?.origin_pinner?.follower_count === 'number' ? pin.origin_pinner.follower_count : null)),
@@ -399,7 +408,7 @@ async function main() {
       console.log(`[SKIP] ${acc.username}: outside requested account.`); continue;
     }
 
-    const pins = await supaQuery('pa_pins', `select=pin_id,saves,repins,comments,share_count,reactions,annotations,seo_category,canonical_pin_id,seo_alt_text,board_pin_count,board_last_modified_at,archived_at,title,description,link,domain,board_name,board_id,created_at_pinterest,image_url,dominant_color,image_signature,node_id,is_video,velocity&workspace_id=eq.${acc.workspace_id}&account_id=eq.${acc.id}&order=last_updated_at.asc&limit=${CFG.MAX_PINS}`);
+    const pins = await supaQuery('pa_pins', `select=pin_id,saves,repins,comments,share_count,reactions,annotations,seo_category,canonical_pin_id,seo_alt_text,board_pin_count,board_last_modified_at,archived_at,title,description,link,utm_link,domain,board_name,board_id,created_at_pinterest,image_url,dominant_color,image_signature,node_id,is_video,velocity&workspace_id=eq.${acc.workspace_id}&account_id=eq.${acc.id}&order=last_updated_at.asc&limit=${CFG.MAX_PINS}`);
     if (!pins.length) continue;
     console.log(`${acc.username}: ${pins.length} pins to refresh`);
     let consecutive403 = 0;
@@ -450,6 +459,7 @@ async function main() {
           title: fresh.title || p.title || '',
           description: fresh.description || p.description || '',
           link: fresh.link || p.link || '',
+          utm_link: fresh.utm_link || p.utm_link || null,
           domain: fresh.domain || p.domain || '',
           board_name: fresh.board_name || p.board_name || '',
           board_id: fresh.board_id || null,
