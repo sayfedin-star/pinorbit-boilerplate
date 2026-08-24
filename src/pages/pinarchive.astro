@@ -258,7 +258,7 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
     </div>
   </section>
 
-  <!-- ═══ View A: Accounts Strip with Bulk Delete Action Bar ═══ -->
+  <!-- ═══ View A: Accounts Table with Bulk Delete Action Bar ═══ -->
   <section class="mb-8" aria-labelledby="accounts-section-heading">
     <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
       <h2 id="accounts-section-heading" class="text-sm font-bold text-foreground flex items-center gap-2">
@@ -272,7 +272,7 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
         <button
           id="delete-selected-accounts-btn"
           type="button"
-          class="inline-flex items-center gap-1.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 text-xs font-bold shadow-xs transition-colors"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 text-xs font-bold shadow-xs transition-colors cursor-pointer"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
           <span id="delete-accounts-btn-text">Delete Selected</span>
@@ -280,27 +280,40 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
         <button
           id="clear-account-selection-btn"
           type="button"
-          class="rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          class="rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
           Cancel
         </button>
       </div>
     </div>
 
-    <div class="overflow-x-auto pb-2">
-      <div id="accounts-strip" class="flex gap-4 min-w-full">
-        <!-- Skeleton cards -->
-        <div class="w-72 shrink-0 rounded-xl border border-border bg-card p-4 shadow-sm animate-pulse space-y-3">
-          <div class="h-4 w-28 bg-muted rounded"></div>
-          <div class="h-3 w-40 bg-muted rounded"></div>
-          <div class="h-3 w-20 bg-muted rounded"></div>
-        </div>
-        <div class="w-72 shrink-0 rounded-xl border border-border bg-card p-4 shadow-sm animate-pulse space-y-3">
-          <div class="h-4 w-28 bg-muted rounded"></div>
-          <div class="h-3 w-40 bg-muted rounded"></div>
-          <div class="h-3 w-20 bg-muted rounded"></div>
-        </div>
-      </div>
+    <div class="overflow-x-auto rounded-xl border border-border bg-card shadow-xs">
+      <table class="w-full text-left text-xs">
+        <thead class="bg-muted/40 text-muted-foreground text-[11px] uppercase border-b border-border/80 font-semibold">
+          <tr>
+            <th class="p-3 w-10 text-center">
+              <input
+                type="checkbox"
+                id="select-all-accounts-cb"
+                class="rounded border-border text-rose-500 focus:ring-rose-500 h-3.5 w-3.5 cursor-pointer"
+                title="Select all accounts"
+              />
+            </th>
+            <th class="p-3 font-semibold text-foreground">Account</th>
+            <th class="p-3 font-semibold">Followers</th>
+            <th class="p-3 font-semibold">Pins Total</th>
+            <th class="p-3 font-semibold">Interval</th>
+            <th class="p-3 font-semibold">Last Run</th>
+            <th class="p-3 font-semibold text-center">Accept GAS</th>
+            <th class="p-3 text-right font-semibold">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="accounts-table-body" class="divide-y divide-border/60">
+          <tr>
+            <td colspan="8" class="p-4 text-center text-xs text-muted-foreground animate-pulse">Loading tracked accounts…</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </section>
 
@@ -845,84 +858,121 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
   }
 
   function renderAccountsStrip(accounts: any[]) {
-    const strip = document.getElementById('accounts-strip');
+    const tbody = document.getElementById('accounts-table-body');
     const stripCount = document.getElementById('accounts-strip-count');
     if (stripCount) stripCount.textContent = `(${accounts.length} total)`;
 
-    if (!strip) return;
+    if (!tbody) return;
 
     if (accounts.length === 0) {
-      strip.innerHTML = `
-        <div class="w-full text-center py-6 text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
-          No Pinterest accounts tracked in archive yet.
-        </div>
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" class="p-6 text-center text-xs text-muted-foreground bg-muted/20">
+            No Pinterest accounts tracked in archive yet.
+          </td>
+        </tr>
       `;
       return;
     }
 
-    strip.innerHTML = accounts
+    tbody.innerHTML = accounts
       .map((acc: any) => {
         const isActive = acc.status === 'active';
         const dotClass = isActive ? 'bg-emerald-500' : acc.status === 'paused' ? 'bg-amber-500' : 'bg-rose-500';
         const isChecked = selectedAccounts.has(acc.id);
 
         return `
-          <div class="w-72 shrink-0 rounded-xl border border-border bg-card p-4 shadow-sm hover:border-primary/40 transition-all flex flex-col justify-between relative">
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center gap-2 min-w-0">
-                  <input
-                    type="checkbox"
-                    data-acc-select="${escapeHtml(acc.id)}"
-                    ${isChecked ? 'checked' : ''}
-                    class="rounded border-border text-rose-500 focus:ring-rose-500 h-3.5 w-3.5 cursor-pointer"
-                    id="acc-check-${escapeHtml(acc.id)}"
-                  />
-                  <span class="h-2 w-2 rounded-full ${dotClass} shrink-0" aria-hidden="true"></span>
-                  <span class="text-sm font-bold text-foreground truncate" title="@${escapeHtml(acc.username)}">@${escapeHtml(acc.username)}</span>
-                </div>
+          <tr class="hover:bg-muted/30 transition-colors">
+            <td class="p-3 text-center">
+              <input
+                type="checkbox"
+                data-acc-select="${escapeHtml(acc.id)}"
+                ${isChecked ? 'checked' : ''}
+                class="rounded border-border text-rose-500 focus:ring-rose-500 h-3.5 w-3.5 cursor-pointer"
+                id="acc-check-${escapeHtml(acc.id)}"
+              />
+            </td>
+            <td class="p-3">
+              <div class="flex items-center gap-2">
+                <span class="h-2 w-2 rounded-full ${dotClass} shrink-0" aria-hidden="true"></span>
+                <span class="font-bold text-foreground">@${escapeHtml(acc.username)}</span>
                 <span class="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${isActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}">
                   ${escapeHtml(acc.status)}
                 </span>
               </div>
-              <div class="grid grid-cols-2 gap-2 text-xs mt-3 pt-3 border-t border-border/60">
-                <div>
-                  <span class="text-[10px] text-muted-foreground uppercase block font-medium">Followers</span>
-                  <span class="font-semibold text-foreground">${fmtNumber(acc.follower_count)}</span>
-                </div>
-                <div>
-                  <span class="text-[10px] text-muted-foreground uppercase block font-medium">Pins Total</span>
-                  <span class="font-semibold text-foreground">${fmtNumber(acc.pins_count)}</span>
-                </div>
+            </td>
+            <td class="p-3 font-medium text-foreground">
+              ${fmtNumber(acc.follower_count)}
+            </td>
+            <td class="p-3 font-semibold text-foreground">
+              ${fmtNumber(acc.pins_count)}
+            </td>
+            <td class="p-3 text-muted-foreground">
+              ${escapeHtml(String(acc.interval_days || 3))}d
+            </td>
+            <td class="p-3 text-muted-foreground font-medium">
+              ${fmtDate(acc.last_run_at)}
+            </td>
+            <td class="p-3 text-center">
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  data-acc-ingest-toggle="${escapeHtml(acc.id)}"
+                  ${acc.ingest_enabled !== false ? 'checked' : ''}
+                  class="sr-only peer"
+                  id="toggle-ingest-${escapeHtml(acc.id)}"
+                />
+                <div class="w-7 h-4 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </td>
+            <td class="p-3 text-right">
+              <div class="inline-flex items-center gap-2">
+                <a
+                  href="/pinarchive/account/${encodeURIComponent(acc.username)}"
+                  class="inline-flex items-center gap-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary px-2.5 py-1 text-xs font-semibold transition-colors"
+                >
+                  <span>View Details</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </a>
+                <button
+                  type="button"
+                  data-single-delete-acc-id="${escapeHtml(acc.id)}"
+                  data-single-delete-acc-user="${escapeHtml(acc.username)}"
+                  class="inline-flex items-center gap-1 rounded-lg border border-border hover:border-rose-500/50 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 px-2 py-1 text-xs font-medium transition-colors cursor-pointer"
+                  title="Delete account"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                </button>
               </div>
-              <div class="mt-3 pt-2 text-[10px] text-muted-foreground flex items-center justify-between border-t border-border/40">
-                <span>Accept GAS Data:</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    data-acc-ingest-toggle="${escapeHtml(acc.id)}"
-                    ${acc.ingest_enabled !== false ? 'checked' : ''}
-                    class="sr-only peer"
-                    id="toggle-ingest-${escapeHtml(acc.id)}"
-                  />
-                  <div class="w-7 h-4 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
-                </label>
-              </div>
-            </div>
-            <div class="mt-3 pt-2 text-[10px] text-muted-foreground flex items-center justify-between">
-              <span>Last run:</span>
-              <span class="font-medium">${fmtDate(acc.last_run_at)}</span>
-            </div>
-          </div>
+            </td>
+          </tr>
         `;
       })
       .join('');
 
     attachAccountSelectionListeners();
     attachAccountIngestToggleListeners();
+    attachSingleDeleteListeners();
   }
 
   function attachAccountSelectionListeners() {
+    const selectAllCb = document.getElementById('select-all-accounts-cb') as HTMLInputElement | null;
+    if (selectAllCb) {
+      selectAllCb.checked = rawAccounts.length > 0 && rawAccounts.every((a) => selectedAccounts.has(a.id));
+      selectAllCb.addEventListener('change', () => {
+        const checked = selectAllCb.checked;
+        document.querySelectorAll<HTMLInputElement>('[data-acc-select]').forEach((cb) => {
+          cb.checked = checked;
+          const id = cb.getAttribute('data-acc-select');
+          if (id) {
+            if (checked) selectedAccounts.add(id);
+            else selectedAccounts.delete(id);
+          }
+        });
+        updateAccountsActionBar();
+      });
+    }
+
     document.querySelectorAll<HTMLInputElement>('[data-acc-select]').forEach((cb) => {
       cb.addEventListener('change', () => {
         const id = cb.getAttribute('data-acc-select');
@@ -932,7 +982,35 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
         } else {
           selectedAccounts.delete(id);
         }
+        if (selectAllCb) {
+          selectAllCb.checked = rawAccounts.length > 0 && rawAccounts.every((a) => selectedAccounts.has(a.id));
+        }
         updateAccountsActionBar();
+      });
+    });
+  }
+
+  function attachSingleDeleteListeners() {
+    document.querySelectorAll<HTMLButtonElement>('[data-single-delete-acc-id]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-single-delete-acc-id');
+        if (!id) return;
+        selectedAccounts.clear();
+        selectedAccounts.add(id);
+        document.querySelectorAll<HTMLInputElement>('[data-acc-select]').forEach((cb) => {
+          cb.checked = cb.getAttribute('data-acc-select') === id;
+        });
+        updateAccountsActionBar();
+
+        const modal = document.getElementById('delete-accounts-modal');
+        const confirmInput = document.getElementById('delete-confirm-input') as HTMLInputElement | null;
+        const confirmBtn = document.getElementById('confirm-delete-modal-btn') as HTMLButtonElement | null;
+        if (modal && confirmInput && confirmBtn) {
+          confirmInput.value = '';
+          confirmBtn.disabled = true;
+          modal.classList.remove('hidden');
+          confirmInput.focus();
+        }
       });
     });
   }
