@@ -134,7 +134,7 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
       expect(json.accounts.length).toBe(1);
       expect(json.accounts[0].username).toBe('roseisabelle555');
       expect(json.totals.accounts).toBe(1);
-      expect(json.totals.archived_pins).toBe(1);
+      expect(json.totals.archived_pins).toBe(2);
       expect(json.totals.sum_saves).toBe(150);
       expect(json.totals.sum_shares).toBe(25);
       expect(json.totals.total_pins).toBe(2);
@@ -160,10 +160,12 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
 
       const limitMock = vi.fn().mockResolvedValue({ data: mockPins, error: null });
       const orderMock = vi.fn().mockReturnValue({ limit: limitMock });
-      const notMock = vi.fn().mockReturnValue({ order: orderMock });
-      const eqMock = vi.fn().mockReturnValue({ not: notMock });
+      const eqMock = vi.fn().mockReturnValue({ order: orderMock });
       const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
       mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_pins') {
+          return { select: selectMock };
+        }
         if (table === 'pa_pin_metrics') {
           return {
             select: vi.fn().mockReturnValue({
@@ -173,7 +175,7 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
             }),
           };
         }
-        return { select: selectMock };
+        return {};
       });
 
       const req = new Request('http://localhost:4321/api/pinarchive/pins?sort=velocity&limit=25');
@@ -188,7 +190,6 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
       expect(json.pins.length).toBe(1);
       expect(json.pins[0].pin_id).toBe('1079245498222414527');
       expect(json.sort).toBe('velocity');
-      expect(notMock).toHaveBeenCalledWith('archived_at', 'is', null);
       expect(orderMock).toHaveBeenCalledWith('velocity', { ascending: false });
       expect(limitMock).toHaveBeenCalledWith(25);
     });

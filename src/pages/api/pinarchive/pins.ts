@@ -58,8 +58,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     let query = db
       .from('pa_pins')
       .select('id, pin_id, title, image_url, link, saves, repins, comments, share_count, velocity, annotations, seo_category, canonical_pin_id, archived_at, board_name, board_id, dominant_color, node_id, is_video, created_at_pinterest, notes, notes_updated_at')
-      .eq('workspace_id', ws)
-      .not('archived_at', 'is', null);
+      .eq('workspace_id', ws);
 
     if (q) {
       const escaped = q.replace(/[%_\\]/g, '\\$&');
