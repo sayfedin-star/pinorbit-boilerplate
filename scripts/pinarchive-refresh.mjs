@@ -6,7 +6,7 @@
 import { fileURLToPath } from 'url';
 import path from 'path';
 
-const CFG = { SLEEP_MS: 1800, BATCH_SIZE: 25, CIRCUIT_BREAKER: 3, MAX_PINS: 150 };
+const CFG = { SLEEP_MS: 3000, BATCH_SIZE: 25, CIRCUIT_BREAKER: 3, MAX_PINS: 150 };
 
 const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36',
