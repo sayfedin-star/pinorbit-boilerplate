@@ -114,6 +114,34 @@ describe('PinArchive Topic Detail API Suite (GET /api/pinarchive/topic-detail)',
         annotations: [{ name: 'Bread Recipes Sweet' }, { name: 'Cinnamon Pastry' }],
         seo_category: 'Food And Drinks',
       },
+      {
+        id: 'pin-uuid-3',
+        pin_id: '1003',
+        title: 'Sweet Flatbread (string annotation)',
+        saves: 700,
+        repins: 50,
+        share_count: 10,
+        velocity: 3.0,
+        created_at_pinterest: '2026-05-01T00:00:00Z',
+        board_name: 'Baking Desserts',
+        account_id: 'acc-uuid-1',
+        annotations: ['Bread Recipes Sweet', 'Flatbread'],
+        seo_category: 'Food And Drinks',
+      },
+      {
+        id: 'pin-uuid-4',
+        pin_id: '1004',
+        title: 'Non-matching pin (must be excluded)',
+        saves: 9999,
+        repins: 0,
+        share_count: 0,
+        velocity: 1.0,
+        created_at_pinterest: '2026-05-01T00:00:00Z',
+        board_name: 'Other',
+        account_id: 'acc-uuid-1',
+        annotations: [{ name: 'Unrelated Topic' }],
+        seo_category: 'Other',
+      },
     ];
 
     const mockAccounts = [
@@ -123,8 +151,8 @@ describe('PinArchive Topic Detail API Suite (GET /api/pinarchive/topic-detail)',
 
     const limitMock = vi.fn().mockResolvedValue({ data: mockPins, error: null });
     const orderMock = vi.fn().mockReturnValue({ limit: limitMock });
-    const containsMock = vi.fn().mockReturnValue({ order: orderMock });
-    const eqMock = vi.fn().mockReturnValue({ contains: containsMock });
+    const containsSpy = vi.fn();
+    const eqMock = vi.fn().mockReturnValue({ contains: containsSpy, order: orderMock });
     const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
 
     mockPinArchiveClient.from.mockImplementation((table: string) => {
@@ -156,7 +184,7 @@ describe('PinArchive Topic Detail API Suite (GET /api/pinarchive/topic-detail)',
 
     // Verify query builder calls
     expect(eqMock).toHaveBeenCalledWith('workspace_id', mockWsId);
-    expect(containsMock).toHaveBeenCalledWith('annotations', [{ name: queryTopic }]);
+    expect(containsSpy).not.toHaveBeenCalled();
     expect(orderMock).toHaveBeenCalledWith('saves', { ascending: false });
 
     // Verify response schema
@@ -167,18 +195,23 @@ describe('PinArchive Topic Detail API Suite (GET /api/pinarchive/topic-detail)',
     expect(json).toHaveProperty('cooccurring');
     expect(json).toHaveProperty('top_pins');
 
-    // KPI values
-    expect(json.kpis.pins).toBe(2);
-    expect(json.kpis.total_saves).toBe(2000);
-    expect(json.kpis.avg_saves).toBe(1000);
-    expect(json.kpis.median_saves).toBe(1000);
-    expect(json.kpis.total_repins).toBe(400);
-    expect(json.kpis.total_shares).toBe(70);
-    expect(json.kpis.avg_velocity).toBe(6.1);
+    // KPI values (3 matching pins; pin-uuid-4 excluded by JS annotation filter)
+    expect(json.kpis.pins).toBe(3);
+    expect(json.kpis.total_saves).toBe(2700);
+    expect(json.kpis.avg_saves).toBe(900);
+    expect(json.kpis.median_saves).toBe(700);
+    expect(json.kpis.total_repins).toBe(450);
+    expect(json.kpis.total_shares).toBe(80);
+    expect(json.kpis.avg_velocity).toBe(5.1);
 
     // Stage distribution
     expect(json.stage_distribution.GROWING).toBe(1);
     expect(json.stage_distribution.DORMANT).toBe(1);
+    expect(json.stage_distribution.MATURE).toBe(1);
+
+    // JS filter proof: highest-saves pin (9999) must be excluded
+    expect(json.top_pins.length).toBe(3);
+    expect(json.top_pins.some((p: any) => p.pin_id === '1004')).toBe(false);
   });
 
   // 5) cooccurring EXCLUDES the queried name and counts distinct pin_ids
@@ -217,10 +250,8 @@ describe('PinArchive Topic Detail API Suite (GET /api/pinarchive/topic-detail)',
         return {
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
-              contains: vi.fn().mockReturnValue({
-                order: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockResolvedValue({ data: mockPins, error: null }),
-                }),
+              order: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue({ data: mockPins, error: null }),
               }),
             }),
           }),
@@ -291,10 +322,8 @@ describe('PinArchive Topic Detail API Suite (GET /api/pinarchive/topic-detail)',
         return {
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
-              contains: vi.fn().mockReturnValue({
-                order: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockResolvedValue({ data: mockPins, error: null }),
-                }),
+              order: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue({ data: mockPins, error: null }),
               }),
             }),
           }),

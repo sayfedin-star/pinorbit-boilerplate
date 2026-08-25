@@ -49,19 +49,23 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const { data: memberPins, error } = await db
+    // PostgREST rejects cs.[{...}] on jsonb arrays ("invalid input syntax for type json");
+    // fetch candidates and filter annotations in JS instead (same query as topics.ts).
+    const { data: candidates, error } = await db
       .from('pa_pins')
       .select('id, pin_id, title, image_url, link, saves, repins, comments, share_count, velocity, annotations, seo_category, canonical_pin_id, archived_at, board_name, board_id, account_id, is_video, created_at_pinterest, notes')
       .eq('workspace_id', ws)
-      .contains('annotations', [{ name }])
       .order('saves', { ascending: false })
-      .limit(500);
+      .limit(2000);
 
     if (error) {
       return json({ success: false, error: error.message }, 500);
     }
 
-    const rawPins = memberPins || [];
+    const rawPins = (candidates || []).filter((p: any) =>
+      (Array.isArray(p.annotations) ? p.annotations : [])
+        .some((a: any) => (typeof a === 'string' ? a.trim() : String(a?.name || '').trim()) === name)
+    );
     const pinsCount = rawPins.length;
     let total_saves = 0;
     let total_repins = 0;
