@@ -57,19 +57,34 @@ function findPinInTree(obj, pinId, depth = 0) {
 }
 
 function formatPin(pin) {
-  const st = pin?.aggregated_pin_data?.aggregated_stats || pin?.aggregatedStats || {};
+  const st = pin?.aggregated_pin_data?.aggregated_stats
+    || pin?.aggregatedPinData?.aggregatedStats
+    || pin?.aggregatedStats || {};
 
-  // --- annotations from annotationsWithLinksArray only ---
+  // --- annotations: annotationsWithLinksArray (rich) + visualAnnotation fallback ---
   const withLinks = pin?.pin_join?.annotationsWithLinksArray
     || pin?.pinJoin?.annotationsWithLinksArray
     || pin?.annotationsWithLinksArray || [];
-  const annotations = (Array.isArray(withLinks) ? withLinks : [])
-    .filter(item => item?.name)
-    .map(item => ({
-      name: item.name,
-      idea_id: String(item.url || '').match(/\/ideas\/[^/]+\/(\d+)/)?.[1] || null,
-      url: item.url || null,
-    }));
+  const visual = pin?.pin_join?.visual_annotation
+    || pin?.visual_annotation
+    || pin?.pinJoin?.visualAnnotation
+    || pin?.visualAnnotation || [];
+  const annotationsMap = new Map();
+  for (const item of (Array.isArray(withLinks) ? withLinks : [])) {
+    if (item?.name && !annotationsMap.has(item.name)) {
+      annotationsMap.set(item.name, {
+        name: item.name,
+        idea_id: String(item.url || '').match(/\/ideas\/[^/]+\/(\d+)/)?.[1] || null,
+        url: item.url || null,
+      });
+    }
+  }
+  for (const name of (Array.isArray(visual) ? visual : [])) {
+    if (typeof name === 'string' && name.trim() && !annotationsMap.has(name)) {
+      annotationsMap.set(name, { name, idea_id: null, url: null });
+    }
+  }
+  const annotations = Array.from(annotationsMap.values());
 
   // --- NEW: reactions ---
   const reactionsPayload = pin?.reactionCountsData || pin?.reactions || [];
@@ -95,7 +110,7 @@ function formatPin(pin) {
     // existing
     saves: Number(st.saves || pin.saves || 0),
     repins: Number(pin.repinCount || pin.repin_count || pin.repins || 0),
-    comments: Number(pin?.aggregated_pin_data?.commentCount || pin?.commentCount || pin?.comment_count || pin.comments || 0),
+    comments: Number(pin?.aggregated_pin_data?.commentCount || pin?.aggregatedPinData?.commentCount || pin?.commentCount || pin?.comment_count || pin.comments || 0),
     title: pin.title || pin.gridTitle || pin.grid_title || '',
     description: pin.description || pin.gridDescription || pin.grid_description || '',
     link: pin.link || '',
@@ -436,45 +451,30 @@ async function main() {
       const oldComments = Number(p.comments) || 0;
       const oldShares = Number(p.share_count) || 0;
 
-      const existingAnnotationsEmpty = !(p.annotations || []).length;
-      const freshHasAnnotations = (fresh.annotations || []).length > 0;
+      const existingAnnotationNames = new Set((Array.isArray(p.annotations) ? p.annotations : [])
+        .map(a => (typeof a === 'string' ? a.trim() : String(a?.name || '').trim()))
+        .filter(Boolean));
+      const newAnnotations = (Array.isArray(fresh.annotations) ? fresh.annotations : [])
+        .filter(a => a?.name && !existingAnnotationNames.has(a.name));
+
       if (
         fresh.saves !== oldSaves ||
         fresh.repins !== oldRepins ||
         fresh.comments !== oldComments ||
         fresh.share_count !== oldShares ||
-        (existingAnnotationsEmpty && freshHasAnnotations) // enrich exactly once
+        newAnnotations.length > 0
       ) {
         const ageDays = Math.max(1, (Date.now() - new Date(p.created_at_pinterest || Date.now()).getTime()) / 86400000);
         changedBatch.push({
           pin_id: pinId,
-          title: fresh.title || p.title || '',
-          description: fresh.description || p.description || '',
-          link: fresh.link || p.link || '',
-          utm_link: fresh.utm_link || p.utm_link || null,
-          domain: fresh.domain || p.domain || '',
-          board_name: fresh.board_name || p.board_name || '',
-          board_id: fresh.board_id || null,
-          created_at_pinterest: p.created_at_pinterest || '',
-          image_url: fresh.image_url || p.image_url || '',
-          dominant_color: fresh.dominant_color || null,
-          image_signature: fresh.image_signature || null,
-          node_id: fresh.node_id || null,
-          is_video: fresh.is_video || false,
           saves: fresh.saves,
           repins: fresh.repins,
           comments: fresh.comments,
           velocity: Math.round((fresh.saves / ageDays) * 100) / 100,
           reactions: fresh.reactions || {},
-          annotations: fresh.annotations || [],
-          seo_category: fresh.seo_category || null,
-          canonical_pin_id: fresh.canonical_pin_id || null,
-          seo_alt_text: fresh.seo_alt_text || null,
+          annotations: newAnnotations,
           share_count: fresh.share_count || 0,
-          board_pin_count: fresh.board_pin_count ?? null,
-          board_last_modified_at: fresh.board_last_modified_at || null,
           archived_at: new Date().toISOString(),
-          tags: (fresh.annotations?.length ? fresh.annotations.map(a => a.name) : []).join(', '),
           refreshed_at: new Date().toISOString(),
         });
         summary.updated++;

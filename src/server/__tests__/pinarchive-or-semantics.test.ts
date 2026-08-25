@@ -407,5 +407,142 @@ describe('PinArchive Phase R2: OR Semantics & Enrichment-Preserving Merge Suite'
       // (d) archived_at preserved from existing row
       expect(savedPin.archived_at).toBe('2026-08-20T10:00:00Z');
     });
+
+    it('metrics-only push preserves static fields', async () => {
+      const existingDbPin = {
+        id: 'db-pin-static-001',
+        pin_id: 'pin_static_001',
+        workspace_id: mockWsId,
+        saves: 10,
+        repins: 5,
+        comments: 2,
+        share_count: 1,
+        archived_at: '2026-08-20T10:00:00Z',
+        title: 'Old Title',
+        description: 'Old Desc',
+        link: 'https://old.example',
+        domain: 'old.example',
+        board_name: 'Old Board',
+        board_id: 'board_old_123',
+        image_url: 'https://img/old.jpg',
+        created_at_pinterest: '2026-01-01T00:00:00Z',
+        node_id: 'node_old_456',
+        annotations: [],
+        board_pin_count: 50,
+        board_last_modified_at: '2026-01-01T00:00:00Z',
+        seo_category: null,
+        canonical_pin_id: null,
+        utm_link: null,
+        image_signature: null,
+        dominant_color: null,
+        seo_alt_text: null,
+      };
+
+      let upsertedPayload: any = null;
+
+      mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_workspace_settings') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: { ingest_enabled: true },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        if (table === 'pa_accounts') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'acc-1', ingest_enabled: true }, error: null }),
+                }),
+              }),
+            }),
+            upsert: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({ data: { id: 'acc-1', workspace_id: mockWsId, username: 'testuser' }, error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'pa_pins') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                in: vi.fn().mockResolvedValue({ data: [existingDbPin], error: null }),
+              }),
+            }),
+            upsert: vi.fn().mockImplementation((rows: any[]) => {
+              upsertedPayload = rows;
+              return {
+                select: vi.fn().mockResolvedValue({
+                  data: rows.map(r => ({ id: existingDbPin.id, ...r })),
+                  error: null,
+                }),
+              };
+            }),
+          };
+        }
+        if (table === 'pa_pin_metrics' || table === 'pa_runs') {
+          return {
+            upsert: vi.fn().mockResolvedValue({ data: [], error: null }),
+            insert: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+        return {};
+      });
+
+      // Incoming payload pin object contains ONLY volatile metrics + empty annotations (no static keys at all)
+      const metricsOnlyPayload = {
+        workspace_id: mockWsId,
+        username: 'testuser',
+        fetched_at: '2026-08-25T12:00:00Z',
+        pins: [
+          {
+            pin_id: 'pin_static_001',
+            saves: 50,
+            repins: 25,
+            comments: 10,
+            share_count: 5,
+            velocity: 3.2,
+            reactions: { type_1: 4 },
+            annotations: [],
+          },
+        ],
+      };
+
+      const req = new Request('http://localhost:4321/api/internal/pinarchive/ingest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-ingest-secret': mockSecret,
+        },
+        body: JSON.stringify(metricsOnlyPayload),
+      });
+
+      const res = await ingestHandler({ request: req, locals: { runtime: { env: mockRuntimeEnv } } } as any);
+      expect(res.status).toBe(200);
+
+      expect(upsertedPayload).toHaveLength(1);
+      const savedPin = upsertedPayload[0];
+
+      // Assert static fields are preserved from DB
+      expect(savedPin.title).toBe('Old Title');
+      expect(savedPin.description).toBe('Old Desc');
+      expect(savedPin.link).toBe('https://old.example');
+      expect(savedPin.board_name).toBe('Old Board');
+      expect(savedPin.image_url).toBe('https://img/old.jpg');
+      expect(savedPin.created_at_pinterest).toBe('2026-01-01T00:00:00Z');
+
+      // Assert fresh metrics won
+      expect(savedPin.saves).toBe(50);
+      expect(savedPin.repins).toBe(25);
+      expect(savedPin.comments).toBe(10);
+      expect(savedPin.share_count).toBe(5);
+    });
   });
 });
