@@ -61,6 +61,87 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return json({ success: false, error: 'Invalid account_id format.' }, 422);
   }
 
+  // New Server-Paginated RPC Mode for Account Pins Page
+  if (searchParams.get('mode') === 'page') {
+    if (!accountId) {
+      return json({ success: false, error: 'account_id is required for mode=page.' }, 422);
+    }
+
+    const sort = searchParams.get('sort')?.trim() || 'saves';
+    const asc = searchParams.get('asc') === '1' || searchParams.get('asc') === 'true' || searchParams.get('order') === 'asc';
+    const pageSizeRaw = parseInt(searchParams.get('page_size') || searchParams.get('limit') || '50', 10);
+    const pageSize = Math.min(Math.max(isNaN(pageSizeRaw) ? 50 : pageSizeRaw, 1), 100);
+    const page = Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1);
+    const offset = (page - 1) * pageSize;
+
+    try {
+      const { data, error } = await db.rpc('pa_account_pins_page', {
+        p_workspace_id: ws,
+        p_account_id: accountId,
+        p_q: q || null,
+        p_board: board || null,
+        p_stage: stageFilter || null,
+        p_sort: sort,
+        p_asc: asc,
+        p_limit: pageSize,
+        p_offset: offset,
+      });
+
+      if (error) {
+        return json({ success: false, error: error.message }, 500);
+      }
+
+      const rows = Array.isArray(data) ? data : [];
+      const total = rows.length > 0 ? Number(rows[0].total_count || 0) : 0;
+
+      const pins = rows.map((p: any) => {
+        const deltaSaves = Number(p.delta_saves || 0);
+        const velocity = Number(p.velocity || 0);
+        const ageDays = Math.max(0, (Date.now() - new Date(p.created_at_pinterest || p.archived_at || Date.now()).getTime()) / 86400000);
+        const stage = computePinStage(velocity, deltaSaves, ageDays);
+        const anomaly = computePinAnomaly(deltaSaves, velocity, 1);
+
+        return {
+          id: p.id,
+          pin_id: p.pin_id,
+          title: p.title,
+          image_url: p.image_url,
+          link: p.link,
+          saves: Number(p.saves || 0),
+          repins: Number(p.repins || 0),
+          comments: Number(p.comments || 0),
+          share_count: Number(p.share_count || 0),
+          reactions: p.reactions || {},
+          velocity,
+          annotations: p.annotations || [],
+          board_name: p.board_name,
+          seo_category: p.seo_category,
+          created_at_pinterest: p.created_at_pinterest,
+          archived_at: p.archived_at,
+          delta_saves: deltaSaves,
+          delta_shares: Number(p.delta_shares || 0),
+          delta_reactions: Number(p.delta_reactions || 0),
+          last_snapshot_at: p.last_snapshot_at,
+          age_days: Math.round(ageDays * 10) / 10,
+          stage,
+          anomaly,
+        };
+      });
+
+      return json({
+        success: true,
+        pins,
+        count: pins.length,
+        total,
+        page,
+        page_size: pageSize,
+        total_pages: Math.max(1, Math.ceil(total / pageSize)),
+      });
+    } catch (e: any) {
+      return json({ success: false, error: e.message || 'Internal Server Error' }, 500);
+    }
+  }
+
   try {
     // 1. Load pa_workspace_settings for persisted filters
     const { data: wsSettings } = await db

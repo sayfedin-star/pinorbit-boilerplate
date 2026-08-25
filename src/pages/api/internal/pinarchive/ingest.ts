@@ -165,7 +165,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       last_run_at: fetchedAt,
       last_result: account_meta.last_result || 'success',
     };
-    if (typeof account_meta.pins_count === 'number' && Number.isFinite(account_meta.pins_count)) {
+    if (payload.trigger !== 'refresh' && typeof account_meta.pins_count === 'number' && Number.isFinite(account_meta.pins_count)) {
       accountData.pins_count = Math.max(0, Math.round(account_meta.pins_count));
     }
     if (typeof account_meta.promoted_count === 'number' && Number.isFinite(account_meta.promoted_count)) {
@@ -210,7 +210,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Fetch existing pin metric & enrichment state for comparison and two-writer protection
       const { data: existingPins } = await pinArchive
         .from('pa_pins')
-        .select('id, pin_id, saves, repins, comments, share_count, archived_at, annotations, board_pin_count, board_last_modified_at, seo_category, canonical_pin_id, utm_link, image_signature, dominant_color, seo_alt_text, title, description, link, domain, board_name, board_id, created_at_pinterest, image_url, node_id')
+        .select('id, pin_id, saves, repins, comments, share_count, reactions, archived_at, annotations, board_pin_count, board_last_modified_at, seo_category, canonical_pin_id, utm_link, image_signature, dominant_color, seo_alt_text, title, description, link, domain, board_name, board_id, created_at_pinterest, image_url, node_id')
         .eq('workspace_id', workspaceId)
         .in('pin_id', pinIds);
 
@@ -220,6 +220,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         repins: number;
         comments: number;
         share_count: number;
+        reactions: Record<string, any> | null;
         archived_at: string | null;
         annotations: any[] | null;
         board_pin_count: number | null;
@@ -249,6 +250,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             repins: Number(ep.repins || 0),
             comments: Number(ep.comments || 0),
             share_count: Number(ep.share_count || 0),
+            reactions: typeof ep.reactions === 'object' && ep.reactions !== null ? ep.reactions : null,
             archived_at: ep.archived_at || null,
             annotations: Array.isArray(ep.annotations) ? ep.annotations : null,
             board_pin_count: typeof ep.board_pin_count === 'number' ? ep.board_pin_count : null,
@@ -324,11 +326,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
           saves: Number(p.saves || 0),
           repins: Number(p.repins || 0),
           comments: Number(p.comments || 0),
-          reactions: typeof p.reactions === 'object' && p.reactions !== null ? p.reactions : {},
+          reactions: p.reactions === undefined
+            ? (existing?.reactions ?? {})
+            : (typeof p.reactions === 'object' && p.reactions !== null ? p.reactions : (existing?.reactions ?? {})),
           velocity: Number(p.velocity || 0),
           promoted: Boolean(p.promoted),
           last_updated_at: fetchedAt,
-          share_count: Number(p.share_count || 0),
+          share_count: p.share_count === undefined ? (existing?.share_count ?? 0) : Number(p.share_count || 0),
 
           // Preserved Enrichment & Scalar non-null fallback
           archived_at: p.archived_at || existing?.archived_at || (isNew ? fetchedAt : null),

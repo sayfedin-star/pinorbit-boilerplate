@@ -271,15 +271,16 @@ function extractPinData(html, pinId) {
           image_signature: null,
           node_id: null,
           is_video: ld['@type'] === 'VideoObject',
-          reactions: { total: 0 },
-          annotations: [],
+          reactions: undefined,
+          annotations: undefined,
           seo_category: ld.articleSection || null,
           canonical_pin_id: null,
           seo_alt_text: null,
-          share_count: 0,
+          share_count: undefined,
           board_pin_count: null,
           board_last_modified_at: null,
           follower_count: null,
+          _source: 'jsonld',
         };
       }
     } catch (e) {}
@@ -461,22 +462,28 @@ async function main() {
         fresh.saves !== oldSaves ||
         fresh.repins !== oldRepins ||
         fresh.comments !== oldComments ||
-        fresh.share_count !== oldShares ||
+        (typeof fresh.share_count === 'number' && fresh.share_count > 0 && fresh.share_count !== oldShares) ||
         newAnnotations.length > 0
       ) {
-        const ageDays = Math.max(1, (Date.now() - new Date(p.created_at_pinterest || Date.now()).getTime()) / 86400000);
-        changedBatch.push({
+        const changedItem = {
           pin_id: pinId,
           saves: fresh.saves,
           repins: fresh.repins,
           comments: fresh.comments,
           velocity: Math.round((fresh.saves / ageDays) * 100) / 100,
-          reactions: fresh.reactions || {},
-          annotations: newAnnotations,
-          share_count: fresh.share_count || 0,
           archived_at: new Date().toISOString(),
           refreshed_at: new Date().toISOString(),
-        });
+        };
+        if (fresh.reactions && Object.keys(fresh.reactions).length > 0) {
+          changedItem.reactions = fresh.reactions;
+        }
+        if (newAnnotations.length > 0) {
+          changedItem.annotations = newAnnotations;
+        }
+        if (typeof fresh.share_count === 'number' && fresh.share_count > 0) {
+          changedItem.share_count = fresh.share_count;
+        }
+        changedBatch.push(changedItem);
         summary.updated++;
       }
 

@@ -268,8 +268,62 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       </h2>
 
       <!-- Account Selection Action Bar -->
-      <div id="accounts-action-bar" class="hidden items-center gap-2 animate-in fade-in duration-150">
+      <div id="accounts-action-bar" class="hidden flex-wrap items-center gap-2 animate-in fade-in duration-150">
         <span id="accounts-selected-label" class="text-xs font-bold text-foreground">0 selected</span>
+        
+        <button
+          id="gas-bulk-run-btn"
+          type="button"
+          class="inline-flex items-center gap-1 rounded-xl border border-border bg-card hover:bg-muted px-2.5 py-1.5 text-xs font-bold text-foreground shadow-xs transition-colors cursor-pointer"
+          title="Trigger Pinterest scraping run in GAS"
+        >
+          <span>▶ Run</span>
+        </button>
+
+        <button
+          id="gas-bulk-sync-btn"
+          type="button"
+          class="inline-flex items-center gap-1 rounded-xl border border-border bg-card hover:bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 shadow-xs transition-colors cursor-pointer"
+          title="Push filtered Sheet pins to DB"
+        >
+          <span>🔄 Sync</span>
+        </button>
+
+        <button
+          id="gas-bulk-pause-btn"
+          type="button"
+          class="inline-flex items-center gap-1 rounded-xl border border-border bg-card hover:bg-muted px-2.5 py-1.5 text-xs font-bold text-foreground shadow-xs transition-colors cursor-pointer"
+        >
+          <span>⏸ Pause</span>
+        </button>
+
+        <button
+          id="gas-bulk-resume-btn"
+          type="button"
+          class="inline-flex items-center gap-1 rounded-xl border border-border bg-card hover:bg-muted px-2.5 py-1.5 text-xs font-bold text-foreground shadow-xs transition-colors cursor-pointer"
+        >
+          <span>▶ Resume</span>
+        </button>
+
+        <div class="flex items-center gap-1 bg-card border border-border rounded-xl px-2 py-1 shadow-xs">
+          <label for="gas-bulk-interval-input" class="text-[11px] font-semibold text-muted-foreground">Int:</label>
+          <input
+            id="gas-bulk-interval-input"
+            type="number"
+            min="1"
+            max="30"
+            value="3"
+            class="w-10 rounded border border-border bg-background px-1 py-0.5 text-xs font-bold text-foreground text-center focus:outline-none"
+          />
+          <button
+            id="gas-bulk-interval-btn"
+            type="button"
+            class="rounded bg-primary text-primary-foreground px-2 py-0.5 text-[11px] font-bold hover:bg-primary/90 transition-colors cursor-pointer"
+          >
+            Apply
+          </button>
+        </div>
+
         <button
           id="delete-selected-accounts-btn"
           type="button"
@@ -1054,11 +1108,172 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     }
   }
 
+  function getSelectedUsernames(): string[] {
+    return rawAccounts
+      .filter((a) => selectedAccounts.has(a.id))
+      .map((a) => a.username);
+  }
+
+  function setupBulkGasControls() {
+    // Bulk Run Now
+    const runBtn = document.getElementById('gas-bulk-run-btn') as HTMLButtonElement | null;
+    if (runBtn) {
+      runBtn.addEventListener('click', async () => {
+        const usernames = getSelectedUsernames();
+        if (usernames.length === 0) return;
+        runBtn.disabled = true;
+        toast(`Triggered GAS run for ${usernames.length} account(s)...`, 'info');
+
+        try {
+          const res = await fetch('/api/pinarchive/accounts-gas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'run_now', usernames }),
+          });
+          const json = await res.json();
+          if (json.success) {
+            toast(`GAS run queued for ${usernames.join(', ')}.`, 'success');
+          } else {
+            toast(json.error || 'Failed to dispatch GAS run', 'error');
+          }
+        } catch (err: any) {
+          toast(err?.message || 'Network error triggering GAS run', 'error');
+        } finally {
+          runBtn.disabled = false;
+        }
+      });
+    }
+
+    // Bulk Sync Now
+    const syncBtn = document.getElementById('gas-bulk-sync-btn') as HTMLButtonElement | null;
+    if (syncBtn) {
+      syncBtn.addEventListener('click', async () => {
+        const usernames = getSelectedUsernames();
+        if (usernames.length === 0) return;
+        syncBtn.disabled = true;
+        toast(`Syncing ${usernames.length} account(s) from Sheet → DB...`, 'info');
+
+        try {
+          const res = await fetch('/api/pinarchive/accounts-gas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'sync_now', usernames }),
+          });
+          const json = await res.json();
+          if (json.success) {
+            toast(`Sync complete for ${usernames.length} account(s)!`, 'success');
+            await loadOverview();
+          } else {
+            toast(json.error || 'Failed to dispatch GAS sync', 'error');
+          }
+        } catch (err: any) {
+          toast(err?.message || 'Network error triggering GAS sync', 'error');
+        } finally {
+          syncBtn.disabled = false;
+        }
+      });
+    }
+
+    // Bulk Pause
+    const pauseBtn = document.getElementById('gas-bulk-pause-btn') as HTMLButtonElement | null;
+    if (pauseBtn) {
+      pauseBtn.addEventListener('click', async () => {
+        const usernames = getSelectedUsernames();
+        if (usernames.length === 0) return;
+        pauseBtn.disabled = true;
+
+        try {
+          const res = await fetch('/api/pinarchive/accounts-gas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'pause', usernames }),
+          });
+          const json = await res.json();
+          if (json.success) {
+            toast(`Paused ${usernames.length} account(s).`, 'success');
+            await loadOverview();
+          } else {
+            toast(json.error || 'Failed to pause accounts', 'error');
+          }
+        } catch (err: any) {
+          toast(err?.message || 'Network error pausing accounts', 'error');
+        } finally {
+          pauseBtn.disabled = false;
+        }
+      });
+    }
+
+    // Bulk Resume
+    const resumeBtn = document.getElementById('gas-bulk-resume-btn') as HTMLButtonElement | null;
+    if (resumeBtn) {
+      resumeBtn.addEventListener('click', async () => {
+        const usernames = getSelectedUsernames();
+        if (usernames.length === 0) return;
+        resumeBtn.disabled = true;
+
+        try {
+          const res = await fetch('/api/pinarchive/accounts-gas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'resume', usernames }),
+          });
+          const json = await res.json();
+          if (json.success) {
+            toast(`Resumed ${usernames.length} account(s).`, 'success');
+            await loadOverview();
+          } else {
+            toast(json.error || 'Failed to resume accounts', 'error');
+          }
+        } catch (err: any) {
+          toast(err?.message || 'Network error resuming accounts', 'error');
+        } finally {
+          resumeBtn.disabled = false;
+        }
+      });
+    }
+
+    // Bulk Interval
+    const intervalBtn = document.getElementById('gas-bulk-interval-btn') as HTMLButtonElement | null;
+    const intervalInput = document.getElementById('gas-bulk-interval-input') as HTMLInputElement | null;
+    if (intervalBtn && intervalInput) {
+      intervalBtn.addEventListener('click', async () => {
+        const usernames = getSelectedUsernames();
+        if (usernames.length === 0) return;
+        const days = parseInt(intervalInput.value, 10);
+        if (isNaN(days) || days < 1 || days > 30) {
+          alert('Interval must be between 1 and 30 days.');
+          return;
+        }
+
+        intervalBtn.disabled = true;
+        try {
+          const res = await fetch('/api/pinarchive/accounts-gas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'set_interval', usernames, days }),
+          });
+          const json = await res.json();
+          if (json.success) {
+            toast(`Set interval to ${days} days for ${usernames.length} account(s).`, 'success');
+            await loadOverview();
+          } else {
+            toast(json.error || 'Failed to update interval', 'error');
+          }
+        } catch (err: any) {
+          toast(err?.message || 'Network error setting interval', 'error');
+        } finally {
+          intervalBtn.disabled = false;
+        }
+      });
+    }
+  }
+
   function init() {
     loadSettings();
     loadOverview();
     loadTopics();
     setupAccountDeleteModal();
+    setupBulkGasControls();
 
     // Ingest settings save button
     const saveSettingsBtn = document.getElementById('save-ingest-settings-btn');

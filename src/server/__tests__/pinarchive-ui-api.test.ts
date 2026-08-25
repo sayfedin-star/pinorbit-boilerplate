@@ -280,64 +280,60 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
   });
 
   describe('3. GET /api/pinarchive/topics', () => {
-    it('aggregates jsonb annotations into top topics ranked by saves', async () => {
-      const mockData = [
+    it('calls pa_topic_clusters_page RPC with search, sort, and pagination parameters', async () => {
+      const mockRpcData = [
         {
-          pin_id: 'pin-1',
-          saves: 1000,
-          annotations: [
-            { name: 'Bread Recipes Sweet' },
-            { name: 'Easy Homemade Bread' },
-          ],
+          name: 'Bread Recipes Sweet',
+          pins: 2,
+          sum_saves: 1500,
+          avg_saves: 750,
+          total_count: 3,
         },
         {
-          pin_id: 'pin-2',
-          saves: 500,
-          annotations: [
-            { name: 'Bread Recipes Sweet' },
-            'Baking Basics',
-          ],
+          name: 'Easy Homemade Bread',
+          pins: 1,
+          sum_saves: 1000,
+          avg_saves: 1000,
+          total_count: 3,
+        },
+        {
+          name: 'Baking Basics',
+          pins: 1,
+          sum_saves: 500,
+          avg_saves: 500,
+          total_count: 3,
         },
       ];
 
-      const limitMock = vi.fn().mockResolvedValue({ data: mockData, error: null });
-      const orderMock = vi.fn().mockReturnValue({ limit: limitMock });
+      mockPinArchiveClient.rpc.mockResolvedValue({ data: mockRpcData, error: null });
 
-      mockPinArchiveClient.from.mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            order: orderMock,
-          }),
-        }),
-      });
-
-      const req = new Request('http://localhost:4321/api/pinarchive/topics');
+      const req = new Request('http://localhost:4321/api/pinarchive/topics?sort=sum_saves&min_pins=1&limit=50&page=1');
       const res = await topicsHandler({
         request: req,
         locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
       } as any);
 
       expect(res.status).toBe(200);
-      expect(orderMock).toHaveBeenCalledWith('saves', { ascending: false });
-      expect(limitMock).toHaveBeenCalledWith(2000);
+      expect(mockPinArchiveClient.rpc).toHaveBeenCalledWith('pa_topic_clusters_page', {
+        p_workspace_id: mockWsId,
+        p_search: null,
+        p_min_pins: 1,
+        p_sort: 'sum_saves',
+        p_limit: 50,
+        p_offset: 0,
+      });
+
       const json = await res.json();
       expect(json.success).toBe(true);
+      expect(json.count).toBe(3);
+      expect(json.total).toBe(3);
       expect(json.topics.length).toBe(3);
 
       // Topic "Bread Recipes Sweet" appeared in 2 pins with sum 1500 saves
       expect(json.topics[0].name).toBe('Bread Recipes Sweet');
       expect(json.topics[0].pins).toBe(2);
       expect(json.topics[0].sum_saves).toBe(1500);
-
-      // Topic "Easy Homemade Bread" has 1000 saves
-      expect(json.topics[1].name).toBe('Easy Homemade Bread');
-      expect(json.topics[1].pins).toBe(1);
-      expect(json.topics[1].sum_saves).toBe(1000);
-
-      // Topic "Baking Basics" has 500 saves
-      expect(json.topics[2].name).toBe('Baking Basics');
-      expect(json.topics[2].pins).toBe(1);
-      expect(json.topics[2].sum_saves).toBe(500);
+      expect(json.topics[0].avg_saves).toBe(750);
     });
   });
 });
