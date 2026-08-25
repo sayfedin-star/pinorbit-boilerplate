@@ -30,7 +30,7 @@ function findPinInTree(obj, pinId, depth = 0) {
 }
 
 function formatPin(pin) {
-  const st = pin?.aggregated_pin_data?.aggregated_stats || pin?.aggregatedStats || {};
+  const st = pin?.aggregated_pin_data?.aggregated_stats || pin?.aggregatedPinData?.aggregatedStats || pin?.aggregatedStats || {};
   const ann = pin?.pin_join?.visual_annotation || pin?.visual_annotation || pin?.pinJoin?.visualAnnotation || pin?.visualAnnotation || [];
 
   // --- NEW: merged annotations with idea_id/url ---
@@ -71,7 +71,7 @@ function formatPin(pin) {
     // existing
     saves: Number(st.saves || pin.saves || 0),
     repins: Number(pin.repinCount || pin.repin_count || pin.repins || 0),
-    comments: Number(pin?.aggregated_pin_data?.commentCount || pin?.commentCount || pin?.comment_count || pin.comments || 0),
+    comments: Number(pin?.aggregated_pin_data?.commentCount || pin?.aggregatedPinData?.commentCount || pin?.commentCount || pin?.comment_count || pin.comments || 0),
     title: pin.title || pin.gridTitle || pin.grid_title || '',
     description: pin.description || pin.gridDescription || pin.grid_description || '',
     link: pin.link || '',

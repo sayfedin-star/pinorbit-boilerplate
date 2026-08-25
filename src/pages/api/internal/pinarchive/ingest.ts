@@ -210,7 +210,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Fetch existing pin metric & enrichment state for comparison and two-writer protection
       const { data: existingPins } = await pinArchive
         .from('pa_pins')
-        .select('id, pin_id, saves, repins, comments, share_count, archived_at, annotations, board_pin_count, board_last_modified_at, seo_category, canonical_pin_id, utm_link, image_signature, dominant_color, seo_alt_text')
+        .select('id, pin_id, saves, repins, comments, share_count, archived_at, annotations, board_pin_count, board_last_modified_at, seo_category, canonical_pin_id, utm_link, image_signature, dominant_color, seo_alt_text, title, description, link, domain, board_name, board_id, created_at_pinterest, image_url, node_id')
         .eq('workspace_id', workspaceId)
         .in('pin_id', pinIds);
 
@@ -230,6 +230,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
         image_signature: string | null;
         dominant_color: string | null;
         seo_alt_text: string | null;
+        title: string | null;
+        description: string | null;
+        link: string | null;
+        domain: string | null;
+        board_name: string | null;
+        board_id: string | null;
+        created_at_pinterest: string | null;
+        image_url: string | null;
+        node_id: string | null;
       }>();
 
       if (Array.isArray(existingPins)) {
@@ -250,6 +259,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
             image_signature: ep.image_signature || null,
             dominant_color: ep.dominant_color || null,
             seo_alt_text: ep.seo_alt_text || null,
+            title: ep.title || null,
+            description: ep.description || null,
+            link: ep.link || null,
+            domain: ep.domain || null,
+            board_name: ep.board_name || null,
+            board_id: ep.board_id || null,
+            created_at_pinterest: ep.created_at_pinterest || null,
+            image_url: ep.image_url || null,
+            node_id: ep.node_id || null,
           });
         }
       }
@@ -289,15 +307,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
           workspace_id: workspaceId,
           account_id: accountId,
           pin_id: pinId,
-          node_id: p.node_id || null,
-          title: p.title || null,
-          description: p.description || null,
-          link: p.link || null,
-          domain: p.domain || null,
-          board_id: p.board_id || null,
-          board_name: p.board_name || null,
-          created_at_pinterest: p.created_at_pinterest || p.created_at || null,
-          image_url: p.image_url || null,
+          node_id: p.node_id ?? existing?.node_id ?? null,
+          title: p.title || existing?.title || null,
+          description: p.description || existing?.description || null,
+          link: p.link || existing?.link || null,
+          domain: p.domain || existing?.domain || null,
+          board_id: p.board_id ?? existing?.board_id ?? null,
+          board_name: p.board_name || existing?.board_name || null,
+          created_at_pinterest: p.created_at_pinterest || p.created_at || existing?.created_at_pinterest || null,
+          image_url: p.image_url || existing?.image_url || null,
           is_video: Boolean(p.is_video),
           is_product: Boolean(p.is_product),
           price: p.price !== undefined ? p.price : null,
