@@ -124,14 +124,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // 6. Dispatch to GAS bridge for each account
     const dispatched: Array<{ username: string; ok: boolean; error?: string }> = [];
+    const CHUNK_SIZE = 5;
 
-    for (const username of usernamesToDispatch) {
-      const callRes = await gasCall(runtimeEnv, workspaceId, 'run', { username });
-      dispatched.push({
-        username,
-        ok: Boolean(callRes.ok),
-        error: callRes.error || undefined,
-      });
+    for (let i = 0; i < usernamesToDispatch.length; i += CHUNK_SIZE) {
+      const chunk = usernamesToDispatch.slice(i, i + CHUNK_SIZE);
+      const chunkResults = await Promise.all(
+        chunk.map(async (username) => {
+          const callRes = await gasCall(runtimeEnv, workspaceId, 'run', { username });
+          return { username, ok: Boolean(callRes.ok), error: callRes.error || undefined };
+        })
+      );
+      dispatched.push(...chunkResults);
     }
 
     return new Response(

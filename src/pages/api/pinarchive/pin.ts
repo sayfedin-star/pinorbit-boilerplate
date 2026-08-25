@@ -3,6 +3,7 @@ import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../server/auth/workspace-guard';
 import { dbClients } from '../../../server/db/clients';
 import { errorStatus } from '../../../server/lib/http-error';
+import { computePinStage, computePinAnomaly } from '../../../server/lib/pin-stages';
 
 // Route: /api/pinarchive/pin (GET) - Single Pin Deep-Dive Details & Historical Metrics
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -62,7 +63,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // b) Fetch historical snapshots
     const { data: metrics, error: metErr } = await db
       .from('pa_pin_metrics')
-      .select('recorded_at, saves, repins, comments, shares, reactions_total')
+      .select('id, recorded_at, saves, repins, comments, shares, reactions_total')
       .eq('pin_ref', id)
       .order('recorded_at', { ascending: true })
       .limit(500);
@@ -96,31 +97,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const ageDays = Math.max(0, (Date.now() - new Date(pin.created_at_pinterest || pin.archived_at || Date.now()).getTime()) / 86400000);
     const velocity = Number(pin.velocity || 0);
 
-    // Stage computation
-    let stage: 'NEW' | 'GROWING' | 'MATURE' | 'COOLING' | 'DORMANT' = 'DORMANT';
-    if (velocity < 0.5) {
-      stage = 'DORMANT';
-    } else if (velocity < 2 && deltaSaves < 0) {
-      stage = 'COOLING';
-    } else if (ageDays <= 14) {
-      stage = 'NEW';
-    } else if (velocity >= 10) {
-      stage = 'GROWING';
-    } else if (velocity >= 2 && ageDays > 14) {
-      stage = 'MATURE';
-    } else {
-      stage = velocity >= 2 ? 'MATURE' : 'DORMANT';
-    }
-
-    // Anomaly detection
-    let anomaly: 'SPIKE' | 'COOLING' | null = null;
-    if (metricsList.length >= 2) {
-      if (deltaSaves >= Math.max(20, 3 * velocity * daysBetween)) {
-        anomaly = 'SPIKE';
-      } else if (deltaSaves <= -Math.max(10, 0.5 * velocity * daysBetween)) {
-        anomaly = 'COOLING';
-      }
-    }
+    const stage = computePinStage(velocity, deltaSaves, ageDays);
+    const anomaly = computePinAnomaly(deltaSaves, velocity, daysBetween);
 
     pin.age_days = Math.round(ageDays * 10) / 10;
     pin.stage = stage;

@@ -291,7 +291,7 @@ function extractPinData(html, pinId) {
 }
 
 async function fetchPinFromPinterest(pinId) {
-  const res = await fetch(`https://www.pinterest.com/pin/${pinId}/`, { headers: HEADERS, redirect: 'follow' });
+  const res = await fetch(`https://www.pinterest.com/pin/${pinId}/`, { headers: HEADERS, redirect: 'follow', signal: AbortSignal.timeout(15000) });
   if (res.status !== 200) return { ok: false, code: res.status };
   const html = await res.text();
   const data = extractPinData(html, pinId);

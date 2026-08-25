@@ -47,7 +47,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       .from('pa_pins')
       .select('pin_id, saves, annotations')
       .eq('workspace_id', ws)
-      .limit(500);
+      .order('saves', { ascending: false })
+      .limit(2000);
 
     if (error) {
       return json({ success: false, error: error.message }, 500);

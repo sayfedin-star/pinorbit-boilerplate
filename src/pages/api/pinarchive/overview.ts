@@ -67,23 +67,30 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const totalPins = totalPinsCount ?? 0;
 
-    // 2. Paginate over rows without count calculation
-    const PAGE = 1000, MAX_PAGES = 20;
-    let offset = 0, sumSaves = 0, sumShares = 0;
-    while (offset < PAGE * MAX_PAGES) {
-      const { data, error } = await db
-        .from('pa_pins')
-        .select('saves, share_count')
-        .eq('workspace_id', ws)
-        .order('pin_id', { ascending: true })
-        .range(offset, offset + PAGE - 1);
-      if (error) return json({ success: false, error: error.message }, 500);
-      for (const p of data || []) {
-        sumSaves += Number(p.saves || 0);
-        sumShares += Number(p.share_count || 0);
+    // 2. Sums via SQL RPC; fallback to paginated scan if RPC not yet applied
+    let sumSaves = 0, sumShares = 0;
+    const rpcRes = await db.rpc('pa_workspace_sums', { p_workspace_id: ws });
+    if (!rpcRes.error && Array.isArray(rpcRes.data) && rpcRes.data.length > 0) {
+      sumSaves = Number(rpcRes.data[0].sum_saves || 0);
+      sumShares = Number(rpcRes.data[0].sum_shares || 0);
+    } else {
+      const PAGE = 1000, MAX_PAGES = 20;
+      let offset = 0;
+      while (offset < PAGE * MAX_PAGES) {
+        const { data, error } = await db
+          .from('pa_pins')
+          .select('saves, share_count')
+          .eq('workspace_id', ws)
+          .order('pin_id', { ascending: true })
+          .range(offset, offset + PAGE - 1);
+        if (error) return json({ success: false, error: error.message }, 500);
+        for (const p of data || []) {
+          sumSaves += Number(p.saves || 0);
+          sumShares += Number(p.share_count || 0);
+        }
+        if (!data || data.length < PAGE) break;
+        offset += PAGE;
       }
-      if (!data || data.length < PAGE) break;
-      offset += PAGE;
     }
 
     return json({
