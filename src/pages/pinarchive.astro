@@ -30,6 +30,14 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         <span>🏆 Winning Pins →</span>
       </a>
 
+      <!-- Link to Dedicated Topic Clusters Page -->
+      <a
+        href="/pinarchive/topics"
+        class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary text-primary-foreground px-3.5 py-2 text-xs font-bold shadow-xs hover:bg-primary/90 transition-all"
+      >
+        <span>🏷️ Topic Clusters →</span>
+      </a>
+
       <!-- Refresh Button -->
       <button
         id="refresh-btn"
@@ -149,7 +157,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none cursor-pointer"
         >
           <option value="reject">Reject Ingest (409 Conflict)</option>
-          <option value="allow">Allow Ingest Silently</option>
+          <option value="accept">Allow Ingest Silently</option>
         </select>
       </div>
 
@@ -163,7 +171,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           id="setting-default-interval"
           type="number"
           min="1"
-          max="90"
+          max="30"
           value="3"
           class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none"
         />
@@ -179,7 +187,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           id="setting-max-batch"
           type="number"
           min="10"
-          max="2000"
+          max="5000"
           value="500"
           class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none"
         />

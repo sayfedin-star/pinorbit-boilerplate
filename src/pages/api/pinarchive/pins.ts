@@ -3,6 +3,7 @@ import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../server/auth/workspace-guard';
 import { dbClients } from '../../../server/db/clients';
 import { errorStatus } from '../../../server/lib/http-error';
+import { computePinStage, computePinAnomaly } from '../../../server/lib/pin-stages';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -52,6 +53,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const board = searchParams.get('board')?.trim();
   const inCluster = searchParams.get('in_cluster') === '1' || searchParams.get('in_cluster') === 'true';
   const accountId = searchParams.get('account_id')?.trim();
+  const stageParam = (searchParams.get('stage') || '').trim().toUpperCase();
+  const STAGE_VALUES = ['NEW', 'GROWING', 'MATURE', 'COOLING', 'DORMANT'];
+  const stageFilter = STAGE_VALUES.includes(stageParam) ? stageParam : null;
 
   if (accountId && !UUID_REGEX.test(accountId)) {
     return json({ success: false, error: 'Invalid account_id format.' }, 422);
@@ -140,31 +144,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
         const ageDays = Math.max(0, (Date.now() - new Date(p.created_at_pinterest || p.archived_at || Date.now()).getTime()) / 86400000);
         const velocity = Number(p.velocity || 0);
 
-        // Stage computation
-        let stage: 'NEW' | 'GROWING' | 'MATURE' | 'COOLING' | 'DORMANT' = 'DORMANT';
-        if (velocity < 0.5) {
-          stage = 'DORMANT';
-        } else if (velocity < 2 && deltaSaves < 0) {
-          stage = 'COOLING';
-        } else if (ageDays <= 14) {
-          stage = 'NEW';
-        } else if (velocity >= 10) {
-          stage = 'GROWING';
-        } else if (velocity >= 2 && ageDays > 14) {
-          stage = 'MATURE';
-        } else {
-          stage = velocity >= 2 ? 'MATURE' : 'DORMANT';
-        }
-
-        // Anomaly detection
-        let anomaly: 'SPIKE' | 'COOLING' | null = null;
-        if (snaps.length >= 2) {
-          if (deltaSaves >= Math.max(20, 3 * velocity * daysBetween)) {
-            anomaly = 'SPIKE';
-          } else if (deltaSaves <= -Math.max(10, 0.5 * velocity * daysBetween)) {
-            anomaly = 'COOLING';
-          }
-        }
+        const stage = computePinStage(velocity, deltaSaves, ageDays);
+        const anomaly = computePinAnomaly(deltaSaves, velocity, daysBetween);
 
         p.age_days = Math.round(ageDays * 10) / 10;
         p.stage = stage;
@@ -173,10 +154,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     }
 
+    const filteredPins = stageFilter ? pins.filter((p: any) => p.stage === stageFilter) : pins;
+
     return json({
       success: true,
-      pins,
-      count: pins.length,
+      pins: filteredPins,
+      count: filteredPins.length,
       sort: sortCol,
       filters: { minSaves, minRepins, risingAgeDays: risA, risingSaves: risS },
     });

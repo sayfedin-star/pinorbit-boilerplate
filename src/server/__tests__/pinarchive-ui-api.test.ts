@@ -16,6 +16,7 @@ vi.mock('../db/clients', () => {
 
   const mockPinArchive = {
     from: vi.fn(),
+    rpc: vi.fn().mockResolvedValue({ data: null, error: { message: 'function does not exist' } }),
   };
 
   return {
@@ -207,6 +208,75 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
       expect(orderMock).toHaveBeenCalledWith('velocity', { ascending: false });
       expect(limitMock).toHaveBeenCalledWith(25);
     });
+
+    it('filters pins by stage and returns updated count when ?stage=GROWING is passed', async () => {
+      const mockPins = [
+        {
+          id: '00000000-0000-0000-0000-000000000001',
+          pin_id: 'pin-growing',
+          title: 'Growing Pin',
+          saves: 5000,
+          velocity: 15.0, // >= 10 -> GROWING
+          created_at_pinterest: '2026-08-01T00:00:00Z',
+        },
+        {
+          id: '00000000-0000-0000-0000-000000000002',
+          pin_id: 'pin-dormant',
+          title: 'Dormant Pin',
+          saves: 100,
+          velocity: 0.1, // < 0.5 -> DORMANT
+          created_at_pinterest: '2025-01-01T00:00:00Z',
+        },
+      ];
+
+      const limitMock = vi.fn().mockResolvedValue({ data: mockPins, error: null });
+      const orderMock = vi.fn().mockReturnValue({ limit: limitMock });
+      const queryMock: any = {
+        order: orderMock,
+        or: vi.fn().mockImplementation(() => queryMock),
+      };
+      const eqMock = vi.fn().mockReturnValue(queryMock);
+      const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
+
+      mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_workspace_settings') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'pa_pins') {
+          return { select: selectMock };
+        }
+        if (table === 'pa_pin_metrics') {
+          return {
+            select: vi.fn().mockReturnValue({
+              in: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }
+        return {};
+      });
+
+      const req = new Request('http://localhost:4321/api/pinarchive/pins?stage=GROWING');
+      const res = await pinsHandler({
+        request: req,
+        locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
+      } as any);
+
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.count).toBe(1);
+      expect(json.pins.length).toBe(1);
+      expect(json.pins[0].pin_id).toBe('pin-growing');
+      expect(json.pins[0].stage).toBe('GROWING');
+    });
   });
 
   describe('3. GET /api/pinarchive/topics', () => {
@@ -230,10 +300,13 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
         },
       ];
 
+      const limitMock = vi.fn().mockResolvedValue({ data: mockData, error: null });
+      const orderMock = vi.fn().mockReturnValue({ limit: limitMock });
+
       mockPinArchiveClient.from.mockReturnValue({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue({ data: mockData, error: null }),
+            order: orderMock,
           }),
         }),
       });
@@ -245,6 +318,8 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
       } as any);
 
       expect(res.status).toBe(200);
+      expect(orderMock).toHaveBeenCalledWith('saves', { ascending: false });
+      expect(limitMock).toHaveBeenCalledWith(2000);
       const json = await res.json();
       expect(json.success).toBe(true);
       expect(json.topics.length).toBe(3);

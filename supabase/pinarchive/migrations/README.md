@@ -1,3 +1,4 @@
 | 1 | 20260822000000_pinarchive_schema.sql | Initial PinArchive schema (pa_accounts, pa_pins, pa_pin_metrics, pa_runs) | None | Apply manually via Supabase SQL Editor (Project kuuugffvyokywtgmdrfk) |
 | 2 | 20260823000000_pinarchive_relay_enrichment.sql | annotations/SEO/social/board/follower enrichment, pa_runs trigger includes 'refresh' | 20260822000000 | Apply manually via Supabase SQL Editor (Project kuuugffvyokywtgmdrfk) |
 | 3 | 20260823000000_pinarchive_notes.sql | Manual notes and notes_updated_at columns on pa_pins | 20260823000000 | Apply manually via Supabase SQL Editor (Project kuuugffvyokywtgmdrfk) |
+| 8 | 20260901000000_pa_overview_sums_rpc.sql | pa_workspace_sums RPC for overview KPI sums | 20260831120000 | Apply via Supabase MCP (Project kuuugffvyokywtgmdrfk) |
