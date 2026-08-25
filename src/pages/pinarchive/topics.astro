@@ -405,7 +405,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
           return `
             <tr
               class="hover:bg-muted/30 transition-colors cursor-pointer"
-              onclick="location.href = '/pinarchive/topics?name=' + encodeURIComponent('${escapeHtml(t.name)}')"
+              data-topic="${encodeURIComponent(t.name)}"
             >
               <td class="py-3 px-4 font-bold text-foreground">
                 <span class="inline-flex items-center gap-1.5 text-primary hover:underline">
@@ -419,6 +419,12 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
             </tr>
           `;
         }).join('');
+
+        tbody.querySelectorAll<HTMLTableRowElement>('[data-topic]').forEach((row) => {
+          row.addEventListener('click', () => {
+            location.href = '/pinarchive/topics?name=' + row.getAttribute('data-topic');
+          });
+        });
       }
     } catch (err: any) {
       if (loadingEl) loadingEl.classList.add('hidden');
