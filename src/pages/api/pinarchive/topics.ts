@@ -42,52 +42,53 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const db = g.ok!.db;
   const ws = g.ok!.ws;
 
+  const search = searchParams.get('q')?.trim() || searchParams.get('search')?.trim() || null;
+  const minPins = Math.max(parseInt(searchParams.get('min_pins') || '1', 10) || 1, 1);
+  const sort = searchParams.get('sort')?.trim() || 'sum_saves';
+
+  const rawLimit = parseInt(searchParams.get('limit') || searchParams.get('page_size') || '50', 10);
+  const limit = Math.min(Math.max(isNaN(rawLimit) ? 50 : rawLimit, 1), 200);
+
+  let offset = 0;
+  if (searchParams.has('offset')) {
+    const rawOffset = parseInt(searchParams.get('offset') || '0', 10);
+    offset = Math.max(isNaN(rawOffset) ? 0 : rawOffset, 0);
+  } else if (searchParams.has('page')) {
+    const page = Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1);
+    offset = (page - 1) * limit;
+  }
+
   try {
-    const { data, error } = await db
-      .from('pa_pins')
-      .select('pin_id, saves, annotations')
-      .eq('workspace_id', ws)
-      .order('saves', { ascending: false })
-      .limit(2000);
+    const { data, error } = await db.rpc('pa_topic_clusters_page', {
+      p_workspace_id: ws,
+      p_search: search,
+      p_min_pins: minPins,
+      p_sort: sort,
+      p_limit: limit,
+      p_offset: offset,
+    });
 
     if (error) {
       return json({ success: false, error: error.message }, 500);
     }
 
-    const topicMap = new Map<string, { name: string; pins: Set<string>; sum_saves: number }>();
+    const rows = Array.isArray(data) ? data : [];
+    const total = rows.length > 0 ? Number(rows[0].total_count || 0) : 0;
 
-    for (const pin of data || []) {
-      const pinId = String(pin.pin_id);
-      const pinSaves = Number(pin.saves || 0);
-      const annotations = Array.isArray(pin.annotations) ? pin.annotations : [];
-
-      for (const ann of annotations) {
-        const name = typeof ann === 'string' ? ann.trim() : (ann?.name ? String(ann.name).trim() : '');
-        if (!name) continue;
-
-        let entry = topicMap.get(name);
-        if (!entry) {
-          entry = { name, pins: new Set<string>(), sum_saves: 0 };
-          topicMap.set(name, entry);
-        }
-        entry.pins.add(pinId);
-        entry.sum_saves += pinSaves;
-      }
-    }
-
-    const topics = Array.from(topicMap.values())
-      .map((t) => ({
-        name: t.name,
-        pins: t.pins.size,
-        sum_saves: t.sum_saves,
-      }))
-      .sort((a, b) => b.sum_saves - a.sum_saves)
-      .slice(0, 30);
+    const topics = rows.map((r: any) => ({
+      name: r.name,
+      pins: Number(r.pins || 0),
+      sum_saves: Number(r.sum_saves || 0),
+      avg_saves: Number(r.avg_saves || 0),
+    }));
 
     return json({
       success: true,
       topics,
       count: topics.length,
+      total,
+      limit,
+      offset,
     });
   } catch (e: any) {
     return json({ success: false, error: e.message || 'Internal Server Error' }, 500);

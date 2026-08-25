@@ -35,7 +35,7 @@ const isActive = account.status === 'active';
 const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg-amber-500' : 'bg-rose-500';
 ---
 
-<Layout title={`@${account.username} — PinArchive Account`} description={`Tracked performance, top pins, and archive history for @${account.username}.`}>
+<Layout title={`@${account.username} — PinArchive Account`} description={`Tracked performance, all pins, and archive history for @${account.username}.`}>
   <!-- ═══ Back Link & Top Bar ═══ -->
   <div class="mb-4">
     <a
@@ -49,10 +49,11 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <SectionHeader
         title={`@${account.username}`}
-        description={`Tracked Pinterest creator profile, top historical pins, and synchronization telemetry.`}
+        description={`Tracked Pinterest creator profile, historical pins archive, and synchronization controls.`}
       />
 
-      <div class="flex items-center gap-2.5">
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Pinterest Profile Link -->
         <a
           href={`https://www.pinterest.com/${encodeURIComponent(account.username)}/`}
           target="_blank"
@@ -63,6 +64,40 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
         </a>
 
+        <!-- Remote GAS Run Now -->
+        <button
+          id="gas-run-btn"
+          type="button"
+          data-username={account.username}
+          class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition-all cursor-pointer"
+          title="Trigger Pinterest scraping run in GAS"
+        >
+          <span>▶ Run Now</span>
+        </button>
+
+        <!-- Remote GAS Sync Now -->
+        <button
+          id="gas-sync-btn"
+          type="button"
+          data-username={account.username}
+          class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shadow-sm hover:bg-emerald-500/10 transition-all cursor-pointer"
+          title="Push filtered pins from Sheet to DB (no Pinterest calls)"
+        >
+          <span>🔄 Sync Now</span>
+        </button>
+
+        <!-- Remote GAS Pause / Resume -->
+        <button
+          id="gas-status-btn"
+          type="button"
+          data-username={account.username}
+          data-current-status={account.status}
+          class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition-all cursor-pointer"
+        >
+          <span>{account.status === 'paused' ? '▶ Resume' : '⏸ Pause'}</span>
+        </button>
+
+        <!-- Refresh Pins (GitHub Action) -->
         <button
           id="refresh-account-btn"
           type="button"
@@ -78,34 +113,57 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
   </div>
 
   <!-- ═══ Account Summary Card ═══ -->
-  <div id="account-card-root" data-account-id={account.id} class="mb-8 rounded-2xl border border-border bg-card p-6 shadow-sm space-y-6">
+  <div id="account-card-root" data-account-id={account.id} data-username={account.username} data-workspace-id={workspaceId} class="mb-8 rounded-2xl border border-border bg-card p-6 shadow-sm space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border/80">
       <div class="flex items-center gap-3">
-        <span class={`h-3 w-3 rounded-full ${dotClass} shrink-0`} aria-hidden="true"></span>
+        <span id="account-status-dot" class={`h-3 w-3 rounded-full ${dotClass} shrink-0`} aria-hidden="true"></span>
         <div class="flex items-center gap-2">
           <h2 class="text-xl font-bold text-foreground">@{account.username}</h2>
-          <span class={`text-xs font-semibold uppercase px-2.5 py-0.5 rounded-full ${isActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}`}>
+          <span id="account-status-badge" class={`text-xs font-semibold uppercase px-2.5 py-0.5 rounded-full ${isActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}`}>
             {account.status}
           </span>
         </div>
       </div>
 
-      <!-- Accept GAS Data Toggle -->
-      <div class="flex items-center gap-3 bg-muted/30 rounded-xl px-3.5 py-2 border border-border/60">
-        <span class="text-xs font-semibold text-foreground">Accept GAS Data:</span>
-        <label class="relative inline-flex items-center cursor-pointer">
+      <div class="flex flex-wrap items-center gap-4">
+        <!-- Interval Editor -->
+        <div class="flex items-center gap-2 bg-muted/30 rounded-xl px-3 py-1.5 border border-border/60">
+          <label for="account-interval-input" class="text-xs font-semibold text-muted-foreground">Interval:</label>
           <input
-            type="checkbox"
-            id="account-ingest-toggle"
-            data-acc-id={account.id}
-            checked={account.ingest_enabled !== false}
-            class="sr-only peer"
+            id="account-interval-input"
+            type="number"
+            min="1"
+            max="30"
+            value={account.interval_days || 3}
+            class="w-12 rounded-lg border border-border bg-background px-1.5 py-0.5 text-xs font-bold text-foreground text-center focus:outline-none"
           />
-          <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
-        </label>
-        <span id="account-ingest-status-text" class={`text-xs font-bold ${account.ingest_enabled !== false ? 'text-emerald-500' : 'text-rose-500'}`}>
-          {account.ingest_enabled !== false ? 'Enabled' : 'Disabled'}
-        </span>
+          <span class="text-xs text-muted-foreground">days</span>
+          <button
+            id="account-interval-apply-btn"
+            type="button"
+            class="rounded-lg bg-primary text-primary-foreground px-2 py-0.5 text-[11px] font-bold hover:bg-primary/90 transition-colors cursor-pointer"
+          >
+            Apply
+          </button>
+        </div>
+
+        <!-- Accept GAS Data Toggle -->
+        <div class="flex items-center gap-3 bg-muted/30 rounded-xl px-3.5 py-2 border border-border/60">
+          <span class="text-xs font-semibold text-foreground">Accept GAS Data:</span>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              id="account-ingest-toggle"
+              data-acc-id={account.id}
+              checked={account.ingest_enabled !== false}
+              class="sr-only peer"
+            />
+            <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
+          </label>
+          <span id="account-ingest-status-text" class={`text-xs font-bold ${account.ingest_enabled !== false ? 'text-emerald-500' : 'text-rose-500'}`}>
+            {account.ingest_enabled !== false ? 'Enabled' : 'Disabled'}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -118,12 +176,12 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
 
       <div class="bg-background rounded-xl border border-border p-3.5">
         <span class="text-[11px] font-medium text-muted-foreground uppercase block">Pins Total</span>
-        <span class="text-lg font-bold text-foreground mt-1 block">{(account.pins_count || 0).toLocaleString('en-US')}</span>
+        <span class="text-lg font-bold text-foreground mt-1 block" id="account-pins-total-metric">{(account.pins_count || 0).toLocaleString('en-US')}</span>
       </div>
 
       <div class="bg-background rounded-xl border border-border p-3.5">
         <span class="text-[11px] font-medium text-muted-foreground uppercase block">Interval</span>
-        <span class="text-lg font-bold text-foreground mt-1 block">{account.interval_days || 3} days</span>
+        <span class="text-lg font-bold text-foreground mt-1 block" id="account-interval-metric">{account.interval_days || 3} days</span>
       </div>
 
       <div class="bg-background rounded-xl border border-border p-3.5">
@@ -142,41 +200,104 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
     </div>
   </div>
 
-  <!-- ═══ Top Pins Section ═══ -->
-  <section class="mb-12" aria-labelledby="top-pins-heading">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-      <div>
-        <h3 id="top-pins-heading" class="text-base font-bold text-foreground flex items-center gap-2">
-          <span>📌 Top Pins</span>
-          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary" id="account-pins-badge">0</span>
-        </h3>
-        <p class="text-xs text-muted-foreground mt-0.5">Top performing archived pins for @{account.username}.</p>
-      </div>
-
-      <!-- Controls: Sort & Limit -->
-      <div class="flex items-center gap-3">
-        <div class="flex items-center gap-1.5 bg-card border border-border rounded-xl px-2.5 py-1.5 shadow-xs">
-          <label for="account-pins-sort" class="text-xs font-semibold text-muted-foreground">Sort:</label>
-          <select id="account-pins-sort" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer">
-            <option value="saves" selected>Total Saves</option>
-            <option value="velocity">Velocity (Saves/Day)</option>
-          </select>
+  <!-- ═══ All Pins Section (Dual View: Cards / Table) ═══ -->
+  <section class="mb-12" aria-labelledby="all-pins-heading">
+    <div class="flex flex-col gap-4 mb-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h3 id="all-pins-heading" class="text-base font-bold text-foreground flex items-center gap-2">
+            <span>📌 All Pins</span>
+            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary" id="account-pins-badge">0</span>
+          </h3>
+          <p class="text-xs text-muted-foreground mt-0.5">All archived creator pins with snapshots, velocity, and metric growth deltas.</p>
         </div>
 
-        <div class="flex items-center gap-1.5 bg-card border border-border rounded-xl px-2.5 py-1.5 shadow-xs">
-          <label for="account-pins-limit" class="text-xs font-semibold text-muted-foreground">Limit:</label>
-          <select id="account-pins-limit" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer">
-            <option value="25">25</option>
-            <option value="50" selected>50</option>
-            <option value="100">100</option>
-          </select>
+        <!-- View Switch Toggle (Cards | Table) -->
+        <div class="flex items-center gap-1.5 self-start sm:self-auto bg-card border border-border rounded-xl p-1 shadow-xs">
+          <button
+            type="button"
+            id="view-cards-btn"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-primary text-primary-foreground shadow-xs"
+            title="Card grid view"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+            <span>Cards</span>
+          </button>
+          <button
+            type="button"
+            id="view-table-btn"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+            title="Dense table view"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            <span>Table</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter Controls Bar -->
+      <div class="rounded-xl border border-border bg-card p-4 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <!-- Search -->
+        <div class="relative flex-1 max-w-sm">
+          <input
+            type="text"
+            id="account-pins-search"
+            placeholder="Search pin titles..."
+            class="w-full rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary pl-9"
+          />
+          <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <!-- Board Select -->
+          <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-xs">
+            <label for="account-pins-board" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Board:</label>
+            <select id="account-pins-board" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer max-w-[160px] truncate">
+              <option value="" selected>All Boards</option>
+            </select>
+          </div>
+
+          <!-- Stage Select -->
+          <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-xs">
+            <label for="account-pins-stage" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Stage:</label>
+            <select id="account-pins-stage" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer">
+              <option value="" selected>All Stages</option>
+              <option value="NEW">🟢 NEW (≤14d)</option>
+              <option value="GROWING">🚀 GROWING (≥10/d)</option>
+              <option value="MATURE">🟣 MATURE (>14d)</option>
+              <option value="COOLING">❄️ COOLING</option>
+              <option value="DORMANT">⚪ DORMANT (&lt;0.5/d)</option>
+            </select>
+          </div>
+
+          <!-- Sort Select -->
+          <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-xs">
+            <label for="account-pins-sort" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Sort:</label>
+            <select id="account-pins-sort" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer">
+              <option value="saves" selected>Total Saves</option>
+              <option value="repins">Total Repins</option>
+              <option value="velocity">Velocity (Saves/Day)</option>
+              <option value="share_count">Total Shares</option>
+              <option value="delta_saves">Δ Saves Growth</option>
+              <option value="newest">Newest on Pinterest</option>
+            </select>
+          </div>
+
+          <!-- Limit Select -->
+          <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-xs">
+            <label for="account-pins-limit" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Show:</label>
+            <select id="account-pins-limit" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer">
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Pins Grid -->
+    <!-- 1. Cards View Container -->
     <div id="account-pins-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      <!-- Skeletons -->
       <div class="rounded-xl border border-border bg-card p-4 shadow-sm animate-pulse space-y-3">
         <div class="h-44 bg-muted rounded-lg"></div>
         <div class="h-4 w-3/4 bg-muted rounded"></div>
@@ -197,14 +318,52 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
         <div class="h-4 w-3/4 bg-muted rounded"></div>
         <div class="h-3 w-1/2 bg-muted rounded"></div>
       </div>
+    </div>
+
+    <!-- 2. Table View Container -->
+    <div id="account-pins-table-wrap" class="hidden overflow-x-auto rounded-xl border border-border bg-card shadow-xs">
+      <table class="w-full text-left text-xs">
+        <thead class="bg-muted/40 text-muted-foreground text-[11px] uppercase border-b border-border/80 font-semibold">
+          <tr>
+            <th class="py-3 px-3 w-16">Preview</th>
+            <th class="py-3 px-4 font-semibold text-foreground">Pin Title</th>
+            <th class="py-3 px-3 font-semibold">Board</th>
+            <th class="py-3 px-3 font-semibold text-right">Saves &amp; Δ</th>
+            <th class="py-3 px-3 font-semibold text-right">Repins</th>
+            <th class="py-3 px-3 font-semibold text-right">Comments</th>
+            <th class="py-3 px-3 font-semibold text-right">Shares</th>
+            <th class="py-3 px-3 font-semibold text-right">Velocity</th>
+            <th class="py-3 px-3 font-semibold text-center">Stage</th>
+            <th class="py-3 px-3 font-semibold">Created</th>
+            <th class="py-3 px-3 text-right font-semibold">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="account-pins-table-body" class="divide-y divide-border/60">
+          <tr>
+            <td colspan="11" class="p-8 text-center text-xs text-muted-foreground animate-pulse">Loading pins table…</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 3. Numbered Pagination Bar -->
+    <div id="account-pins-pagination" class="flex flex-wrap items-center justify-between gap-3 pt-6">
+      <!-- Populated via JS -->
     </div>
   </section>
 </Layout>
 
 <script>
   let accountId = '';
+  let workspaceId = '';
+  let username = '';
   let currentSort = 'saves';
   let currentLimit = 50;
+  let currentPage = 1;
+  let currentSearch = '';
+  let currentBoard = '';
+  let currentStage = '';
+  let currentView = 'cards';
 
   function escapeHtml(str?: string | null): string {
     if (!str) return '';
@@ -260,18 +419,29 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
     }
   }
 
+  function renderDeltaBadge(delta?: number | null): string {
+    const d = Number(delta) || 0;
+    if (d > 0) {
+      return `<span class="inline-flex items-center text-[10px] font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded-md" title="Gained ${d} saves since last snapshot">+${fmtNumber(d)}</span>`;
+    }
+    if (d < 0) {
+      return `<span class="inline-flex items-center text-[10px] font-bold text-rose-500 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.2 rounded-md" title="Decreased by ${Math.abs(d)} saves since last snapshot">${fmtNumber(d)}</span>`;
+    }
+    return '';
+  }
+
   function renderStageBadge(stage?: string | null): string {
     switch (stage) {
       case 'NEW':
-        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">🟢 NEW</span>';
+        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 whitespace-nowrap">🟢 NEW</span>';
       case 'GROWING':
-        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">🚀 GROWING</span>';
+        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap">🚀 GROWING</span>';
       case 'MATURE':
-        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">🟣 MATURE</span>';
+        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 whitespace-nowrap">🟣 MATURE</span>';
       case 'COOLING':
-        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">❄️ COOLING</span>';
+        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap">❄️ COOLING</span>';
       default:
-        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-500/10 text-slate-500 border border-slate-500/20">⚪ DORMANT</span>';
+        return '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-500/10 text-slate-500 border border-slate-500/20 whitespace-nowrap">⚪ DORMANT</span>';
     }
   }
 
@@ -297,6 +467,7 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
     const imageUrl = p.image_url || '';
     const pinId = p.id || '';
     const createdDate = fmtDate(p.created_at_pinterest);
+    const deltaBadge = renderDeltaBadge(p.delta_saves);
 
     const tagsHtml = annotations.slice(0, 4).map((a: any) => {
       const name = typeof a === 'string' ? a : a?.name || '';
@@ -372,19 +543,22 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
               </div>
             </div>
 
-            <!-- Metrics Row -->
+            <!-- Metrics Row with Saves + Delta -->
             <div class="grid grid-cols-3 gap-1.5 pt-1">
-              <div class="bg-muted/40 rounded-lg p-1.5 text-center border border-border/40">
+              <div class="bg-muted/40 rounded-lg p-1.5 text-center border border-border/40 flex flex-col justify-center items-center">
                 <span class="text-[9px] text-muted-foreground uppercase block font-semibold">Saves</span>
-                <span class="text-xs font-bold text-rose-500">${fmtNumber(saves)}</span>
+                <div class="flex items-center justify-center gap-1 mt-0.5">
+                  <span class="text-xs font-bold text-rose-500">${fmtNumber(saves)}</span>
+                  ${deltaBadge}
+                </div>
               </div>
-              <div class="bg-muted/40 rounded-lg p-1.5 text-center border border-border/40">
+              <div class="bg-muted/40 rounded-lg p-1.5 text-center border border-border/40 flex flex-col justify-center items-center">
                 <span class="text-[9px] text-muted-foreground uppercase block font-semibold">Repins</span>
-                <span class="text-xs font-bold text-foreground">${fmtNumber(repins)}</span>
+                <span class="text-xs font-bold text-foreground mt-0.5">${fmtNumber(repins)}</span>
               </div>
-              <div class="bg-muted/40 rounded-lg p-1.5 text-center border border-border/40">
+              <div class="bg-muted/40 rounded-lg p-1.5 text-center border border-border/40 flex flex-col justify-center items-center">
                 <span class="text-[9px] text-muted-foreground uppercase block font-semibold">Velocity</span>
-                <span class="text-xs font-bold text-emerald-500">${velocity.toFixed(1)}/d</span>
+                <span class="text-xs font-bold text-emerald-500 mt-0.5">${velocity.toFixed(1)}/d</span>
               </div>
             </div>
 
@@ -424,17 +598,255 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
     `;
   }
 
+  function renderSinglePinTableRow(p: any): string {
+    const saves = Number(p.saves || 0);
+    const repins = Number(p.repins || 0);
+    const comments = Number(p.comments || 0);
+    const shares = Number(p.share_count || 0);
+    const velocity = Number(p.velocity || 0);
+    const pinterestUrl = `https://www.pinterest.com/pin/${p.pin_id}/`;
+    const destinationUrl = p.link ? p.link : null;
+    const imageUrl = p.image_url || '';
+    const pinId = p.id || '';
+    const createdDate = fmtDate(p.created_at_pinterest);
+    const deltaBadge = renderDeltaBadge(p.delta_saves);
+
+    return `
+      <tr class="hover:bg-muted/30 transition-colors">
+        <!-- Thumb -->
+        <td class="py-2.5 px-3">
+          <a href="/pinarchive/details?id=${encodeURIComponent(pinId)}" class="block h-10 w-10 rounded-lg overflow-hidden bg-muted/50 shrink-0">
+            ${imageUrl ? `
+              <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(p.title || 'Pin')}" loading="lazy" class="w-full h-full object-cover" />
+            ` : `
+              <div class="w-full h-full flex items-center justify-center text-muted-foreground text-[10px]">No img</div>
+            `}
+          </a>
+        </td>
+
+        <!-- Title -->
+        <td class="py-2.5 px-4 max-w-[220px]">
+          <a href="/pinarchive/details?id=${encodeURIComponent(pinId)}" class="font-bold text-foreground hover:text-primary line-clamp-1 block transition-colors" title="${escapeHtml(p.title || 'Pin')}">
+            ${escapeHtml(p.title || `Pin ${p.pin_id}`)}
+          </a>
+          <span class="text-[10px] text-muted-foreground font-mono">ID: ${escapeHtml(p.pin_id)}</span>
+        </td>
+
+        <!-- Board -->
+        <td class="py-2.5 px-3 text-muted-foreground font-medium max-w-[120px] truncate">
+          ${escapeHtml(p.board_name || '—')}
+        </td>
+
+        <!-- Saves + Delta -->
+        <td class="py-2.5 px-3 text-right tabular-nums whitespace-nowrap">
+          <span class="font-bold text-rose-500">${fmtNumber(saves)}</span>
+          ${deltaBadge}
+        </td>
+
+        <!-- Repins -->
+        <td class="py-2.5 px-3 text-right tabular-nums font-medium text-foreground">
+          ${fmtNumber(repins)}
+        </td>
+
+        <!-- Comments -->
+        <td class="py-2.5 px-3 text-right tabular-nums text-muted-foreground">
+          ${fmtNumber(comments)}
+        </td>
+
+        <!-- Shares -->
+        <td class="py-2.5 px-3 text-right tabular-nums font-semibold text-blue-500">
+          ${shares > 0 ? fmtNumber(shares) : '—'}
+        </td>
+
+        <!-- Velocity -->
+        <td class="py-2.5 px-3 text-right tabular-nums font-bold text-emerald-500">
+          ${velocity.toFixed(1)}/d
+        </td>
+
+        <!-- Stage Badge -->
+        <td class="py-2.5 px-3 text-center">
+          ${renderStageBadge(p.stage)}
+        </td>
+
+        <!-- Created -->
+        <td class="py-2.5 px-3 text-muted-foreground whitespace-nowrap">
+          ${createdDate}
+        </td>
+
+        <!-- Actions -->
+        <td class="py-2.5 px-3 text-right whitespace-nowrap">
+          <div class="flex items-center justify-end gap-1.5">
+            ${destinationUrl ? `
+              <a href="${escapeHtml(destinationUrl)}" target="_blank" rel="noopener noreferrer nofollow" class="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Visit Site">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              </a>
+            ` : ''}
+            <a href="${escapeHtml(pinterestUrl)}" target="_blank" rel="noopener noreferrer" class="p-1 rounded-md hover:bg-primary/10 text-primary transition-colors" title="View on Pinterest">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m10 15 5-3-5-3v6Z"/></svg>
+            </a>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  function renderAccountPagination(total: number, currentPageNum: number, limit: number) {
+    const paginationEl = document.getElementById('account-pins-pagination');
+    if (!paginationEl) return;
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    if (totalPages <= 1) {
+      paginationEl.innerHTML = `
+        <span class="text-xs text-muted-foreground">Showing <strong>${total}</strong> pins</span>
+        <div></div>
+      `;
+      return;
+    }
+
+    const startItem = (currentPageNum - 1) * limit + 1;
+    const endItem = Math.min(currentPageNum * limit, total);
+
+    const pages: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPageNum > 3) pages.push('…');
+      const start = Math.max(2, currentPageNum - 1);
+      const end = Math.min(totalPages - 1, currentPageNum + 1);
+      for (let i = start; i <= end; i++) {
+        if (!pages.includes(i)) pages.push(i);
+      }
+      if (currentPageNum < totalPages - 2) pages.push('…');
+      if (!pages.includes(totalPages)) pages.push(totalPages);
+    }
+
+    const buttonsHtml = pages.map((p) => {
+      if (p === '…') {
+        return '<span class="px-2 py-1 text-xs text-muted-foreground">…</span>';
+      }
+      const pageNum = Number(p);
+      const isActive = pageNum === currentPageNum;
+      return `
+        <button
+          type="button"
+          data-page-btn="${pageNum}"
+          class="min-w-[32px] h-8 px-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+            isActive
+              ? 'bg-primary text-primary-foreground shadow-xs'
+              : 'border border-border bg-card text-foreground hover:bg-muted'
+          }"
+        >
+          ${pageNum}
+        </button>
+      `;
+    }).join('');
+
+    paginationEl.innerHTML = `
+      <span class="text-xs text-muted-foreground">
+        Showing <strong>${fmtNumber(startItem)}</strong>–<strong>${fmtNumber(endItem)}</strong> of <strong>${fmtNumber(total)}</strong> pins
+      </span>
+      <div class="flex items-center gap-1">
+        <button
+          type="button"
+          data-page-btn="${currentPageNum - 1}"
+          ${currentPageNum <= 1 ? 'disabled' : ''}
+          class="h-8 px-2.5 rounded-lg border border-border bg-card text-xs font-bold text-foreground hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+        >
+          ← Prev
+        </button>
+        ${buttonsHtml}
+        <button
+          type="button"
+          data-page-btn="${currentPageNum + 1}"
+          ${currentPageNum >= totalPages ? 'disabled' : ''}
+          class="h-8 px-2.5 rounded-lg border border-border bg-card text-xs font-bold text-foreground hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+        >
+          Next →
+        </button>
+      </div>
+    `;
+
+    paginationEl.querySelectorAll<HTMLButtonElement>('[data-page-btn]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = parseInt(btn.getAttribute('data-page-btn') || '1', 10);
+        if (!isNaN(target) && target >= 1 && target <= totalPages && target !== currentPage) {
+          currentPage = target;
+          loadAccountPins();
+        }
+      });
+    });
+  }
+
+  function setView(view: 'cards' | 'table') {
+    currentView = view;
+    localStorage.setItem('pa_account_view', view);
+
+    const cardsBtn = document.getElementById('view-cards-btn');
+    const tableBtn = document.getElementById('view-table-btn');
+    const gridEl = document.getElementById('account-pins-grid');
+    const tableWrapEl = document.getElementById('account-pins-table-wrap');
+
+    if (view === 'cards') {
+      if (cardsBtn) {
+        cardsBtn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-primary text-primary-foreground shadow-xs';
+      }
+      if (tableBtn) {
+        tableBtn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-muted-foreground hover:text-foreground transition-all cursor-pointer';
+      }
+      if (gridEl) gridEl.classList.remove('hidden');
+      if (tableWrapEl) tableWrapEl.classList.add('hidden');
+    } else {
+      if (cardsBtn) {
+        cardsBtn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-muted-foreground hover:text-foreground transition-all cursor-pointer';
+      }
+      if (tableBtn) {
+        tableBtn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-primary text-primary-foreground shadow-xs';
+      }
+      if (gridEl) gridEl.classList.add('hidden');
+      if (tableWrapEl) tableWrapEl.classList.remove('hidden');
+    }
+  }
+
+  async function loadBoardsList() {
+    const boardSelect = document.getElementById('account-pins-board') as HTMLSelectElement | null;
+    if (!boardSelect || !accountId) return;
+
+    try {
+      const res = await fetch(`/api/pinarchive/account-boards?account_id=${encodeURIComponent(accountId)}`);
+      if (!res.ok) return;
+      const json = await res.json();
+      if (!json.success || !Array.isArray(json.boards)) return;
+
+      const currentVal = boardSelect.value;
+      boardSelect.innerHTML = '<option value="" selected>All Boards</option>' + json.boards.map((b: any) => `
+        <option value="${escapeHtml(b.board_name)}" ${currentVal === b.board_name ? 'selected' : ''}>
+          ${escapeHtml(b.board_name)} (${fmtNumber(b.pins)})
+        </option>
+      `).join('');
+    } catch (err) {
+      console.error('Failed to load boards list:', err);
+    }
+  }
+
   async function loadAccountPins() {
     const grid = document.getElementById('account-pins-grid');
+    const tableBody = document.getElementById('account-pins-table-body');
     const badge = document.getElementById('account-pins-badge');
-    if (!grid || !accountId) return;
+    if (!accountId) return;
 
     try {
       const params = new URLSearchParams({
+        mode: 'page',
         account_id: accountId,
         sort: currentSort,
         limit: String(currentLimit),
+        page: String(currentPage),
       });
+
+      if (currentSearch) params.set('q', currentSearch);
+      if (currentBoard) params.set('board', currentBoard);
+      if (currentStage) params.set('stage', currentStage);
 
       const res = await fetch(`/api/pinarchive/pins?${params.toString()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -442,25 +854,57 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
       if (!json.success) throw new Error(json.error || 'Failed to load pins');
 
       const pins: any[] = json.pins || [];
-      if (badge) badge.textContent = `${pins.length}`;
+      const total = Number(json.total || 0);
 
-      if (pins.length === 0) {
-        grid.innerHTML = `
-          <div class="col-span-full py-12 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
-            No archived pins found for this account matching active settings.
-          </div>
-        `;
-        return;
+      if (badge) badge.textContent = `${fmtNumber(total)}`;
+
+      // Render Cards
+      if (grid) {
+        if (pins.length === 0) {
+          grid.innerHTML = `
+            <div class="col-span-full py-12 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
+              ${currentSearch || currentBoard || currentStage ? 'No pins match active filters.' : 'No archived pins found for this account.'}
+            </div>
+          `;
+        } else {
+          grid.innerHTML = pins.map((p) => renderSinglePinCard(p)).join('');
+        }
       }
 
-      grid.innerHTML = pins.map((p) => renderSinglePinCard(p)).join('');
+      // Render Table
+      if (tableBody) {
+        if (pins.length === 0) {
+          tableBody.innerHTML = `
+            <tr>
+              <td colspan="11" class="p-8 text-center text-xs text-muted-foreground bg-muted/20">
+                ${currentSearch || currentBoard || currentStage ? 'No pins match active filters.' : 'No archived pins found for this account.'}
+              </td>
+            </tr>
+          `;
+        } else {
+          tableBody.innerHTML = pins.map((p) => renderSinglePinTableRow(p)).join('');
+        }
+      }
+
+      renderAccountPagination(total, currentPage, currentLimit);
     } catch (err: any) {
       console.error('Error loading account pins:', err);
-      grid.innerHTML = `
-        <div class="col-span-full py-8 text-center text-xs text-rose-500 bg-rose-500/10 rounded-xl border border-rose-500/20">
-          Failed to load pins: ${escapeHtml(err.message)}
-        </div>
-      `;
+      if (grid) {
+        grid.innerHTML = `
+          <div class="col-span-full py-8 text-center text-xs text-rose-500 bg-rose-500/10 rounded-xl border border-rose-500/20">
+            Failed to load pins: ${escapeHtml(err.message)}
+          </div>
+        `;
+      }
+      if (tableBody) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="11" class="p-8 text-center text-xs text-rose-500 bg-rose-500/10">
+              Failed to load pins: ${escapeHtml(err.message)}
+            </td>
+          </tr>
+        `;
+      }
     }
   }
 
@@ -505,31 +949,229 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
     }
   }
 
+  function setupGasControls() {
+    // Run Now
+    const runBtn = document.getElementById('gas-run-btn') as HTMLButtonElement | null;
+    if (runBtn) {
+      runBtn.addEventListener('click', async () => {
+        runBtn.disabled = true;
+        toast(`Triggered GAS run for @${username} (queued in background)...`, 'info');
+
+        try {
+          const res = await fetch('/api/pinarchive/accounts-gas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'run_now', usernames: [username] }),
+          });
+          const json = await res.json();
+          if (json.success && json.results?.[0]?.ok) {
+            toast(`GAS run initiated for @${username}. Check back after collection.`, 'success');
+          } else {
+            toast(json.error || json.results?.[0]?.error || 'GAS run request failed', 'error');
+          }
+        } catch (err: any) {
+          toast(err?.message || 'Network error executing GAS run', 'error');
+        } finally {
+          runBtn.disabled = false;
+        }
+      });
+    }
+
+    // Sync Now
+    const syncBtn = document.getElementById('gas-sync-btn') as HTMLButtonElement | null;
+    if (syncBtn) {
+      syncBtn.addEventListener('click', async () => {
+        syncBtn.disabled = true;
+        toast(`Syncing Sheet → DB for @${username}...`, 'info');
+
+        try {
+          const res = await fetch('/api/pinarchive/accounts-gas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'sync_now', usernames: [username] }),
+          });
+          const json = await res.json();
+          if (json.success && json.results?.[0]?.ok) {
+            const summary = json.results[0].summary;
+            if (summary) {
+              toast(`Sync complete for @${username}: ${summary.pushed || 0} pushed, ${summary.matched || 0} matched, ${summary.skippedUnchanged || 0} unchanged.`, 'success');
+            } else {
+              toast(`Sync complete for @${username}!`, 'success');
+            }
+            loadAccountPins();
+          } else {
+            toast(json.error || json.results?.[0]?.error || 'GAS sync failed', 'error');
+          }
+        } catch (err: any) {
+          toast(err?.message || 'Network error executing GAS sync', 'error');
+        } finally {
+          syncBtn.disabled = false;
+        }
+      });
+    }
+
+    // Pause / Resume
+    const statusBtn = document.getElementById('gas-status-btn') as HTMLButtonElement | null;
+    if (statusBtn) {
+      statusBtn.addEventListener('click', async () => {
+        const cur = statusBtn.getAttribute('data-current-status') || 'active';
+        const newAction = cur === 'paused' ? 'resume' : 'pause';
+        statusBtn.disabled = true;
+
+        try {
+          const res = await fetch('/api/pinarchive/accounts-gas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: newAction, usernames: [username] }),
+          });
+          const json = await res.json();
+          if (json.success && json.results?.[0]?.ok) {
+            const newStatus = newAction === 'resume' ? 'active' : 'paused';
+            statusBtn.setAttribute('data-current-status', newStatus);
+            statusBtn.innerHTML = `<span>${newStatus === 'paused' ? '▶ Resume' : '⏸ Pause'}</span>`;
+
+            const dot = document.getElementById('account-status-dot');
+            const badge = document.getElementById('account-status-badge');
+            if (dot) {
+              dot.className = `h-3 w-3 rounded-full ${newStatus === 'active' ? 'bg-emerald-500' : 'bg-amber-500'} shrink-0`;
+            }
+            if (badge) {
+              badge.textContent = newStatus;
+              badge.className = `text-xs font-semibold uppercase px-2.5 py-0.5 rounded-full ${newStatus === 'active' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}`;
+            }
+
+            toast(`Account @${username} is now ${newStatus}.`, 'success');
+          } else {
+            toast(json.error || 'Failed to update account status in GAS', 'error');
+          }
+        } catch (err: any) {
+          toast(err?.message || 'Network error updating account status', 'error');
+        } finally {
+          statusBtn.disabled = false;
+        }
+      });
+    }
+
+    // Apply Interval
+    const applyIntervalBtn = document.getElementById('account-interval-apply-btn') as HTMLButtonElement | null;
+    const intervalInput = document.getElementById('account-interval-input') as HTMLInputElement | null;
+    if (applyIntervalBtn && intervalInput) {
+      applyIntervalBtn.addEventListener('click', async () => {
+        const days = parseInt(intervalInput.value, 10);
+        if (isNaN(days) || days < 1 || days > 30) {
+          alert('Interval must be between 1 and 30 days.');
+          return;
+        }
+
+        applyIntervalBtn.disabled = true;
+        try {
+          const res = await fetch('/api/pinarchive/accounts-gas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'set_interval', usernames: [username], days }),
+          });
+          const json = await res.json();
+          if (json.success && json.results?.[0]?.ok) {
+            const metricEl = document.getElementById('account-interval-metric');
+            if (metricEl) metricEl.textContent = `${days} days`;
+            toast(`Sync interval for @${username} updated to ${days} days.`, 'success');
+          } else {
+            toast(json.error || 'Failed to update interval in GAS', 'error');
+          }
+        } catch (err: any) {
+          toast(err?.message || 'Network error updating interval', 'error');
+        } finally {
+          applyIntervalBtn.disabled = false;
+        }
+      });
+    }
+  }
+
   function init() {
     const root = document.getElementById('account-card-root');
     if (root) {
       accountId = root.getAttribute('data-account-id') || '';
+      workspaceId = root.getAttribute('data-workspace-id') || '';
+      username = root.getAttribute('data-username') || '';
     }
 
+    // Restore view preference (default: cards)
+    const savedView = (localStorage.getItem('pa_account_view') as 'cards' | 'table') || 'cards';
+    setView(savedView);
+
+    // Setup toggles and GAS controls
     setupIngestToggle();
+    setupGasControls();
+
+    // Load boards dropdown and pins
+    loadBoardsList();
     loadAccountPins();
 
+    // View toggle buttons
+    const cardsBtn = document.getElementById('view-cards-btn');
+    if (cardsBtn) {
+      cardsBtn.addEventListener('click', () => setView('cards'));
+    }
+    const tableBtn = document.getElementById('view-table-btn');
+    if (tableBtn) {
+      tableBtn.addEventListener('click', () => setView('table'));
+    }
+
+    // Search input (debounced 300ms)
+    const searchInput = document.getElementById('account-pins-search') as HTMLInputElement | null;
+    if (searchInput) {
+      let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+      searchInput.addEventListener('input', () => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          currentSearch = searchInput.value.trim();
+          currentPage = 1;
+          loadAccountPins();
+        }, 300);
+      });
+    }
+
+    // Board filter
+    const boardSelect = document.getElementById('account-pins-board') as HTMLSelectElement | null;
+    if (boardSelect) {
+      boardSelect.addEventListener('change', () => {
+        currentBoard = boardSelect.value;
+        currentPage = 1;
+        loadAccountPins();
+      });
+    }
+
+    // Stage filter
+    const stageSelect = document.getElementById('account-pins-stage') as HTMLSelectElement | null;
+    if (stageSelect) {
+      stageSelect.addEventListener('change', () => {
+        currentStage = stageSelect.value;
+        currentPage = 1;
+        loadAccountPins();
+      });
+    }
+
+    // Sort select
     const sortSelect = document.getElementById('account-pins-sort') as HTMLSelectElement | null;
     if (sortSelect) {
       sortSelect.addEventListener('change', () => {
         currentSort = sortSelect.value;
+        currentPage = 1;
         loadAccountPins();
       });
     }
 
+    // Limit select
     const limitSelect = document.getElementById('account-pins-limit') as HTMLSelectElement | null;
     if (limitSelect) {
       limitSelect.addEventListener('change', () => {
         currentLimit = parseInt(limitSelect.value, 10) || 50;
+        currentPage = 1;
         loadAccountPins();
       });
     }
 
+    // Refresh Account Button (GitHub workflow)
     const refreshBtn = document.getElementById('refresh-account-btn') as HTMLButtonElement | null;
     if (refreshBtn) {
       refreshBtn.addEventListener('click', async () => {
