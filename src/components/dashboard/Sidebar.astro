@@ -1,78 +1,52 @@
 ---
 const pathname = Astro.url.pathname;
 
-const navGroups = [
-  {
-    id: 'scheduling',
-    label: 'Scheduling',
-    icon: 'calendar',
-    children: [
-      { label: 'Dashboard', href: '/dashboard', icon: 'dashboard' },
-      { label: 'Accounts', href: '/accounts', icon: 'accounts' },
-      { label: 'Logs', href: '/logs', icon: 'logs' },
-    ],
-  },
-  {
-    id: 'competitors',
-    label: 'Competitors',
-    icon: 'competitors',
-    href: '/competitors',
-  },
-  {
-    id: 'pinarchive',
-    label: 'PinArchive',
-    icon: 'archive',
-    href: '/pinarchive',
-  },
-  {
-    id: 'analytics',
-    label: 'Analytics',
-    icon: 'analytics',
-    children: [
-      { label: 'Connections', href: '/analytics', icon: 'analytics' },
-      { label: 'Ingest Secrets', href: '/analytics/secrets', icon: 'secrets' },
-    ],
-  },
-  {
-    id: 'settings',
-    label: 'Settings',
-    icon: 'settings',
-    children: [
-      { label: 'Workspace', href: '/settings', icon: 'settings' },
-      { label: 'Audit Trail', href: '/audit', icon: 'audit' },
-    ],
-  },
-];
-
-// Flatten all items with group id to evaluate active state sorted by href length DESC
-const allNavItems: Array<{ href: string; label: string; groupId: string }> = [];
-navGroups.forEach((g) => {
-  if (g.children) {
-    g.children.forEach((c) => {
-      allNavItems.push({ href: c.href, label: c.label, groupId: g.id });
-    });
-  } else if (g.href) {
-    allNavItems.push({ href: g.href, label: g.label, groupId: g.id });
-  }
-});
-
-// Sort by href length DESC: ensures /analytics/secrets matches before /analytics
-allNavItems.sort((a, b) => b.href.length - a.href.length);
-
-function getActiveItem() {
-  for (const item of allNavItems) {
-    if (item.href === '/dashboard' && (pathname === '/' || pathname === '/dashboard')) {
-      return item;
-    }
-    if (pathname === item.href || pathname.startsWith(item.href + '/')) {
-      return item;
-    }
-  }
-  return null;
+interface NavItem {
+  id: string;
+  label: string;
+  href: string;
+  icon: 'dashboard' | 'calendar' | 'analytics' | 'competitors' | 'archive' | 'settings';
 }
 
-const activeItem = getActiveItem();
-const activeGroupId = activeItem?.groupId || null;
+const navItems: NavItem[] = [
+  { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: 'dashboard' },
+  { id: 'scheduling', label: 'Scheduling', href: '/scheduling', icon: 'calendar' },
+  { id: 'analytics', label: 'Analytics', href: '/analytics', icon: 'analytics' },
+  { id: 'competitors', label: 'Competitor', href: '/competitors', icon: 'competitors' },
+  { id: 'pinarchive', label: 'PinArchive', href: '/pinarchive', icon: 'archive' },
+  { id: 'settings', label: 'Settings', href: '/settings', icon: 'settings' },
+];
+
+function isItemActive(item: NavItem): boolean {
+  if (item.id === 'dashboard') {
+    return pathname === '/' || pathname === '/dashboard';
+  }
+  if (item.id === 'scheduling') {
+    return (
+      pathname === '/scheduling' ||
+      pathname.startsWith('/scheduling/') ||
+      pathname.startsWith('/accounts') ||
+      pathname.startsWith('/boards') ||
+      pathname.startsWith('/pins') ||
+      pathname.startsWith('/imports') ||
+      pathname.startsWith('/logs') ||
+      pathname.startsWith('/schedules')
+    );
+  }
+  if (item.id === 'analytics') {
+    return pathname === '/analytics' || pathname.startsWith('/analytics/');
+  }
+  if (item.id === 'competitors') {
+    return pathname === '/competitors' || pathname.startsWith('/competitors/');
+  }
+  if (item.id === 'pinarchive') {
+    return pathname === '/pinarchive' || pathname.startsWith('/pinarchive/');
+  }
+  if (item.id === 'settings') {
+    return pathname === '/settings' || pathname.startsWith('/settings/') || pathname.startsWith('/audit');
+  }
+  return false;
+}
 ---
 
 <!-- Desktop Sidebar (Model C Collapse-to-Rail) -->
@@ -98,157 +72,73 @@ const activeGroupId = activeItem?.groupId || null;
     </a>
   </div>
 
-  <!-- Navigation Groups -->
+  <!-- Flat Navigation (6 items) -->
   <nav class="flex-1 space-y-1.5 p-3 overflow-y-auto overflow-x-visible">
-    {navGroups.map((group) => {
-      const isGroupActive = activeGroupId === group.id;
-      const isDirectLink = !!group.href;
-
-      if (isDirectLink) {
-        const isItemActive = activeItem?.href === group.href;
-        return (
-          <div class="relative group/item">
-            <a
-              href={group.href}
-              title={group.label}
-              aria-label={group.label}
-              aria-current={isItemActive ? 'page' : undefined}
-              class={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                isItemActive
-                  ? 'bg-primary/10 text-primary dark:bg-primary/15'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              {group.icon === 'competitors' && (
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-              )}
-              {group.icon === 'archive' && (
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
-              )}
-              <span class="sidebar-text truncate">{group.label}</span>
-              {isItemActive && (
-                <span class="sidebar-text ml-auto h-1.5 w-1.5 rounded-full bg-primary shrink-0"></span>
-              )}
-            </a>
-
-            <!-- Rail Tooltip (visible only when collapsed) -->
-            <div class="sidebar-rail-tooltip pointer-events-none opacity-0 invisible absolute left-full top-1/2 -translate-y-1/2 ml-3 rounded-md bg-popover border border-border px-2 py-1 text-xs font-semibold text-popover-foreground shadow-md whitespace-nowrap z-50">
-              {group.label}
-            </div>
-          </div>
-        );
-      }
-
-      // Group with children (Accordion in full width, Flyout in rail mode)
+    {navItems.map((item) => {
+      const active = isItemActive(item);
       return (
-        <div class="relative group/navgroup" data-group-id={group.id}>
-          <!-- Group Accordion Button -->
-          <button
-            type="button"
-            data-accordion-trigger={group.id}
-            aria-expanded={isGroupActive ? 'true' : 'false'}
-            aria-controls={`nav-group-${group.id}`}
-            title={group.label}
-            aria-label={group.label}
-            class={`w-full flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-              isGroupActive
-                ? 'text-foreground bg-muted/40 font-bold'
+        <div class="relative group/item">
+          <a
+            href={item.href}
+            title={item.label}
+            aria-label={item.label}
+            aria-current={active ? 'page' : undefined}
+            class={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+              active
+                ? 'bg-primary/10 text-primary font-bold dark:bg-primary/15'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
           >
-            <div class="flex items-center gap-3 min-w-0">
-              {group.icon === 'calendar' && (
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-              )}
-              {group.icon === 'analytics' && (
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-              )}
-              {group.icon === 'settings' && (
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-              )}
-              <span class="sidebar-text truncate">{group.label}</span>
-            </div>
-
-            <div class="sidebar-text flex items-center gap-1.5 shrink-0">
-              {isGroupActive && (
-                <span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
-              )}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 accordion-chevron ${isGroupActive ? 'rotate-180' : ''}`}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <polyline points="6 9 12 15 18 9"/>
+            {item.icon === 'dashboard' && (
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="7" height="9" x="3" y="3" rx="1"/>
+                <rect width="7" height="5" x="14" y="3" rx="1"/>
+                <rect width="7" height="9" x="14" y="12" rx="1"/>
+                <rect width="7" height="5" x="3" y="16" rx="1"/>
               </svg>
-            </div>
-          </button>
+            )}
+            {item.icon === 'calendar' && (
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+                <line x1="16" x2="16" y1="2" y2="6"/>
+                <line x1="8" x2="8" y1="2" y2="6"/>
+                <line x1="3" x2="21" y1="10" y2="10"/>
+              </svg>
+            )}
+            {item.icon === 'analytics' && (
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3v18h18"/>
+                <path d="m19 9-5 5-4-4-3 3"/>
+              </svg>
+            )}
+            {item.icon === 'competitors' && (
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            )}
+            {item.icon === 'archive' && (
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="20" height="5" x="2" y="3" rx="1"/>
+                <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/>
+                <path d="M10 12h4"/>
+              </svg>
+            )}
+            {item.icon === 'settings' && (
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            )}
+            <span class="sidebar-text truncate">{item.label}</span>
+            {active && (
+              <span class="sidebar-text ml-auto h-1.5 w-1.5 rounded-full bg-primary shrink-0"></span>
+            )}
+          </a>
 
-          <!-- Accordion Children (Expanded Sidebar) -->
-          <div
-            id={`nav-group-${group.id}`}
-            class={`sidebar-accordion-body space-y-1 pl-7 pr-1 pt-1 ${isGroupActive ? '' : 'hidden'}`}
-          >
-            {group.children?.map((child) => {
-              const isChildActive = activeItem?.href === child.href;
-              return (
-                <a
-                  href={child.href}
-                  aria-current={isChildActive ? 'page' : undefined}
-                  class={`flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                    isChildActive
-                      ? 'bg-primary/10 text-primary font-bold dark:bg-primary/15'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
-                >
-                  <div class="flex items-center gap-2.5 min-w-0">
-                    {child.icon === 'dashboard' && <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>}
-                    {child.icon === 'accounts' && <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>}
-                    {child.icon === 'logs' && <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>}
-                    {child.icon === 'analytics' && <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>}
-                    {child.icon === 'secrets' && <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
-                    {child.icon === 'settings' && <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>}
-                    {child.icon === 'audit' && <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>}
-                    <span class="truncate">{child.label}</span>
-                  </div>
-                  {isChildActive && (
-                    <span class="h-1.5 w-1.5 rounded-full bg-primary shrink-0"></span>
-                  )}
-                </a>
-              );
-            })}
-          </div>
-
-          <!-- Rail Flyout Panel (Visible in Collapsed Rail Mode on Hover/Focus) -->
-          <div class="sidebar-rail-flyout pointer-events-none opacity-0 invisible absolute left-full top-0 ml-3 w-48 rounded-xl border border-border bg-card p-2 shadow-2xl transition-all duration-150 z-50 group-hover/navgroup:pointer-events-auto group-hover/navgroup:opacity-100 group-hover/navgroup:visible group-focus-within/navgroup:pointer-events-auto group-focus-within/navgroup:opacity-100 group-focus-within/navgroup:visible">
-            <div class="px-2.5 py-1.5 border-b border-border/50 mb-1">
-              <span class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">{group.label}</span>
-            </div>
-            <div class="space-y-1">
-              {group.children?.map((child) => {
-                const isChildActive = activeItem?.href === child.href;
-                return (
-                  <a
-                    href={child.href}
-                    aria-current={isChildActive ? 'page' : undefined}
-                    class={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-                      isChildActive
-                        ? 'bg-primary/10 text-primary font-bold'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }`}
-                  >
-                    <span class="truncate">{child.label}</span>
-                    {isChildActive && (
-                      <span class="h-1.5 w-1.5 rounded-full bg-primary shrink-0"></span>
-                    )}
-                  </a>
-                );
-              })}
-            </div>
+          <!-- Rail Tooltip (visible only when collapsed) -->
+          <div class="sidebar-rail-tooltip pointer-events-none opacity-0 invisible absolute left-full top-1/2 -translate-y-1/2 ml-3 rounded-md bg-popover border border-border px-2 py-1 text-xs font-semibold text-popover-foreground shadow-md whitespace-nowrap z-50">
+            {item.label}
           </div>
         </div>
       );
@@ -274,68 +164,40 @@ const activeGroupId = activeItem?.groupId || null;
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
   </div>
-  <nav class="flex-1 space-y-2 p-4 overflow-y-auto">
-    {navGroups.map((group) => {
-      const isGroupActive = activeGroupId === group.id;
-      const isDirectLink = !!group.href;
-
-      if (isDirectLink) {
-        const isItemActive = activeItem?.href === group.href;
-        return (
-          <a
-            href={group.href}
-            class={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-colors ${
-              isItemActive
-                ? 'bg-primary/10 text-primary dark:bg-primary/15'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
-          >
-            {group.icon === 'competitors' && (
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-            )}
-            {group.icon === 'archive' && (
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
-            )}
-            <span>{group.label}</span>
-          </a>
-        );
-      }
-
+  <nav class="flex-1 space-y-1.5 p-4 overflow-y-auto">
+    {navItems.map((item) => {
+      const active = isItemActive(item);
       return (
-        <div class="space-y-1">
-          <button
-            type="button"
-            data-mobile-accordion={group.id}
-            class="w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground bg-muted/30"
-          >
-            <div class="flex items-center gap-3">
-              {group.icon === 'calendar' && <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>}
-              {group.icon === 'analytics' && <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>}
-              {group.icon === 'settings' && <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>}
-              <span>{group.label}</span>
-            </div>
-            <svg xmlns="http://www.w3.org/2000/svg" class={`h-3.5 w-3.5 text-muted-foreground transition-transform mobile-chevron ${isGroupActive ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-
-          <div id={`mobile-group-${group.id}`} class={`space-y-1 pl-7 pr-1 pt-1 ${isGroupActive ? '' : 'hidden'}`}>
-            {group.children?.map((child) => {
-              const isChildActive = activeItem?.href === child.href;
-              return (
-                <a
-                  href={child.href}
-                  class={`flex items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
-                    isChildActive
-                      ? 'bg-primary/10 text-primary font-bold'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
-                >
-                  <span>{child.label}</span>
-                  {isChildActive && <span class="h-1.5 w-1.5 rounded-full bg-primary"></span>}
-                </a>
-              );
-            })}
-          </div>
-        </div>
+        <a
+          href={item.href}
+          aria-current={active ? 'page' : undefined}
+          class={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-colors ${
+            active
+              ? 'bg-primary/10 text-primary font-bold dark:bg-primary/15'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+          }`}
+        >
+          {item.icon === 'dashboard' && (
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          )}
+          {item.icon === 'calendar' && (
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+          )}
+          {item.icon === 'analytics' && (
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          )}
+          {item.icon === 'competitors' && (
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          )}
+          {item.icon === 'archive' && (
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
+          )}
+          {item.icon === 'settings' && (
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          )}
+          <span>{item.label}</span>
+          {active && <span class="ml-auto h-1.5 w-1.5 rounded-full bg-primary shrink-0"></span>}
+        </a>
       );
     })}
   </nav>
@@ -348,10 +210,6 @@ const activeGroupId = activeItem?.groupId || null;
   }
 
   html.sidebar-collapsed #desktop-sidebar .sidebar-text {
-    display: none !important;
-  }
-
-  html.sidebar-collapsed #desktop-sidebar .sidebar-accordion-body {
     display: none !important;
   }
 
@@ -385,52 +243,6 @@ const activeGroupId = activeItem?.groupId || null;
 </style>
 
 <script>
-  // Desktop Accordion Toggles
-  document.querySelectorAll<HTMLButtonElement>('[data-accordion-trigger]').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      // If sidebar is collapsed, clicking expands the sidebar or triggers flyout
-      if (document.documentElement.classList.contains('sidebar-collapsed')) {
-        toggleSidebarCollapse();
-        return;
-      }
-
-      const groupId = btn.getAttribute('data-accordion-trigger');
-      const body = document.getElementById(`nav-group-${groupId}`);
-      const chevron = btn.querySelector('.accordion-chevron');
-      if (!body) return;
-
-      const isExpanded = !body.classList.contains('hidden');
-      if (isExpanded) {
-        body.classList.add('hidden');
-        btn.setAttribute('aria-expanded', 'false');
-        chevron?.classList.remove('rotate-180');
-      } else {
-        body.classList.remove('hidden');
-        btn.setAttribute('aria-expanded', 'true');
-        chevron?.classList.add('rotate-180');
-      }
-    });
-  });
-
-  // Mobile Accordion Toggles
-  document.querySelectorAll<HTMLButtonElement>('[data-mobile-accordion]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const groupId = btn.getAttribute('data-mobile-accordion');
-      const body = document.getElementById(`mobile-group-${groupId}`);
-      const chevron = btn.querySelector('.mobile-chevron');
-      if (!body) return;
-
-      const isExpanded = !body.classList.contains('hidden');
-      if (isExpanded) {
-        body.classList.add('hidden');
-        chevron?.classList.remove('rotate-180');
-      } else {
-        body.classList.remove('hidden');
-        chevron?.classList.add('rotate-180');
-      }
-    });
-  });
-
   // Sidebar Collapse Toggle (Model C)
   function toggleSidebarCollapse() {
     const isCollapsed = document.documentElement.classList.toggle('sidebar-collapsed');
@@ -438,4 +250,24 @@ const activeGroupId = activeItem?.groupId || null;
   }
 
   document.getElementById('topbar-sidebar-toggle')?.addEventListener('click', toggleSidebarCollapse);
+
+  // Mobile sidebar drawer script
+  const openBtn = document.getElementById('open-mobile-sidebar');
+  const closeBtn = document.getElementById('close-mobile-sidebar');
+  const sidebar = document.getElementById('mobile-sidebar');
+  const backdrop = document.getElementById('mobile-sidebar-backdrop');
+
+  function openDrawer() {
+    sidebar?.classList.remove('-translate-x-full');
+    backdrop?.classList.remove('hidden');
+  }
+
+  function closeDrawer() {
+    sidebar?.classList.add('-translate-x-full');
+    backdrop?.classList.add('hidden');
+  }
+
+  openBtn?.addEventListener('click', openDrawer);
+  closeBtn?.addEventListener('click', closeDrawer);
+  backdrop?.addEventListener('click', closeDrawer);
 </script>

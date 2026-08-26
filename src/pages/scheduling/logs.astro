@@ -1,7 +1,7 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import SectionHeader from '../components/ui/SectionHeader.astro';
-import SectionTabs from '../components/ui/SectionTabs.astro';
+import Layout from '../../layouts/Layout.astro';
+import SectionHeader from '../../components/ui/SectionHeader.astro';
+import SectionTabs from '../../components/ui/SectionTabs.astro';
 
 const schedulingTabs = [
   { label: 'Overview', href: '/scheduling' },
@@ -61,10 +61,10 @@ const schedulingTabs = [
 </Layout>
 
 <script>
-  import { requireAuth } from '../lib/auth';
-  import { getLogs, getPinDeliveryLogs } from '../lib/supabase';
-  import { renderStatusBadge, formatDate, renderEmptyStateHTML, escapeHtml, maskWebhookUrl } from '../lib/ui-helpers';
-  import type { Log, PinDeliveryLog } from '../lib/types';
+  import { requireAuth } from '../../lib/auth';
+  import { getLogs, getPinDeliveryLogs } from '../../lib/supabase';
+  import { renderStatusBadge, formatDate, renderEmptyStateHTML, escapeHtml, maskWebhookUrl } from '../../lib/ui-helpers';
+  import type { Log, PinDeliveryLog } from '../../lib/types';
 
   let currentTab: 'delivery' | 'system' = 'delivery';
   let currentSystemLogs: Log[] = [];
