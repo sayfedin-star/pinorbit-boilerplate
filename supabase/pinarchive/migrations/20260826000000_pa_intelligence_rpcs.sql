@@ -608,7 +608,6 @@ BEGIN
     WHERE prev.saves IS NULL
        OR prev.saves IS DISTINCT FROM u.saves
        OR prev.repins IS DISTINCT FROM u.repins
-       OR prev.shares IS DISTINCT FROM u.share_count
     ON CONFLICT (pin_ref, recorded_at) DO NOTHING
     RETURNING id
   )
