@@ -13,6 +13,10 @@ on:
         description: 'Single account username (empty = all in workspace)'
         required: false
         type: string
+      usernames:
+        description: 'Comma-separated usernames (optional)'
+        required: false
+        type: string
 
 concurrency:
   group: pinarchive-refresh
@@ -48,6 +52,7 @@ jobs:
           PINARCHIVE_INGEST_SECRET: ${{ secrets.PINARCHIVE_INGEST_SECRET }}
           REFRESH_WORKSPACE_ID: ${{ github.event.inputs.workspace_id || '' }}
           REFRESH_USERNAME: ${{ github.event.inputs.username || '' }}
+          REFRESH_USERNAMES: ${{ github.event.inputs.usernames || '' }}
           REFRESH_SHARD: ${{ matrix.shard }}
           SHARD_COUNT: 4
           REFRESH_MAX_PINS: '0'

@@ -34,6 +34,10 @@ const { PINARCHIVE_SUPABASE_URL, PINARCHIVE_SUPABASE_KEY, PINORBIT_WORKER_URL, P
 
 const REFRESH_WORKSPACE_ID = (process.env.REFRESH_WORKSPACE_ID || '').trim();
 const REFRESH_USERNAME = (process.env.REFRESH_USERNAME || '').trim().toLowerCase();
+const REFRESH_USERNAMES = (process.env.REFRESH_USERNAMES || '')
+  .split(',')
+  .map(s => s.trim().toLowerCase())
+  .filter(Boolean);
 
 function checkEnv() {
   const missing = [];
@@ -417,8 +421,19 @@ async function main() {
     console.warn('Could not query pa_workspace_settings (using defaults):', e.message);
   }
 
-  const accounts = await supaQuery('pa_accounts', 'select=id,workspace_id,username,follower_count,status,ingest_enabled');
+  let accounts = await supaQuery('pa_accounts', 'select=id,workspace_id,username,follower_count,status,ingest_enabled');
   if (!accounts.length) { console.log('No accounts found.'); return; }
+
+  if (REFRESH_USERNAME) {
+    accounts = accounts.filter(a => a.username.toLowerCase() === REFRESH_USERNAME);
+    console.log(`Requested single account @${REFRESH_USERNAME}: ${accounts.length} matched in this workspace/shard scope`);
+  } else if (REFRESH_USERNAMES.length > 0) {
+    const set = new Set(REFRESH_USERNAMES);
+    accounts = accounts.filter(a => set.has(a.username.toLowerCase()));
+    console.log(`Requested ${REFRESH_USERNAMES.length} account(s): ${accounts.length} matched in this workspace/shard scope`);
+  }
+
+  if (!accounts.length) { console.log('No matching accounts found.'); return; }
   console.log(`Found ${accounts.length} account(s)\n`);
   const summary = { refreshed: 0, updated: 0, pushed: 0, errors: [] };
 
@@ -590,7 +605,7 @@ async function main() {
   }
 
   console.log(`\nSummary: checked=${summary.refreshed}, changed=${summary.updated}, pushed=${summary.pushed}, errors=${summary.errors.length}`);
-  const isFiltered = Boolean(REFRESH_WORKSPACE_ID || REFRESH_USERNAME);
+  const isFiltered = Boolean(REFRESH_WORKSPACE_ID || REFRESH_USERNAME || REFRESH_USERNAMES.length > 0);
   if (isFiltered) {
     // Filtered run: success if anything was pushed/updated, regardless of per-pin extraction misses
     if (summary.pushed > 0 || summary.updated > 0) process.exit(0);

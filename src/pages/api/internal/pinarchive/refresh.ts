@@ -49,10 +49,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
   const workspaceId = rawWorkspaceId.trim();
 
-  // Validate optional username
+  // Validate optional usernames / username
+  let validatedUsernames: string[] = [];
+  if (body?.usernames !== undefined && body?.usernames !== null) {
+    const rawList = Array.isArray(body.usernames)
+      ? body.usernames
+      : typeof body.usernames === 'string'
+        ? body.usernames.split(',')
+        : [];
+
+    const parsed = rawList
+      .map((u: any) => String(u).trim().toLowerCase())
+      .filter((u: string) => u.length > 0);
+
+    for (const u of parsed) {
+      if (!USERNAME_REGEX.test(u)) {
+        return json({ success: false, error: `Invalid username format: ${u}` }, 400);
+      }
+    }
+    validatedUsernames = Array.from(new Set(parsed)).slice(0, 50);
+  }
+
   let username: string | undefined;
   if (body?.username !== undefined && body?.username !== null && String(body.username).trim() !== '') {
-    const trimmed = String(body.username).trim();
+    const trimmed = String(body.username).trim().toLowerCase();
     if (!USERNAME_REGEX.test(trimmed)) {
       return json({ success: false, error: 'Invalid username format.' }, 400);
     }
@@ -110,7 +130,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     ref: 'main',
     inputs: {
       workspace_id: workspaceId,
-      username: username || '',
+      username: validatedUsernames.length > 0 ? '' : (username || ''),
+      usernames: validatedUsernames.length > 0 ? validatedUsernames.join(',') : '',
     },
   };
 
@@ -132,10 +153,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const responseBody: Record<string, any> = {
         success: true,
         queued: true,
+        queued_runs: 1,
         workspace_id: workspaceId,
       };
-      if (username) {
+      if (validatedUsernames.length > 0) {
+        responseBody.usernames = validatedUsernames;
+        responseBody.accounts = validatedUsernames.length;
+      } else if (username) {
         responseBody.username = username;
+        responseBody.accounts = 1;
       }
       return json(responseBody, 202);
     }

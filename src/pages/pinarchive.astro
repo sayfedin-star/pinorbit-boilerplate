@@ -1189,29 +1189,38 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         const root = document.getElementById('pinarchive-page-root');
         const workspaceId = root?.getAttribute('data-workspace-id') || '';
 
-        let queuedCount = 0;
-        for (let i = 0; i < usernames.length; i++) {
-          const u = usernames[i];
-          try {
-            const res = await fetch('/api/internal/pinarchive/refresh', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ workspace_id: workspaceId, username: u }),
-            });
-            if (res.status === 202 || res.ok) {
-              queuedCount++;
-            }
-          } catch (e) {
-            console.error(`Failed to dispatch refresh for @${u}:`, e);
-          }
-          if (i < usernames.length - 1) {
-            await new Promise((r) => setTimeout(r, 500));
-          }
-        }
+        try {
+          const payload = usernames.length === 1
+            ? { workspace_id: workspaceId, username: usernames[0] }
+            : { workspace_id: workspaceId, usernames };
 
-        if (refreshSelectedIcon) refreshSelectedIcon.classList.remove('animate-spin');
-        refreshSelectedBtn.disabled = false;
-        toast(`Refresh queued for ${queuedCount} of ${usernames.length} account(s)`, queuedCount > 0 ? 'success' : 'error');
+          const res = await fetch('/api/internal/pinarchive/refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          if (res.status === 202 || res.ok) {
+            if (usernames.length === 1) {
+              toast(`Refresh queued for @${usernames[0]}`, 'success');
+            } else {
+              toast(`Queued 1 refresh run for ${usernames.length} accounts`, 'success');
+            }
+          } else if (res.status === 403) {
+            toast('Admin required', 'error');
+          } else if (res.status === 503) {
+            toast('Refresh not configured on server yet', 'error');
+          } else {
+            const data = await res.json().catch(() => ({}));
+            toast(data.error || 'Failed to dispatch refresh', 'error');
+          }
+        } catch (e: any) {
+          console.error('Failed to dispatch refresh:', e);
+          toast(e?.message || 'Network error triggering refresh', 'error');
+        } finally {
+          if (refreshSelectedIcon) refreshSelectedIcon.classList.remove('animate-spin');
+          refreshSelectedBtn.disabled = false;
+        }
       });
     }
   }
