@@ -14,10 +14,18 @@ on:
         required: false
         type: string
 
+concurrency:
+  group: pinarchive-refresh
+  cancel-in-progress: false
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
 
     steps:
       - name: Checkout
@@ -32,7 +40,7 @@ jobs:
         continue-on-error: true
         run: node scripts/test-pin-fetch.mjs 1079245498222414527
 
-      - name: Run PinArchive Refresh
+      - name: Run PinArchive Refresh (Shard ${{ matrix.shard }}/4)
         env:
           PINARCHIVE_SUPABASE_URL: ${{ secrets.PINARCHIVE_SUPABASE_URL }}
           PINARCHIVE_SUPABASE_KEY: ${{ secrets.PINARCHIVE_SUPABASE_KEY }}
@@ -40,4 +48,6 @@ jobs:
           PINARCHIVE_INGEST_SECRET: ${{ secrets.PINARCHIVE_INGEST_SECRET }}
           REFRESH_WORKSPACE_ID: ${{ github.event.inputs.workspace_id || '' }}
           REFRESH_USERNAME: ${{ github.event.inputs.username || '' }}
+          REFRESH_SHARD: ${{ matrix.shard }}
+          SHARD_COUNT: 4
         run: node scripts/pinarchive-refresh.mjs

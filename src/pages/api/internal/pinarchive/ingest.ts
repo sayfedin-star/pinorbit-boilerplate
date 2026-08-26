@@ -205,7 +205,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Phase C1: Atomic Ingest Monitor Mode (pa_ingest_pin_batch dry-run verification)
     const MONITOR = true;
-    if (pins.length > 0) {
+    if (pins.length > 0 && typeof pinArchive.rpc === 'function') {
       try {
         const { data: rpcData, error: rpcErr } = await pinArchive.rpc('pa_ingest_pin_batch', {
           p_workspace_id: workspaceId,

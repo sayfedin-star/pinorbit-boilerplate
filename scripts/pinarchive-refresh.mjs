@@ -6,7 +6,18 @@
 import { fileURLToPath } from 'url';
 import path from 'path';
 
-const CFG = { SLEEP_MS: 3000, BATCH_SIZE: 12, PUSH_SLEEP_MS: 10000, CIRCUIT_BREAKER: 3, MAX_PINS: 150 };
+const CFG = {
+  SLEEP_MS_MIN: 2500,
+  SLEEP_MS_MAX: 4000,
+  BATCH_SIZE: 12,
+  PUSH_SLEEP_MS: 3000,
+  CIRCUIT_BREAKER: 3,
+  CONCURRENCY: 3,
+  MAX_PINS: parseInt(process.env.REFRESH_MAX_PINS || '0', 10) || 0,
+};
+
+const SHARD_COUNT = Math.max(1, parseInt(process.env.SHARD_COUNT || '1', 10) || 1);
+const REFRESH_SHARD = Math.max(0, parseInt(process.env.REFRESH_SHARD || '0', 10) || 0);
 
 const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36',
@@ -43,6 +54,33 @@ async function supaQuery(table, params = '') {
 }
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function randomJitterMs(min = CFG.SLEEP_MS_MIN, max = CFG.SLEEP_MS_MAX) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+class Semaphore {
+  constructor(max) {
+    this.max = max;
+    this.count = 0;
+    this.queue = [];
+  }
+  async acquire() {
+    if (this.count < this.max) {
+      this.count++;
+      return;
+    }
+    await new Promise(resolve => this.queue.push(resolve));
+  }
+  release() {
+    this.count--;
+    if (this.queue.length > 0) {
+      this.count++;
+      const next = this.queue.shift();
+      next();
+    }
+  }
+}
 
 function findPinInTree(obj, pinId, depth = 0) {
   if (depth > 20 || !obj || typeof obj !== 'object') return null;
@@ -414,96 +452,140 @@ async function main() {
       console.log(`[SKIP] ${acc.username}: outside requested account.`); continue;
     }
 
-    const pins = await supaQuery('pa_pins', `select=pin_id,saves,repins,comments,share_count,reactions,annotations,seo_category,canonical_pin_id,seo_alt_text,board_pin_count,board_last_modified_at,archived_at,title,description,link,utm_link,domain,board_name,board_id,created_at_pinterest,image_url,dominant_color,image_signature,node_id,is_video,velocity&workspace_id=eq.${acc.workspace_id}&account_id=eq.${acc.id}&order=last_updated_at.asc&limit=${CFG.MAX_PINS}`);
+    const pinQueryLimit = CFG.MAX_PINS > 0 ? `&limit=${CFG.MAX_PINS}` : '';
+    const allPins = await supaQuery('pa_pins', `select=pin_id,saves,repins,comments,share_count,reactions,annotations,seo_category,canonical_pin_id,seo_alt_text,board_pin_count,board_last_modified_at,archived_at,title,description,link,utm_link,domain,board_name,board_id,created_at_pinterest,image_url,dominant_color,image_signature,node_id,is_video,velocity&workspace_id=eq.${acc.workspace_id}&account_id=eq.${acc.id}&order=last_updated_at.asc${pinQueryLimit}`);
+    const pins = allPins.filter((_, idx) => idx % SHARD_COUNT === REFRESH_SHARD);
+
     if (!pins.length) continue;
-    console.log(`${acc.username}: ${pins.length} pins to refresh`);
-    let consecutive403 = 0;
-    const changedBatch = [];
+    console.log(`${acc.username}: ${pins.length} pins to refresh (shard ${REFRESH_SHARD + 1}/${SHARD_COUNT} of ${allPins.length} total)`);
+
+    let consecutiveErrors = 0;
+    let rateLimitCooldownUntil = 0;
+    let circuitBroken = false;
+    const changedPins = [];
     let accountFollowerCount = typeof acc.follower_count === 'number' && acc.follower_count > 0 ? acc.follower_count : null;
 
-    for (let i = 0; i < pins.length; i++) {
-      const p = pins[i];
-      const pinId = String(p.pin_id);
-      if (consecutive403 >= CFG.CIRCUIT_BREAKER) {
-        summary.errors.push(`circuit-breaker: ${acc.username}`);
-        break;
-      }
-      const fresh = await fetchPinFromPinterest(pinId);
-      if (!fresh.ok) {
-        if (fresh.code === 403 || fresh.code === 429) consecutive403++;
-        else consecutive403 = 0;
-        if (fresh.code === 200 && fresh.diag) {
-          console.warn(`[DIAG] ${pinId}: html=${Math.round(fresh.diag.htmlLen / 1024)}KB relay=${fresh.diag.relay} pws=${fresh.diag.pws} hasPinId=${fresh.diag.hasPinId}`);
+    const sem = new Semaphore(CFG.CONCURRENCY);
+
+    // Two-Phase: Phase 1 (Concurrent Fetch & Extract)
+    await Promise.all(
+      pins.map(async (p) => {
+        await sem.acquire();
+        try {
+          if (circuitBroken) return;
+
+          // Rate-limit cooldown check
+          if (Date.now() < rateLimitCooldownUntil) {
+            const waitMs = Math.max(0, rateLimitCooldownUntil - Date.now());
+            console.warn(`[RATE LIMIT] Pausing for ${Math.round(waitMs / 1000)}s cooldown before pin ${p.pin_id}`);
+            await sleep(waitMs);
+          }
+
+          if (circuitBroken) return;
+
+          // Apply jitter delay before request
+          await sleep(randomJitterMs());
+
+          const pinId = String(p.pin_id);
+          const fresh = await fetchPinFromPinterest(pinId);
+
+          if (!fresh.ok) {
+            if (fresh.code === 429) {
+              consecutiveErrors++;
+              rateLimitCooldownUntil = Date.now() + 60000;
+              console.warn(`[429 RATE LIMIT] Pin ${pinId} received 429. Setting 60s cooldown.`);
+            } else if (fresh.code === 403) {
+              consecutiveErrors++;
+            } else {
+              consecutiveErrors = 0;
+            }
+
+            if (consecutiveErrors >= CFG.CIRCUIT_BREAKER) {
+              circuitBroken = true;
+              summary.errors.push(`circuit-breaker: ${acc.username}`);
+              console.error(`[CIRCUIT BREAKER] Hit ${CFG.CIRCUIT_BREAKER} consecutive errors on ${acc.username}. Aborting remaining pin fetches for this account.`);
+              return;
+            }
+
+            if (fresh.code === 200 && fresh.diag) {
+              console.warn(`[DIAG] ${pinId}: html=${Math.round(fresh.diag.htmlLen / 1024)}KB relay=${fresh.diag.relay} pws=${fresh.diag.pws} hasPinId=${fresh.diag.hasPinId}`);
+            }
+            console.warn(`[FAIL] ${pinId}: ${fresh.error || 'http ' + fresh.code} (code=${fresh.code})`);
+            summary.errors.push(`${pinId}: ${fresh.error || 'http ' + fresh.code}`);
+            return;
+          }
+
+          consecutiveErrors = 0;
+          summary.refreshed++;
+
+          if (typeof fresh.follower_count === 'number' && fresh.follower_count > 0 && accountFollowerCount === null) {
+            accountFollowerCount = fresh.follower_count;
+          }
+
+          const oldSaves = Number(p.saves) || 0;
+          const oldRepins = Number(p.repins) || 0;
+          const oldComments = Number(p.comments) || 0;
+          const oldShares = Number(p.share_count) || 0;
+
+          const existingAnnotationNames = new Set((Array.isArray(p.annotations) ? p.annotations : [])
+            .map(a => (typeof a === 'string' ? a.trim() : String(a?.name || '').trim()))
+            .filter(Boolean));
+          const newAnnotations = (Array.isArray(fresh.annotations) ? fresh.annotations : [])
+            .filter(a => a?.name && !existingAnnotationNames.has(a.name));
+
+          const createdAt = p.created_at_pinterest || fresh.created_at_pinterest;
+          const ageDays = createdAt ? Math.max(1, Math.round((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24))) : 1;
+
+          if (
+            fresh.saves !== oldSaves ||
+            fresh.repins !== oldRepins ||
+            fresh.comments !== oldComments ||
+            (typeof fresh.share_count === 'number' && fresh.share_count > 0 && fresh.share_count !== oldShares) ||
+            newAnnotations.length > 0
+          ) {
+            const changedItem = {
+              pin_id: pinId,
+              saves: fresh.saves,
+              repins: fresh.repins,
+              comments: fresh.comments,
+              velocity: Math.round((fresh.saves / ageDays) * 100) / 100,
+              archived_at: new Date().toISOString(),
+              refreshed_at: new Date().toISOString(),
+            };
+            if (fresh.reactions && Object.keys(fresh.reactions).length > 0) {
+              changedItem.reactions = fresh.reactions;
+            }
+            if (newAnnotations.length > 0) {
+              changedItem.annotations = newAnnotations;
+            }
+            if (typeof fresh.share_count === 'number' && fresh.share_count > 0) {
+              changedItem.share_count = fresh.share_count;
+            }
+            changedPins.push(changedItem);
+            summary.updated++;
+          }
+        } finally {
+          sem.release();
         }
-        console.warn(`[FAIL] ${pinId}: ${fresh.error || 'http ' + fresh.code} (code=${fresh.code})`);
-        summary.errors.push(`${pinId}: ${fresh.error || 'http ' + fresh.code}`);
-        await sleep(CFG.SLEEP_MS);
-        continue;
-      }
-      consecutive403 = 0;
-      summary.refreshed++;
+      })
+    );
 
-      if (typeof fresh.follower_count === 'number' && fresh.follower_count > 0 && accountFollowerCount === null) {
-        accountFollowerCount = fresh.follower_count;
-      }
-
-      const oldSaves = Number(p.saves) || 0;
-      const oldRepins = Number(p.repins) || 0;
-      const oldComments = Number(p.comments) || 0;
-      const oldShares = Number(p.share_count) || 0;
-
-      const existingAnnotationNames = new Set((Array.isArray(p.annotations) ? p.annotations : [])
-        .map(a => (typeof a === 'string' ? a.trim() : String(a?.name || '').trim()))
-        .filter(Boolean));
-      const newAnnotations = (Array.isArray(fresh.annotations) ? fresh.annotations : [])
-        .filter(a => a?.name && !existingAnnotationNames.has(a.name));
-
-      if (
-        fresh.saves !== oldSaves ||
-        fresh.repins !== oldRepins ||
-        fresh.comments !== oldComments ||
-        (typeof fresh.share_count === 'number' && fresh.share_count > 0 && fresh.share_count !== oldShares) ||
-        newAnnotations.length > 0
-      ) {
-        const changedItem = {
-          pin_id: pinId,
-          saves: fresh.saves,
-          repins: fresh.repins,
-          comments: fresh.comments,
-          velocity: Math.round((fresh.saves / ageDays) * 100) / 100,
-          archived_at: new Date().toISOString(),
-          refreshed_at: new Date().toISOString(),
-        };
-        if (fresh.reactions && Object.keys(fresh.reactions).length > 0) {
-          changedItem.reactions = fresh.reactions;
-        }
-        if (newAnnotations.length > 0) {
-          changedItem.annotations = newAnnotations;
-        }
-        if (typeof fresh.share_count === 'number' && fresh.share_count > 0) {
-          changedItem.share_count = fresh.share_count;
-        }
-        changedBatch.push(changedItem);
-        summary.updated++;
-      }
-
-      if (changedBatch.length >= CFG.BATCH_SIZE) {
-        const result = await pushBatch(acc.workspace_id, acc.username, changedBatch.splice(0, changedBatch.length), accountFollowerCount, pins.length);
+    // Two-Phase: Phase 2 (Sequential Batch Push)
+    if (changedPins.length > 0) {
+      console.log(`[PUSH] Pushing ${changedPins.length} changed pins for @${acc.username} in batches of ${CFG.BATCH_SIZE}...`);
+      for (let i = 0; i < changedPins.length; i += CFG.BATCH_SIZE) {
+        const batch = changedPins.slice(i, i + CFG.BATCH_SIZE);
+        const result = await pushBatch(acc.workspace_id, acc.username, batch, accountFollowerCount, allPins.length);
         if (result.ok) {
           summary.pushed += result.pushed;
         } else {
           summary.errors.push(`push: ${result.error}`);
           if (result.terminal) break;
         }
-        await sleep(CFG.PUSH_SLEEP_MS);
+        if (i + CFG.BATCH_SIZE < changedPins.length) {
+          await sleep(CFG.PUSH_SLEEP_MS);
+        }
       }
-      await sleep(CFG.SLEEP_MS);
-    }
-
-    if (changedBatch.length) {
-      const result = await pushBatch(acc.workspace_id, acc.username, changedBatch, accountFollowerCount, pins.length);
-      if (result.ok) summary.pushed += result.pushed;
-      else summary.errors.push(`push: ${result.error}`);
     }
   }
 
@@ -519,7 +601,7 @@ async function main() {
   if (summary.errors.length > summary.refreshed) process.exit(1);
 }
 
-export { extractPinData, formatPin, findPinInTree, fetchPinFromPinterest, pushBatch };
+export { extractPinData, formatPin, findPinInTree, fetchPinFromPinterest, pushBatch, Semaphore };
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   main().catch(err => { console.error('Fatal:', err); process.exit(1); });
