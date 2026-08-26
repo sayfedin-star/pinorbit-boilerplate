@@ -786,7 +786,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
               ${fmtNumber(acc.follower_count)}
             </td>
             <td class="py-3.5 px-4 font-semibold text-foreground">
-              ${fmtNumber(acc.pins_count)}
+              <span title="GAS sheet count: ${fmtNumber(acc.pins_count)}">${fmtNumber(acc.db_pins_count !== undefined ? acc.db_pins_count : acc.pins_count)}</span>
             </td>
             <td class="py-3.5 px-4 text-muted-foreground">
               ${escapeHtml(String(acc.interval_days || 3))}d

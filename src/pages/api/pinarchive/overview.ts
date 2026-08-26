@@ -53,7 +53,26 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return json({ success: false, error: accRes.error.message }, 500);
     }
 
-    const accounts = accRes.data || [];
+    const accounts = (accRes.data || []).map((a: any) => ({ ...a }));
+
+    // Fetch live DB pin count per account
+    const countMap = new Map<string, number>();
+    try {
+      if (typeof db.rpc === 'function') {
+        const { data: countData, error: countRpcErr } = await db.rpc('pa_account_pin_counts', { p_workspace_id: ws });
+        if (!countRpcErr && Array.isArray(countData)) {
+          for (const row of countData) {
+            if (row.account_id) countMap.set(row.account_id, Number(row.pins || 0));
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Could not query pa_account_pin_counts:', err);
+    }
+
+    for (const a of accounts) {
+      a.db_pins_count = countMap.has(a.id) ? countMap.get(a.id) : a.pins_count;
+    }
 
     // 1. Get exact total pins count once via lightweight HEAD request
     const { count: totalPinsCount, error: countErr } = await db
