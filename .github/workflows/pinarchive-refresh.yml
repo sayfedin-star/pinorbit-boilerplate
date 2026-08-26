@@ -50,4 +50,5 @@ jobs:
           REFRESH_USERNAME: ${{ github.event.inputs.username || '' }}
           REFRESH_SHARD: ${{ matrix.shard }}
           SHARD_COUNT: 4
+          REFRESH_MAX_PINS: '0'
         run: node scripts/pinarchive-refresh.mjs

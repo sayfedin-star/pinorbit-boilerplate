@@ -176,7 +176,7 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
 
       <div class="bg-background rounded-xl border border-border p-3.5">
         <span class="text-[11px] font-medium text-muted-foreground uppercase block">Pins Total</span>
-        <span class="text-lg font-bold text-foreground mt-1 block" id="account-pins-total-metric">{(account.pins_count || 0).toLocaleString('en-US')}</span>
+        <span class="text-lg font-bold text-foreground mt-1 block" id="account-pins-total-metric" title={`GAS sheet count: ${(account.pins_count || 0).toLocaleString('en-US')}`}>{(account.pins_count || 0).toLocaleString('en-US')}</span>
       </div>
 
       <div class="bg-background rounded-xl border border-border p-3.5">
@@ -186,15 +186,19 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
 
       <div class="bg-background rounded-xl border border-border p-3.5">
         <span class="text-[11px] font-medium text-muted-foreground uppercase block">Last Run</span>
-        <span class="text-xs font-bold text-foreground mt-1 block truncate" title={account.last_run_at || 'Never'}>
+        <span class="text-xs font-bold text-foreground mt-1 block truncate" title={account.last_run_at ? new Date(account.last_run_at).toLocaleString() : 'Never'}>
           {account.last_run_at ? new Date(account.last_run_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Never'}
         </span>
       </div>
 
       <div class="bg-background rounded-xl border border-border p-3.5">
         <span class="text-[11px] font-medium text-muted-foreground uppercase block">Next Run</span>
-        <span class="text-xs font-bold text-foreground mt-1 block truncate" title={account.next_run_at || 'Automatic'}>
-          {account.next_run_at ? new Date(account.next_run_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Pending'}
+        <span class="text-xs font-bold text-foreground mt-1 block truncate" title={account.next_run_at ? new Date(account.next_run_at).toLocaleString() : (account.last_run_at ? new Date(new Date(account.last_run_at).getTime() + Number(account.interval_days || 3) * 86400000).toLocaleString() + ' (est.)' : 'Pending')}>
+          {account.next_run_at
+            ? new Date(account.next_run_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+            : account.last_run_at
+              ? `${new Date(new Date(account.last_run_at).getTime() + Number(account.interval_days || 3) * 86400000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} (est.)`
+              : 'Pending'}
         </span>
       </div>
     </div>
@@ -378,19 +382,44 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
     <!-- 2. Table View Container -->
     <div id="account-pins-table-wrap" class="hidden overflow-x-auto rounded-xl border border-border bg-card shadow-xs">
       <table class="w-full text-left text-xs">
-        <thead class="bg-muted/40 text-muted-foreground text-[11px] uppercase border-b border-border/80 font-semibold">
+        <thead class="bg-muted/40 text-muted-foreground text-[11px] uppercase border-b border-border/80 font-semibold select-none">
           <tr>
             <th class="py-3 px-3 w-16" data-col="preview">Preview</th>
             <th class="py-3 px-4 font-semibold text-foreground" data-col="title">Pin Title</th>
             <th class="py-3 px-3 font-semibold" data-col="board">Board</th>
-            <th class="py-3 px-3 font-semibold text-right" data-col="saves">Saves &amp; Δ</th>
-            <th class="py-3 px-3 font-semibold text-right" data-col="repins">Repins &amp; Δ</th>
+            <th class="py-3 px-3 font-semibold text-right" data-col="saves">
+              <button type="button" data-header-sort="saves" class="inline-flex items-center justify-end gap-1 hover:text-foreground cursor-pointer transition-colors w-full">
+                <span>Saves &amp; Δ</span>
+                <span class="sort-icon opacity-40">↕</span>
+              </button>
+            </th>
+            <th class="py-3 px-3 font-semibold text-right" data-col="repins">
+              <button type="button" data-header-sort="repins" class="inline-flex items-center justify-end gap-1 hover:text-foreground cursor-pointer transition-colors w-full">
+                <span>Repins &amp; Δ</span>
+                <span class="sort-icon opacity-40">↕</span>
+              </button>
+            </th>
             <th class="py-3 px-3 font-semibold text-right" data-col="comments">Comments</th>
             <th class="py-3 px-3 font-semibold text-right" data-col="shares">Shares</th>
-            <th class="py-3 px-3 font-semibold text-right" data-col="velocity">Velocity</th>
+            <th class="py-3 px-3 font-semibold text-right" data-col="velocity">
+              <button type="button" data-header-sort="velocity" class="inline-flex items-center justify-end gap-1 hover:text-foreground cursor-pointer transition-colors w-full">
+                <span>Velocity</span>
+                <span class="sort-icon opacity-40">↕</span>
+              </button>
+            </th>
             <th class="py-3 px-3 font-semibold text-center" data-col="stage">Stage</th>
-            <th class="py-3 px-3 font-semibold" data-col="first_pulled">First Pulled</th>
-            <th class="py-3 px-3 font-semibold" data-col="created">Created</th>
+            <th class="py-3 px-3 font-semibold" data-col="first_pulled">
+              <button type="button" data-header-sort="first_seen_at" class="inline-flex items-center gap-1 hover:text-foreground cursor-pointer transition-colors">
+                <span>First Pulled</span>
+                <span class="sort-icon opacity-40">↕</span>
+              </button>
+            </th>
+            <th class="py-3 px-3 font-semibold" data-col="created">
+              <button type="button" data-header-sort="created_at_pinterest" class="inline-flex items-center gap-1 hover:text-foreground cursor-pointer transition-colors">
+                <span>Created</span>
+                <span class="sort-icon opacity-40">↕</span>
+              </button>
+            </th>
             <th class="py-3 px-3 text-right font-semibold" data-col="actions">Actions</th>
           </tr>
         </thead>
@@ -414,6 +443,7 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
   let workspaceId = '';
   let username = '';
   let currentSort = 'saves';
+  let headerSort: { sort: string; asc: boolean } | null = null;
   let currentLimit = 50;
   let currentPage = 1;
   let currentSearch = '';
@@ -903,10 +933,14 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
     if (!accountId) return;
 
     try {
+      const activeSort = headerSort ? headerSort.sort : currentSort;
+      const isAsc = headerSort ? headerSort.asc : false;
+
       const params = new URLSearchParams({
         mode: 'page',
         account_id: accountId,
-        sort: currentSort,
+        sort: activeSort,
+        asc: isAsc ? '1' : '0',
         limit: String(currentLimit),
         page: String(currentPage),
       });
@@ -924,6 +958,10 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
       const total = Number(json.total || 0);
 
       if (badge) badge.textContent = `${fmtNumber(total)}`;
+      const metricPins = document.getElementById('account-pins-total-metric');
+      if (metricPins && !currentSearch && !currentBoard && !currentStage) {
+        metricPins.textContent = fmtNumber(total);
+      }
 
       // Render Cards
       if (grid) {
@@ -1172,6 +1210,44 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
     }
   }
 
+  function updateHeaderSortIcons() {
+    document.querySelectorAll<HTMLButtonElement>('[data-header-sort]').forEach((btn) => {
+      const key = btn.getAttribute('data-header-sort');
+      const icon = btn.querySelector('.sort-icon');
+      if (!icon) return;
+      if (headerSort && headerSort.sort === key) {
+        icon.textContent = headerSort.asc ? '▲' : '▼';
+        icon.className = 'sort-icon text-primary font-bold opacity-100';
+        btn.classList.add('text-primary');
+      } else {
+        icon.textContent = '↕';
+        icon.className = 'sort-icon text-muted-foreground opacity-40';
+        btn.classList.remove('text-primary');
+      }
+    });
+  }
+
+  function setupHeaderSortButtons() {
+    document.querySelectorAll<HTMLButtonElement>('[data-header-sort]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const key = btn.getAttribute('data-header-sort');
+        if (!key) return;
+
+        if (!headerSort || headerSort.sort !== key) {
+          headerSort = { sort: key, asc: false }; // 1st click: desc
+        } else if (headerSort.asc === false) {
+          headerSort = { sort: key, asc: true }; // 2nd click: asc
+        } else {
+          headerSort = null; // 3rd click: off (revert to dropdown default)
+        }
+
+        updateHeaderSortIcons();
+        currentPage = 1;
+        loadAccountPins();
+      });
+    });
+  }
+
   function init() {
     const root = document.getElementById('account-card-root');
     if (root) {
@@ -1187,6 +1263,7 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
     // Setup toggles and GAS controls
     setupIngestToggle();
     setupGasControls();
+    setupHeaderSortButtons();
 
     // Load boards dropdown and pins
     loadBoardsList();
@@ -1240,6 +1317,8 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
     const sortSelect = document.getElementById('account-pins-sort') as HTMLSelectElement | null;
     if (sortSelect) {
       sortSelect.addEventListener('change', () => {
+        headerSort = null;
+        updateHeaderSortIcons();
         currentSort = sortSelect.value;
         currentPage = 1;
         loadAccountPins();

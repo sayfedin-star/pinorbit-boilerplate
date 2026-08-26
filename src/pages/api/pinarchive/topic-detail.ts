@@ -48,6 +48,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return json({ success: false, error: 'Validation Error: name (1-120 chars) is required.' }, 400);
   }
 
+  const rawAccountId = searchParams.get('account_id')?.trim();
+  const accountId = rawAccountId && UUID_REGEX.test(rawAccountId) ? rawAccountId : null;
+  const board = searchParams.get('board')?.trim() || null;
+
   try {
     // PostgREST rejects cs.[{...}] on jsonb arrays ("invalid input syntax for type json");
     // fetch candidates and filter annotations in JS instead (same query as topics.ts).
@@ -62,9 +66,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return json({ success: false, error: error.message }, 500);
     }
 
-    const rawPins = (candidates || []).filter((p: any) =>
+    const namePins = (candidates || []).filter((p: any) =>
       (Array.isArray(p.annotations) ? p.annotations : [])
         .some((a: any) => (typeof a === 'string' ? a.trim() : String(a?.name || '').trim()) === name)
+    );
+
+    let rawPins = namePins.filter((p: any) =>
+      (!accountId || p.account_id === accountId) &&
+      (!board || p.board_name === board || (p.board_name || 'General Board').trim() === board)
     );
     const pinsCount = rawPins.length;
     let total_saves = 0;
@@ -169,13 +178,41 @@ export const GET: APIRoute = async ({ request, locals }) => {
       if (a.id) usernameMap.set(a.id, a.username || 'unknown');
     }
 
-    const accountTallyMap = new Map<string, { username: string; pins: number; sum_saves: number }>();
+    // Cluster-wide accounts & boards (from all namePins before account/board filters)
+    const clusterAccountMap = new Map<string, { account_id: string; username: string; pins: number; sum_saves: number }>();
+    const clusterBoardMap = new Map<string, { name: string; pins: number; sum_saves: number }>();
+
+    for (const p of namePins) {
+      const accId = p.account_id || '';
+      const uname = (accId && usernameMap.get(accId)) || 'unknown';
+      let aEntry = clusterAccountMap.get(accId);
+      if (!aEntry) {
+        aEntry = { account_id: accId, username: uname, pins: 0, sum_saves: 0 };
+        clusterAccountMap.set(accId, aEntry);
+      }
+      aEntry.pins += 1;
+      aEntry.sum_saves += Number(p.saves || 0);
+
+      const bName = (p.board_name || 'General Board').trim();
+      let bEntry = clusterBoardMap.get(bName);
+      if (!bEntry) {
+        bEntry = { name: bName, pins: 0, sum_saves: 0 };
+        clusterBoardMap.set(bName, bEntry);
+      }
+      bEntry.pins += 1;
+      bEntry.sum_saves += Number(p.saves || 0);
+    }
+
+    const all_accounts = Array.from(clusterAccountMap.values()).sort((a, b) => b.sum_saves - a.sum_saves);
+    const all_boards = Array.from(clusterBoardMap.values()).sort((a, b) => b.sum_saves - a.sum_saves);
+
+    const accountTallyMap = new Map<string, { account_id: string; username: string; pins: number; sum_saves: number }>();
     for (const p of rawPins) {
       const accId = p.account_id || '';
       const username = (accId && usernameMap.get(accId)) || 'unknown';
       let entry = accountTallyMap.get(username);
       if (!entry) {
-        entry = { username, pins: 0, sum_saves: 0 };
+        entry = { account_id: accId, username, pins: 0, sum_saves: 0 };
         accountTallyMap.set(username, entry);
       }
       entry.pins += 1;
@@ -189,21 +226,23 @@ export const GET: APIRoute = async ({ request, locals }) => {
       .sort((a, b) => b.pins - a.pins)
       .slice(0, 15);
 
-    // Top 12 pins
-    const top_pins = rawPins.slice(0, 12).map((p: any) => {
+    // Formatted pins (all matching pins for instant client filtering)
+    const formatted_pins = rawPins.map((p: any) => {
       const v = Number(p.velocity || 0);
       const pinDate = p.created_at_pinterest || p.archived_at;
       const ageDays = Math.max(0, (Date.now() - new Date(pinDate || Date.now()).getTime()) / 86400000);
+      const accId = p.account_id || '';
       return {
         id: p.id,
         pin_id: p.pin_id,
         title: p.title,
         image_url: p.image_url,
         link: p.link,
-        saves: p.saves,
-        repins: p.repins,
-        share_count: p.share_count,
-        velocity: p.velocity,
+        saves: Number(p.saves || 0),
+        repins: Number(p.repins || 0),
+        comments: Number(p.comments || 0),
+        share_count: Number(p.share_count || 0),
+        velocity: v,
         stage: computePinStage(v, 0, ageDays),
         anomaly: null,
         board_name: p.board_name,
@@ -211,8 +250,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
         annotations: p.annotations,
         created_at_pinterest: p.created_at_pinterest,
         archived_at: p.archived_at,
+        account_id: accId,
+        account_username: (accId && usernameMap.get(accId)) || 'unknown',
       };
     });
+
+    const top_pins = formatted_pins.slice(0, 12);
 
     return json({
       success: true,
@@ -221,8 +264,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       stage_distribution,
       boards,
       accounts,
+      all_accounts,
+      all_boards,
       cooccurring,
       top_pins,
+      pins: formatted_pins,
     });
   } catch (e: any) {
     return json({ success: false, error: e.message || 'Internal Server Error' }, 500);

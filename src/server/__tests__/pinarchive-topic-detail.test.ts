@@ -350,9 +350,83 @@ describe('PinArchive Topic Detail API Suite (GET /api/pinarchive/topic-detail)',
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.success).toBe(true);
+    expect(json.status).toBeUndefined();
     expect(json.accounts.length).toBe(1);
     expect(json.accounts[0].username).toBe('unknown');
     expect(json.accounts[0].pins).toBe(2);
     expect(json.accounts[0].sum_saves).toBe(200);
+  });
+
+  // 7) filters by account_id and board correctly
+  it('filters rawPins by account_id and board before computing aggregations', async () => {
+    const queryTopic = 'Smoothies';
+    const mockPins = [
+      {
+        id: 'pin-1',
+        pin_id: '201',
+        saves: 80,
+        velocity: 1.0,
+        account_id: '00000000-0000-0000-0000-000000000010',
+        board_name: 'Breakfast Drinks',
+        annotations: [{ name: 'Smoothies' }],
+        created_at_pinterest: '2026-07-01T00:00:00Z',
+      },
+      {
+        id: 'pin-2',
+        pin_id: '202',
+        saves: 120,
+        velocity: 1.5,
+        account_id: '00000000-0000-0000-0000-000000000020',
+        board_name: 'Healthy Snacks',
+        annotations: [{ name: 'Smoothies' }],
+        created_at_pinterest: '2026-07-01T00:00:00Z',
+      },
+    ];
+
+    mockPinArchiveClient.from.mockImplementation((table: string) => {
+      if (table === 'pa_pins') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue({ data: mockPins, error: null }),
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'pa_accounts') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue({
+                data: [
+                  { id: '00000000-0000-0000-0000-000000000010', username: 'drinkqueen' },
+                  { id: '00000000-0000-0000-0000-000000000020', username: 'snackking' },
+                ],
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    const req = new Request(`http://localhost:4321/api/pinarchive/topic-detail?name=${encodeURIComponent(queryTopic)}&account_id=00000000-0000-0000-0000-000000000010&board=Breakfast%20Drinks`);
+    const res = await topicDetailHandler({
+      request: req,
+      locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
+    } as any);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.success).toBe(true);
+    expect(json.kpis.pins).toBe(1);
+    expect(json.kpis.total_saves).toBe(80);
+    expect(json.accounts.length).toBe(1);
+    expect(json.accounts[0].username).toBe('drinkqueen');
+    expect(json.boards.length).toBe(1);
+    expect(json.boards[0].name).toBe('Breakfast Drinks');
   });
 });
