@@ -441,7 +441,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const curRepins = Number(up.repins || 0);
           const curShares = Number(up.share_count || 0);
 
-          if (!existing || curSaves > existing.saves || curRepins > existing.repins || curShares > existing.share_count) {
+          if (!existing || curSaves > existing.saves || curRepins > existing.repins) {
             metricsToInsert.push({
               workspace_id: workspaceId,
               pin_ref: up.id,

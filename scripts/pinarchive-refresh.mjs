@@ -539,8 +539,6 @@ async function main() {
 
           const oldSaves = Number(p.saves) || 0;
           const oldRepins = Number(p.repins) || 0;
-          const oldComments = Number(p.comments) || 0;
-          const oldShares = Number(p.share_count) || 0;
 
           const existingAnnotationNames = new Set((Array.isArray(p.annotations) ? p.annotations : [])
             .map(a => (typeof a === 'string' ? a.trim() : String(a?.name || '').trim()))
@@ -554,8 +552,6 @@ async function main() {
           if (
             fresh.saves !== oldSaves ||
             fresh.repins !== oldRepins ||
-            fresh.comments !== oldComments ||
-            (typeof fresh.share_count === 'number' && fresh.share_count > 0 && fresh.share_count !== oldShares) ||
             newAnnotations.length > 0
           ) {
             const changedItem = {
