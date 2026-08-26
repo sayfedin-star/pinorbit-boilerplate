@@ -9,31 +9,33 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
 <Layout title="PinArchive Intelligence" description="Historical pin performance, winning recipe clusters, SEO topics, and canonical variations.">
   <div id="pinarchive-page-root" data-workspace-id={activeWorkspaceId}>
   <!-- ═══ Header & Primary Controls ═══ -->
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
     <div>
       <SectionHeader
         title="PinArchive Intelligence"
         description="Historical pin performance archive, high-velocity winners, SEO topic clusters, and canonical groupings."
       />
-      <div id="refresh-meta-line" class="text-xs text-muted-foreground -mt-3 mb-2 flex items-center gap-1.5">
-        <span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
-        <span id="refresh-meta-text">Loading sync schedule...</span>
-      </div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
-      <!-- Link to Dedicated Winning Pins Page -->
+    <div class="flex flex-wrap items-center gap-3 self-start sm:self-auto">
+      <!-- Status Pill -->
+      <div id="refresh-meta-line" class="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs text-muted-foreground shadow-xs">
+        <span class="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="refresh-meta-text" class="font-medium">Loading sync schedule...</span>
+      </div>
+
+      <!-- Link to Dedicated Winning Pins Page (Ghost/Outline) -->
       <a
         href="/pinarchive/winning-pins"
-        class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary text-primary-foreground px-3.5 py-2 text-xs font-bold shadow-xs hover:bg-primary/90 transition-all"
+        class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card text-foreground px-3.5 py-2 text-xs font-semibold shadow-xs hover:bg-muted transition-all"
       >
         <span>🏆 Winning Pins →</span>
       </a>
 
-      <!-- Link to Dedicated Topic Clusters Page -->
+      <!-- Link to Dedicated Topic Clusters Page (Ghost/Outline) -->
       <a
         href="/pinarchive/topics"
-        class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary text-primary-foreground px-3.5 py-2 text-xs font-bold shadow-xs hover:bg-primary/90 transition-all"
+        class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card text-foreground px-3.5 py-2 text-xs font-semibold shadow-xs hover:bg-muted transition-all"
       >
         <span>🏷️ Topic Clusters →</span>
       </a>
@@ -41,69 +43,81 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
   </div>
 
   <!-- ═══ KPI Totals Bar (Full Numbers) ═══ -->
-  <div class="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    <div class="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-all">
+  <div class="mb-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Card 1: Accounts -->
+    <div class="rounded-2xl border border-border bg-card p-5 shadow-xs flex flex-col justify-between">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Archived Accounts</span>
+        <span class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Archived Accounts</span>
         <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </span>
       </div>
-      <div class="text-2xl font-bold tracking-tight text-foreground mt-2" id="kpi-accounts-count">
-        <div class="h-7 w-12 bg-muted/60 rounded animate-pulse"></div>
+      <div>
+        <div class="text-3xl font-bold tracking-tight text-foreground mt-3" id="kpi-accounts-count">
+          <div class="h-8 w-12 bg-muted/60 rounded animate-pulse"></div>
+        </div>
+        <div class="mt-1 text-[11px] text-muted-foreground" id="kpi-accounts-sub">Tracked in archive</div>
       </div>
-      <div class="mt-1 text-[11px] text-muted-foreground" id="kpi-accounts-sub">Tracked in archive</div>
     </div>
 
-    <div class="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-all">
+    <!-- Card 2: Archived Pins -->
+    <div class="rounded-2xl border border-border bg-card p-5 shadow-xs flex flex-col justify-between">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Archived Pins</span>
+        <span class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Archived Pins</span>
         <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
         </span>
       </div>
-      <div class="text-2xl font-bold tracking-tight text-emerald-500 mt-2" id="kpi-archived-pins">
-        <div class="h-7 w-16 bg-muted/60 rounded animate-pulse"></div>
+      <div>
+        <div class="text-3xl font-bold tracking-tight text-emerald-500 mt-3" id="kpi-archived-pins">
+          <div class="h-8 w-16 bg-muted/60 rounded animate-pulse"></div>
+        </div>
+        <div class="mt-1 text-[11px] text-muted-foreground" id="kpi-archived-sub">With verified metrics</div>
       </div>
-      <div class="mt-1 text-[11px] text-muted-foreground" id="kpi-archived-sub">With verified metrics</div>
     </div>
 
-    <div class="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-all">
+    <!-- Card 3: Total Saves -->
+    <div class="rounded-2xl border border-border bg-card p-5 shadow-xs flex flex-col justify-between">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Saves</span>
+        <span class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Total Saves</span>
         <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
         </span>
       </div>
-      <div class="text-2xl font-bold tracking-tight text-foreground mt-2" id="kpi-total-saves">
-        <div class="h-7 w-20 bg-muted/60 rounded animate-pulse"></div>
+      <div>
+        <div class="text-3xl font-bold tracking-tight text-foreground mt-3" id="kpi-total-saves">
+          <div class="h-8 w-20 bg-muted/60 rounded animate-pulse"></div>
+        </div>
+        <div class="mt-1 text-[11px] text-muted-foreground" id="kpi-saves-sub">Cumulative pin saves</div>
       </div>
-      <div class="mt-1 text-[11px] text-muted-foreground" id="kpi-saves-sub">Cumulative pin saves</div>
     </div>
 
-    <div class="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-all">
+    <!-- Card 4: Total Shares -->
+    <div class="rounded-2xl border border-border bg-card p-5 shadow-xs flex flex-col justify-between">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Shares</span>
+        <span class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Total Shares</span>
         <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         </span>
       </div>
-      <div class="text-2xl font-bold tracking-tight text-foreground mt-2" id="kpi-total-shares">
-        <div class="h-7 w-16 bg-muted/60 rounded animate-pulse"></div>
+      <div>
+        <div class="text-3xl font-bold tracking-tight text-foreground mt-3" id="kpi-total-shares">
+          <div class="h-8 w-16 bg-muted/60 rounded animate-pulse"></div>
+        </div>
+        <div class="mt-1 text-[11px] text-muted-foreground" id="kpi-shares-sub">Social engagement signals</div>
       </div>
-      <div class="mt-1 text-[11px] text-muted-foreground" id="kpi-shares-sub">Social engagement signals</div>
     </div>
   </div>
 
   <!-- ═══ Ingestion Controls Card ═══ -->
-  <section class="mb-8 rounded-xl border border-border bg-card p-5 shadow-sm space-y-4" aria-labelledby="ingest-settings-heading">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-border">
+  <section class="mb-8 rounded-2xl border border-border bg-card p-5 shadow-xs space-y-5" aria-labelledby="ingest-settings-heading">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-border/80">
       <div>
         <h2 id="ingest-settings-heading" class="text-sm font-bold text-foreground flex items-center gap-2">
           <span>⚙️ GAS Ingestion Controls</span>
           <span id="settings-role-badge" class="hidden text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Admin Only</span>
         </h2>
-        <p class="text-xs text-muted-foreground mt-0.5">A pin is archived &amp; shown if it matches ANY rule (OR). 0 disables a rule.</p>
       </div>
       <div class="flex items-center gap-3">
         <span id="settings-status-msg" class="text-xs font-semibold"></span>
@@ -117,138 +131,159 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <!-- Ingest Enabled Master Switch -->
-      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
-        <div>
-          <label for="setting-ingest-enabled" class="text-xs font-bold text-foreground block">Master Ingest Switch</label>
-          <span class="text-[11px] text-muted-foreground">Accept or reject incoming GAS runs.</span>
+    <!-- Body: 2 Columns (Gates vs Defaults) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-2 border-b border-border/60">
+      <!-- LEFT: Gates -->
+      <div class="space-y-3">
+        <span class="text-xs font-bold text-foreground block">Ingestion Gates</span>
+        
+        <!-- Master Ingest Switch -->
+        <div class="rounded-xl border border-border bg-background p-3.5 flex items-center justify-between">
+          <div>
+            <label for="setting-ingest-enabled" class="text-xs font-bold text-foreground block">Master Ingest Switch</label>
+            <span class="text-[11px] text-muted-foreground">Accept or reject incoming GAS runs.</span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span id="setting-ingest-label" class="text-xs font-bold text-emerald-500">Active</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input id="setting-ingest-enabled" type="checkbox" checked class="sr-only peer" />
+              <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
+            </label>
+          </div>
         </div>
-        <div class="mt-2.5 flex items-center justify-between">
-          <span id="setting-ingest-label" class="text-xs font-bold text-emerald-500">Active</span>
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input id="setting-ingest-enabled" type="checkbox" checked class="sr-only peer" />
-            <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
-          </label>
+
+        <!-- Paused Account Policy -->
+        <div class="rounded-xl border border-border bg-background p-3.5 flex flex-col justify-between">
+          <div>
+            <label for="setting-paused-policy" class="text-xs font-bold text-foreground block">Paused Account Policy</label>
+            <span class="text-[11px] text-muted-foreground">Behavior when paused account sends data.</span>
+          </div>
+          <select
+            id="setting-paused-policy"
+            class="mt-2.5 w-full rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-foreground focus:outline-none cursor-pointer"
+          >
+            <option value="reject">Reject Ingest (Ingest disabled)</option>
+            <option value="accept">Allow Ingest Silently</option>
+          </select>
         </div>
       </div>
 
-      <!-- Paused Account Policy -->
-      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
-        <div>
-          <label for="setting-paused-policy" class="text-xs font-bold text-foreground block">Paused Account Policy</label>
-          <span class="text-[11px] text-muted-foreground">Behavior when paused account sends data.</span>
+      <!-- RIGHT: Defaults -->
+      <div class="space-y-3">
+        <span class="text-xs font-bold text-foreground block">Default Cadence &amp; Payload</span>
+
+        <!-- Default Sync Interval -->
+        <div class="rounded-xl border border-border bg-background p-3.5 flex flex-col justify-between">
+          <div>
+            <label for="setting-default-interval" class="text-xs font-bold text-foreground block">Default Sync Interval</label>
+            <span class="text-[11px] text-muted-foreground">Cadence in days for new accounts.</span>
+          </div>
+          <input
+            id="setting-default-interval"
+            type="number"
+            min="1"
+            max="30"
+            value="3"
+            class="mt-2.5 w-full rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-foreground focus:outline-none"
+          />
         </div>
-        <select
-          id="setting-paused-policy"
-          class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none cursor-pointer"
-        >
-          <option value="reject">Reject Ingest (Ingest disabled)</option>
-          <option value="accept">Allow Ingest Silently</option>
-        </select>
+
+        <!-- Max Batch Pins -->
+        <div class="rounded-xl border border-border bg-background p-3.5 flex flex-col justify-between">
+          <div>
+            <label for="setting-max-batch" class="text-xs font-bold text-foreground block">Max Batch Pins</label>
+            <span class="text-[11px] text-muted-foreground">Payload limit per POST /ingest.</span>
+          </div>
+          <input
+            id="setting-max-batch"
+            type="number"
+            min="10"
+            max="5000"
+            value="500"
+            class="mt-2.5 w-full rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-foreground focus:outline-none"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Below: Full-width Archive filter rules (OR) -->
+    <div>
+      <div class="mb-2.5">
+        <h3 class="text-xs font-bold text-foreground">Archive filter rules (OR)</h3>
+        <p class="text-[11px] text-muted-foreground">Pins meeting any criteria below will be archived.</p>
       </div>
 
-      <!-- Default Sync Interval -->
-      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
-        <div>
-          <label for="setting-default-interval" class="text-xs font-bold text-foreground block">Default Sync Interval</label>
-          <span class="text-[11px] text-muted-foreground">Cadence in days for new accounts.</span>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <!-- Rule 1 — Min Saves ≥ -->
+        <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
+          <div class="flex items-center gap-1.5 mb-1.5">
+            <span class="h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold inline-flex items-center justify-center shrink-0">1</span>
+            <label for="setting-min-saves" class="text-xs font-bold text-foreground truncate">Min Saves ≥</label>
+          </div>
+          <input
+            id="setting-min-saves"
+            type="number"
+            min="0"
+            max="1000000"
+            value="0"
+            class="w-full rounded-xl border border-border bg-card h-9 px-3 py-2 text-xs font-medium text-foreground focus:outline-none"
+          />
         </div>
-        <input
-          id="setting-default-interval"
-          type="number"
-          min="1"
-          max="30"
-          value="3"
-          class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none"
-        />
-      </div>
 
-      <!-- Max Batch Pins -->
-      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
-        <div>
-          <label for="setting-max-batch" class="text-xs font-bold text-foreground block">Max Batch Pins</label>
-          <span class="text-[11px] text-muted-foreground">Payload limit per POST /ingest.</span>
+        <!-- Rule 2 — Min Repins ≥ -->
+        <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
+          <div class="flex items-center gap-1.5 mb-1.5">
+            <span class="h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold inline-flex items-center justify-center shrink-0">2</span>
+            <label for="setting-min-repins" class="text-xs font-bold text-foreground truncate">Min Repins ≥</label>
+          </div>
+          <input
+            id="setting-min-repins"
+            type="number"
+            min="0"
+            max="1000000"
+            value="0"
+            class="w-full rounded-xl border border-border bg-card h-9 px-3 py-2 text-xs font-medium text-foreground focus:outline-none"
+          />
         </div>
-        <input
-          id="setting-max-batch"
-          type="number"
-          min="10"
-          max="5000"
-          value="500"
-          class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none"
-        />
-      </div>
 
-      <!-- Rule 1 — Min Saves ≥ -->
-      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
-        <div>
-          <label for="setting-min-saves" class="text-xs font-bold text-foreground block">Rule 1 — Min Saves ≥</label>
-          <span class="text-[11px] text-muted-foreground">Min saves required (0 = off).</span>
+        <!-- Rule 3 — Rising: Age ≤ (days) -->
+        <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
+          <div class="flex items-center gap-1.5 mb-1.5">
+            <span class="h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold inline-flex items-center justify-center shrink-0">3</span>
+            <label for="setting-rising-age" class="text-xs font-bold text-foreground truncate">Rising: Age ≤ (d)</label>
+          </div>
+          <input
+            id="setting-rising-age"
+            type="number"
+            min="0"
+            max="365"
+            value="14"
+            class="w-full rounded-xl border border-border bg-card h-9 px-3 py-2 text-xs font-medium text-foreground focus:outline-none"
+          />
         </div>
-        <input
-          id="setting-min-saves"
-          type="number"
-          min="0"
-          max="1000000"
-          value="0"
-          class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none"
-        />
-      </div>
 
-      <!-- Rule 2 — Min Repins ≥ -->
-      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
-        <div>
-          <label for="setting-min-repins" class="text-xs font-bold text-foreground block">Rule 2 — Min Repins ≥</label>
-          <span class="text-[11px] text-muted-foreground">Min repins required (0 = off).</span>
+        <!-- Rule 3 — Rising: Min Saves ≥ -->
+        <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
+          <div class="flex items-center gap-1.5 mb-1.5">
+            <span class="h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold inline-flex items-center justify-center shrink-0">3</span>
+            <label for="setting-rising-saves" class="text-xs font-bold text-foreground truncate">Rising: Min Saves ≥</label>
+          </div>
+          <input
+            id="setting-rising-saves"
+            type="number"
+            min="0"
+            max="1000000"
+            value="34"
+            class="w-full rounded-xl border border-border bg-card h-9 px-3 py-2 text-xs font-medium text-foreground focus:outline-none"
+          />
         </div>
-        <input
-          id="setting-min-repins"
-          type="number"
-          min="0"
-          max="1000000"
-          value="0"
-          class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none"
-        />
-      </div>
-
-      <!-- Rule 3 — Rising: Age ≤ (days) -->
-      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
-        <div>
-          <label for="setting-rising-age" class="text-xs font-bold text-foreground block">Rule 3 — Rising: Age ≤ (days)</label>
-          <span class="text-[11px] text-muted-foreground">Max age in days (0 = off).</span>
-        </div>
-        <input
-          id="setting-rising-age"
-          type="number"
-          min="0"
-          max="365"
-          value="14"
-          class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none"
-        />
-      </div>
-
-      <!-- Rule 3 — Rising: Min Saves ≥ -->
-      <div class="rounded-lg border border-border bg-background p-3 flex flex-col justify-between">
-        <div>
-          <label for="setting-rising-saves" class="text-xs font-bold text-foreground block">Rule 3 — Rising: Min Saves ≥</label>
-          <span class="text-[11px] text-muted-foreground">Min saves for rising pins (0 = off).</span>
-        </div>
-        <input
-          id="setting-rising-saves"
-          type="number"
-          min="0"
-          max="1000000"
-          value="34"
-          class="mt-2.5 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none"
-        />
       </div>
     </div>
   </section>
 
   <!-- ═══ View A: Accounts Table with Bulk Action Bar ═══ -->
-  <section class="mb-8" aria-labelledby="accounts-section-heading">
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+  <section class="mb-8 rounded-2xl border border-border bg-card overflow-hidden shadow-xs" aria-labelledby="accounts-section-heading">
+    <div class="sticky top-0 bg-card z-10 p-4 border-b border-border/80 flex flex-wrap items-center justify-between gap-3">
       <h2 id="accounts-section-heading" class="text-sm font-bold text-foreground flex items-center gap-2">
         <span>👤 Tracked Accounts</span>
         <span class="text-xs font-normal text-muted-foreground" id="accounts-strip-count"></span>
@@ -302,7 +337,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           <span>▶ Resume</span>
         </button>
 
-        <div class="flex items-center gap-1 bg-card border border-border rounded-xl px-2 py-1 shadow-xs">
+        <div class="flex items-center gap-1 bg-background border border-border rounded-xl px-2 py-1 shadow-xs">
           <label for="gas-bulk-interval-input" class="text-[11px] font-semibold text-muted-foreground">Int:</label>
           <input
             id="gas-bulk-interval-input"
@@ -339,11 +374,11 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       </div>
     </div>
 
-    <div class="overflow-x-auto rounded-xl border border-border bg-card shadow-xs">
+    <div class="overflow-x-auto">
       <table class="w-full text-left text-xs">
         <thead class="bg-muted/40 text-muted-foreground text-[11px] uppercase border-b border-border/80 font-semibold">
           <tr>
-            <th class="p-3 w-10 text-center">
+            <th class="py-3.5 px-4 w-10 text-center">
               <input
                 type="checkbox"
                 id="select-all-accounts-cb"
@@ -351,13 +386,13 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
                 title="Select all accounts"
               />
             </th>
-            <th class="p-3 font-semibold text-foreground">Account</th>
-            <th class="p-3 font-semibold">Followers</th>
-            <th class="p-3 font-semibold">Pins Total</th>
-            <th class="p-3 font-semibold">Interval</th>
-            <th class="p-3 font-semibold">Last / Next Run</th>
-            <th class="p-3 font-semibold text-center">Accept GAS</th>
-            <th class="p-3 text-right font-semibold">Actions</th>
+            <th class="py-3.5 px-4 font-semibold text-foreground">Account</th>
+            <th class="py-3.5 px-4 font-semibold">Followers</th>
+            <th class="py-3.5 px-4 font-semibold">Pins Total</th>
+            <th class="py-3.5 px-4 font-semibold">Interval</th>
+            <th class="py-3.5 px-4 font-semibold">Last / Next Run</th>
+            <th class="py-3.5 px-4 font-semibold text-center">Accept GAS</th>
+            <th class="py-3.5 px-4 text-right font-semibold">Actions</th>
           </tr>
         </thead>
         <tbody id="accounts-table-body" class="divide-y divide-border/60">
@@ -729,7 +764,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
 
         return `
           <tr class="hover:bg-muted/30 transition-colors">
-            <td class="p-3 text-center">
+            <td class="py-3.5 px-4 text-center">
               <input
                 type="checkbox"
                 data-acc-select="${escapeHtml(acc.id)}"
@@ -738,7 +773,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
                 id="acc-check-${escapeHtml(acc.id)}"
               />
             </td>
-            <td class="p-3">
+            <td class="py-3.5 px-4">
               <div class="flex items-center gap-2">
                 <span class="h-2 w-2 rounded-full ${dotClass} shrink-0" aria-hidden="true"></span>
                 <span class="font-bold text-foreground">@${escapeHtml(acc.username)}</span>
@@ -747,20 +782,20 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
                 </span>
               </div>
             </td>
-            <td class="p-3 font-medium text-foreground">
+            <td class="py-3.5 px-4 font-medium text-foreground">
               ${fmtNumber(acc.follower_count)}
             </td>
-            <td class="p-3 font-semibold text-foreground">
+            <td class="py-3.5 px-4 font-semibold text-foreground">
               ${fmtNumber(acc.pins_count)}
             </td>
-            <td class="p-3 text-muted-foreground">
+            <td class="py-3.5 px-4 text-muted-foreground">
               ${escapeHtml(String(acc.interval_days || 3))}d
             </td>
-            <td class="p-3 text-muted-foreground font-medium">
+            <td class="py-3.5 px-4 text-muted-foreground font-medium">
               <div class="text-foreground font-semibold">${acc.last_run_at ? new Date(acc.last_run_at).toLocaleString() : '—'}</div>
               ${acc.next_run_at ? `<div class="text-[10px] text-muted-foreground/80 mt-0.5">Next: ${new Date(acc.next_run_at).toLocaleString()}</div>` : (acc.last_run_at && acc.interval_days ? `<div class="text-[10px] text-muted-foreground/80 mt-0.5">Next: ${new Date(new Date(acc.last_run_at).getTime() + Number(acc.interval_days) * 86400000).toLocaleString()} (est.)</div>` : '')}
             </td>
-            <td class="p-3 text-center">
+            <td class="py-3.5 px-4 text-center">
               <label class="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -772,7 +807,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
                 <div class="w-7 h-4 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
               </label>
             </td>
-            <td class="p-3 text-right">
+            <td class="py-3.5 px-4 text-right">
               <div class="inline-flex items-center gap-2">
                 <a
                   href="/pinarchive/account/${encodeURIComponent(acc.username)}"
