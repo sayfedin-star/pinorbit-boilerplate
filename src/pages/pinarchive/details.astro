@@ -213,98 +213,68 @@ import Layout from '../../layouts/Layout.astro';
       </div>
     </div>
 
-    <!-- ═══ 2. Modern 6-Card KPI Stat Bar ═══ -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+    <!-- ═══ 2. Clean 6-Card KPI Stat Bar ═══ -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       <!-- Saves -->
-      <div class="rounded-2xl border border-border bg-card p-4.5 shadow-xs hover:shadow-sm transition-all group">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Saves</span>
-          <div class="h-7 w-7 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
-            ❤️
-          </div>
+      <div class="rounded-2xl border border-border bg-card p-4 shadow-2xs">
+        <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Total Saves</span>
+        <div class="flex items-baseline gap-1.5 mt-1">
+          <span class="text-2xl font-bold text-rose-500 tabular-nums" id="kpi-detail-saves">-</span>
+          <span id="kpi-delta-saves" class="text-xs font-bold text-emerald-600 dark:text-emerald-400"></span>
         </div>
-        <div class="flex items-baseline gap-1.5">
-          <span class="text-xl font-bold text-rose-500 tabular-nums" id="kpi-detail-saves">-</span>
-          <span id="kpi-delta-saves" class="text-[10px] font-bold"></span>
-        </div>
-        <span class="text-[10px] text-muted-foreground block mt-1">Cumulative saves</span>
+        <span class="text-[10px] text-muted-foreground block mt-0.5">Cumulative saves</span>
       </div>
 
       <!-- Repins -->
-      <div class="rounded-2xl border border-border bg-card p-4.5 shadow-xs hover:shadow-sm transition-all group">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Repins</span>
-          <div class="h-7 w-7 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
-            🔁
-          </div>
+      <div class="rounded-2xl border border-border bg-card p-4 shadow-2xs">
+        <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Repins</span>
+        <div class="flex items-baseline gap-1.5 mt-1">
+          <span class="text-2xl font-bold text-foreground tabular-nums" id="kpi-detail-repins">-</span>
+          <span id="kpi-delta-repins" class="text-xs font-bold text-emerald-600 dark:text-emerald-400"></span>
         </div>
-        <div class="flex items-baseline gap-1.5">
-          <span class="text-xl font-bold text-foreground tabular-nums" id="kpi-detail-repins">-</span>
-          <span id="kpi-delta-repins" class="text-[10px] font-bold"></span>
-        </div>
-        <span class="text-[10px] text-muted-foreground block mt-1">Re-pin shares</span>
+        <span class="text-[10px] text-muted-foreground block mt-0.5">Re-pin shares</span>
       </div>
 
       <!-- Comments -->
-      <div class="rounded-2xl border border-border bg-card p-4.5 shadow-xs hover:shadow-sm transition-all group">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Comments</span>
-          <div class="h-7 w-7 rounded-lg bg-slate-500/10 text-slate-500 flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
-            💬
-          </div>
+      <div class="rounded-2xl border border-border bg-card p-4 shadow-2xs">
+        <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Comments</span>
+        <div class="flex items-baseline gap-1.5 mt-1">
+          <span class="text-2xl font-bold text-foreground tabular-nums" id="kpi-detail-comments">-</span>
+          <span id="kpi-delta-comments" class="text-xs font-bold text-emerald-600 dark:text-emerald-400"></span>
         </div>
-        <div class="flex items-baseline gap-1.5">
-          <span class="text-xl font-bold text-foreground tabular-nums" id="kpi-detail-comments">-</span>
-          <span id="kpi-delta-comments" class="text-[10px] font-bold"></span>
-        </div>
-        <span class="text-[10px] text-muted-foreground block mt-1">User comments</span>
+        <span class="text-[10px] text-muted-foreground block mt-0.5">User comments</span>
       </div>
 
       <!-- Shares -->
-      <div class="rounded-2xl border border-border bg-card p-4.5 shadow-xs hover:shadow-sm transition-all group">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Shares</span>
-          <div class="h-7 w-7 rounded-lg bg-sky-500/10 text-sky-500 flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
-            ↗️
-          </div>
+      <div class="rounded-2xl border border-border bg-card p-4 shadow-2xs">
+        <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Shares</span>
+        <div class="flex items-baseline gap-1.5 mt-1">
+          <span class="text-2xl font-bold text-sky-500 tabular-nums" id="kpi-detail-shares">-</span>
+          <span id="kpi-delta-shares" class="text-xs font-bold text-emerald-600 dark:text-emerald-400"></span>
         </div>
-        <div class="flex items-baseline gap-1.5">
-          <span class="text-xl font-bold text-sky-500 tabular-nums" id="kpi-detail-shares">-</span>
-          <span id="kpi-delta-shares" class="text-[10px] font-bold"></span>
-        </div>
-        <span class="text-[10px] text-muted-foreground block mt-1">Social shares</span>
+        <span class="text-[10px] text-muted-foreground block mt-0.5">Social shares</span>
       </div>
 
       <!-- Velocity -->
-      <div class="rounded-2xl border border-border bg-card p-4.5 shadow-xs hover:shadow-sm transition-all group">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Velocity</span>
-          <div class="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
-            ⚡
-          </div>
-        </div>
-        <div class="text-xl font-bold text-emerald-500 tabular-nums" id="kpi-detail-velocity">-</div>
-        <span class="text-[10px] text-muted-foreground block mt-1">Saves per day</span>
+      <div class="rounded-2xl border border-border bg-card p-4 shadow-2xs">
+        <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Velocity</span>
+        <div class="text-2xl font-bold text-emerald-500 tabular-nums mt-1" id="kpi-detail-velocity">-</div>
+        <span class="text-[10px] text-muted-foreground block mt-0.5">Saves / day</span>
       </div>
 
       <!-- Reactions -->
-      <div class="rounded-2xl border border-border bg-card p-4.5 shadow-xs hover:shadow-sm transition-all group">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Reactions</span>
-          <div class="h-7 w-7 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
-            ✨
-          </div>
+      <div class="rounded-2xl border border-border bg-card p-4 shadow-2xs">
+        <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Reactions</span>
+        <div class="flex items-baseline gap-1.5 mt-1">
+          <span class="text-2xl font-bold text-purple-500 tabular-nums" id="kpi-detail-reactions">-</span>
+          <span id="kpi-delta-reactions" class="text-xs font-bold text-emerald-600 dark:text-emerald-400"></span>
         </div>
-        <div class="flex items-baseline gap-1.5">
-          <span class="text-xl font-bold text-purple-500 tabular-nums" id="kpi-detail-reactions">-</span>
-          <span id="kpi-delta-reactions" class="text-[10px] font-bold"></span>
-        </div>
-        <span class="text-[10px] text-muted-foreground block mt-1">Total reactions</span>
+        <span class="text-[10px] text-muted-foreground block mt-0.5">Total reactions</span>
       </div>
     </div>
 
     <!-- ═══ 3. Performance Trajectory SVG Chart & Growth History ═══ -->
-    <div class="rounded-3xl border border-border bg-card p-6 sm:p-7 shadow-xs space-y-6">
+    <div class="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-6">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-border/70">
         <div>
           <h2 class="text-base font-bold text-foreground flex items-center gap-2">
@@ -316,11 +286,11 @@ import Layout from '../../layouts/Layout.astro';
         
         <div class="flex items-center gap-4 text-xs font-semibold">
           <div class="flex items-center gap-1.5">
-            <span class="h-2.5 w-2.5 rounded-full bg-rose-500 shadow-2xs"></span>
+            <span class="h-2.5 w-2.5 rounded-full bg-rose-500"></span>
             <span class="text-foreground">Saves</span>
           </div>
           <div class="flex items-center gap-1.5">
-            <span class="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-2xs"></span>
+            <span class="h-2.5 w-2.5 rounded-full bg-blue-500"></span>
             <span class="text-foreground">Repins</span>
           </div>
         </div>
@@ -328,7 +298,7 @@ import Layout from '../../layouts/Layout.astro';
 
       <!-- Chart Wrapper -->
       <div id="chart-wrapper" class="w-full relative">
-        <div id="chart-notice" class="hidden py-12 text-center text-xs text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border"></div>
+        <div id="chart-notice" class="hidden py-10 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border"></div>
         <div id="svg-chart-container" class="w-full h-64 overflow-hidden relative"></div>
       </div>
 
@@ -453,17 +423,29 @@ import Layout from '../../layouts/Layout.astro';
     const rows = [...metrics].reverse(); // newest first
     const first = metrics[0];
     const last = metrics[metrics.length - 1];
-    const net = (k: string) => Math.max(0, Number(last[k] || 0) - Number(first[k] || 0));
-    const netChip = (k: string) => {
-      const diff = Number(last[k] || 0) - Number(first[k] || 0);
-      if (diff > 0) return `<span class="inline-block text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-md ml-1">(+${fmtNumber(diff)})</span>`;
-      return '';
+    
+    const calcNet = (k: string) => Number(last[k] || 0) - Number(first[k] || 0);
+
+    const renderNetCell = (diff: number) => {
+      if (diff > 0) {
+        return `<td class="py-3 px-3.5 text-right font-bold tabular-nums text-emerald-600 dark:text-emerald-400 whitespace-nowrap">+${fmtNumber(diff)}</td>`;
+      }
+      if (diff < 0) {
+        return `<td class="py-3 px-3.5 text-right font-bold tabular-nums text-rose-500 whitespace-nowrap">−${fmtNumber(Math.abs(diff))}</td>`;
+      }
+      return `<td class="py-3 px-3.5 text-right font-medium tabular-nums text-muted-foreground whitespace-nowrap">0</td>`;
     };
 
-    const cell = (v: number, d: string) => `
-      <td class="py-3 px-3.5 text-right font-medium tabular-nums text-foreground whitespace-nowrap">
-        ${fmtNumber(v)} ${d}
-      </td>`;
+    const renderSnapshotCell = (val: number, delta: number | null) => {
+      const strVal = fmtNumber(val);
+      if (delta === null || delta === 0) {
+        return `<td class="py-3 px-3.5 text-right font-medium tabular-nums text-foreground whitespace-nowrap">${strVal}</td>`;
+      }
+      if (delta > 0) {
+        return `<td class="py-3 px-3.5 text-right font-medium tabular-nums text-foreground whitespace-nowrap">${strVal} <span class="font-bold text-emerald-600 dark:text-emerald-400 text-xs ml-1">(+${fmtNumber(delta)})</span></td>`;
+      }
+      return `<td class="py-3 px-3.5 text-right font-medium tabular-nums text-foreground whitespace-nowrap">${strVal} <span class="font-bold text-rose-500 text-xs ml-1">(−${fmtNumber(Math.abs(delta))})</span></td>`;
+    };
 
     container.innerHTML = `
       <div class="overflow-x-auto rounded-2xl border border-border bg-card shadow-2xs">
@@ -481,36 +463,34 @@ import Layout from '../../layouts/Layout.astro';
           </thead>
           <tbody class="divide-y divide-border/60">
             <tr class="bg-emerald-500/5 font-bold border-b border-emerald-500/20">
-              <td class="py-3 px-3.5 text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
-                <span>Σ</span>
-                <span>Total Net Growth</span>
+              <td class="py-3 px-3.5 text-emerald-600 dark:text-emerald-400 font-bold whitespace-nowrap">
+                Σ Total Net Growth
               </td>
-              ${cell(net('saves'), netChip('saves'))}
-              ${cell(net('repins'), netChip('repins'))}
-              ${cell(net('comments'), netChip('comments'))}
-              ${cell(net('shares'), netChip('shares'))}
-              ${cell(net('reactions_total'), netChip('reactions_total'))}
+              ${renderNetCell(calcNet('saves'))}
+              ${renderNetCell(calcNet('repins'))}
+              ${renderNetCell(calcNet('comments'))}
+              ${renderNetCell(calcNet('shares'))}
+              ${renderNetCell(calcNet('reactions_total'))}
               <td></td>
             </tr>
             ${rows.map((m, idx) => {
               const prev = rows[idx + 1] || null;
-              const d = (k: string) => renderDeltaChip(Number(m[k] || 0), prev ? Number(prev[k] || 0) : null);
+              const getDelta = (k: string) => (prev ? Number(m[k] || 0) - Number(prev[k] || 0) : null);
               return `
                 <tr class="hover:bg-muted/30 transition-colors">
-                  <td class="py-3 px-3.5 font-medium text-muted-foreground whitespace-nowrap flex items-center gap-1.5">
-                    <span class="text-xs">🕒</span>
-                    <span>${escapeHtml(fmtDateTime(m.recorded_at))}</span>
+                  <td class="py-3 px-3.5 font-medium text-muted-foreground whitespace-nowrap">
+                    ${escapeHtml(fmtDateTime(m.recorded_at))}
                   </td>
-                  ${cell(Number(m.saves || 0), d('saves'))}
-                  ${cell(Number(m.repins || 0), d('repins'))}
-                  ${cell(Number(m.comments || 0), d('comments'))}
-                  ${cell(Number(m.shares || 0), d('shares'))}
-                  ${cell(Number(m.reactions_total || 0), d('reactions_total'))}
-                  <td class="py-3 px-3.5 text-right">
+                  ${renderSnapshotCell(Number(m.saves || 0), getDelta('saves'))}
+                  ${renderSnapshotCell(Number(m.repins || 0), getDelta('repins'))}
+                  ${renderSnapshotCell(Number(m.comments || 0), getDelta('comments'))}
+                  ${renderSnapshotCell(Number(m.shares || 0), getDelta('shares'))}
+                  ${renderSnapshotCell(Number(m.reactions_total || 0), getDelta('reactions_total'))}
+                  <td class="py-3 px-3.5 text-right whitespace-nowrap">
                     <button
                       type="button"
                       data-del-metric="${escapeHtml(m.id || '')}"
-                      class="rounded-lg border border-border hover:border-rose-500/40 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 px-2 py-1 text-[11px] font-semibold transition-colors cursor-pointer"
+                      class="rounded-lg border border-border hover:border-rose-500/40 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 px-2 py-0.5 text-[11px] font-semibold transition-colors cursor-pointer"
                     >🗑 Delete</button>
                   </td>
                 </tr>`;
@@ -560,10 +540,10 @@ import Layout from '../../layouts/Layout.astro';
 
   function renderDelta(val: number, label: string): string {
     if (val > 0) {
-      return `<span class="text-emerald-600 dark:text-emerald-400 font-bold" aria-label="${label} increased by ${val}">(+${fmtNumber(val)})</span>`;
+      return `(+${fmtNumber(val)})`;
     }
     if (val < 0) {
-      return `<span class="text-rose-500 font-bold" aria-label="${label} decreased by ${Math.abs(val)}">(−${fmtNumber(Math.abs(val))})</span>`;
+      return `(−${fmtNumber(Math.abs(val))})`;
     }
     return '';
   }
@@ -957,22 +937,34 @@ import Layout from '../../layouts/Layout.astro';
       const savesEl = document.getElementById('kpi-detail-saves');
       if (savesEl) savesEl.textContent = fmtNumber(pin.saves);
       const deltaSavesEl = document.getElementById('kpi-delta-saves');
-      if (deltaSavesEl) deltaSavesEl.innerHTML = renderDelta(deltas.saves || 0, 'Saves');
+      if (deltaSavesEl) {
+        deltaSavesEl.textContent = renderDelta(deltas.saves || 0, 'Saves');
+        deltaSavesEl.className = (deltas.saves || 0) >= 0 ? 'text-xs font-bold text-emerald-600 dark:text-emerald-400' : 'text-xs font-bold text-rose-500';
+      }
 
       const repinsEl = document.getElementById('kpi-detail-repins');
       if (repinsEl) repinsEl.textContent = fmtNumber(pin.repins);
       const deltaRepinsEl = document.getElementById('kpi-delta-repins');
-      if (deltaRepinsEl) deltaRepinsEl.innerHTML = renderDelta(deltas.repins || 0, 'Repins');
+      if (deltaRepinsEl) {
+        deltaRepinsEl.textContent = renderDelta(deltas.repins || 0, 'Repins');
+        deltaRepinsEl.className = (deltas.repins || 0) >= 0 ? 'text-xs font-bold text-emerald-600 dark:text-emerald-400' : 'text-xs font-bold text-rose-500';
+      }
 
       const commentsEl = document.getElementById('kpi-detail-comments');
       if (commentsEl) commentsEl.textContent = fmtNumber(pin.comments);
       const deltaCommentsEl = document.getElementById('kpi-delta-comments');
-      if (deltaCommentsEl) deltaCommentsEl.innerHTML = renderDelta(deltas.comments || 0, 'Comments');
+      if (deltaCommentsEl) {
+        deltaCommentsEl.textContent = renderDelta(deltas.comments || 0, 'Comments');
+        deltaCommentsEl.className = (deltas.comments || 0) >= 0 ? 'text-xs font-bold text-emerald-600 dark:text-emerald-400' : 'text-xs font-bold text-rose-500';
+      }
 
       const sharesEl = document.getElementById('kpi-detail-shares');
       if (sharesEl) sharesEl.textContent = fmtNumber(pin.share_count);
       const deltaSharesEl = document.getElementById('kpi-delta-shares');
-      if (deltaSharesEl) deltaSharesEl.innerHTML = renderDelta(deltas.shares || 0, 'Shares');
+      if (deltaSharesEl) {
+        deltaSharesEl.textContent = renderDelta(deltas.shares || 0, 'Shares');
+        deltaSharesEl.className = (deltas.shares || 0) >= 0 ? 'text-xs font-bold text-emerald-600 dark:text-emerald-400' : 'text-xs font-bold text-rose-500';
+      }
 
       const velocityEl = document.getElementById('kpi-detail-velocity');
       if (velocityEl) velocityEl.textContent = `${Number(pin.velocity || 0).toFixed(1)}/d`;
@@ -981,7 +973,10 @@ import Layout from '../../layouts/Layout.astro';
       const totalReactions = Number((pin.reactions as any)?.total || 0);
       if (reactionsEl) reactionsEl.textContent = fmtNumber(totalReactions);
       const deltaReactionsEl = document.getElementById('kpi-delta-reactions');
-      if (deltaReactionsEl) deltaReactionsEl.innerHTML = renderDelta(deltas.reactions || 0, 'Reactions');
+      if (deltaReactionsEl) {
+        deltaReactionsEl.textContent = renderDelta(deltas.reactions || 0, 'Reactions');
+        deltaReactionsEl.className = (deltas.reactions || 0) >= 0 ? 'text-xs font-bold text-emerald-600 dark:text-emerald-400' : 'text-xs font-bold text-rose-500';
+      }
 
       // 3. SVG Trajectory Chart
       const metricsBadge = document.getElementById('metrics-count-badge');
