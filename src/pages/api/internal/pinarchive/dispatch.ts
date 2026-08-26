@@ -4,70 +4,85 @@ import type { APIRoute } from 'astro';
 import { dbClients, isKnownDefaultIngestSecret, isProductionEnv } from '../../../../server/db/clients';
 import { getEffectiveSecret } from '../../../../server/services/webhook-secrets';
 import { timingSafeEqual } from '../../../../server/lib/timing-safe';
-import { gasCall } from '../../../../server/lib/gas-bridge';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Server-Only Internal PinArchive Dispatch Endpoint (FastCron Target).
+ * Server-Only Internal PinArchive Dispatch Endpoint.
  *
- * Triggers GAS scraping/sync execution for active accounts in the specified workspace.
+ * Triggered by FastCron to dispatch GitHub Actions pinarchive-refresh workflow.
  *
- * Architecture Law:
- * - PinOrbit never reads or writes Google Sheets directly.
- * - This endpoint invokes the GAS Web App bridge via `gasCall`.
- *
- * Security:
- * - Scoped strictly to workspace_id.
- * - Authenticates via x-ingest-secret using the getEffectiveSecret cascade and timingSafeEqual.
+ * Security & RLS:
+ * - Public self-auth via x-ingest-secret (workspace -> global -> env cascade).
+ * - Strictly scoped to workspace_id.
+ * - Verifies workspace existence in Project 1.
+ * - Never throws: always returns JSON 202, 400, 401, 403, 422, 502, 503.
  */
 export const POST: APIRoute = async ({ request, locals }) => {
   const runtimeEnv =
     (locals as { runtime?: { env?: Record<string, any> }; runtimeEnv?: Record<string, any> })?.runtime?.env ||
     (locals as { runtimeEnv?: Record<string, any> })?.runtimeEnv ||
+    (typeof process !== 'undefined' ? process.env : {}) ||
     {};
 
-  // 1. Parse optional JSON body
-  let body: Record<string, any> = {};
+  // 1. Parse JSON body
+  let payload: any;
   try {
     const text = await request.text();
-    if (text && text.trim().length > 0) {
-      body = JSON.parse(text);
+    if (!text || text.trim().length === 0) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Empty request payload.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
-  } catch (err: any) {
+    payload = JSON.parse(text);
+  } catch {
     return new Response(
       JSON.stringify({ success: false, error: 'Malformed JSON payload.' }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  // 2. Validate workspace_id (from body or query param)
-  const url = new URL(request.url);
-  const rawWsId = body.workspace_id || url.searchParams.get('workspace_id');
-  if (!rawWsId || typeof rawWsId !== 'string' || rawWsId.trim().length === 0) {
+  // 2. Validate workspace_id (required, 422 if missing/empty)
+  if (!payload || !payload.workspace_id || typeof payload.workspace_id !== 'string' || payload.workspace_id.trim() === '') {
     return new Response(
-      JSON.stringify({ success: false, error: 'Validation Error: workspace_id is required.' }),
+      JSON.stringify({ success: false, error: 'Validation Error: workspace_id is required in payload.' }),
       { status: 422, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  const workspaceId = rawWsId.trim();
-
-  // 3. Authenticate via getEffectiveSecret + timingSafeEqual FIRST
-  const eff = await getEffectiveSecret(workspaceId, runtimeEnv);
-  if (isProductionEnv(runtimeEnv) && eff.source === 'env' && isKnownDefaultIngestSecret(eff.value)) {
+  const workspaceId = payload.workspace_id.trim();
+  if (!UUID_REGEX.test(workspaceId)) {
     return new Response(
-      JSON.stringify({ success: false, error: 'Service unavailable: ingest secret not configured on server.' }),
-      { status: 503, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: false, error: 'Validation Error: valid workspace_id UUID is required.' }),
+      { status: 422, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  const providedSecret =
-    request.headers.get('x-ingest-secret') ||
-    (typeof body.ingest_secret === 'string' ? body.ingest_secret : null);
+  // 3. Authenticate via getEffectiveSecret + timingSafeEqual (copied verbatim from ingest.ts)
+  try {
+    const eff = await getEffectiveSecret(workspaceId, runtimeEnv);
+    if (isProductionEnv(runtimeEnv) && eff.source === 'env' && isKnownDefaultIngestSecret(eff.value)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Service unavailable: ingest secret not configured on server.' }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
-  if (!providedSecret || !eff.value || !(await timingSafeEqual(providedSecret, eff.value))) {
+    const providedSecret =
+      request.headers.get('x-ingest-secret') ||
+      (typeof payload.ingest_secret === 'string' ? payload.ingest_secret : null);
+
+    if (!providedSecret || !eff.value || !(await timingSafeEqual(providedSecret, eff.value))) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized: missing or invalid x-ingest-secret header.' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  } catch (err: any) {
     return new Response(
-      JSON.stringify({ success: false, error: 'Unauthorized: missing or invalid x-ingest-secret header.' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: false, error: 'Authentication evaluation failed.' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
@@ -93,61 +108,77 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
   }
 
-  // 5. Query active accounts in Project 4 (PinArchive)
-  try {
-    const pinArchive = dbClients.getPinArchive(runtimeEnv);
-    const targetUsername =
-      (typeof body.username === 'string' && body.username.trim().length > 0 ? body.username.trim() : null) ||
-      url.searchParams.get('username') ||
-      null;
+  // 5. Forward to GitHub Actions workflow_dispatch
+  const githubRepo =
+    (runtimeEnv.GITHUB_REPO as string) ||
+    (typeof process !== 'undefined' ? process.env.GITHUB_REPO : '') ||
+    'sayfedin-star/PinOrbit-v2';
 
-    let usernamesToDispatch: string[] = [];
+  const dispatchToken =
+    (runtimeEnv.GITHUB_DISPATCH_TOKEN as string) ||
+    (runtimeEnv.GH_REFRESH_TOKEN as string) ||
+    (typeof process !== 'undefined' ? process.env.GITHUB_DISPATCH_TOKEN || process.env.GH_REFRESH_TOKEN : '') ||
+    '';
 
-    if (targetUsername) {
-      usernamesToDispatch = [targetUsername];
-    } else {
-      const { data: accounts, error: accErr } = await pinArchive
-        .from('pa_accounts')
-        .select('username, status')
-        .eq('workspace_id', workspaceId)
-        .eq('status', 'active');
-
-      if (accErr) {
-        return new Response(
-          JSON.stringify({ success: false, error: `Failed to query accounts: ${accErr.message}` }),
-          { status: 500, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      usernamesToDispatch = (accounts || []).map((a: any) => a.username).filter(Boolean);
-    }
-
-    // 6. Dispatch to GAS bridge for each account
-    const dispatched: Array<{ username: string; ok: boolean; error?: string }> = [];
-    const CHUNK_SIZE = 5;
-
-    for (let i = 0; i < usernamesToDispatch.length; i += CHUNK_SIZE) {
-      const chunk = usernamesToDispatch.slice(i, i + CHUNK_SIZE);
-      const chunkResults = await Promise.all(
-        chunk.map(async (username) => {
-          const callRes = await gasCall(runtimeEnv, workspaceId, 'run', { username });
-          return { username, ok: Boolean(callRes.ok), error: callRes.error || undefined };
-        })
-      );
-      dispatched.push(...chunkResults);
-    }
-
+  if (!dispatchToken || !dispatchToken.trim()) {
     return new Response(
-      JSON.stringify({
-        success: true,
-        dispatched,
+      JSON.stringify({ success: false, error: 'GitHub dispatch token not configured on server.' }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const dispatchUrl = `https://api.github.com/repos/${githubRepo}/actions/workflows/pinarchive-refresh.yml/dispatches`;
+  const forceValue = payload.force === 'true' || payload.force === true ? 'true' : '';
+
+  try {
+    const ghRes = await fetch(dispatchUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${dispatchToken.trim()}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'PinOrbit-v2',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ref: 'main',
+        inputs: {
+          workspace_id: workspaceId,
+          force: forceValue,
+        },
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (ghRes.status === 204 || (ghRes.status >= 200 && ghRes.status < 300)) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          dispatched: true,
+          workspace_id: workspaceId,
+          force: forceValue === 'true',
+        }),
+        { status: 202, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (ghRes.status === 401 || ghRes.status === 403) {
+      console.error(`[PinArchive Dispatch] GitHub authorization failure: HTTP ${ghRes.status}`);
+      return new Response(
+        JSON.stringify({ success: false, error: 'GitHub dispatch authorization failed.' }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.error(`[PinArchive Dispatch] GitHub dispatch returned HTTP ${ghRes.status}`);
+    return new Response(
+      JSON.stringify({ success: false, error: `GitHub dispatch upstream returned HTTP ${ghRes.status}` }),
+      { status: 502, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {
+    console.error('[PinArchive Dispatch] Network error or timeout contacting GitHub Actions API:', err?.message);
     return new Response(
-      JSON.stringify({ success: false, error: `Dispatch failed: ${err.message || 'Unknown'}` }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: false, error: err?.message || 'Failed to communicate with GitHub Actions API.' }),
+      { status: 502, headers: { 'Content-Type': 'application/json' } }
     );
   }
 };
