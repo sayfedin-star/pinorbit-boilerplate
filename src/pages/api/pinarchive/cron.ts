@@ -2,11 +2,40 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../server/auth/workspace-guard';
-import { dbClients } from '../../../server/db/clients';
+import { dbClients, getServerEnv } from '../../../server/db/clients';
 import { getEffectiveSecret, maskSecret } from '../../../server/services/webhook-secrets';
 import { resolveScheduleToken } from '../../../server/services/fastcron-service';
+import { resolveTokenKek, decryptToken } from '../../../server/lib/token-crypto';
 
-const FASTCRON_BASE = 'https://www.fastcron.com/api/v1';
+export const FASTCRON_BASE = 'https://www.fastcron.com/api/v1';
+
+export const getDispatchEndpointUrl = (runtimeEnv?: Record<string, any>): string => {
+  return (
+    (runtimeEnv?.PINARCHIVE_DISPATCH_URL as string) ||
+    (typeof process !== 'undefined' ? process.env.PINARCHIVE_DISPATCH_URL : '') ||
+    'https://pinorbit-v2.o-i.workers.dev/api/internal/pinarchive/dispatch'
+  );
+};
+
+/**
+ * Epoch normalization helper (v6-T2).
+ * Normalizes seconds-based timestamps (< 1e12) to millisecond epoch numbers.
+ */
+export const toMs = (v: any): number | null => {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number') {
+    return v < 1e12 ? v * 1000 : v;
+  }
+  if (typeof v === 'string') {
+    const num = Number(v);
+    if (!isNaN(num) && num > 0) {
+      return num < 1e12 ? num * 1000 : num;
+    }
+    const d = new Date(v).getTime();
+    return isNaN(d) ? null : d;
+  }
+  return null;
+};
 
 /**
  * Converts HH:MM (24-hour) format to standard cron expression: M H * * *
@@ -31,60 +60,17 @@ export function parseTimeToCron(timeStr?: string | null): { valid: boolean; cron
 }
 
 /**
- * Resolves FastCron token and metadata via shared helper resolveScheduleToken
- * (chains: fastcron_token_id -> workspace default in fastcron_tokens -> env fallback)
+ * Validates standard 5-part cron expression (min hour dom mon dow).
  */
-export async function getPinArchiveTokenInfo(
-  workspaceId: string,
-  runtimeEnv: Record<string, any>
-): Promise<{
-  token: string | null;
-  token_source: 'workspace_registry' | 'env' | null;
-  token_name: string | null;
-  masked_token: string | null;
-}> {
-  let token: string | null = null;
-  try {
-    token = await resolveScheduleToken({ workspace_id: workspaceId }, runtimeEnv);
-  } catch {
-    token = null; // fail-lazy, never throw
+export function validateCronExpression(expr?: string | null): { valid: boolean; cron?: string; error?: string } {
+  if (!expr || typeof expr !== 'string' || expr.trim().length === 0) {
+    return { valid: false, error: 'Cron expression cannot be empty.' };
   }
-
-  if (!token) {
-    return {
-      token: null,
-      token_source: null,
-      token_name: null,
-      masked_token: null,
-    };
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length < 5) {
+    return { valid: false, error: 'Standard cron expression must contain at least 5 fields (min hour dom mon dow).' };
   }
-
-  let tokenSource: 'workspace_registry' | 'env' = 'env';
-  let tokenName: string | null = 'Environment Fallback';
-
-  try {
-    const schedulingClient = dbClients.getSchedulingAdmin(runtimeEnv);
-    const { data: defRow } = await schedulingClient
-      .from('fastcron_tokens')
-      .select('name, token_masked')
-      .eq('workspace_id', workspaceId)
-      .eq('is_default', true)
-      .maybeSingle();
-
-    if (defRow) {
-      tokenSource = 'workspace_registry';
-      tokenName = defRow.name || 'Workspace Default';
-    }
-  } catch {
-    // fail-lazy fallback to env
-  }
-
-  return {
-    token,
-    token_source: tokenSource,
-    token_name: tokenName,
-    masked_token: maskSecret(token),
-  };
+  return { valid: true, cron: parts.slice(0, 5).join(' ') };
 }
 
 /**
@@ -147,52 +133,281 @@ export async function fastcronCall(
   }
 }
 
+export interface ResolvedFastCronToken {
+  id: string | null;
+  name: string;
+  masked_token: string;
+  is_default: boolean;
+  source: 'workspace_registry' | 'env';
+  token: string;
+}
+
+/**
+ * Resolves all available FastCron tokens for a workspace (from P1 fastcron_tokens + env fallback).
+ */
+export async function getWorkspaceFastCronTokens(
+  workspaceId: string,
+  runtimeEnv: Record<string, any>
+): Promise<ResolvedFastCronToken[]> {
+  const tokenList: ResolvedFastCronToken[] = [];
+  const tokenStrings = new Set<string>();
+
+  try {
+    const schedulingClient = dbClients.getSchedulingAdmin(runtimeEnv);
+    const kek = await resolveTokenKek(runtimeEnv);
+
+    const { data: dbRows } = await schedulingClient
+      .from('fastcron_tokens')
+      .select('id, name, token_masked, token_encrypted, is_default')
+      .eq('workspace_id', workspaceId)
+      .order('is_default', { ascending: false });
+
+    if (Array.isArray(dbRows)) {
+      for (const row of dbRows) {
+        let plain: string | null = null;
+        if (row.token_encrypted && kek) {
+          plain = await decryptToken(row.token_encrypted, kek);
+        }
+        if (plain && plain.trim().length > 0) {
+          tokenStrings.add(plain.trim());
+          tokenList.push({
+            id: row.id,
+            name: row.name || 'Workspace Token',
+            masked_token: row.token_masked || maskSecret(plain),
+            is_default: Boolean(row.is_default),
+            source: 'workspace_registry',
+            token: plain.trim(),
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[PinArchive FastCron] Failed to load workspace registry tokens:', err);
+  }
+
+  // Fallback / default token resolution via resolveScheduleToken helper
+  try {
+    const defaultResolved = await resolveScheduleToken({ workspace_id: workspaceId }, runtimeEnv);
+    if (defaultResolved && !tokenStrings.has(defaultResolved)) {
+      tokenList.unshift({
+        id: null,
+        name: 'Workspace Default',
+        masked_token: defaultResolved.length > 8 ? defaultResolved.slice(0, 8) + '...' : '********',
+        is_default: tokenList.length === 0,
+        source: 'workspace_registry',
+        token: defaultResolved,
+      });
+      tokenStrings.add(defaultResolved);
+    }
+  } catch {
+    // fail-lazy
+  }
+
+  return tokenList;
+}
+
+/**
+ * Resolves a specific token by token_id or returns the default workspace / env token.
+ */
+export async function resolveTargetToken(
+  tokenId: string | null | undefined,
+  workspaceId: string,
+  runtimeEnv: Record<string, any>
+): Promise<ResolvedFastCronToken | null> {
+  if (tokenId) {
+    const allTokens = await getWorkspaceFastCronTokens(workspaceId, runtimeEnv);
+    const matched = allTokens.find((t) => t.id === tokenId);
+    if (matched) return matched;
+  }
+
+  let tokenStr: string | null = null;
+  try {
+    tokenStr = await resolveScheduleToken(
+      { workspace_id: workspaceId, fastcron_token_id: tokenId || undefined },
+      runtimeEnv
+    );
+  } catch {
+    tokenStr = null;
+  }
+
+  if (tokenStr) {
+    const allTokens = await getWorkspaceFastCronTokens(workspaceId, runtimeEnv);
+    const matched = allTokens.find((t) => t.token === tokenStr);
+    if (matched) return matched;
+
+    return {
+      id: tokenId || null,
+      name: tokenId ? 'Custom Token' : 'Workspace Default',
+      masked_token: tokenStr.length > 8 ? tokenStr.slice(0, 8) + '...' : '********',
+      is_default: true,
+      source: 'workspace_registry',
+      token: tokenStr,
+    };
+  }
+
+  const allTokens = await getWorkspaceFastCronTokens(workspaceId, runtimeEnv);
+  return allTokens.find((t) => t.is_default) || allTokens[0] || null;
+}
+
+/**
+ * Token info helper for backwards compatibility.
+ */
+export async function getPinArchiveTokenInfo(
+  workspaceId: string,
+  runtimeEnv: Record<string, any>
+): Promise<{
+  token: string | null;
+  token_source: 'workspace_registry' | 'env' | null;
+  token_name: string | null;
+  masked_token: string | null;
+}> {
+  let token: string | null = null;
+  try {
+    token = await resolveScheduleToken({ workspace_id: workspaceId }, runtimeEnv);
+  } catch {
+    token = null;
+  }
+
+  if (!token) {
+    return {
+      token: null,
+      token_source: null,
+      token_name: null,
+      masked_token: null,
+    };
+  }
+
+  const masked = token.length > 8 ? token.slice(0, 8) + '...' : '********';
+  return {
+    token,
+    token_source: 'workspace_registry',
+    token_name: 'Workspace Default',
+    masked_token: masked,
+  };
+}
+
+/**
+ * Parses post_data from a FastCron job object.
+ */
+export function extractPostData(job: any): any | null {
+  const raw = job.post_data || job.postdata;
+  if (!raw) return null;
+  if (typeof raw === 'object') return raw;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Verifies that a FastCron job belongs to PinArchive in this workspace.
+ */
+export function isMatchingPinArchiveJob(job: any, workspaceId: string, dispatchEndpointUrl: string): boolean {
+  const postData = extractPostData(job);
+  const urlMatches = typeof job.url === 'string' && (job.url === dispatchEndpointUrl || job.url.includes('/api/internal/pinarchive/dispatch'));
+
+  if (postData && postData.pipeline === 'pinarchive' && postData.workspace_id === workspaceId) {
+    return true;
+  }
+
+  if (urlMatches && job.name && job.name.includes('PinOrbit pinarchive') && job.name.includes(workspaceId.slice(0, 8))) {
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Stateless Discovery: Searches FastCron jobs and matches postData.pipeline === 'pinarchive' && postData.workspace_id === ws
  */
-export async function discoverPinArchiveJob(token: string, workspaceId: string): Promise<any | null> {
-  const res = await fastcronCall('cron_list', { keyword: 'PinOrbit pinarchive' }, token);
-  let matched = res.success ? matchJob(res.data, workspaceId) : null;
-  if (matched) return matched;
+export async function discoverPinArchiveJob(
+  token: string,
+  workspaceId: string,
+  dispatchEndpointUrl?: string
+): Promise<any | null> {
+  const url = dispatchEndpointUrl || 'https://pinorbit-v2.o-i.workers.dev/api/internal/pinarchive/dispatch';
+  const res = await fastcronCall('cron_list', { keyword: 'PinOrbit' }, token);
+  const list: any[] = Array.isArray(res.data)
+    ? res.data
+    : Array.isArray(res.data?.data)
+      ? res.data.data
+      : Array.isArray(res.data?.jobs)
+        ? res.data.jobs
+        : [];
+
+  for (const j of list) {
+    if (isMatchingPinArchiveJob(j, workspaceId, url)) return j;
+  }
 
   // Fallback to full list if keyword filter was too strict
   const fullRes = await fastcronCall('cron_list', {}, token);
-  if (fullRes.success) {
-    matched = matchJob(fullRes.data, workspaceId);
-  }
-  return matched;
-}
-
-function matchJob(data: any, workspaceId: string): any | null {
-  const jobs: any[] = Array.isArray(data)
-    ? data
-    : Array.isArray(data?.data)
-      ? data.data
-      : Array.isArray(data?.jobs)
-        ? data.jobs
+  const fullList: any[] = Array.isArray(fullRes.data)
+    ? fullRes.data
+    : Array.isArray(fullRes.data?.data)
+      ? fullRes.data.data
+      : Array.isArray(fullRes.data?.jobs)
+        ? fullRes.data.jobs
         : [];
 
-  for (const j of jobs) {
-    let postData: any = null;
-    try {
-      postData = typeof j.post_data === 'string' ? JSON.parse(j.post_data) : (j.post_data || (typeof j.postdata === 'string' ? JSON.parse(j.postdata) : j.postdata));
-    } catch {
-      postData = null;
-    }
-
-    if (postData && postData.pipeline === 'pinarchive' && postData.workspace_id === workspaceId) {
-      return j;
-    }
-
-    if (j.name && j.name.includes('PinOrbit pinarchive') && j.name.includes(workspaceId.slice(0, 8))) {
-      return j;
-    }
+  for (const j of fullList) {
+    if (isMatchingPinArchiveJob(j, workspaceId, url)) return j;
   }
+
   return null;
 }
 
 /**
- * GET: Retrieves discovered FastCron job + next runs + last 10 logs.
+ * Orphan cleanup (4-condition gate):
+ * Deletes FastCron jobs on the token where:
+ * 1. url === DISPATCH_ENDPOINT_URL
+ * 2. postData.pipeline === 'pinarchive'
+ * 3. postData.workspace_id === ws
+ * 4. id NOT IN currently-known job ids
+ */
+export async function cleanupOrphanJobs(
+  token: string,
+  workspaceId: string,
+  dispatchEndpointUrl: string,
+  knownJobIds: Set<number>
+): Promise<number> {
+  let cleanedCount = 0;
+  try {
+    const listRes = await fastcronCall('cron_list', { keyword: 'PinOrbit' }, token);
+    const jobs: any[] = Array.isArray(listRes.data)
+      ? listRes.data
+      : Array.isArray(listRes.data?.data)
+        ? listRes.data.data
+        : Array.isArray(listRes.data?.jobs)
+          ? listRes.data.jobs
+          : [];
+
+    for (const j of jobs) {
+      const jId = Number(j.id);
+      const postData = extractPostData(j);
+      const isPinArchive = postData && postData.pipeline === 'pinarchive' && postData.workspace_id === workspaceId;
+      const urlMatches = typeof j.url === 'string' && (j.url === dispatchEndpointUrl || j.url.includes('/api/internal/pinarchive/dispatch'));
+
+      // 4-Condition Gate Check
+      if (
+        urlMatches &&
+        isPinArchive &&
+        postData.workspace_id === workspaceId &&
+        !knownJobIds.has(jId)
+      ) {
+        console.log(`[PinArchive FastCron] Deleting orphan job #${jId} (${j.name})`);
+        const del = await fastcronCall('cron_delete', { id: jId }, token);
+        if (del.success) cleanedCount++;
+      }
+    }
+  } catch (err) {
+    console.warn('[PinArchive FastCron] Orphan cleanup error:', err);
+  }
+  return cleanedCount;
+}
+
+/**
+ * GET: Retrieves multi-token FastCron jobs for PinArchive in the active workspace.
  */
 export const GET: APIRoute = async ({ locals }) => {
   const user = locals.user;
@@ -214,83 +429,158 @@ export const GET: APIRoute = async ({ locals }) => {
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id);
 
+    const dispatchUrl = getDispatchEndpointUrl(runtimeEnv);
+    const tokens = await getWorkspaceFastCronTokens(workspaceId, runtimeEnv);
     const tokenInfo = await getPinArchiveTokenInfo(workspaceId, runtimeEnv);
-    if (!tokenInfo.token) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'FastCron API token not configured on server',
-          configured: false,
-          token_source: null,
-          masked_token: null,
-          token_name: null,
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
 
-    const job = await discoverPinArchiveJob(tokenInfo.token, workspaceId);
-    if (!job) {
+    if (!tokenInfo.token && tokens.length === 0) {
       return new Response(
         JSON.stringify({
           success: true,
+          tokens: [],
+          jobs: [],
           job: null,
           configured: false,
-          token_source: tokenInfo.token_source,
-          masked_token: tokenInfo.masked_token,
-          token_name: tokenInfo.token_name,
+          token_source: null,
+          token_name: null,
+          masked_token: null,
+          error: 'FastCron API token not configured on server or in workspace registry.',
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // Fetch cron_next and cron_logs (last 10) in parallel
-    const [nextRes, logsRes] = await Promise.all([
-      fastcronCall('cron_next', { id: job.id }, tokenInfo.token),
-      fastcronCall('cron_logs', { id: job.id }, tokenInfo.token),
-    ]);
+    const liveJobsMap = new Map<number, { job: any; tokenInfo: ResolvedFastCronToken }>();
 
-    const nextRuns = Array.isArray(nextRes.data)
-      ? nextRes.data
-      : Array.isArray(nextRes.data?.data)
-        ? nextRes.data.data
-        : Array.isArray(nextRes.data?.next)
-          ? nextRes.data.next
-          : [];
+    // Fetch jobs across each distinct token
+    for (const tokenItem of tokens) {
+      try {
+        const res = await fastcronCall('cron_list', { keyword: 'PinOrbit' }, tokenItem.token);
+        const list: any[] = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.data)
+            ? res.data.data
+            : Array.isArray(res.data?.jobs)
+              ? res.data.jobs
+              : [];
 
-    const rawLogs = Array.isArray(logsRes.data)
-      ? logsRes.data
-      : Array.isArray(logsRes.data?.data)
-        ? logsRes.data.data
-        : Array.isArray(logsRes.data?.logs)
-          ? logsRes.data.logs
-          : [];
+        for (const j of list) {
+          if (isMatchingPinArchiveJob(j, workspaceId, dispatchUrl)) {
+            const jId = Number(j.id);
+            if (!isNaN(jId) && jId > 0 && !liveJobsMap.has(jId)) {
+              liveJobsMap.set(jId, { job: j, tokenInfo: tokenItem });
+            }
+          }
+        }
+      } catch (listErr) {
+        console.warn(`[PinArchive FastCron] List failed for token ${tokenItem.masked_token}:`, listErr);
+      }
+    }
+
+    // Enrich each discovered job with cron_next and cron_logs (last 10) in parallel
+    const jobEntries = Array.from(liveJobsMap.values());
+    const enrichedJobs = await Promise.all(
+      jobEntries.map(async ({ job, tokenInfo: itemTokenInfo }) => {
+        let cronNext: any[] = [];
+        let cronLogs: any[] = [];
+
+        try {
+          const [nextRes, logsRes] = await Promise.all([
+            fastcronCall('cron_next', { id: job.id }, itemTokenInfo.token),
+            fastcronCall('cron_logs', { id: job.id }, itemTokenInfo.token),
+          ]);
+
+          cronNext = Array.isArray(nextRes.data)
+            ? nextRes.data
+            : Array.isArray(nextRes.data?.data)
+              ? nextRes.data.data
+              : Array.isArray(nextRes.data?.next)
+                ? nextRes.data.next
+                : [];
+
+          cronLogs = Array.isArray(logsRes.data)
+            ? logsRes.data
+            : Array.isArray(logsRes.data?.data)
+              ? logsRes.data.data
+              : Array.isArray(logsRes.data?.logs)
+                ? logsRes.data.logs
+                : [];
+        } catch {
+          // fail-lazy on telemetry fetch
+        }
+
+        const postData = extractPostData(job) || {};
+        const isPaused =
+          job.status === 'disabled' ||
+          job.status === 'paused' ||
+          job.status === 0 ||
+          job.status === '0' ||
+          job.paused === true;
+
+        const nextRunRaw = cronNext[0] || job.cron_next || job.next_run_at || job.nextRun;
+        const lastLog = cronLogs[0] || null;
+        const lastRunRaw = lastLog?.date || lastLog?.created_at || job.last_run_at || job.lastRun;
+
+        let label = postData.label;
+        if (!label && job.name && job.name.includes(' — ')) {
+          const parts = job.name.split(' — ');
+          if (parts.length >= 2) label = parts[1].trim();
+        }
+        if (!label) label = 'Daily Refresh';
+
+        return {
+          id: Number(job.id),
+          name: job.name || `PinOrbit pinarchive — ${label}`,
+          label,
+          expression: job.expression || job.cron_expression || '0 3 * * *',
+          timezone: job.timezone || 'UTC',
+          paused: isPaused,
+          status: isPaused ? 'disabled' : 'enabled',
+          next_run: toMs(nextRunRaw),
+          last_run: toMs(lastRunRaw),
+          last_status: lastLog?.status || (lastLog?.http_status_code === 202 ? 'OK' : null),
+          last_http_code: lastLog?.http_status_code || lastLog?.status_code || null,
+          masked_token: itemTokenInfo.masked_token,
+          token_name: itemTokenInfo.name,
+          token_id: itemTokenInfo.id,
+          token_source: itemTokenInfo.source,
+          cron_next: cronNext,
+          cron_logs: cronLogs.slice(0, 10),
+          post_data: postData,
+        };
+      })
+    );
 
     return new Response(
       JSON.stringify({
         success: true,
         configured: true,
-        token_source: tokenInfo.token_source,
-        masked_token: tokenInfo.masked_token,
-        token_name: tokenInfo.token_name,
-        job: {
-          ...job,
-          cron_next: nextRuns,
-          cron_logs: rawLogs.slice(0, 10),
-        },
+        token_source: tokenInfo.token_source || 'workspace_registry',
+        token_name: tokenInfo.token_name || 'Workspace Default',
+        masked_token: tokenInfo.masked_token || '********',
+        tokens: tokens.map((t) => ({
+          id: t.id,
+          name: t.name,
+          masked_token: t.masked_token,
+          is_default: t.is_default,
+          source: t.source,
+        })),
+        jobs: enrichedJobs,
+        // Backward-compatibility single job alias for legacy cards
+        job: enrichedJobs[0] || null,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {
     return new Response(
-      JSON.stringify({ success: false, error: err?.message || 'Failed to retrieve FastCron job' }),
+      JSON.stringify({ success: false, error: err?.message || 'Failed to retrieve FastCron jobs.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 };
 
 /**
- * POST: Handles job creation/update ({sync_time, timezone, enabled}) and run_now ({action:'run_now'}).
+ * POST: Handles multi-job actions (create, edit, pause, resume, clone, run_now, sync_missing).
  */
 export const POST: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
@@ -323,8 +613,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id);
 
-    // Branch A: Server-side run_now trigger
-    if (body?.action === 'run_now') {
+    const action = body?.action || 'create';
+    const dispatchUrl = getDispatchEndpointUrl(runtimeEnv);
+
+    // ── Branch: run_now (Server-side GitHub dispatch with force=true) ───────
+    if (action === 'run_now') {
       const githubRepo =
         (runtimeEnv.GITHUB_REPO as string) ||
         (typeof process !== 'undefined' ? process.env.GITHUB_REPO : '') ||
@@ -343,13 +636,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
       }
 
-      const dispatchUrl = `https://api.github.com/repos/${githubRepo}/actions/workflows/pinarchive-refresh.yml/dispatches`;
+      const dispatchEndpoint = `https://api.github.com/repos/${githubRepo}/actions/workflows/pinarchive-refresh.yml/dispatches`;
 
-      const ghRes = await fetch(dispatchUrl, {
+      const ghRes = await fetch(dispatchEndpoint, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${dispatchToken.trim()}`,
-          'Accept': 'application/vnd.github.v3+json',
+          Authorization: `Bearer ${dispatchToken.trim()}`,
+          Accept: 'application/vnd.github.v3+json',
           'User-Agent': 'PinOrbit-v2',
           'Content-Type': 'application/json',
         },
@@ -365,7 +658,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (ghRes.status === 204 || (ghRes.status >= 200 && ghRes.status < 300)) {
         return new Response(
-          JSON.stringify({ success: true, message: 'Workflow run dispatched with force' }),
+          JSON.stringify({ success: true, message: 'Workflow run dispatched immediately with force.' }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
         );
       }
@@ -376,105 +669,297 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    // Branch B: FastCron Job Add/Edit
-    let token: string | null = null;
-    try {
-      token = await resolveScheduleToken({ workspace_id: workspaceId }, runtimeEnv);
-    } catch {
-      token = null;
-    }
-
-    if (!token) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'FastCron API token not configured on server.' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const parsedCron = parseTimeToCron(body.sync_time);
-    if (!parsedCron.valid || !parsedCron.cron) {
-      return new Response(
-        JSON.stringify({ success: false, error: parsedCron.error || 'Invalid sync_time format' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
+    // ── Resolve Target Token & Effective Ingest Secret ──────────────────────
     const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
     if (!effSecret || !effSecret.value || effSecret.value.trim() === '') {
       return new Response(
-        JSON.stringify({ success: false, error: 'Ingest secret not configured' }),
+        JSON.stringify({ success: false, error: 'Ingest secret not configured for workspace.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const dispatchUrl =
-      (runtimeEnv.PINARCHIVE_DISPATCH_URL as string) ||
-      (typeof process !== 'undefined' ? process.env.PINARCHIVE_DISPATCH_URL : '') ||
-      'https://pinorbit-v2.o-i.workers.dev/api/internal/pinarchive/dispatch';
+    const targetTokenObj = await resolveTargetToken(body?.token_id, workspaceId, runtimeEnv);
+    if (!targetTokenObj || !targetTokenObj.token) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'FastCron API token not configured on server or in workspace registry.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    const token = targetTokenObj.token;
 
-    const timezone =
-      body.timezone && typeof body.timezone === 'string' && body.timezone.trim().length > 0
-        ? body.timezone.trim()
-        : 'UTC';
+    // ── Branch: sync_missing (Creates default job if 0 jobs found) ──────────
+    if (action === 'sync_missing') {
+      const listRes = await fastcronCall('cron_list', { keyword: 'PinOrbit' }, token);
+      const existingList: any[] = Array.isArray(listRes.data)
+        ? listRes.data
+        : Array.isArray(listRes.data?.data)
+          ? listRes.data.data
+          : Array.isArray(listRes.data?.jobs)
+            ? listRes.data.jobs
+            : [];
 
+      const matchedJobs = existingList.filter((j) => isMatchingPinArchiveJob(j, workspaceId, dispatchUrl));
+      if (matchedJobs.length > 0) {
+        return new Response(
+          JSON.stringify({ success: true, message: 'FastCron jobs already present for this workspace.', count: matchedJobs.length }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const defaultParams = {
+        name: `PinOrbit pinarchive — Default Daily — ${workspaceId.slice(0, 8)}`,
+        url: dispatchUrl,
+        expression: '0 3 * * *',
+        timezone: 'UTC',
+        http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
+        post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label: 'Default Daily' }),
+        status: 'enabled',
+      };
+
+      const addRes = await fastcronCall('cron_add', defaultParams, token);
+      if (!addRes.success) {
+        return new Response(
+          JSON.stringify({ success: false, error: addRes.error || 'Failed to create default sync FastCron job.' }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: 'Default daily FastCron job created (03:00 UTC).', job: addRes.data }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ── Branch: pause / resume ──────────────────────────────────────────────
+    if (action === 'pause' || action === 'resume') {
+      const jobId = Number(body?.job_id);
+      if (!jobId || isNaN(jobId)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'job_id is required for pause/resume.' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Marker verification before modification
+      const getRes = await fastcronCall('cron_get', { id: jobId }, token);
+      const existingJob = getRes.data?.data || getRes.data?.job || getRes.data;
+      if (!existingJob || !isMatchingPinArchiveJob(existingJob, workspaceId, dispatchUrl)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Job not found or unauthorized marker mismatch.' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const toggleAction = action === 'pause' ? 'cron_disable' : 'cron_enable';
+      const toggleRes = await fastcronCall(toggleAction, { id: jobId }, token);
+
+      if (!toggleRes.success) {
+        return new Response(
+          JSON.stringify({ success: false, error: toggleRes.error || `Failed to ${action} job.` }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: `FastCron job #${jobId} ${action === 'pause' ? 'paused' : 'resumed'}.` }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ── Branch: clone ───────────────────────────────────────────────────────
+    if (action === 'clone') {
+      const jobId = Number(body?.job_id);
+      if (!jobId || isNaN(jobId)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'job_id is required for clone.' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const getRes = await fastcronCall('cron_get', { id: jobId }, token);
+      const existingJob = getRes.data?.data || getRes.data?.job || getRes.data;
+      if (!existingJob || !isMatchingPinArchiveJob(existingJob, workspaceId, dispatchUrl)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Job not found or unauthorized marker mismatch.' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const postData = extractPostData(existingJob) || {};
+      const clonedLabel = `${postData.label || 'Schedule'} (copy)`;
+      const cloneParams = {
+        name: `PinOrbit pinarchive — ${clonedLabel} — ${workspaceId.slice(0, 8)}`,
+        url: dispatchUrl,
+        expression: existingJob.expression || '0 3 * * *',
+        timezone: existingJob.timezone || 'UTC',
+        http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
+        post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label: clonedLabel }),
+        status: 'enabled',
+      };
+
+      const cloneRes = await fastcronCall('cron_add', cloneParams, token);
+      if (!cloneRes.success) {
+        return new Response(
+          JSON.stringify({ success: false, error: cloneRes.error || 'Failed to clone FastCron job.' }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: `FastCron job cloned as "${clonedLabel}".`, job: cloneRes.data }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ── Branch: edit ────────────────────────────────────────────────────────
+    if (action === 'edit' || (body?.job_id && action !== 'create')) {
+      const jobId = Number(body.job_id);
+      if (!jobId || isNaN(jobId)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'job_id is required for edit.' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Marker verification before edit
+      const getRes = await fastcronCall('cron_get', { id: jobId }, token);
+      const existingJob = getRes.data?.data || getRes.data?.job || getRes.data;
+      if (!existingJob || !isMatchingPinArchiveJob(existingJob, workspaceId, dispatchUrl)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Job not found or unauthorized marker mismatch.' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      let cronExpression: string;
+      if (body.cron_expression) {
+        const validCron = validateCronExpression(body.cron_expression);
+        if (!validCron.valid || !validCron.cron) {
+          return new Response(
+            JSON.stringify({ success: false, error: validCron.error || 'Invalid cron expression.' }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+        cronExpression = validCron.cron;
+      } else {
+        const parsedCron = parseTimeToCron(body.sync_time);
+        if (!parsedCron.valid || !parsedCron.cron) {
+          return new Response(
+            JSON.stringify({ success: false, error: parsedCron.error || 'Invalid sync_time format.' }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+        cronExpression = parsedCron.cron;
+      }
+
+      const label = body.label && typeof body.label === 'string' && body.label.trim().length > 0 ? body.label.trim() : 'Schedule';
+      const timezone = body.timezone && typeof body.timezone === 'string' && body.timezone.trim().length > 0 ? body.timezone.trim() : 'UTC';
+      const isEnabled = body.enabled !== false;
+
+      const editParams = {
+        id: jobId,
+        name: `PinOrbit pinarchive — ${label} — ${workspaceId.slice(0, 8)}`,
+        url: dispatchUrl,
+        expression: cronExpression,
+        timezone,
+        http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
+        post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label }),
+        status: isEnabled ? 'enabled' : 'disabled',
+      };
+
+      const editRes = await fastcronCall('cron_edit', editParams, token);
+      if (!editRes.success) {
+        return new Response(
+          JSON.stringify({ success: false, error: editRes.error || 'Failed to edit FastCron job.' }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!isEnabled) {
+        await fastcronCall('cron_disable', { id: jobId }, token);
+      } else {
+        await fastcronCall('cron_enable', { id: jobId }, token);
+      }
+
+      // 4-Condition Orphan Cleanup
+      await cleanupOrphanJobs(token, workspaceId, dispatchUrl, new Set([jobId]));
+
+      return new Response(
+        JSON.stringify({ success: true, message: 'FastCron job updated successfully.', job: editRes.data }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ── Branch: create ──────────────────────────────────────────────────────
+    let cronExpression: string;
+    if (body.cron_expression) {
+      const validCron = validateCronExpression(body.cron_expression);
+      if (!validCron.valid || !validCron.cron) {
+        return new Response(
+          JSON.stringify({ success: false, error: validCron.error || 'Invalid cron expression.' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      cronExpression = validCron.cron;
+    } else {
+      const parsedCron = parseTimeToCron(body.sync_time);
+      if (!parsedCron.valid || !parsedCron.cron) {
+        return new Response(
+          JSON.stringify({ success: false, error: parsedCron.error || 'Invalid sync_time format.' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      cronExpression = parsedCron.cron;
+    }
+
+    const label = body.label && typeof body.label === 'string' && body.label.trim().length > 0 ? body.label.trim() : 'Daily Refresh';
+    const timezone = body.timezone && typeof body.timezone === 'string' && body.timezone.trim().length > 0 ? body.timezone.trim() : 'UTC';
     const isEnabled = body.enabled !== false;
 
-    const jobParams = {
-      name: `PinOrbit pinarchive — ${workspaceId.slice(0, 8)}`,
+    const addParams = {
+      name: `PinOrbit pinarchive — ${label} — ${workspaceId.slice(0, 8)}`,
       url: dispatchUrl,
-      expression: parsedCron.cron,
+      expression: cronExpression,
       timezone,
       http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
-      post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive' }),
+      post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label }),
       status: isEnabled ? 'enabled' : 'disabled',
     };
 
-    const discovered = await discoverPinArchiveJob(token, workspaceId);
-    let jobResult: any;
+    const addRes = await fastcronCall('cron_add', addParams, token);
+    if (!addRes.success) {
+      return new Response(
+        JSON.stringify({ success: false, error: addRes.error || 'Failed to create FastCron job.' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
-    if (discovered && discovered.id) {
-      jobResult = await fastcronCall('cron_edit', { id: discovered.id, ...jobParams }, token);
-      if (!jobResult.success) {
-        return new Response(
-          JSON.stringify({ success: false, error: jobResult.error || 'Failed to update FastCron job.' }),
-          { status: 500, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-      if (!isEnabled) {
-        await fastcronCall('cron_disable', { id: discovered.id }, token);
-      } else {
-        await fastcronCall('cron_enable', { id: discovered.id }, token);
-      }
-    } else {
-      jobResult = await fastcronCall('cron_add', jobParams, token);
-      if (!jobResult.success) {
-        return new Response(
-          JSON.stringify({ success: false, error: jobResult.error || 'Failed to create FastCron job.' }),
-          { status: 500, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-      const newId = jobResult.data?.id || jobResult.data?.data?.id;
-      if (newId && !isEnabled) {
-        await fastcronCall('cron_disable', { id: newId }, token);
-      }
+    const newJobId = Number(addRes.data?.id || addRes.data?.data?.id);
+    if (newJobId && !isEnabled) {
+      await fastcronCall('cron_disable', { id: newJobId }, token);
+    }
+
+    // 4-Condition Orphan Cleanup after create
+    if (newJobId) {
+      await cleanupOrphanJobs(token, workspaceId, dispatchUrl, new Set([newJobId]));
     }
 
     return new Response(
-      JSON.stringify({ success: true, job: jobResult.data }),
+      JSON.stringify({ success: true, message: 'FastCron job created successfully.', job: addRes.data }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {
     return new Response(
-      JSON.stringify({ success: false, error: err?.message || 'Failed to process request.' }),
+      JSON.stringify({ success: false, error: err?.message || 'Failed to process FastCron request.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 };
 
 /**
- * DELETE: Removes discovered FastCron job.
+ * DELETE: Removes a discovered FastCron job after verifying marker and workspace_id in postData.
  */
-export const DELETE: APIRoute = async ({ locals }) => {
+export const DELETE: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
   const schedulingClient = locals.supabase;
   const workspaceId = locals.activeWorkspaceId;
@@ -491,41 +976,86 @@ export const DELETE: APIRoute = async ({ locals }) => {
     });
   }
 
+  let jobId: number | null = null;
+  let tokenId: string | null = null;
+
+  try {
+    const urlObj = new URL(request.url);
+    const qId = urlObj.searchParams.get('job_id') || urlObj.searchParams.get('id');
+    tokenId = urlObj.searchParams.get('token_id');
+    if (qId) jobId = Number(qId);
+  } catch {}
+
+  if (!jobId) {
+    try {
+      const body = await request.json();
+      if (body?.job_id) jobId = Number(body.job_id);
+      if (body?.id) jobId = Number(body.id);
+      if (body?.token_id) tokenId = body.token_id;
+    } catch {}
+  }
+
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id);
 
-    let token: string | null = null;
-    try {
-      token = await resolveScheduleToken({ workspace_id: workspaceId }, runtimeEnv);
-    } catch {
-      token = null;
-    }
-
-    if (!token) {
+    const targetTokenObj = await resolveTargetToken(tokenId, workspaceId, runtimeEnv);
+    if (!targetTokenObj || !targetTokenObj.token) {
       return new Response(
         JSON.stringify({ success: false, error: 'FastCron API token not configured on server.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
+    const token = targetTokenObj.token;
+    const dispatchUrl = getDispatchEndpointUrl(runtimeEnv);
 
-    const discovered = await discoverPinArchiveJob(token, workspaceId);
-    if (!discovered || !discovered.id) {
+    // If specific job_id provided, verify marker before delete
+    if (jobId && !isNaN(jobId)) {
+      const getRes = await fastcronCall('cron_get', { id: jobId }, token);
+      const existingJob = getRes.data?.data || getRes.data?.job || getRes.data;
+
+      // Marker and Workspace ID verification before cron_delete
+      if (!existingJob || !isMatchingPinArchiveJob(existingJob, workspaceId, dispatchUrl)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Unauthorized marker check: Job does not belong to this workspace pipeline.' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const delRes = await fastcronCall('cron_delete', { id: jobId }, token);
+      if (!delRes.success) {
+        return new Response(
+          JSON.stringify({ success: false, error: delRes.error || 'Failed to delete FastCron job.' }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log(`[PinArchive FastCron] Deleted FastCron job #${jobId} for workspace ${workspaceId}`);
       return new Response(
-        JSON.stringify({ success: true, message: 'No FastCron job found to delete.' }),
+        JSON.stringify({ success: true, message: `FastCron job #${jobId} deleted successfully.` }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const delRes = await fastcronCall('cron_delete', { id: discovered.id }, token);
-    if (!delRes.success) {
-      return new Response(
-        JSON.stringify({ success: false, error: delRes.error || 'Failed to delete FastCron job.' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
+    // If no specific job_id, delete all discovered jobs for this workspace
+    const listRes = await fastcronCall('cron_list', { keyword: 'PinOrbit' }, token);
+    const jobs: any[] = Array.isArray(listRes.data)
+      ? listRes.data
+      : Array.isArray(listRes.data?.data)
+        ? listRes.data.data
+        : Array.isArray(listRes.data?.jobs)
+          ? listRes.data.jobs
+          : [];
+
+    let deletedCount = 0;
+    for (const j of jobs) {
+      if (isMatchingPinArchiveJob(j, workspaceId, dispatchUrl)) {
+        const delRes = await fastcronCall('cron_delete', { id: j.id }, token);
+        if (delRes.success) deletedCount++;
+      }
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'FastCron job deleted successfully.' }),
+      JSON.stringify({ success: true, message: `Deleted ${deletedCount} FastCron job(s) for workspace.` }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {

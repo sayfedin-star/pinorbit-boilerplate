@@ -1,913 +1,1066 @@
 ---
 // src/components/pinarchive/PinArchiveCronCard.astro
+// Carbon-copy of Scheduling FastCron Architecture & UX for PinArchive (Blocks A–D)
 ---
 
-<div class="space-y-6" id="pinarchive-automation-container">
-  <!-- Card Header & Configuration Controls -->
-  <article class="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-xs space-y-6" id="pinarchive-cron-card">
-    <!-- Card Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-border/80">
-      <div class="flex items-center gap-3">
-        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-          </svg>
-        </span>
-        <div>
-          <h3 class="text-sm font-bold text-foreground flex items-center gap-2">
-            <span>FastCron Automation Pipeline</span>
-            <span id="cron-status-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">
-              Checking...
-            </span>
-          </h3>
-          <p class="text-xs text-muted-foreground mt-0.5">
-            Automated daily pin refresh and trajectory synchronization across tracked workspace accounts.
-          </p>
-        </div>
+<div class="space-y-6" id="pinarchive-fastcron-container">
+  <!-- ═══ TOP SUMMARY / BANNER ═══ -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 sm:p-6 rounded-2xl border border-border bg-card shadow-xs">
+    <div class="flex items-center gap-3.5">
+      <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xs">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
       </div>
-
-      <!-- Top Action Toolbar -->
-      <div class="flex items-center gap-2 self-start sm:self-auto">
-        <button
-          id="cron-view-logs-btn"
-          type="button"
-          class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card hover:bg-muted text-foreground px-3 py-1.5 text-xs font-semibold shadow-2xs transition-all cursor-pointer"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          <span>View Logs</span>
-        </button>
-
-        <button
-          id="cron-run-now-btn"
-          type="button"
-          class="inline-flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 text-xs font-bold shadow-2xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Dispatches GitHub refresh workflow immediately with force=true"
-        >
-          <svg id="cron-run-icon" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          <span id="cron-run-text">Run Now</span>
-        </button>
+      <div>
+        <div class="flex items-center gap-2">
+          <h2 class="text-base font-bold text-foreground">FastCron Automation Pipeline</h2>
+          <span id="pa-cron-global-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">
+            Checking...
+          </span>
+        </div>
+        <p class="text-xs text-muted-foreground mt-0.5">
+          Stateless multi-job scheduler for PinArchive metric refreshes, engagement velocity updates, and relay syncs.
+        </p>
       </div>
     </div>
 
-    <!-- Read-Only Token Registry Row -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3.5 rounded-xl border border-border bg-background">
-      <div class="flex flex-wrap items-center gap-2">
-        <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">FastCron Token:</span>
-        <span id="cron-token-display" class="text-xs font-semibold text-foreground">
-          Loading token registry status...
-        </span>
-      </div>
-      <a
-        id="manage-tokens-link"
-        href="/accounts"
-        class="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline self-start sm:self-auto"
+    <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+      <button
+        id="pa-btn-sync-missing"
+        type="button"
+        class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs cursor-pointer"
+        title="Creates default daily schedule if none are currently present"
       >
-        <span>Manage tokens →</span>
-      </a>
-    </div>
-
-    <!-- Read-Only Status & Cadence Meta Line -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <!-- Next Run -->
-      <div class="rounded-xl border border-border bg-background p-3.5">
-        <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Next Scheduled Run</span>
-        <div id="cron-next-run-val" class="text-xs font-bold text-foreground mt-1 truncate">
-          Loading...
-        </div>
-        <span id="cron-next-run-sub" class="text-[10px] text-muted-foreground mt-0.5 block truncate">Via FastCron Scheduler</span>
-      </div>
-
-      <!-- Last Run -->
-      <div class="rounded-xl border border-border bg-background p-3.5">
-        <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Last Run Status</span>
-        <div id="cron-last-run-val" class="text-xs font-bold text-foreground mt-1 truncate">
-          Loading...
-        </div>
-        <span id="cron-last-run-sub" class="text-[10px] text-muted-foreground mt-0.5 block truncate">Latest execution response</span>
-      </div>
-
-      <!-- Job ID / Target URL -->
-      <div class="rounded-xl border border-border bg-background p-3.5">
-        <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">FastCron Job ID</span>
-        <div id="cron-job-id-val" class="text-xs font-mono font-bold text-foreground mt-1 truncate">
-          —
-        </div>
-        <span id="cron-job-name-val" class="text-[10px] text-muted-foreground mt-0.5 block truncate">Stateless discovery</span>
-      </div>
-    </div>
-
-    <!-- Schedule Configuration Form -->
-    <form id="pinarchive-cron-form" class="space-y-4 pt-1">
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <!-- Sync Time (HH:MM) -->
-        <div>
-          <label for="cron-sync-time" class="block text-xs font-bold text-foreground mb-1.5">
-            Sync Time (24h)
-          </label>
-          <input
-            id="cron-sync-time"
-            type="time"
-            value="04:00"
-            class="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground focus:border-primary focus:outline-none"
-            required
-          />
-          <p class="text-[10px] text-muted-foreground mt-1">Daily dispatch execution time.</p>
-        </div>
-
-        <!-- Timezone Selector -->
-        <div>
-          <label for="cron-timezone" class="block text-xs font-bold text-foreground mb-1.5">
-            Timezone
-          </label>
-          <select
-            id="cron-timezone"
-            class="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground focus:border-primary focus:outline-none cursor-pointer"
-          >
-            <option value="UTC" selected>UTC (Coordinated Universal Time)</option>
-            <option value="America/New_York">America/New_York (Eastern Time)</option>
-            <option value="America/Chicago">America/Chicago (Central Time)</option>
-            <option value="America/Denver">America/Denver (Mountain Time)</option>
-            <option value="America/Los_Angeles">America/Los_Angeles (Pacific Time)</option>
-            <option value="Europe/London">Europe/London (GMT / BST)</option>
-            <option value="Europe/Paris">Europe/Paris (CET / CEST)</option>
-            <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
-            <option value="Australia/Sydney">Australia/Sydney (AEST)</option>
-          </select>
-          <p class="text-[10px] text-muted-foreground mt-1">Schedule timezone offset.</p>
-        </div>
-
-        <!-- Enabled Switch -->
-        <div>
-          <label class="block text-xs font-bold text-foreground mb-1.5">
-            Schedule Status
-          </label>
-          <div class="flex items-center justify-between h-[38px] rounded-xl border border-border bg-background px-3 py-1.5">
-            <span id="cron-enabled-label" class="text-xs font-bold text-emerald-500">Enabled</span>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input id="cron-enabled-cb" type="checkbox" checked class="sr-only peer" />
-              <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
-            </label>
-          </div>
-          <p class="text-[10px] text-muted-foreground mt-1">Toggle active automation.</p>
-        </div>
-      </div>
-
-      <!-- Actions & Status Message -->
-      <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border/80">
-        <div class="flex items-center gap-2">
-          <span id="cron-status-msg" class="text-xs font-semibold"></span>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <button
-            id="cron-delete-btn"
-            type="button"
-            class="hidden rounded-xl border border-rose-500/30 hover:bg-rose-500/10 text-rose-500 px-3 py-2 text-xs font-bold transition-all cursor-pointer"
-          >
-            Remove Job
-          </button>
-
-          <button
-            id="cron-save-btn"
-            type="submit"
-            class="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Save Schedule
-          </button>
-        </div>
-      </div>
-    </form>
-  </article>
-
-  <!-- ═══ In-App Automation Jobs Table (Mirroring Posting Schedules) ═══ -->
-  <div class="rounded-2xl border border-border bg-card shadow-xs overflow-hidden">
-    <div class="p-4 sm:p-5 border-b border-border/80 flex items-center justify-between">
-      <div class="flex items-center gap-2.5">
-        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        </span>
-        <div>
-          <h3 class="text-xs sm:text-sm font-bold text-foreground">Automation Jobs</h3>
-          <p class="text-[11px] text-muted-foreground">Active recurring FastCron triggers for this workspace</p>
-        </div>
-      </div>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/><polyline points="9 11 12 14 22 4"/></svg>
+        <span>Sync Missing</span>
+      </button>
 
       <button
-        id="btn-refresh-jobs-table"
+        id="pa-btn-run-now"
         type="button"
-        class="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background hover:bg-muted text-foreground px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer"
+        class="inline-flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary px-3.5 py-2 text-xs font-bold shadow-2xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Dispatches GitHub refresh workflow immediately with force=true"
       >
-        <svg id="refresh-jobs-icon" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-        <span>Refresh</span>
+        <svg id="pa-run-now-icon" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <span id="pa-run-now-text">Run Now</span>
       </button>
+    </div>
+  </div>
+
+  <!-- ═══ BLOCK A: Workspace Token Registry ═══ -->
+  <div class="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-xs space-y-4">
+    <div class="flex flex-wrap items-center justify-between border-b border-border/80 pb-3 gap-3">
+      <div class="flex items-center gap-2.5">
+        <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-foreground">FastCron API Tokens</h3>
+          <p class="text-xs text-muted-foreground">Workspace token registry & connection authority</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          id="pa-btn-ping-tokens"
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background hover:bg-muted text-foreground px-2.5 py-1.5 text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+        >
+          <svg class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <span>Test Connection</span>
+        </button>
+        <button
+          id="pa-btn-add-token"
+          type="button"
+          class="inline-flex items-center gap-1 rounded-xl bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer"
+        >
+          + Add Token
+        </button>
+      </div>
     </div>
 
     <div class="overflow-x-auto">
-      <table class="w-full text-left text-xs">
-        <thead class="bg-muted/40 text-muted-foreground text-[11px] uppercase tracking-wider border-b border-border/80">
-          <tr>
-            <th class="py-3 px-4 font-semibold">Job & Status</th>
-            <th class="py-3 px-4 font-semibold">Schedule & Cadence</th>
-            <th class="py-3 px-4 font-semibold">Next Run</th>
-            <th class="py-3 px-4 font-semibold">Last Run</th>
-            <th class="py-3 px-4 font-semibold">Token</th>
-            <th class="py-3 px-4 font-semibold text-right">Actions</th>
+      <table class="w-full text-xs">
+        <thead>
+          <tr class="text-left border-b border-border text-muted-foreground">
+            <th class="p-2.5 font-semibold">TOKEN NAME</th>
+            <th class="p-2.5 font-semibold">MASKED KEY</th>
+            <th class="p-2.5 font-semibold">SOURCE</th>
+            <th class="p-2.5 font-semibold">STATUS</th>
+            <th class="p-2.5 font-semibold text-right">ACTIONS</th>
           </tr>
         </thead>
-        <tbody id="pinarchive-jobs-tbody" class="divide-y divide-border/60">
+        <tbody id="pa-tokens-table-rows">
           <tr>
-            <td colspan="6" class="py-8 text-center text-xs text-muted-foreground">
-              Loading automation jobs...
-            </td>
+            <td colspan="5" class="p-4 text-center text-muted-foreground">Loading FastCron token registry...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pt-3 border-t border-border/80 flex items-center justify-between">
+      <div class="flex items-center gap-1.5 text-xs font-medium" id="pa-token-health-indicator">
+        <svg class="h-4 w-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        <span id="pa-fc-connection-status" class="text-emerald-500">Connection ready</span>
+      </div>
+      <span class="text-[11px] text-muted-foreground">Tokens are securely encrypted with AES-GCM at rest</span>
+    </div>
+  </div>
+
+  <!-- ═══ BLOCK D: Cadence & Eligibility Pacing Analyzer Banner ═══ -->
+  <div id="pa-sched-pace-box" class="p-4 rounded-2xl border border-primary/25 bg-primary/5 space-y-1.5 shadow-2xs">
+    <div class="flex flex-wrap items-center justify-between text-xs gap-2">
+      <span class="font-bold text-primary flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span>Cadence & Eligibility Gate Analyzer</span>
+      </span>
+      <span id="pa-sched-pace-val" class="font-bold text-foreground">Calculating cadence...</span>
+    </div>
+    <p id="pa-sched-pace-desc" class="text-[11px] text-muted-foreground">
+      Cron fires ~0 times/week; PinArchive eligibility gate controls effective pin updates based on account interval settings.
+    </p>
+  </div>
+
+  <!-- ═══ BLOCK C: Automation Schedules (Jobs Table & Batch Actions) ═══ -->
+  <div class="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-xs space-y-4">
+    <div class="flex flex-wrap items-center justify-between border-b border-border/80 pb-3 gap-3">
+      <div class="flex items-center gap-2.5">
+        <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-pink-500/10 text-pink-500 border border-pink-500/20">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-foreground">Automation Schedules</h3>
+          <p class="text-xs text-muted-foreground">Manage multi-schedule FastCron triggers for this workspace</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          id="pa-btn-add-schedule"
+          type="button"
+          class="inline-flex items-center gap-1 rounded-xl bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer"
+        >
+          + New Schedule
+        </button>
+
+        <!-- Batch Actions Dropdown -->
+        <div class="relative inline-block text-left" id="pa-batch-dropdown-container">
+          <button
+            id="pa-btn-sched-batch"
+            type="button"
+            class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs cursor-pointer"
+          >
+            <svg class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <span>Batch</span>
+            <span id="pa-batch-sel-count" class="hidden rounded-full bg-primary/20 text-primary px-1.5 py-0.2 text-[10px] font-bold">0</span>
+            <svg class="h-3 w-3 text-muted-foreground ml-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+
+          <div id="pa-sched-batch-menu" class="hidden absolute right-0 mt-1 w-56 rounded-2xl border border-border bg-card shadow-xl z-50 py-1 text-xs divide-y divide-border/80">
+            <div class="py-1">
+              <button type="button" id="pa-batch-act-select-all" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-foreground cursor-pointer">
+                <svg class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <span>Select all</span>
+              </button>
+            </div>
+            <div class="py-1">
+              <button type="button" id="pa-batch-act-enable" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-emerald-600 dark:text-emerald-400 cursor-pointer">
+                <svg class="h-3.5 w-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Resume / Enable Selected</span>
+              </button>
+              <button type="button" id="pa-batch-act-disable" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-amber-600 dark:text-amber-400 cursor-pointer">
+                <svg class="h-3.5 w-3.5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <span>Pause / Disable Selected</span>
+              </button>
+            </div>
+            <div class="py-1">
+              <button type="button" id="pa-batch-act-delete" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-rose-500 font-semibold cursor-pointer">
+                <svg class="h-3.5 w-3.5 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                <span>Delete Selected</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button
+          id="pa-btn-refresh-schedules"
+          type="button"
+          class="inline-flex items-center gap-1 rounded-xl border border-border bg-background p-2 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs cursor-pointer"
+          title="Refresh schedule telemetry"
+        >
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs">
+        <thead>
+          <tr class="text-left border-b border-border text-muted-foreground">
+            <th class="p-2.5 w-8">
+              <input type="checkbox" id="pa-sched-select-all-header" class="h-3.5 w-3.5 rounded border-border text-primary cursor-pointer" />
+            </th>
+            <th class="p-2.5 font-semibold">JOB & STATUS</th>
+            <th class="p-2.5 font-semibold">SCHEDULE & CADENCE</th>
+            <th class="p-2.5 font-semibold">NEXT RUN</th>
+            <th class="p-2.5 font-semibold">LAST RUN</th>
+            <th class="p-2.5 font-semibold">FASTCRON TOKEN</th>
+            <th class="p-2.5 font-semibold text-right">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody id="pa-account-schedules-rows">
+          <tr>
+            <td colspan="7" class="p-6 text-center text-muted-foreground">Loading FastCron schedules...</td>
           </tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- FastCron Execution Logs Modal (START TIME / TIME / HTTP / OUTPUT) -->
-  <div id="cron-logs-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-    <div class="relative w-full max-w-3xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between pb-3 border-b border-border">
-        <div class="flex items-center gap-2.5">
-          <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          </span>
+  <!-- ═══ BLOCK B: Add / Edit Schedule Modal (Simple | Visual | Raw) ═══ -->
+  <dialog id="pa-schedule-modal" class="rounded-3xl border border-border bg-card p-6 shadow-2xl w-[620px] max-w-full backdrop:bg-black/60 backdrop:backdrop-blur-xs max-h-[90vh] overflow-y-auto">
+    <form id="pa-schedule-form" class="space-y-4 text-xs">
+      <div class="flex items-center justify-between border-b border-border/80 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <h3 id="pa-schedule-modal-title" class="text-base font-bold text-foreground">Add Automation Schedule</h3>
+        </div>
+        <button type="button" id="pa-btn-close-sched-modal" class="rounded-xl p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <input type="hidden" id="pa-f-sched-id" value="" />
+
+      <!-- Schedule Label -->
+      <div>
+        <label for="pa-f-sched-label" class="block font-bold text-foreground mb-1">Schedule Label / Name</label>
+        <input
+          type="text"
+          id="pa-f-sched-label"
+          placeholder="e.g. Daily Morning Refresh"
+          class="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground font-semibold focus:border-primary focus:outline-none"
+          required
+        />
+      </div>
+
+      <!-- Builder Tab Switcher -->
+      <div class="flex items-center rounded-xl bg-muted/80 p-1 border border-border/60">
+        <button type="button" id="pa-tab-btn-simple" class="flex-1 rounded-lg py-1.5 text-center text-xs font-bold transition-all bg-background text-foreground shadow-2xs cursor-pointer">
+          Simple Time
+        </button>
+        <button type="button" id="pa-tab-btn-visual" class="flex-1 rounded-lg py-1.5 text-center text-xs font-semibold text-muted-foreground transition-all cursor-pointer">
+          Visual Builder
+        </button>
+        <button type="button" id="pa-tab-btn-raw" class="flex-1 rounded-lg py-1.5 text-center text-xs font-semibold text-muted-foreground transition-all cursor-pointer">
+          Raw Cron
+        </button>
+      </div>
+
+      <!-- Tab 1: Simple Time Builder -->
+      <div id="pa-tab-pane-simple" class="space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <h3 class="text-sm font-bold text-foreground">FastCron Execution History</h3>
-            <p class="text-xs text-muted-foreground">Recent dispatch execution log records from FastCron</p>
+            <label for="pa-f-sched-time" class="block font-bold text-foreground mb-1">Daily Run Time (24h)</label>
+            <input
+              type="time"
+              id="pa-f-sched-time"
+              value="03:00"
+              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground font-semibold focus:border-primary focus:outline-none"
+            />
+          </div>
+          <div>
+            <label for="pa-f-sched-tz" class="block font-bold text-foreground mb-1">Timezone</label>
+            <select
+              id="pa-f-sched-tz"
+              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground font-semibold focus:border-primary focus:outline-none cursor-pointer"
+            >
+              <option value="UTC" selected>UTC (Coordinated Universal Time)</option>
+              <option value="America/New_York">America/New_York (Eastern Time)</option>
+              <option value="America/Chicago">America/Chicago (Central Time)</option>
+              <option value="America/Denver">America/Denver (Mountain Time)</option>
+              <option value="America/Los_Angeles">America/Los_Angeles (Pacific Time)</option>
+              <option value="Europe/London">Europe/London (GMT / BST)</option>
+              <option value="Europe/Paris">Europe/Paris (CET / CEST)</option>
+              <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+              <option value="Australia/Sydney">Australia/Sydney (AEST)</option>
+            </select>
           </div>
         </div>
+      </div>
 
-        <button
-          id="close-logs-modal-btn"
-          type="button"
-          class="rounded-lg p-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-base font-bold"
+      <!-- Tab 2: Visual Builder -->
+      <div id="pa-tab-pane-visual" class="hidden space-y-3">
+        <div>
+          <span class="block font-bold text-foreground mb-1">Hours of Day</span>
+          <div id="pa-cron-hour-grid" class="grid grid-cols-12 gap-1 p-2 rounded-xl bg-background border border-border"></div>
+        </div>
+        <div>
+          <span class="block font-bold text-foreground mb-1">Days of Week</span>
+          <div id="pa-cron-dow-grid" class="grid grid-cols-7 gap-1 p-2 rounded-xl bg-background border border-border"></div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Raw Cron Expression -->
+      <div id="pa-tab-pane-raw" class="hidden space-y-3">
+        <div>
+          <label for="pa-f-raw-cron" class="block font-bold text-foreground mb-1">Raw Cron Expression (5 fields: min hour dom mon dow)</label>
+          <textarea
+            id="pa-f-raw-cron"
+            rows="2"
+            class="w-full rounded-xl border border-border bg-background p-2.5 font-mono text-xs text-foreground focus:border-primary focus:outline-none"
+            placeholder="0 3 * * *"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Token Selector -->
+      <div>
+        <label for="pa-f-sched-token" class="block font-bold text-foreground mb-1">FastCron API Token</label>
+        <select
+          id="pa-f-sched-token"
+          class="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground font-semibold focus:border-primary focus:outline-none cursor-pointer"
         >
+          <option value="">Loading tokens...</option>
+        </select>
+      </div>
+
+      <!-- Read-Only Rule Info Line -->
+      <div class="p-3 rounded-xl border border-border/80 bg-muted/40 flex items-center justify-between text-xs">
+        <span class="text-muted-foreground">Refresh Strategy:</span>
+        <span class="font-semibold text-foreground">Relay Metrics + Annotations + Reactions (Force-bypass on manual run)</span>
+      </div>
+
+      <!-- Execution Preview Box -->
+      <div class="rounded-xl border border-border/80 bg-background p-3 space-y-1">
+        <div class="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Preview & Cadence</div>
+        <div id="pa-sched-summary-preview" class="text-xs font-semibold text-foreground">At 03:00 every day</div>
+        <div class="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+          <span>Next predicted execution:</span>
+          <span id="pa-sched-next-preview" class="font-mono font-bold text-primary">Calculating...</span>
+        </div>
+      </div>
+
+      <!-- Enabled Toggle -->
+      <div class="flex items-center justify-between pt-1">
+        <div>
+          <span class="block font-bold text-foreground">Enable Schedule</span>
+          <span class="text-[11px] text-muted-foreground">When disabled, FastCron pauses automated execution</span>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" id="pa-f-sched-enabled" checked class="sr-only peer" />
+          <div class="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+        </label>
+      </div>
+
+      <!-- Form Buttons -->
+      <div class="flex items-center justify-end gap-2 pt-3 border-t border-border/80">
+        <button
+          type="button"
+          id="pa-btn-cancel-sched-modal"
+          class="rounded-xl border border-border bg-background px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-all cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          id="pa-btn-save-sched"
+          class="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer"
+        >
+          Save Schedule
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ═══ MODAL: Add FastCron Token ═══ -->
+  <dialog id="pa-token-modal" class="rounded-3xl border border-border bg-card p-6 shadow-2xl w-[480px] max-w-full backdrop:bg-black/60 backdrop:backdrop-blur-xs">
+    <form id="pa-token-form" class="space-y-4 text-xs">
+      <div class="flex items-center justify-between border-b border-border/80 pb-3">
+        <h3 class="text-base font-bold text-foreground">Add FastCron API Token</h3>
+        <button type="button" id="pa-btn-close-token-modal" class="rounded-xl p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer">
           ✕
         </button>
       </div>
+      <div>
+        <label for="pa-f-token-name" class="block font-bold text-foreground mb-1">Token Name / Label</label>
+        <input
+          type="text"
+          id="pa-f-token-name"
+          placeholder="e.g. Production FastCron API"
+          class="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground font-semibold focus:border-primary focus:outline-none"
+          required
+        />
+      </div>
+      <div>
+        <label for="pa-f-token-value" class="block font-bold text-foreground mb-1">FastCron API Secret Key</label>
+        <input
+          type="password"
+          id="pa-f-token-value"
+          placeholder="Paste FastCron API Token"
+          class="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground font-mono focus:border-primary focus:outline-none"
+          required
+        />
+      </div>
+      <div class="flex items-center gap-2">
+        <input type="checkbox" id="pa-f-token-default" class="h-4 w-4 rounded border-border text-primary cursor-pointer" />
+        <label for="pa-f-token-default" class="text-xs font-semibold text-foreground cursor-pointer">Set as default workspace token</label>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-3 border-t border-border/80">
+        <button type="button" id="pa-btn-cancel-token-modal" class="rounded-xl border border-border bg-background px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted cursor-pointer">Cancel</button>
+        <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 cursor-pointer">Save Token</button>
+      </div>
+    </form>
+  </dialog>
 
-      <!-- Logs Table -->
-      <div class="max-h-96 overflow-y-auto overflow-x-auto rounded-xl border border-border bg-background">
-        <table class="w-full text-left text-xs">
-          <thead class="bg-muted/40 text-muted-foreground text-[11px] uppercase border-b border-border/80 sticky top-0">
-            <tr>
-              <th class="py-2.5 px-3">Start Time</th>
-              <th class="py-2.5 px-3">Duration</th>
-              <th class="py-2.5 px-3">HTTP Code</th>
-              <th class="py-2.5 px-3">Output</th>
+  <!-- ═══ MODAL: Execution Logs ═══ -->
+  <dialog id="pa-logs-modal" class="rounded-3xl border border-border bg-card p-6 shadow-2xl w-[640px] max-w-full backdrop:bg-black/60 backdrop:backdrop-blur-xs max-h-[85vh] overflow-y-auto">
+    <div class="space-y-4 text-xs">
+      <div class="flex items-center justify-between border-b border-border/80 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-foreground">FastCron Execution History</h3>
+          <p class="text-xs text-muted-foreground" id="pa-logs-job-subtitle">Recent dispatch logs recorded by FastCron</p>
+        </div>
+        <button type="button" id="pa-btn-close-logs-modal" class="rounded-xl p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer">
+          ✕
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs">
+          <thead>
+            <tr class="text-left border-b border-border text-muted-foreground">
+              <th class="p-2 font-semibold">DATE & TIME</th>
+              <th class="p-2 font-semibold">STATUS</th>
+              <th class="p-2 font-semibold">HTTP CODE</th>
+              <th class="p-2 font-semibold text-right">DURATION</th>
             </tr>
           </thead>
-          <tbody id="cron-logs-tbody" class="divide-y divide-border/60 font-mono text-[11px]">
-            <tr>
-              <td colspan="4" class="py-6 text-center text-xs font-sans text-muted-foreground">Loading logs...</td>
-            </tr>
+          <tbody id="pa-logs-table-rows">
+            <tr><td colspan="4" class="p-4 text-center text-muted-foreground">Loading logs...</td></tr>
           </tbody>
         </table>
       </div>
-
-      <div class="flex justify-end pt-2">
-        <button
-          id="close-logs-modal-btn-2"
-          type="button"
-          class="rounded-xl border border-border bg-muted/40 hover:bg-muted px-4 py-1.5 text-xs font-semibold text-foreground transition-colors cursor-pointer"
-        >
-          Close
-        </button>
-      </div>
     </div>
-  </div>
+  </dialog>
 </div>
 
 <script>
-  let cachedJobData: any = null;
-  let cachedTokenMeta: { source?: string; name?: string; masked?: string } = {};
+  // ═══ CLIENT ENGINE: Carbon-Copy FastCron Automation ═══
+  const toMs = (v: any): number | null => {
+    if (v === null || v === undefined) return null;
+    if (typeof v === 'number') return v < 1e12 ? v * 1000 : v;
+    if (typeof v === 'string') {
+      const num = Number(v);
+      if (!isNaN(num) && num > 0) return num < 1e12 ? num * 1000 : num;
+      const d = new Date(v).getTime();
+      return isNaN(d) ? null : d;
+    }
+    return null;
+  };
 
-  function escapeHtml(str?: string | null): string {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+  let loadedTokens: any[] = [];
+  let loadedJobs: any[] = [];
+  const selectedJobIds = new Set<number>();
+  let currentTab: 'simple' | 'visual' | 'raw' = 'simple';
+
+  const visualHours = new Set<number>([3]);
+  const visualWeekdays = new Set<number>([0, 1, 2, 3, 4, 5, 6]);
+
+  function formatRangeList(set: Set<number>, max: number): string {
+    if (set.size === 0 || set.size === max + 1) return '*';
+    return Array.from(set).sort((a, b) => a - b).join(',');
   }
 
-  function fmtDateTimeStr(str?: string | null): string {
-    if (!str) return '—';
+  function getVisualCronExpression(): string {
+    const hStr = formatRangeList(visualHours, 23);
+    const dStr = visualWeekdays.size === 7 || visualWeekdays.size === 0 ? '*' : Array.from(visualWeekdays).sort((a, b) => a - b).join(',');
+    return `0 ${hStr} * * ${dStr}`;
+  }
+
+  function buildHumanReadableSummary(cronExpr: string): string {
+    const parts = cronExpr.trim().split(/\s+/);
+    if (parts.length < 5) return 'Invalid cron expression format';
+    const [mPart, hPart, , , dowPart] = parts;
+    const dayNames: Record<number, string> = { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat' };
+
+    let mText = mPart === '*' ? 'every minute' : `at :${mPart.padStart(2, '0')}`;
+    let hText = hPart === '*' ? 'every hour' : `hour ${hPart}`;
+    let dText = dowPart === '*' ? 'every day' : `on ${dowPart.split(',').map(d => dayNames[Number(d)] || d).join(', ')}`;
+    return `At ${mText} ${hText} ${dText}`;
+  }
+
+  function calculateNextExecution(cronExpr: string, tzStr = 'UTC'): string {
     try {
-      const d = new Date(str);
-      if (isNaN(d.getTime())) return str;
-      return d.toLocaleString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
+      const parts = cronExpr.trim().split(/\s+/);
+      if (parts.length < 5) return '--:--';
+      const [mPart, hPart, , , dowPart] = parts;
+      const scanTime = new Date(Date.now() + 60000);
+
+      const matchNum = (val: number, rule: string): boolean => {
+        if (rule === '*') return true;
+        if (rule.startsWith('*/')) return val % Number(rule.slice(2)) === 0;
+        return rule.split(',').some(p => Number(p) === val);
+      };
+
+      for (let offset = 0; offset < 7 * 24 * 60; offset++) {
+        const testDate = new Date(scanTime.getTime() + offset * 60000);
+        let m = testDate.getUTCMinutes(), h = testDate.getUTCHours(), dow = testDate.getUTCDay();
+        try {
+          const formatter = new Intl.DateTimeFormat('en-US', { timeZone: tzStr, minute: 'numeric', hour: 'numeric', weekday: 'short', hour12: false });
+          const partsTz = formatter.formatToParts(testDate);
+          m = Number(partsTz.find(p => p.type === 'minute')?.value ?? m);
+          h = Number(partsTz.find(p => p.type === 'hour')?.value ?? h);
+          const dayStr = partsTz.find(p => p.type === 'weekday')?.value ?? '';
+          const dowMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+          if (dayStr in dowMap) dow = dowMap[dayStr];
+        } catch {}
+
+        if (matchNum(m, mPart) && matchNum(h, hPart) && matchNum(dow, dowPart)) {
+          const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dow];
+          return `${dayName}, ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+      }
+      return 'Within 7 days: none';
     } catch {
-      return str || '—';
+      return '--:--';
     }
   }
 
-  function parseCronToTime(cronExp?: string | null): string {
-    if (!cronExp) return '04:00';
-    const parts = cronExp.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      const min = parseInt(parts[0], 10);
-      const hour = parseInt(parts[1], 10);
-      if (!isNaN(min) && !isNaN(hour)) {
-        return `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+  function updatePreview() {
+    let expr = '0 3 * * *';
+    const tz = (document.getElementById('pa-f-sched-tz') as HTMLSelectElement)?.value || 'UTC';
+    if (currentTab === 'simple') {
+      const timeVal = (document.getElementById('pa-f-sched-time') as HTMLInputElement)?.value || '03:00';
+      const [h, m] = timeVal.split(':');
+      expr = `${parseInt(m || '0', 10)} ${parseInt(h || '3', 10)} * * *`;
+    } else if (currentTab === 'visual') {
+      expr = getVisualCronExpression();
+    } else {
+      expr = (document.getElementById('pa-f-raw-cron') as HTMLTextAreaElement)?.value || '0 3 * * *';
+    }
+
+    const sumEl = document.getElementById('pa-sched-summary-preview');
+    const nextEl = document.getElementById('pa-sched-next-preview');
+    if (sumEl) sumEl.textContent = buildHumanReadableSummary(expr);
+    if (nextEl) nextEl.textContent = calculateNextExecution(expr, tz);
+  }
+
+  function setBuilderTab(tab: 'simple' | 'visual' | 'raw') {
+    currentTab = tab;
+    const btnSimple = document.getElementById('pa-tab-btn-simple');
+    const btnVisual = document.getElementById('pa-tab-btn-visual');
+    const btnRaw = document.getElementById('pa-tab-btn-raw');
+    const paneSimple = document.getElementById('pa-tab-pane-simple');
+    const paneVisual = document.getElementById('pa-tab-pane-visual');
+    const paneRaw = document.getElementById('pa-tab-pane-raw');
+
+    [btnSimple, btnVisual, btnRaw].forEach(b => {
+      b?.classList.remove('bg-background', 'text-foreground', 'shadow-2xs', 'font-bold');
+      b?.classList.add('text-muted-foreground', 'font-semibold');
+    });
+
+    paneSimple?.classList.add('hidden');
+    paneVisual?.classList.add('hidden');
+    paneRaw?.classList.add('hidden');
+
+    if (tab === 'simple') {
+      btnSimple?.classList.add('bg-background', 'text-foreground', 'shadow-2xs', 'font-bold');
+      btnSimple?.classList.remove('text-muted-foreground');
+      paneSimple?.classList.remove('hidden');
+    } else if (tab === 'visual') {
+      btnVisual?.classList.add('bg-background', 'text-foreground', 'shadow-2xs', 'font-bold');
+      btnVisual?.classList.remove('text-muted-foreground');
+      paneVisual?.classList.remove('hidden');
+      renderVisualGrids();
+    } else {
+      btnRaw?.classList.add('bg-background', 'text-foreground', 'shadow-2xs', 'font-bold');
+      btnRaw?.classList.remove('text-muted-foreground');
+      paneRaw?.classList.remove('hidden');
+    }
+    updatePreview();
+  }
+
+  function renderVisualGrids() {
+    const hrGrid = document.getElementById('pa-cron-hour-grid');
+    if (hrGrid) {
+      let hHtml = '';
+      for (let h = 0; h < 24; h++) {
+        const isSel = visualHours.has(h);
+        hHtml += `<button type="button" data-hour="${h}" class="pa-chip py-1 px-0.5 rounded text-[11px] font-mono transition-all ${isSel ? 'bg-primary text-primary-foreground font-bold' : 'bg-muted/60 text-muted-foreground hover:bg-muted'}">${String(h).padStart(2, '0')}</button>`;
       }
+      hrGrid.innerHTML = hHtml;
     }
-    return '04:00';
-  }
 
-  function humanizeCron(expr?: string | null): string {
-    if (!expr) return 'Daily at 04:00';
-    const parts = expr.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      const min = parseInt(parts[0], 10);
-      const hr = parseInt(parts[1], 10);
-      if (!isNaN(min) && !isNaN(hr)) {
-        return `Daily at ${String(hr).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+    const dowGrid = document.getElementById('pa-cron-dow-grid');
+    if (dowGrid) {
+      const days = [{ n: 1, l: 'Mon' }, { n: 2, l: 'Tue' }, { n: 3, l: 'Wed' }, { n: 4, l: 'Thu' }, { n: 5, l: 'Fri' }, { n: 6, l: 'Sat' }, { n: 0, l: 'Sun' }];
+      let dHtml = '';
+      for (const d of days) {
+        const isSel = visualWeekdays.has(d.n);
+        dHtml += `<button type="button" data-dow="${d.n}" class="pa-chip py-1 px-1 rounded-lg text-xs font-semibold transition-all ${isSel ? 'bg-primary text-primary-foreground font-bold' : 'bg-muted/60 text-muted-foreground hover:bg-muted'}">${d.l}</button>`;
       }
+      dowGrid.innerHTML = dHtml;
     }
-    return expr;
   }
 
-  function renderJobsTable() {
-    const tbody = document.getElementById('pinarchive-jobs-tbody');
+  // ═══ API Loaders ═══
+  async function loadData() {
+    try {
+      const res = await fetch('/api/pinarchive/cron', { headers: { Accept: 'application/json' } });
+      const data = await res.json();
+      if (!data.success) {
+        console.warn('Failed to load PinArchive cron data:', data.error);
+        return;
+      }
+
+      loadedTokens = Array.isArray(data.tokens) ? data.tokens : [];
+      loadedJobs = Array.isArray(data.jobs) ? data.jobs : (data.job ? [data.job] : []);
+
+      renderTokens();
+      renderJobs();
+      updateCadenceBanner();
+    } catch (err) {
+      console.error('Error fetching PinArchive cron schedules:', err);
+    }
+  }
+
+  function renderTokens() {
+    const tbody = document.getElementById('pa-tokens-table-rows');
+    const select = document.getElementById('pa-f-sched-token') as HTMLSelectElement | null;
     if (!tbody) return;
 
-    if (!cachedJobData) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="6" class="py-8 text-center text-xs text-muted-foreground">
-            <div class="flex flex-col items-center justify-center gap-1.5">
-              <span class="text-base">📅</span>
-              <span class="font-medium text-foreground">No FastCron job yet</span>
-              <span class="text-[11px] text-muted-foreground">Configure your sync time above and click Save Schedule.</span>
+    if (loadedTokens.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted-foreground">No FastCron tokens found in workspace registry.</td></tr>`;
+      if (select) select.innerHTML = `<option value="">Environment Fallback</option>`;
+      return;
+    }
+
+    let rowsHtml = '';
+    let selectHtml = '';
+
+    for (const t of loadedTokens) {
+      const isDef = t.is_default;
+      rowsHtml += `
+        <tr class="border-b border-border/60 hover:bg-muted/30">
+          <td class="p-2.5 font-bold text-foreground flex items-center gap-1.5">
+            <span>${t.name}</span>
+            ${isDef ? `<span class="rounded bg-primary/20 text-primary text-[9px] px-1 py-0.2 font-bold">DEFAULT</span>` : ''}
+          </td>
+          <td class="p-2.5 font-mono text-muted-foreground">${t.masked_token}</td>
+          <td class="p-2.5 text-muted-foreground capitalize">${t.source.replace('_', ' ')}</td>
+          <td class="p-2.5">
+            <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-500">
+              <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> Active
+            </span>
+          </td>
+          <td class="p-2.5 text-right">
+            ${t.id ? `<button type="button" data-del-token="${t.id}" class="text-rose-500 hover:underline font-semibold cursor-pointer">Delete</button>` : `<span class="text-muted-foreground">—</span>`}
+          </td>
+        </tr>
+      `;
+
+      selectHtml += `<option value="${t.id || ''}" ${isDef ? 'selected' : ''}>${t.name} (${t.masked_token})</option>`;
+    }
+
+    tbody.innerHTML = rowsHtml;
+    if (select) select.innerHTML = selectHtml;
+  }
+
+  function renderJobs() {
+    const tbody = document.getElementById('pa-account-schedules-rows');
+    const globalBadge = document.getElementById('pa-cron-global-badge');
+    if (!tbody) return;
+
+    if (loadedJobs.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-muted-foreground">No automation schedules found for this workspace. Click "+ New Schedule" or "Sync Missing" to create one.</td></tr>`;
+      if (globalBadge) {
+        globalBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20';
+        globalBadge.textContent = 'Unconfigured';
+      }
+      return;
+    }
+
+    const hasActive = loadedJobs.some(j => !j.paused);
+    if (globalBadge) {
+      if (hasActive) {
+        globalBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20';
+        globalBadge.textContent = 'Active Pipeline';
+      } else {
+        globalBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20';
+        globalBadge.textContent = 'Paused';
+      }
+    }
+
+    let rowsHtml = '';
+    for (const job of loadedJobs) {
+      const isPaused = job.paused;
+      const nextRunMs = toMs(job.next_run);
+      const lastRunMs = toMs(job.last_run);
+
+      const nextRunStr = nextRunMs ? new Date(nextRunMs).toLocaleString() : '—';
+      const lastRunStr = lastRunMs ? new Date(lastRunMs).toLocaleString() : '—';
+      const lastHttp = job.last_http_code || (job.last_status === 'OK' ? 202 : null);
+
+      rowsHtml += `
+        <tr class="border-b border-border/60 hover:bg-muted/30 ${selectedJobIds.has(job.id) ? 'bg-primary/5' : ''}">
+          <td class="p-2.5">
+            <input type="checkbox" data-job-select="${job.id}" ${selectedJobIds.has(job.id) ? 'checked' : ''} class="h-3.5 w-3.5 rounded border-border text-primary cursor-pointer" />
+          </td>
+          <td class="p-2.5">
+            <div class="font-bold text-foreground flex items-center gap-1.5">
+              <span>${job.label || job.name}</span>
+              <span class="rounded text-[9px] px-1.5 py-0.2 font-bold ${isPaused ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}">
+                ${isPaused ? 'PAUSED' : 'ENABLED'}
+              </span>
+            </div>
+            <div class="text-[10px] font-mono text-muted-foreground mt-0.5">#${job.id}</div>
+          </td>
+          <td class="p-2.5">
+            <span class="font-mono font-semibold text-foreground">${job.expression}</span>
+            <div class="text-[10px] text-muted-foreground">${buildHumanReadableSummary(job.expression)}</div>
+          </td>
+          <td class="p-2.5">
+            <div class="font-semibold text-foreground">${nextRunStr}</div>
+            <div class="text-[10px] text-muted-foreground">${job.timezone || 'UTC'}</div>
+          </td>
+          <td class="p-2.5">
+            <div class="flex items-center gap-1.5">
+              ${lastHttp ? `<span class="rounded px-1.5 py-0.2 text-[9px] font-bold ${lastHttp >= 200 && lastHttp < 300 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}">HTTP ${lastHttp}</span>` : ''}
+              <span class="font-semibold text-muted-foreground">${lastRunStr}</span>
+            </div>
+          </td>
+          <td class="p-2.5">
+            <span class="text-foreground font-semibold">${job.token_name || 'Default'}</span>
+            <div class="text-[10px] font-mono text-muted-foreground">${job.masked_token || '********'}</div>
+          </td>
+          <td class="p-2.5 text-right">
+            <div class="inline-flex items-center gap-1">
+              <button type="button" data-act-pause="${job.id}" data-paused="${isPaused}" class="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer" title="${isPaused ? 'Resume' : 'Pause'}">
+                ${isPaused ? '▶' : '⏸'}
+              </button>
+              <button type="button" data-act-clone="${job.id}" class="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer" title="Clone">
+                📋
+              </button>
+              <button type="button" data-act-logs="${job.id}" class="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer" title="Logs">
+                📜
+              </button>
+              <button type="button" data-act-edit="${job.id}" class="p-1 rounded-lg hover:bg-muted text-primary cursor-pointer" title="Edit">
+                ✏️
+              </button>
+              <button type="button" data-act-delete="${job.id}" class="p-1 rounded-lg hover:bg-muted text-rose-500 cursor-pointer" title="Delete">
+                🗑️
+              </button>
             </div>
           </td>
         </tr>
       `;
-      return;
     }
-
-    const job = cachedJobData;
-    const isActive = job.status === 'enabled' || job.status === 1 || job.status === '1' || job.status === 'active';
-    const statusBadge = isActive
-      ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Enabled</span>'
-      : '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">Paused</span>';
-
-    const nextRuns = Array.isArray(job.cron_next) ? job.cron_next : [];
-    const nextRunStr = nextRuns.length > 0 ? fmtDateTimeStr(nextRuns[0]) : (isActive ? 'Scheduled' : 'Paused');
-
-    const logs = Array.isArray(job.cron_logs) ? job.cron_logs : [];
-    let lastRunHtml = '<span class="text-muted-foreground">—</span>';
-    if (logs.length > 0) {
-      const l = logs[0];
-      const isOk = l.status === 'OK' || l.status === 'success' || l.http_status_code === 202 || l.http_status_code === 200;
-      const code = l.http_status_code || (isOk ? '202' : 'ERR');
-      const badgeClass = isOk ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold';
-      lastRunHtml = `
-        <div class="flex flex-col">
-          <span class="${badgeClass}">${isOk ? '✓' : '✕'} HTTP ${escapeHtml(String(code))}</span>
-          <span class="text-[10px] text-muted-foreground">${escapeHtml(fmtDateTimeStr(l.date || l.created_at))}</span>
-        </div>
-      `;
-    }
-
-    const tokenName = cachedTokenMeta.name || 'Workspace Default';
-    const maskedTok = cachedTokenMeta.masked || '********';
-
-    tbody.innerHTML = `
-      <tr class="hover:bg-muted/20 transition-colors">
-        <!-- Job & Status -->
-        <td class="py-3 px-4">
-          <div class="flex flex-col gap-1">
-            <div class="flex items-center gap-2">
-              <span class="font-bold text-foreground">${escapeHtml(job.name || 'PinOrbit pinarchive')}</span>
-              ${statusBadge}
-            </div>
-            <span class="text-[10px] font-mono text-muted-foreground">ID: #${escapeHtml(String(job.id))}</span>
-          </div>
-        </td>
-
-        <!-- Schedule & Cadence -->
-        <td class="py-3 px-4">
-          <div class="flex flex-col">
-            <span class="font-semibold text-foreground">${escapeHtml(humanizeCron(job.expression))}</span>
-            <span class="text-[10px] font-mono text-muted-foreground">${escapeHtml(job.expression || '0 4 * * *')} · ${escapeHtml(job.timezone || 'UTC')}</span>
-          </div>
-        </td>
-
-        <!-- Next Run -->
-        <td class="py-3 px-4 font-medium text-foreground whitespace-nowrap">
-          ${escapeHtml(nextRunStr)}
-        </td>
-
-        <!-- Last Run -->
-        <td class="py-3 px-4 whitespace-nowrap">
-          ${lastRunHtml}
-        </td>
-
-        <!-- Token -->
-        <td class="py-3 px-4 whitespace-nowrap">
-          <div class="flex flex-col">
-            <span class="font-semibold text-foreground text-xs">${escapeHtml(tokenName)}</span>
-            <span class="font-mono text-[10px] text-muted-foreground">${escapeHtml(maskedTok)}</span>
-          </div>
-        </td>
-
-        <!-- Actions Dropdown -->
-        <td class="py-3 px-4 text-right whitespace-nowrap">
-          <div class="relative inline-block text-left action-dropdown-container">
-            <button
-              type="button"
-              class="action-menu-trigger inline-flex items-center justify-center h-8 w-8 rounded-xl border border-border bg-card hover:bg-muted text-foreground transition-all cursor-pointer shadow-2xs"
-              title="Actions"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-            </button>
-            <div class="action-menu-dropdown hidden absolute right-0 z-30 mt-1 w-44 origin-top-right rounded-xl border border-border bg-card p-1.5 shadow-xl space-y-0.5 text-left">
-              <button type="button" class="btn-action-run-now flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                <span>Run Now</span>
-              </button>
-              <button type="button" class="btn-action-edit flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                <span>Edit Schedule</span>
-              </button>
-              <button type="button" class="btn-action-toggle flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="10" y1="15" x2="10" y2="9"/><line x1="14" y1="15" x2="14" y2="9"/></svg>
-                <span class="btn-action-toggle-text">${isActive ? 'Pause' : 'Resume'}</span>
-              </button>
-              <button type="button" class="btn-action-logs flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/80 transition-colors cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                <span>FastCron Logs</span>
-              </button>
-              <div class="my-1 border-t border-border/60"></div>
-              <button type="button" class="btn-action-delete flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                <span>Delete Job</span>
-              </button>
-            </div>
-          </div>
-        </td>
-      </tr>
-    `;
-
-    bindTableActionListeners();
+    tbody.innerHTML = rowsHtml;
   }
 
-  function bindTableActionListeners() {
-    const triggers = document.querySelectorAll('.action-menu-trigger');
-    triggers.forEach(trig => {
-      trig.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const dropdown = trig.nextElementSibling;
-        document.querySelectorAll('.action-menu-dropdown').forEach(d => {
-          if (d !== dropdown) d.classList.add('hidden');
-        });
-        dropdown?.classList.toggle('hidden');
-      });
-    });
+  function updateCadenceBanner() {
+    const paceVal = document.getElementById('pa-sched-pace-val');
+    const paceDesc = document.getElementById('pa-sched-pace-desc');
+    if (!paceVal || !paceDesc) return;
 
-    // Run Now
-    document.querySelector('.btn-action-run-now')?.addEventListener('click', () => {
-      document.getElementById('cron-run-now-btn')?.click();
-    });
+    let activeCount = 0;
+    let totalWeeklyRuns = 0;
 
-    // Edit (hydrate form and focus)
-    document.querySelector('.btn-action-edit')?.addEventListener('click', () => {
-      const timeInput = document.getElementById('cron-sync-time') as HTMLInputElement | null;
-      const tzSelect = document.getElementById('cron-timezone') as HTMLSelectElement | null;
-      const enabledCb = document.getElementById('cron-enabled-cb') as HTMLInputElement | null;
-
-      if (cachedJobData) {
-        if (timeInput && cachedJobData.expression) {
-          timeInput.value = parseCronToTime(cachedJobData.expression);
-        }
-        if (tzSelect && cachedJobData.timezone) {
-          tzSelect.value = cachedJobData.timezone;
-        }
-        if (enabledCb) {
-          const isActive = cachedJobData.status === 'enabled' || cachedJobData.status === 1 || cachedJobData.status === '1' || cachedJobData.status === 'active';
-          enabledCb.checked = isActive;
-          const enabledLabel = document.getElementById('cron-enabled-label');
-          if (enabledLabel) {
-            enabledLabel.textContent = isActive ? 'Enabled' : 'Paused';
-            enabledLabel.className = `text-xs font-bold ${isActive ? 'text-emerald-500' : 'text-amber-500'}`;
-          }
+    for (const j of loadedJobs) {
+      if (!j.paused) {
+        activeCount++;
+        const parts = (j.expression || '').trim().split(/\s+/);
+        if (parts.length >= 5) {
+          const hours = parts[1] === '*' ? 24 : parts[1].split(',').length;
+          const days = parts[4] === '*' ? 7 : parts[4].split(',').length;
+          totalWeeklyRuns += (hours * days);
         }
       }
+    }
 
-      timeInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      timeInput?.focus();
+    paceVal.textContent = `${activeCount} Active Schedule(s) · ~${totalWeeklyRuns} Runs/Week`;
+    paceDesc.textContent = `FastCron triggers ~${totalWeeklyRuns} dispatch checks/week. PinArchive's eligibility gate ensures individual accounts only refresh when their interval threshold has elapsed.`;
+  }
+
+  // ═══ Event Handlers ═══
+  document.addEventListener('DOMContentLoaded', () => {
+    loadData();
+
+    // Tab buttons
+    document.getElementById('pa-tab-btn-simple')?.addEventListener('click', () => setBuilderTab('simple'));
+    document.getElementById('pa-tab-btn-visual')?.addEventListener('click', () => setBuilderTab('visual'));
+    document.getElementById('pa-tab-btn-raw')?.addEventListener('click', () => setBuilderTab('raw'));
+
+    document.getElementById('pa-f-sched-time')?.addEventListener('input', updatePreview);
+    document.getElementById('pa-f-sched-tz')?.addEventListener('change', updatePreview);
+    document.getElementById('pa-f-raw-cron')?.addEventListener('input', updatePreview);
+
+    // Modal controls
+    const schedModal = document.getElementById('pa-schedule-modal') as HTMLDialogElement | null;
+    const tokenModal = document.getElementById('pa-token-modal') as HTMLDialogElement | null;
+    const logsModal = document.getElementById('pa-logs-modal') as HTMLDialogElement | null;
+
+    document.getElementById('pa-btn-add-schedule')?.addEventListener('click', () => {
+      const form = document.getElementById('pa-schedule-form') as HTMLFormElement | null;
+      if (form) form.reset();
+      (document.getElementById('pa-f-sched-id') as HTMLInputElement).value = '';
+      (document.getElementById('pa-schedule-modal-title') as HTMLElement).textContent = 'Add Automation Schedule';
+      setBuilderTab('simple');
+      schedModal?.showModal();
     });
 
-    // Toggle Pause/Resume
-    document.querySelector('.btn-action-toggle')?.addEventListener('click', async () => {
-      if (!cachedJobData) return;
-      const timeInput = document.getElementById('cron-sync-time') as HTMLInputElement | null;
-      const tzSelect = document.getElementById('cron-timezone') as HTMLSelectElement | null;
-      const isActive = cachedJobData.status === 'enabled' || cachedJobData.status === 1 || cachedJobData.status === '1' || cachedJobData.status === 'active';
-      const targetState = !isActive;
+    document.getElementById('pa-btn-close-sched-modal')?.addEventListener('click', () => schedModal?.close());
+    document.getElementById('pa-btn-cancel-sched-modal')?.addEventListener('click', () => schedModal?.close());
+
+    document.getElementById('pa-btn-add-token')?.addEventListener('click', () => tokenModal?.showModal());
+    document.getElementById('pa-btn-close-token-modal')?.addEventListener('click', () => tokenModal?.close());
+    document.getElementById('pa-btn-cancel-token-modal')?.addEventListener('click', () => tokenModal?.close());
+
+    document.getElementById('pa-btn-close-logs-modal')?.addEventListener('click', () => logsModal?.close());
+
+    // Refresh & Sync buttons
+    document.getElementById('pa-btn-refresh-schedules')?.addEventListener('click', () => loadData());
+    document.getElementById('pa-btn-ping-tokens')?.addEventListener('click', async () => {
+      const statusEl = document.getElementById('pa-fc-connection-status');
+      if (statusEl) statusEl.textContent = 'Testing connection...';
+      await loadData();
+      if (statusEl) statusEl.textContent = '✓ FastCron Connection OK';
+    });
+
+    document.getElementById('pa-btn-sync-missing')?.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/pinarchive/cron', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'sync_missing' }),
+        });
+        const json = await res.json();
+        if (json.success) {
+          await loadData();
+        } else {
+          alert('Sync Missing failed: ' + json.error);
+        }
+      } catch (err: any) {
+        alert('Network error: ' + err.message);
+      }
+    });
+
+    // Run Now Button (dispatches GH actions immediately with force=true)
+    document.getElementById('pa-btn-run-now')?.addEventListener('click', async () => {
+      const btn = document.getElementById('pa-btn-run-now') as HTMLButtonElement | null;
+      const text = document.getElementById('pa-run-now-text');
+      if (btn) btn.disabled = true;
+      if (text) text.textContent = 'Dispatching...';
 
       try {
         const res = await fetch('/api/pinarchive/cron', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sync_time: timeInput ? timeInput.value : parseCronToTime(cachedJobData.expression),
-            timezone: tzSelect ? tzSelect.value : (cachedJobData.timezone || 'UTC'),
-            enabled: targetState,
-          }),
+          body: JSON.stringify({ action: 'run_now' }),
         });
-
         const json = await res.json();
-        if (!res.ok || !json.success) {
-          throw new Error(json.error || 'Failed to update job state');
+        if (json.success) {
+          alert('PinArchive refresh workflow dispatched immediately with force=true.');
+        } else {
+          alert('Run Now failed: ' + json.error);
         }
-
-        await loadCronStatus();
       } catch (err: any) {
-        alert(`Error: ${err.message}`);
+        alert('Network error: ' + err.message);
+      } finally {
+        if (btn) btn.disabled = false;
+        if (text) text.textContent = 'Run Now';
       }
     });
 
-    // Logs
-    document.querySelector('.btn-action-logs')?.addEventListener('click', () => {
-      document.getElementById('cron-view-logs-btn')?.click();
-    });
+    // Schedule Form Submission
+    document.getElementById('pa-schedule-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const schedId = (document.getElementById('pa-f-sched-id') as HTMLInputElement)?.value;
+      const label = (document.getElementById('pa-f-sched-label') as HTMLInputElement)?.value;
+      const tokenId = (document.getElementById('pa-f-sched-token') as HTMLSelectElement)?.value || null;
+      const timezone = (document.getElementById('pa-f-sched-tz') as HTMLSelectElement)?.value || 'UTC';
+      const enabled = (document.getElementById('pa-f-sched-enabled') as HTMLInputElement)?.checked !== false;
 
-    // Delete
-    document.querySelector('.btn-action-delete')?.addEventListener('click', () => {
-      document.getElementById('cron-delete-btn')?.click();
-    });
-  }
+      let cronExpr = '0 3 * * *';
+      if (currentTab === 'simple') {
+        const timeVal = (document.getElementById('pa-f-sched-time') as HTMLInputElement)?.value || '03:00';
+        const [h, m] = timeVal.split(':');
+        cronExpr = `${parseInt(m || '0', 10)} ${parseInt(h || '3', 10)} * * *`;
+      } else if (currentTab === 'visual') {
+        cronExpr = getVisualCronExpression();
+      } else {
+        cronExpr = (document.getElementById('pa-f-raw-cron') as HTMLTextAreaElement)?.value || '0 3 * * *';
+      }
 
-  // Close dropdowns on document click
-  document.addEventListener('click', () => {
-    document.querySelectorAll('.action-menu-dropdown').forEach(d => d.classList.add('hidden'));
-  });
-
-  async function loadCronStatus() {
-    const badge = document.getElementById('cron-status-badge');
-    const tokenDisplay = document.getElementById('cron-token-display');
-    const nextVal = document.getElementById('cron-next-run-val');
-    const lastVal = document.getElementById('cron-last-run-val');
-    const jobIdVal = document.getElementById('cron-job-id-val');
-    const jobNameVal = document.getElementById('cron-job-name-val');
-    const timeInput = document.getElementById('cron-sync-time') as HTMLInputElement | null;
-    const tzSelect = document.getElementById('cron-timezone') as HTMLSelectElement | null;
-    const enabledCb = document.getElementById('cron-enabled-cb') as HTMLInputElement | null;
-    const enabledLabel = document.getElementById('cron-enabled-label');
-    const deleteBtn = document.getElementById('cron-delete-btn');
-    const saveBtn = document.getElementById('cron-save-btn') as HTMLButtonElement | null;
-    const runNowBtn = document.getElementById('cron-run-now-btn') as HTMLButtonElement | null;
-    const refreshIcon = document.getElementById('refresh-jobs-icon');
-
-    if (refreshIcon) refreshIcon.classList.add('animate-spin');
-
-    try {
-      const res = await fetch('/api/pinarchive/cron');
-      const json = await res.json();
-
-      const hasToken = Boolean(json.token_source || json.masked_token);
-      cachedTokenMeta = {
-        source: json.token_source,
-        name: json.token_name,
-        masked: json.masked_token,
+      const payload = {
+        action: schedId ? 'edit' : 'create',
+        job_id: schedId ? Number(schedId) : undefined,
+        label,
+        cron_expression: cronExpr,
+        timezone,
+        token_id: tokenId,
+        enabled,
       };
 
-      // 1. Render FastCron Token Row
-      if (tokenDisplay) {
-        if (hasToken) {
-          const name = json.token_name || (json.token_source === 'workspace_registry' ? 'Workspace Default' : 'Environment Fallback');
-          const masked = json.masked_token || '********';
-          tokenDisplay.innerHTML = `<span class="font-bold text-foreground">${escapeHtml(name)}</span> <span class="font-mono text-muted-foreground text-xs">(${escapeHtml(masked)})</span>`;
+      try {
+        const res = await fetch('/api/pinarchive/cron', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (json.success) {
+          schedModal?.close();
+          await loadData();
         } else {
-          tokenDisplay.innerHTML = '<span class="text-amber-500 font-semibold">Not configured in workspace registry or environment</span>';
+          alert('Save failed: ' + json.error);
         }
+      } catch (err: any) {
+        alert('Network error: ' + err.message);
       }
+    });
 
-      // 2. Control Save / Run Now enable state based on token presence
-      if (saveBtn) saveBtn.disabled = !hasToken;
-      if (runNowBtn) runNowBtn.disabled = !hasToken;
+    // Table Actions (delegated)
+    document.getElementById('pa-account-schedules-rows')?.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+      const delId = target.closest('[data-act-delete]')?.getAttribute('data-act-delete');
+      const pauseId = target.closest('[data-act-pause]')?.getAttribute('data-act-pause');
+      const isPaused = target.closest('[data-act-pause]')?.getAttribute('data-paused') === 'true';
+      const cloneId = target.closest('[data-act-clone]')?.getAttribute('data-act-clone');
+      const logsId = target.closest('[data-act-logs]')?.getAttribute('data-act-logs');
+      const editId = target.closest('[data-act-edit]')?.getAttribute('data-act-edit');
 
-      // 3. Header badge & failure handling
-      if (!res.ok || (!hasToken && !json.success)) {
-        if (badge) {
-          badge.textContent = '● FastCron Unavailable';
-          badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20';
-        }
-        if (nextVal) nextVal.textContent = 'Not configured';
-        if (lastVal) lastVal.textContent = json.error || 'Check server configuration';
-        cachedJobData = null;
-        renderJobsTable();
-        return;
-      }
-
-      // Token resolved successfully -> Badge flips to green "FastCron Healthy"
-      if (badge) {
-        badge.textContent = '🟢 FastCron Healthy';
-        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
-      }
-
-      cachedJobData = json.job;
-      renderJobsTable();
-
-      if (!json.job) {
-        if (nextVal) nextVal.textContent = 'Pending Setup';
-        if (lastVal) lastVal.textContent = 'Never executed';
-        if (jobIdVal) jobIdVal.textContent = 'None';
-        if (jobNameVal) jobNameVal.textContent = 'Click Save to provision';
-        if (deleteBtn) deleteBtn.classList.add('hidden');
-        return;
-      }
-
-      const job = json.job;
-      const isActive = job.status === 'enabled' || job.status === 1 || job.status === '1' || job.status === 'active';
-
-      if (jobIdVal) jobIdVal.textContent = `#${job.id}`;
-      if (jobNameVal) jobNameVal.textContent = job.name || 'PinOrbit pinarchive';
-      if (deleteBtn) deleteBtn.classList.remove('hidden');
-
-      // Populate form
-      if (timeInput && job.expression) {
-        timeInput.value = parseCronToTime(job.expression);
-      }
-      if (tzSelect && job.timezone) {
-        tzSelect.value = job.timezone;
-      }
-      if (enabledCb) {
-        enabledCb.checked = isActive;
-        if (enabledLabel) {
-          enabledLabel.textContent = isActive ? 'Enabled' : 'Paused';
-          enabledLabel.className = `text-xs font-bold ${isActive ? 'text-emerald-500' : 'text-amber-500'}`;
-        }
-      }
-
-      // Next run
-      const nextRuns = Array.isArray(job.cron_next) ? job.cron_next : [];
-      if (nextVal) {
-        nextVal.textContent = nextRuns.length > 0 ? fmtDateTimeStr(nextRuns[0]) : (isActive ? 'Scheduled' : 'Paused');
-      }
-
-      // Last run
-      const logs = Array.isArray(job.cron_logs) ? job.cron_logs : [];
-      if (lastVal) {
-        if (logs.length > 0) {
-          const l = logs[0];
-          const isOk = l.status === 'OK' || l.status === 'success' || l.http_status_code === 202 || l.http_status_code === 200;
-          lastVal.innerHTML = `<span class="${isOk ? 'text-emerald-500' : 'text-rose-500'} font-bold">${isOk ? '✓ Success' : '✕ Failed'}</span> · ${fmtDateTimeStr(l.date || l.created_at)}`;
-        } else {
-          lastVal.textContent = 'No executions yet';
-        }
-      }
-    } catch (err: any) {
-      console.error('Failed to load FastCron status:', err);
-      if (badge) {
-        badge.textContent = '● FastCron Unavailable';
-        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20';
-      }
-      cachedJobData = null;
-      renderJobsTable();
-    } finally {
-      if (refreshIcon) refreshIcon.classList.remove('animate-spin');
-    }
-  }
-
-  function setupCronForm() {
-    const form = document.getElementById('pinarchive-cron-form') as HTMLFormElement | null;
-    const timeInput = document.getElementById('cron-sync-time') as HTMLInputElement | null;
-    const tzSelect = document.getElementById('cron-timezone') as HTMLSelectElement | null;
-    const enabledCb = document.getElementById('cron-enabled-cb') as HTMLInputElement | null;
-    const enabledLabel = document.getElementById('cron-enabled-label');
-    const saveBtn = document.getElementById('cron-save-btn') as HTMLButtonElement | null;
-    const statusMsg = document.getElementById('cron-status-msg');
-    const deleteBtn = document.getElementById('cron-delete-btn') as HTMLButtonElement | null;
-
-    if (enabledCb && enabledLabel) {
-      enabledCb.addEventListener('change', () => {
-        enabledLabel.textContent = enabledCb.checked ? 'Enabled' : 'Paused';
-        enabledLabel.className = `text-xs font-bold ${enabledCb.checked ? 'text-emerald-500' : 'text-amber-500'}`;
-      });
-    }
-
-    if (form && saveBtn) {
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!timeInput || !tzSelect || !enabledCb) return;
-
-        saveBtn.disabled = true;
-        if (statusMsg) {
-          statusMsg.textContent = 'Saving schedule...';
-          statusMsg.className = 'text-xs font-semibold text-muted-foreground';
-        }
-
-        try {
-          const res = await fetch('/api/pinarchive/cron', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              sync_time: timeInput.value,
-              timezone: tzSelect.value,
-              enabled: enabledCb.checked,
-            }),
-          });
-
-          const json = await res.json();
-          if (!res.ok || !json.success) {
-            throw new Error(json.error || 'Failed to save FastCron schedule');
+      if (delId) {
+        if (!confirm(`Delete FastCron schedule #${delId}?`)) return;
+        await fetch('/api/pinarchive/cron', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_id: Number(delId) }),
+        });
+        await loadData();
+      } else if (pauseId) {
+        await fetch('/api/pinarchive/cron', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: isPaused ? 'resume' : 'pause', job_id: Number(pauseId) }),
+        });
+        await loadData();
+      } else if (cloneId) {
+        await fetch('/api/pinarchive/cron', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'clone', job_id: Number(cloneId) }),
+        });
+        await loadData();
+      } else if (logsId) {
+        const job = loadedJobs.find(j => j.id === Number(logsId));
+        if (job) {
+          (document.getElementById('pa-logs-job-subtitle') as HTMLElement).textContent = `Logs for #${job.id} (${job.label || job.name})`;
+          const tbody = document.getElementById('pa-logs-table-rows');
+          if (tbody) {
+            const logs: any[] = job.cron_logs || [];
+            if (logs.length === 0) {
+              tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-muted-foreground">No recent execution logs recorded.</td></tr>`;
+            } else {
+              tbody.innerHTML = logs.map(l => `
+                <tr class="border-b border-border/60">
+                  <td class="p-2 font-mono">${l.date || l.created_at || '—'}</td>
+                  <td class="p-2"><span class="font-bold ${l.status === 'OK' ? 'text-emerald-500' : 'text-amber-500'}">${l.status || 'OK'}</span></td>
+                  <td class="p-2"><span class="rounded px-1.5 py-0.2 text-[10px] font-bold ${l.http_status_code === 202 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-muted text-muted-foreground'}">${l.http_status_code || '—'}</span></td>
+                  <td class="p-2 text-right font-mono text-muted-foreground">${l.duration ? l.duration + 's' : '—'}</td>
+                </tr>
+              `).join('');
+            }
           }
-
-          if (statusMsg) {
-            statusMsg.textContent = 'Schedule saved successfully!';
-            statusMsg.className = 'text-xs font-semibold text-emerald-500';
-            setTimeout(() => {
-              if (statusMsg) statusMsg.textContent = '';
-            }, 3500);
-          }
-
-          await loadCronStatus();
-        } catch (err: any) {
-          if (statusMsg) {
-            statusMsg.textContent = err.message || 'Save failed';
-            statusMsg.className = 'text-xs font-semibold text-rose-500';
-          }
-        } finally {
-          saveBtn.disabled = false;
+          logsModal?.showModal();
         }
-      });
-    }
-
-    // Delete button
-    if (deleteBtn) {
-      deleteBtn.addEventListener('click', async () => {
-        if (!confirm('Remove this FastCron automation job?')) return;
-        deleteBtn.disabled = true;
-
-        try {
-          const res = await fetch('/api/pinarchive/cron', { method: 'DELETE' });
-          const json = await res.json();
-          if (!res.ok || !json.success) {
-            throw new Error(json.error || 'Failed to delete job');
-          }
-          if (statusMsg) {
-            statusMsg.textContent = 'Job removed';
-            statusMsg.className = 'text-xs font-semibold text-muted-foreground';
-            setTimeout(() => {
-              if (statusMsg) statusMsg.textContent = '';
-            }, 3000);
-          }
-          await loadCronStatus();
-        } catch (err: any) {
-          alert(`Error: ${err.message}`);
-        } finally {
-          deleteBtn.disabled = false;
+      } else if (editId) {
+        const job = loadedJobs.find(j => j.id === Number(editId));
+        if (job) {
+          (document.getElementById('pa-f-sched-id') as HTMLInputElement).value = String(job.id);
+          (document.getElementById('pa-f-sched-label') as HTMLInputElement).value = job.label || '';
+          (document.getElementById('pa-f-sched-tz') as HTMLSelectElement).value = job.timezone || 'UTC';
+          (document.getElementById('pa-f-sched-enabled') as HTMLInputElement).checked = !job.paused;
+          (document.getElementById('pa-f-raw-cron') as HTMLTextAreaElement).value = job.expression || '0 3 * * *';
+          (document.getElementById('pa-schedule-modal-title') as HTMLElement).textContent = `Edit Schedule #${job.id}`;
+          setBuilderTab('raw');
+          schedModal?.showModal();
         }
-      });
-    }
-  }
-
-  function setupRunNow() {
-    const runBtn = document.getElementById('cron-run-now-btn') as HTMLButtonElement | null;
-    const runIcon = document.getElementById('cron-run-icon');
-    const runText = document.getElementById('cron-run-text');
-
-    if (runBtn) {
-      runBtn.addEventListener('click', async () => {
-        if (!confirm('Trigger immediate PinArchive refresh run on GitHub Actions with force=true?')) {
-          return;
-        }
-
-        runBtn.disabled = true;
-        if (runIcon) runIcon.classList.add('animate-spin');
-        if (runText) runText.textContent = 'Dispatching...';
-
-        try {
-          const res = await fetch('/api/pinarchive/cron', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'run_now' }),
-          });
-
-          const json = await res.json();
-          if (!res.ok || !json.success) {
-            throw new Error(json.error || 'Dispatch failed');
-          }
-
-          alert('Workflow dispatched successfully to GitHub Actions!');
-        } catch (err: any) {
-          alert(`Dispatch error: ${err.message}`);
-        } finally {
-          if (runIcon) runIcon.classList.remove('animate-spin');
-          if (runText) runText.textContent = 'Run Now';
-          runBtn.disabled = false;
-        }
-      });
-    }
-  }
-
-  function setupLogsModal() {
-    const viewBtn = document.getElementById('cron-view-logs-btn');
-    const modal = document.getElementById('cron-logs-modal');
-    const closeBtn1 = document.getElementById('close-logs-modal-btn');
-    const closeBtn2 = document.getElementById('close-logs-modal-btn-2');
-    const tbody = document.getElementById('cron-logs-tbody');
-
-    function renderLogs() {
-      if (!tbody) return;
-      const logs = Array.isArray(cachedJobData?.cron_logs) ? cachedJobData.cron_logs : [];
-
-      if (logs.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="4" class="py-6 text-center text-xs font-sans text-muted-foreground">
-              No recent execution logs available.
-            </td>
-          </tr>
-        `;
-        return;
       }
+    });
 
-      tbody.innerHTML = logs
-        .map((l: any, idx: number) => {
-          const isOk = l.status === 'OK' || l.status === 'success' || l.http_status_code === 202 || l.http_status_code === 200;
-          const code = l.http_status_code || l.status_code || (isOk ? '202' : 'ERR');
-          const isError = !isOk || (Number(code) >= 400);
+    // Batch Menu Dropdown toggle
+    const batchBtn = document.getElementById('pa-btn-sched-batch');
+    const batchMenu = document.getElementById('pa-sched-batch-menu');
+    batchBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      batchMenu?.classList.toggle('hidden');
+    });
+    document.addEventListener('click', () => batchMenu?.classList.add('hidden'));
 
-          const rowClass = isError
-            ? 'bg-rose-500/5 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors'
-            : 'hover:bg-muted/30 transition-colors text-foreground';
+    // Checkbox selections
+    document.getElementById('pa-sched-select-all-header')?.addEventListener('change', (e) => {
+      const checked = (e.target as HTMLInputElement).checked;
+      selectedJobIds.clear();
+      if (checked) {
+        loadedJobs.forEach(j => selectedJobIds.add(j.id));
+      }
+      renderJobs();
+    });
 
-          const duration = l.duration ? `${(Number(l.duration)).toFixed(2)}s` : '—';
-          const rawOutput = l.output || l.error || l.message || (isOk ? '{"success":true,"dispatched":true}' : 'Unknown error');
-          const outputStr = typeof rawOutput === 'object' ? JSON.stringify(rawOutput) : String(rawOutput);
+    document.getElementById('pa-account-schedules-rows')?.addEventListener('change', (e) => {
+      const target = e.target as HTMLInputElement;
+      const jobId = target.getAttribute('data-job-select');
+      if (jobId) {
+        const id = Number(jobId);
+        if (target.checked) selectedJobIds.add(id);
+        else selectedJobIds.delete(id);
+        const cnt = document.getElementById('pa-batch-sel-count');
+        if (cnt) {
+          cnt.textContent = String(selectedJobIds.size);
+          cnt.classList.toggle('hidden', selectedJobIds.size === 0);
+        }
+      }
+    });
 
-          const isLong = outputStr.length > 200;
-          const truncated = isLong ? outputStr.slice(0, 190) + '...' : outputStr;
+    // Batch Actions
+    document.getElementById('pa-batch-act-enable')?.addEventListener('click', async () => {
+      for (const id of selectedJobIds) {
+        await fetch('/api/pinarchive/cron', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'resume', job_id: id }),
+        });
+      }
+      selectedJobIds.clear();
+      await loadData();
+    });
 
-          const outputHtml = isLong
-            ? `<div>
-                <span id="log-out-trunc-${idx}">${escapeHtml(truncated)}</span>
-                <span id="log-out-full-${idx}" class="hidden whitespace-pre-wrap">${escapeHtml(outputStr)}</span>
-                <button type="button" class="ml-1.5 text-primary text-[10px] font-bold underline cursor-pointer" onclick="
-                  const tr = document.getElementById('log-out-trunc-${idx}');
-                  const fu = document.getElementById('log-out-full-${idx}');
-                  if (tr && fu) {
-                    const isHidden = fu.classList.contains('hidden');
-                    if (isHidden) { fu.classList.remove('hidden'); tr.classList.add('hidden'); this.textContent = 'Collapse'; }
-                    else { fu.classList.add('hidden'); tr.classList.remove('hidden'); this.textContent = 'Expand'; }
-                  }
-                ">Expand</button>
-              </div>`
-            : `<span class="whitespace-pre-wrap">${escapeHtml(outputStr)}</span>`;
+    document.getElementById('pa-batch-act-disable')?.addEventListener('click', async () => {
+      for (const id of selectedJobIds) {
+        await fetch('/api/pinarchive/cron', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'pause', job_id: id }),
+        });
+      }
+      selectedJobIds.clear();
+      await loadData();
+    });
 
-          return `
-            <tr class="${rowClass}">
-              <td class="py-2.5 px-3 whitespace-nowrap">${escapeHtml(fmtDateTimeStr(l.date || l.created_at || l.start_time))}</td>
-              <td class="py-2.5 px-3 whitespace-nowrap font-medium text-muted-foreground">${escapeHtml(duration)}</td>
-              <td class="py-2.5 px-3 whitespace-nowrap font-bold ${isOk ? 'text-emerald-500' : 'text-rose-500'}">HTTP ${escapeHtml(String(code))}</td>
-              <td class="py-2.5 px-3 max-w-[320px] break-all">${outputHtml}</td>
-            </tr>
-          `;
-        })
-        .join('');
-    }
-
-    if (viewBtn && modal) {
-      viewBtn.addEventListener('click', () => {
-        renderLogs();
-        modal.classList.remove('hidden');
-      });
-    }
-
-    if (closeBtn1 && modal) {
-      closeBtn1.addEventListener('click', () => modal.classList.add('hidden'));
-    }
-    if (closeBtn2 && modal) {
-      closeBtn2.addEventListener('click', () => modal.classList.add('hidden'));
-    }
-  }
-
-  function initCronCard() {
-    setupCronForm();
-    setupRunNow();
-    setupLogsModal();
-    loadCronStatus();
-
-    document.getElementById('btn-refresh-jobs-table')?.addEventListener('click', loadCronStatus);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCronCard);
-  } else {
-    initCronCard();
-  }
+    document.getElementById('pa-batch-act-delete')?.addEventListener('click', async () => {
+      if (!confirm(`Delete ${selectedJobIds.size} selected FastCron schedules?`)) return;
+      for (const id of selectedJobIds) {
+        await fetch('/api/pinarchive/cron', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_id: id }),
+        });
+      }
+      selectedJobIds.clear();
+      await loadData();
+    });
+  });
 </script>
