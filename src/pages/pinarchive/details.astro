@@ -3,163 +3,190 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 ---
 
-<Layout title="Pin Deep-Dive & Metrics History" description="Archived pin performance, historical saves/repins growth, SEO annotations, and canonical cluster variations.">
-  <!-- ═══ Sticky Mini-bar on Scroll (T1) ═══ -->
+<Layout title="Pin Deep-Dive & Metrics History — PinArchive" description="Archived pin performance, historical saves/repins growth, SEO annotations, and canonical cluster variations.">
+  <!-- ═══ Sticky Mini-bar on Scroll ═══ -->
   <div
     id="sticky-mini-bar"
     class="fixed top-0 left-0 right-0 z-40 bg-card/90 backdrop-blur-md border-b border-border shadow-md px-6 py-2.5 flex items-center justify-between transition-all duration-300 -translate-y-full opacity-0 pointer-events-none"
   >
     <div class="flex items-center gap-3 min-w-0 max-w-xl">
-      <a href="/pinarchive" class="text-xs font-semibold text-muted-foreground hover:text-foreground shrink-0">← Back</a>
+      <a href="/pinarchive" class="text-xs font-semibold text-muted-foreground hover:text-foreground shrink-0 transition-colors">← Back</a>
       <span class="text-xs text-border shrink-0">|</span>
       <h3 id="sticky-title" class="text-xs font-bold text-foreground truncate"></h3>
     </div>
     <div class="flex items-center gap-4 text-xs shrink-0">
-      <div>Saves: <strong id="sticky-saves" class="text-rose-500 font-bold">-</strong></div>
-      <div>Velocity: <strong id="sticky-velocity" class="text-emerald-500 font-bold">-</strong></div>
+      <div>Saves: <strong id="sticky-saves" class="text-rose-500 font-bold tabular-nums">-</strong></div>
+      <div>Velocity: <strong id="sticky-velocity" class="text-emerald-500 font-bold tabular-nums">-</strong></div>
       <div id="sticky-stage-badge"></div>
     </div>
   </div>
 
-  <!-- Back Button & Refresh Header -->
-  <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-    <a href="/pinarchive" class="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-      <span>Back to PinArchive Intelligence</span>
-    </a>
+  <!-- Breadcrumb & Top Action Header -->
+  <div class="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div class="flex items-center gap-2 text-xs">
+      <a
+        href="/pinarchive"
+        class="inline-flex items-center gap-1.5 font-semibold text-muted-foreground hover:text-foreground transition-colors group"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        <span>PinArchive</span>
+      </a>
+      <span class="text-muted-foreground/50">/</span>
+      <span class="text-muted-foreground font-medium">Pin Deep-Dive</span>
+      <span class="text-muted-foreground/50">/</span>
+      <span id="breadcrumb-pin-title" class="font-bold text-foreground truncate max-w-[200px] sm:max-w-[320px]">Pin Details</span>
+    </div>
 
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2 self-start sm:self-auto">
       <span id="pin-refresh-meta" class="text-xs text-muted-foreground hidden sm:inline-block"></span>
       <button
         id="refresh-pin-btn"
         type="button"
         title="Refresh pin details"
-        class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition-all"
+        class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground shadow-xs hover:bg-muted transition-all cursor-pointer"
       >
-        <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/>
         </svg>
-        <span>Refresh</span>
+        <span>Refresh Data</span>
       </button>
     </div>
   </div>
 
   <!-- Loading Skeleton -->
   <div id="pin-loading-skeleton" class="space-y-6">
-    <div class="rounded-2xl border border-border bg-card p-6 shadow-sm animate-pulse flex flex-col md:flex-row gap-6">
-      <div class="w-full md:w-56 h-64 bg-muted rounded-xl"></div>
+    <div class="rounded-3xl border border-border bg-card p-6 shadow-xs animate-pulse flex flex-col md:flex-row gap-6">
+      <div class="w-full md:w-60 h-80 bg-muted rounded-2xl"></div>
       <div class="flex-1 space-y-4">
-        <div class="h-6 w-3/4 bg-muted rounded"></div>
+        <div class="h-5 w-1/3 bg-muted rounded-full"></div>
+        <div class="h-8 w-3/4 bg-muted rounded-lg"></div>
         <div class="h-4 w-1/2 bg-muted rounded"></div>
         <div class="grid grid-cols-3 gap-3 pt-4">
-          <div class="h-16 bg-muted rounded-xl"></div>
-          <div class="h-16 bg-muted rounded-xl"></div>
-          <div class="h-16 bg-muted rounded-xl"></div>
+          <div class="h-20 bg-muted rounded-2xl"></div>
+          <div class="h-20 bg-muted rounded-2xl"></div>
+          <div class="h-20 bg-muted rounded-2xl"></div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Error State -->
-  <div id="pin-error-container" class="hidden rounded-2xl border border-rose-500/30 bg-rose-500/10 p-8 text-center text-xs text-rose-500 shadow-sm">
+  <div id="pin-error-container" class="hidden rounded-3xl border border-rose-500/30 bg-rose-500/10 p-8 text-center text-xs text-rose-500 shadow-xs">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 text-rose-500 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     <p id="pin-error-text" class="font-bold text-sm">Failed to load pin details.</p>
     <a href="/pinarchive" class="mt-4 inline-block font-semibold text-primary hover:underline">Return to PinArchive</a>
   </div>
 
   <!-- Pin Detail Main Container -->
-  <div id="pin-main-content" class="hidden space-y-8">
-    <!-- ═══ Pin Header Hero Card (T1 + T2) ═══ -->
-    <div class="rounded-2xl border border-border bg-card p-6 shadow-sm overflow-hidden">
-      <div class="flex flex-col md:flex-row items-start gap-6">
-        <!-- Pin Image Preview -->
-        <div class="relative w-full md:w-56 shrink-0 aspect-[2/3] max-h-80 bg-muted/60 rounded-xl overflow-hidden flex items-center justify-center border border-border/80 shadow-sm group">
+  <div id="pin-main-content" class="hidden space-y-6">
+    <!-- ═══ 1. Pin Header Hero Card ═══ -->
+    <div class="rounded-3xl border border-border bg-card p-6 sm:p-7 shadow-xs overflow-hidden">
+      <div class="flex flex-col md:flex-row items-start gap-7">
+        <!-- Pin Image Preview Card -->
+        <div class="relative w-full md:w-64 shrink-0 aspect-[2/3] max-h-[380px] bg-muted/60 rounded-2xl overflow-hidden flex items-center justify-center border border-border/80 shadow-md group">
           <img
             id="pin-detail-image"
             src=""
             alt="Pinterest Pin"
-            class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+            class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
           />
           <div id="pin-detail-fallback-icon" class="hidden absolute inset-0 flex items-center justify-center text-muted-foreground">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
           </div>
-          <span id="pin-detail-category-badge" class="hidden absolute top-2.5 left-2.5 text-[10px] font-bold bg-background/90 backdrop-blur-xs text-foreground px-2.5 py-1 rounded-md shadow-xs border border-border/40"></span>
+          <span id="pin-detail-category-badge" class="hidden absolute top-3 left-3 text-[10px] font-bold bg-background/90 backdrop-blur-md text-foreground px-2.5 py-1 rounded-lg shadow-xs border border-border/40 max-w-[160px] truncate"></span>
+          
+          <a
+            id="pin-image-overlay-link"
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs gap-1.5 backdrop-blur-xs"
+          >
+            <span>Open High-Res</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
         </div>
 
         <!-- Pin Information -->
         <div class="flex-1 space-y-4 min-w-0">
           <div>
-            <div class="flex flex-wrap items-center gap-2 mb-2">
+            <!-- Status & Metadata Badges -->
+            <div class="flex flex-wrap items-center gap-2 mb-2.5">
               <span id="pin-stage-badge"></span>
               <span id="pin-anomaly-badge"></span>
-              <span id="pin-board-badge" class="rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground border border-border/60"></span>
-              <span id="pin-canonical-badge" class="hidden rounded-full bg-purple-500/10 px-2.5 py-0.5 text-xs font-bold text-purple-500 border border-purple-500/20"></span>
+              <span id="pin-board-badge" class="inline-flex items-center gap-1 rounded-full bg-muted/80 px-3 py-1 text-xs font-semibold text-muted-foreground border border-border/60"></span>
+              <span id="pin-canonical-badge" class="hidden inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-3 py-1 text-xs font-bold text-purple-500 border border-purple-500/20"></span>
+              <span id="pin-account-badge" class="hidden inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary border border-primary/20"></span>
             </div>
-            <h1 id="pin-detail-title" class="text-xl font-bold tracking-tight text-foreground line-clamp-3"></h1>
-            <p id="pin-detail-description" class="mt-2 text-xs text-muted-foreground line-clamp-3"></p>
+
+            <!-- Title -->
+            <h1 id="pin-detail-title" class="text-xl sm:text-2xl font-black tracking-tight text-foreground line-clamp-3 leading-snug"></h1>
+            
+            <!-- Description -->
+            <p id="pin-detail-description" class="mt-2 text-xs text-muted-foreground line-clamp-3 leading-relaxed"></p>
           </div>
 
-          <!-- Quick Copy Buttons Toolbar (T1) -->
+          <!-- Quick Copy Action Toolbar -->
           <div class="flex flex-wrap items-center gap-2 pt-1">
             <button
               id="copy-id-btn"
               type="button"
-              class="inline-flex items-center gap-1 text-[11px] font-semibold bg-muted hover:bg-muted/80 text-foreground px-2.5 py-1 rounded-lg border border-border transition-all"
+              class="inline-flex items-center gap-1.5 text-xs font-semibold bg-muted/60 hover:bg-muted text-foreground px-3 py-1.5 rounded-xl border border-border shadow-2xs transition-all cursor-pointer"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
               <span>Copy Pin ID</span>
             </button>
             <button
               id="copy-url-btn"
               type="button"
-              class="inline-flex items-center gap-1 text-[11px] font-semibold bg-muted hover:bg-muted/80 text-foreground px-2.5 py-1 rounded-lg border border-border transition-all"
+              class="inline-flex items-center gap-1.5 text-xs font-semibold bg-muted/60 hover:bg-muted text-foreground px-3 py-1.5 rounded-xl border border-border shadow-2xs transition-all cursor-pointer"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-              <span>Copy URL</span>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              <span>Copy Pinterest URL</span>
             </button>
             <button
               id="copy-title-btn"
               type="button"
-              class="inline-flex items-center gap-1 text-[11px] font-semibold bg-muted hover:bg-muted/80 text-foreground px-2.5 py-1 rounded-lg border border-border transition-all"
+              class="inline-flex items-center gap-1.5 text-xs font-semibold bg-muted/60 hover:bg-muted text-foreground px-3 py-1.5 rounded-xl border border-border shadow-2xs transition-all cursor-pointer"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
               <span>Copy Title</span>
             </button>
           </div>
 
-          <!-- Metadata row with Created Date (T1 + Created Date directive) -->
-          <div class="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border/60">
-            <div class="flex items-center gap-1.5">
-              <span>Pin ID:</span>
-              <strong class="font-mono text-foreground" id="pin-id-str"></strong>
+          <!-- Structured Metadata Key-Value Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-3 pb-1 border-t border-border/70">
+            <div class="bg-muted/30 rounded-xl p-2.5 border border-border/40">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Pin ID</span>
+              <span class="font-mono text-xs font-bold text-foreground block mt-0.5 truncate" id="pin-id-str">—</span>
             </div>
-            <span>•</span>
-            <div class="flex items-center gap-1.5">
-              <span>Created:</span>
-              <span class="font-medium text-foreground" id="pin-created-date-str">—</span>
+            <div class="bg-muted/30 rounded-xl p-2.5 border border-border/40">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Created Date</span>
+              <span class="text-xs font-bold text-foreground block mt-0.5" id="pin-created-date-str">—</span>
             </div>
-            <span>•</span>
-            <div class="flex items-center gap-1.5">
-              <span>Archived:</span>
-              <span class="font-medium text-foreground" id="pin-archived-date-str">—</span>
+            <div class="bg-muted/30 rounded-xl p-2.5 border border-border/40">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">First Tracked</span>
+              <span class="text-xs font-bold text-foreground block mt-0.5" id="pin-first-seen-date-str">—</span>
             </div>
-            <span>•</span>
-            <div class="flex items-center gap-1.5">
-              <span>First Pulled:</span>
-              <span class="font-medium text-foreground" id="pin-first-seen-date-str">—</span>
+            <div class="bg-muted/30 rounded-xl p-2.5 border border-border/40">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Last Archived</span>
+              <span class="text-xs font-bold text-foreground block mt-0.5" id="pin-archived-date-str">—</span>
             </div>
-            <span>•</span>
+          </div>
+
+          <!-- Direct External Action Links -->
+          <div class="flex flex-wrap items-center gap-3 text-xs pt-1">
             <a
               id="pin-external-link"
               href="#"
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+              class="inline-flex items-center gap-1.5 font-bold text-primary hover:underline"
             >
               <span>View on Pinterest</span>
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             </a>
-            <span id="pin-dest-sep" class="hidden">•</span>
+            <span id="pin-dest-sep" class="text-muted-foreground/60 hidden">•</span>
             <a
               id="pin-destination-link"
               href="#"
@@ -167,15 +194,18 @@ import Layout from '../../layouts/Layout.astro';
               rel="noopener noreferrer nofollow"
               class="inline-flex items-center gap-1 font-semibold text-muted-foreground hover:text-foreground hover:underline hidden"
             >
-              <span>Visit Site ↗</span>
+              <span>Visit Destination Site ↗</span>
             </a>
           </div>
 
-          <!-- Annotation Tags with Direct Links (T1) -->
+          <!-- Annotation Tags with Clickable Pinterest Idea Links -->
           <div class="pt-2">
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Annotations & SEO Keywords</span>
-              <span id="annotations-counter" class="text-[10px] text-muted-foreground font-medium"></span>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <span>🏷️</span>
+                <span>Annotations & SEO Keywords</span>
+              </span>
+              <span id="annotations-counter" class="text-[10px] font-semibold text-muted-foreground"></span>
             </div>
             <div id="pin-annotations-container" class="flex flex-wrap items-center gap-1.5"></div>
           </div>
@@ -183,113 +213,146 @@ import Layout from '../../layouts/Layout.astro';
       </div>
     </div>
 
-    <!-- ═══ KPI Stats Grid with Full Numbers & Snapshot Deltas (T1) ═══ -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+    <!-- ═══ 2. Modern 6-Card KPI Stat Bar ═══ -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
       <!-- Saves -->
-      <div class="rounded-xl border border-border bg-card p-4 shadow-sm text-center">
-        <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Total Saves</span>
-        <div class="flex items-baseline justify-center gap-1.5 mt-1">
-          <span class="text-xl font-bold text-rose-500" id="kpi-detail-saves">-</span>
+      <div class="rounded-2xl border border-border bg-card p-4.5 shadow-xs hover:shadow-sm transition-all group">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Saves</span>
+          <div class="h-7 w-7 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
+            ❤️
+          </div>
+        </div>
+        <div class="flex items-baseline gap-1.5">
+          <span class="text-xl font-bold text-rose-500 tabular-nums" id="kpi-detail-saves">-</span>
           <span id="kpi-delta-saves" class="text-[10px] font-bold"></span>
         </div>
-        <span class="text-[9px] text-muted-foreground block mt-0.5">Cumulative</span>
+        <span class="text-[10px] text-muted-foreground block mt-1">Cumulative saves</span>
       </div>
 
       <!-- Repins -->
-      <div class="rounded-xl border border-border bg-card p-4 shadow-sm text-center">
-        <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Repins</span>
-        <div class="flex items-baseline justify-center gap-1.5 mt-1">
-          <span class="text-xl font-bold text-foreground" id="kpi-detail-repins">-</span>
+      <div class="rounded-2xl border border-border bg-card p-4.5 shadow-xs hover:shadow-sm transition-all group">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Repins</span>
+          <div class="h-7 w-7 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
+            🔁
+          </div>
+        </div>
+        <div class="flex items-baseline gap-1.5">
+          <span class="text-xl font-bold text-foreground tabular-nums" id="kpi-detail-repins">-</span>
           <span id="kpi-delta-repins" class="text-[10px] font-bold"></span>
         </div>
-        <span class="text-[9px] text-muted-foreground block mt-0.5">Re-pin shares</span>
+        <span class="text-[10px] text-muted-foreground block mt-1">Re-pin shares</span>
       </div>
 
       <!-- Comments -->
-      <div class="rounded-xl border border-border bg-card p-4 shadow-sm text-center">
-        <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Comments</span>
-        <div class="flex items-baseline justify-center gap-1.5 mt-1">
-          <span class="text-xl font-bold text-foreground" id="kpi-detail-comments">-</span>
+      <div class="rounded-2xl border border-border bg-card p-4.5 shadow-xs hover:shadow-sm transition-all group">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Comments</span>
+          <div class="h-7 w-7 rounded-lg bg-slate-500/10 text-slate-500 flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
+            💬
+          </div>
+        </div>
+        <div class="flex items-baseline gap-1.5">
+          <span class="text-xl font-bold text-foreground tabular-nums" id="kpi-detail-comments">-</span>
           <span id="kpi-delta-comments" class="text-[10px] font-bold"></span>
         </div>
-        <span class="text-[9px] text-muted-foreground block mt-0.5">User comments</span>
+        <span class="text-[10px] text-muted-foreground block mt-1">User comments</span>
       </div>
 
       <!-- Shares -->
-      <div class="rounded-xl border border-border bg-card p-4 shadow-sm text-center">
-        <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Shares</span>
-        <div class="flex items-baseline justify-center gap-1.5 mt-1">
-          <span class="text-xl font-bold text-blue-500" id="kpi-detail-shares">-</span>
+      <div class="rounded-2xl border border-border bg-card p-4.5 shadow-xs hover:shadow-sm transition-all group">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Shares</span>
+          <div class="h-7 w-7 rounded-lg bg-sky-500/10 text-sky-500 flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
+            ↗️
+          </div>
+        </div>
+        <div class="flex items-baseline gap-1.5">
+          <span class="text-xl font-bold text-sky-500 tabular-nums" id="kpi-detail-shares">-</span>
           <span id="kpi-delta-shares" class="text-[10px] font-bold"></span>
         </div>
-        <span class="text-[9px] text-muted-foreground block mt-0.5">Social shares</span>
+        <span class="text-[10px] text-muted-foreground block mt-1">Social shares</span>
       </div>
 
       <!-- Velocity -->
-      <div class="rounded-xl border border-border bg-card p-4 shadow-sm text-center">
-        <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Velocity</span>
-        <div class="text-xl font-bold text-emerald-500 mt-1" id="kpi-detail-velocity">-</div>
-        <span class="text-[9px] text-muted-foreground block mt-0.5">Saves / day</span>
+      <div class="rounded-2xl border border-border bg-card p-4.5 shadow-xs hover:shadow-sm transition-all group">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Velocity</span>
+          <div class="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
+            ⚡
+          </div>
+        </div>
+        <div class="text-xl font-bold text-emerald-500 tabular-nums" id="kpi-detail-velocity">-</div>
+        <span class="text-[10px] text-muted-foreground block mt-1">Saves per day</span>
       </div>
 
       <!-- Reactions -->
-      <div class="rounded-xl border border-border bg-card p-4 shadow-sm text-center">
-        <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Reactions</span>
-        <div class="flex items-baseline justify-center gap-1.5 mt-1">
-          <span class="text-xl font-bold text-purple-500" id="kpi-detail-reactions">-</span>
+      <div class="rounded-2xl border border-border bg-card p-4.5 shadow-xs hover:shadow-sm transition-all group">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Reactions</span>
+          <div class="h-7 w-7 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
+            ✨
+          </div>
+        </div>
+        <div class="flex items-baseline gap-1.5">
+          <span class="text-xl font-bold text-purple-500 tabular-nums" id="kpi-detail-reactions">-</span>
           <span id="kpi-delta-reactions" class="text-[10px] font-bold"></span>
         </div>
-        <span class="text-[9px] text-muted-foreground block mt-0.5">Total reactions</span>
+        <span class="text-[10px] text-muted-foreground block mt-1">Total reactions</span>
       </div>
     </div>
 
-    <!-- ═══ Performance Trend Chart & History (T1) ═══ -->
-    <div class="rounded-2xl border border-border bg-card p-6 shadow-sm relative">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
+    <!-- ═══ 3. Performance Trajectory SVG Chart & Growth History ═══ -->
+    <div class="rounded-3xl border border-border bg-card p-6 sm:p-7 shadow-xs space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-border/70">
         <div>
           <h2 class="text-base font-bold text-foreground flex items-center gap-2">
             <span>📈 Performance Trajectory</span>
-            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500" id="metrics-count-badge">0 Snapshots</span>
+            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" id="metrics-count-badge">0 Snapshots</span>
           </h2>
           <p class="text-xs text-muted-foreground mt-0.5">Historical growth curve tracked during automated refresh cycles.</p>
         </div>
-        <div class="flex items-center gap-3 text-xs">
+        
+        <div class="flex items-center gap-4 text-xs font-semibold">
           <div class="flex items-center gap-1.5">
-            <span class="h-2.5 w-2.5 rounded-full bg-rose-500"></span>
-            <span class="text-muted-foreground font-medium">Saves</span>
+            <span class="h-2.5 w-2.5 rounded-full bg-rose-500 shadow-2xs"></span>
+            <span class="text-foreground">Saves</span>
           </div>
           <div class="flex items-center gap-1.5">
-            <span class="h-2.5 w-2.5 rounded-full bg-blue-500"></span>
-            <span class="text-muted-foreground font-medium">Repins</span>
+            <span class="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-2xs"></span>
+            <span class="text-foreground">Repins</span>
           </div>
         </div>
       </div>
 
-      <!-- Chart / Notice Container -->
+      <!-- Chart Wrapper -->
       <div id="chart-wrapper" class="w-full relative">
-        <div id="chart-notice" class="hidden py-12 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border"></div>
+        <div id="chart-notice" class="hidden py-12 text-center text-xs text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border"></div>
         <div id="svg-chart-container" class="w-full h-64 overflow-hidden relative"></div>
-        <div id="metrics-history-container" class="mt-2"></div>
       </div>
+
+      <!-- Snapshots History Table -->
+      <div id="metrics-history-container" class="pt-2"></div>
     </div>
 
-    <!-- ═══ Canonical Asset Consolidation Card (T2) ═══ -->
-    <div id="canonical-consolidation-section" class="hidden rounded-2xl border border-border bg-card p-6 shadow-sm">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 pb-4 border-b border-border">
+    <!-- ═══ 4. Canonical Asset Consolidation Card ═══ -->
+    <div id="canonical-consolidation-section" class="hidden rounded-3xl border border-border bg-card p-6 sm:p-7 shadow-xs space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b border-border/70">
         <div>
           <h2 class="text-base font-bold text-foreground flex items-center gap-2">
             <span>🧬 Canonical Asset Consolidation</span>
-            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500" id="cluster-rank-badge">Rank #1</span>
+            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20" id="cluster-rank-badge">Rank #1</span>
           </h2>
           <p id="cluster-summary-text" class="text-xs text-muted-foreground mt-0.5"></p>
         </div>
       </div>
 
-      <div id="canonical-siblings-list" class="divide-y divide-border/60 bg-muted/20 rounded-xl border border-border/60 overflow-hidden"></div>
+      <div id="canonical-siblings-list" class="divide-y divide-border/60 bg-muted/20 rounded-2xl border border-border/60 overflow-hidden"></div>
     </div>
 
-    <!-- ═══ Pin Editorial Notes Section (T3-notes) ═══ -->
-    <div class="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
+    <!-- ═══ 5. Pin Editorial Notes & Workspace Strategy ═══ -->
+    <div class="rounded-3xl border border-border bg-card p-6 sm:p-7 shadow-xs space-y-4">
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-base font-bold text-foreground flex items-center gap-2">
@@ -297,23 +360,23 @@ import Layout from '../../layouts/Layout.astro';
           </h2>
           <p class="text-xs text-muted-foreground mt-0.5">Private workspace notes regarding content angle, imagery iteration, or performance.</p>
         </div>
-        <span id="notes-status-caption" class="text-xs text-muted-foreground"></span>
+        <span id="notes-status-caption" class="text-xs font-medium text-muted-foreground"></span>
       </div>
 
-      <div class="space-y-2">
+      <div class="space-y-3">
         <textarea
           id="pin-notes-textarea"
           rows="4"
           maxlength="2000"
-          placeholder="Add strategic notes about this pin..."
-          class="w-full rounded-xl border border-border bg-background p-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-y"
+          placeholder="Add strategic notes about this pin (e.g. key hooks, seasonality, high-performing boards)..."
+          class="w-full rounded-2xl border border-border bg-background p-3.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-y leading-relaxed"
         ></textarea>
         <div class="flex items-center justify-between">
           <span id="notes-char-count" class="text-[11px] text-muted-foreground font-mono">0 / 2000</span>
           <button
             id="save-notes-btn"
             type="button"
-            class="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all disabled:opacity-50"
+            class="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all disabled:opacity-50 cursor-pointer"
           >
             Save Notes
           </button>
@@ -336,13 +399,11 @@ import Layout from '../../layouts/Layout.astro';
       .replace(/'/g, '&#039;');
   }
 
-  // Full numbers formatting everywhere
   function fmtNumber(n: number | string | null | undefined): string {
     const num = Number(n) || 0;
     return num.toLocaleString('en-US');
   }
 
-  // Compact abbreviation ONLY allowed for SVG chart axis ticks
   function fmtCompact(n: number | string | null | undefined): string {
     const num = Number(n) || 0;
     if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
@@ -375,8 +436,8 @@ import Layout from '../../layouts/Layout.astro';
   function renderDeltaChip(cur: number, prev: number | null): string {
     if (prev === null) return '';
     const d = cur - prev;
-    if (d > 0) return `<span class="text-[10px] font-bold text-emerald-500">(+${fmtNumber(d)})</span>`;
-    if (d < 0) return `<span class="text-[10px] font-bold text-rose-500">(−${fmtNumber(Math.abs(d))})</span>`;
+    if (d > 0) return `<span class="inline-block text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-md ml-1">(+${fmtNumber(d)})</span>`;
+    if (d < 0) return `<span class="inline-block text-[10px] font-bold text-rose-500 bg-rose-500/10 px-1.5 py-0.2 rounded-md ml-1">(−${fmtNumber(Math.abs(d))})</span>`;
     return '';
   }
 
@@ -385,38 +446,45 @@ import Layout from '../../layouts/Layout.astro';
     if (!container) return;
 
     if (!Array.isArray(metrics) || metrics.length === 0) {
-      container.innerHTML = '<div class="py-6 text-center text-xs text-muted-foreground">No snapshots recorded yet.</div>';
+      container.innerHTML = '<div class="py-8 text-center text-xs text-muted-foreground bg-muted/20 rounded-2xl">No snapshots recorded yet.</div>';
       return;
     }
 
     const rows = [...metrics].reverse(); // newest first
     const first = metrics[0];
     const last = metrics[metrics.length - 1];
-    const net = (k: string) => Number(last[k] || 0) - Number(first[k] || 0);
-    const netChip = (k: string) => renderDeltaChip(Number(last[k] || 0), Number(first[k] || 0));
+    const net = (k: string) => Math.max(0, Number(last[k] || 0) - Number(first[k] || 0));
+    const netChip = (k: string) => {
+      const diff = Number(last[k] || 0) - Number(first[k] || 0);
+      if (diff > 0) return `<span class="inline-block text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-md ml-1">(+${fmtNumber(diff)})</span>`;
+      return '';
+    };
 
     const cell = (v: number, d: string) => `
-      <td class="py-2.5 px-3 text-right font-medium tabular-nums text-foreground whitespace-nowrap">
+      <td class="py-3 px-3.5 text-right font-medium tabular-nums text-foreground whitespace-nowrap">
         ${fmtNumber(v)} ${d}
       </td>`;
 
     container.innerHTML = `
-      <div class="overflow-x-auto rounded-xl border border-border bg-card mt-4">
+      <div class="overflow-x-auto rounded-2xl border border-border bg-card shadow-2xs">
         <table class="w-full text-left text-xs">
           <thead class="bg-muted/40 text-muted-foreground text-[11px] uppercase border-b border-border/80 font-semibold">
             <tr>
-              <th class="py-2.5 px-3">Recorded Date & Time</th>
-              <th class="py-2.5 px-3 text-right">Saves</th>
-              <th class="py-2.5 px-3 text-right">Repins</th>
-              <th class="py-2.5 px-3 text-right">Comments</th>
-              <th class="py-2.5 px-3 text-right">Shares</th>
-              <th class="py-2.5 px-3 text-right">Reactions</th>
-              <th class="py-2.5 px-3 text-right">Actions</th>
+              <th class="py-3 px-3.5">Recorded Date & Time</th>
+              <th class="py-3 px-3.5 text-right">Saves</th>
+              <th class="py-3 px-3.5 text-right">Repins</th>
+              <th class="py-3 px-3.5 text-right">Comments</th>
+              <th class="py-3 px-3.5 text-right">Shares</th>
+              <th class="py-3 px-3.5 text-right">Reactions</th>
+              <th class="py-3 px-3.5 text-right">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border/60">
-            <tr class="bg-muted/20 font-bold">
-              <td class="py-2.5 px-3 text-foreground">Σ Net Change</td>
+            <tr class="bg-emerald-500/5 font-bold border-b border-emerald-500/20">
+              <td class="py-3 px-3.5 text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+                <span>Σ</span>
+                <span>Total Net Growth</span>
+              </td>
               ${cell(net('saves'), netChip('saves'))}
               ${cell(net('repins'), netChip('repins'))}
               ${cell(net('comments'), netChip('comments'))}
@@ -429,17 +497,20 @@ import Layout from '../../layouts/Layout.astro';
               const d = (k: string) => renderDeltaChip(Number(m[k] || 0), prev ? Number(prev[k] || 0) : null);
               return `
                 <tr class="hover:bg-muted/30 transition-colors">
-                  <td class="py-2.5 px-3 font-mono text-muted-foreground whitespace-nowrap">${escapeHtml(fmtDateTime(m.recorded_at))}</td>
+                  <td class="py-3 px-3.5 font-medium text-muted-foreground whitespace-nowrap flex items-center gap-1.5">
+                    <span class="text-xs">🕒</span>
+                    <span>${escapeHtml(fmtDateTime(m.recorded_at))}</span>
+                  </td>
                   ${cell(Number(m.saves || 0), d('saves'))}
                   ${cell(Number(m.repins || 0), d('repins'))}
                   ${cell(Number(m.comments || 0), d('comments'))}
                   ${cell(Number(m.shares || 0), d('shares'))}
                   ${cell(Number(m.reactions_total || 0), d('reactions_total'))}
-                  <td class="py-2.5 px-3 text-right">
+                  <td class="py-3 px-3.5 text-right">
                     <button
                       type="button"
                       data-del-metric="${escapeHtml(m.id || '')}"
-                      class="rounded-lg border border-border hover:border-rose-500/50 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 px-2 py-1 text-[10px] font-semibold transition-colors cursor-pointer"
+                      class="rounded-lg border border-border hover:border-rose-500/40 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 px-2 py-1 text-[11px] font-semibold transition-colors cursor-pointer"
                     >🗑 Delete</button>
                   </td>
                 </tr>`;
@@ -453,7 +524,7 @@ import Layout from '../../layouts/Layout.astro';
       btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-del-metric');
         if (!id) return;
-        if (!confirm('Delete this snapshot? Deltas and SPIKE/COOLING detection are computed from the latest two snapshots — deleting the newest one changes them.')) return;
+        if (!confirm('Delete this snapshot? Deltas and growth velocity will automatically adjust.')) return;
         btn.disabled = true;
         try {
           const res = await fetch('/api/pinarchive/metrics', {
@@ -475,24 +546,24 @@ import Layout from '../../layouts/Layout.astro';
   function renderStageBadge(stage?: string | null): string {
     switch (stage) {
       case 'NEW':
-        return '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">🟢 NEW (≤14d)</span>';
+        return '<span class="text-[10px] font-bold px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">🟢 NEW (≤14d)</span>';
       case 'GROWING':
-        return '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">🚀 GROWING (≥10/d)</span>';
+        return '<span class="text-[10px] font-bold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">🚀 GROWING (≥10/d)</span>';
       case 'MATURE':
-        return '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">🟣 MATURE (>14d)</span>';
+        return '<span class="text-[10px] font-bold px-3 py-1 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">🟣 MATURE (>14d)</span>';
       case 'COOLING':
-        return '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">❄️ COOLING (<2/d)</span>';
+        return '<span class="text-[10px] font-bold px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">❄️ COOLING (<2/d)</span>';
       default:
-        return '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-500/10 text-slate-500 border border-slate-500/20">⚪ DORMANT (<0.5/d)</span>';
+        return '<span class="text-[10px] font-bold px-3 py-1 rounded-full bg-slate-500/10 text-slate-500 border border-slate-500/20">⚪ DORMANT (<0.5/d)</span>';
     }
   }
 
   function renderDelta(val: number, label: string): string {
     if (val > 0) {
-      return `<span class="text-emerald-500" aria-label="${label} increased by ${val}">(+${fmtNumber(val)})</span>`;
+      return `<span class="text-emerald-600 dark:text-emerald-400 font-bold" aria-label="${label} increased by ${val}">(+${fmtNumber(val)})</span>`;
     }
     if (val < 0) {
-      return `<span class="text-rose-500" aria-label="${label} decreased by ${Math.abs(val)}">(−${fmtNumber(Math.abs(val))})</span>`;
+      return `<span class="text-rose-500 font-bold" aria-label="${label} decreased by ${Math.abs(val)}">(−${fmtNumber(Math.abs(val))})</span>`;
     }
     return '';
   }
@@ -503,25 +574,19 @@ import Layout from '../../layouts/Layout.astro';
     if (!container || !notice) return;
 
     if (!Array.isArray(metrics) || metrics.length < 2) {
-      notice.innerHTML = 'Not enough history yet — refresh cycle will build history (1 snapshot recorded).';
+      notice.innerHTML = '<span class="font-medium">Building history…</span> Next automated refresh cycle will plot the trajectory curve (1 snapshot recorded).';
       notice.classList.remove('hidden');
       container.classList.add('hidden');
       return;
     }
 
-    if (metrics.length < 4) {
-      notice.innerHTML = `Building history — refresh cycle will complete the curve (${metrics.length} of 4 snapshots).`;
-      notice.classList.remove('hidden');
-    } else {
-      notice.classList.add('hidden');
-    }
-
+    notice.classList.add('hidden');
     container.classList.remove('hidden');
 
     const width = container.clientWidth || 800;
-    const height = 250;
+    const height = 240;
     const padX = 50;
-    const padY = 30;
+    const padY = 25;
 
     const saves = metrics.map((m) => Number(m.saves || 0));
     const repins = metrics.map((m) => Number(m.repins || 0));
@@ -541,6 +606,7 @@ import Layout from '../../layouts/Layout.astro';
       .join(' ');
 
     const savesArea = `${savesPath} L ${getX(ptsCount - 1)} ${height - padY} L ${getX(0)} ${height - padY} Z`;
+    const repinsArea = `${repinsPath} L ${getX(ptsCount - 1)} ${height - padY} L ${getX(0)} ${height - padY} Z`;
 
     const gridY1 = height - padY;
     const gridY2 = height - padY - (height - padY * 2) * 0.5;
@@ -550,45 +616,51 @@ import Layout from '../../layouts/Layout.astro';
       <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" class="overflow-visible" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="savesGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#f43f5e" stop-opacity="0.25"/>
+            <stop offset="0%" stop-color="#f43f5e" stop-opacity="0.28"/>
             <stop offset="100%" stop-color="#f43f5e" stop-opacity="0.0"/>
+          </linearGradient>
+          <linearGradient id="repinsGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0"/>
           </linearGradient>
         </defs>
 
         <!-- Grid lines -->
-        <line x1="${padX}" y1="${gridY1}" x2="${width - padX}" y2="${gridY1}" stroke="currentColor" class="text-border" stroke-width="1" />
-        <line x1="${padX}" y1="${gridY2}" x2="${width - padX}" y2="${gridY2}" stroke="currentColor" class="text-border" stroke-dasharray="4 4" stroke-width="1" />
-        <line x1="${padX}" y1="${gridY3}" x2="${width - padX}" y2="${gridY3}" stroke="currentColor" class="text-border" stroke-dasharray="4 4" stroke-width="1" />
+        <line x1="${padX}" y1="${gridY1}" x2="${width - padX}" y2="${gridY1}" stroke="currentColor" class="text-border/60" stroke-width="1" />
+        <line x1="${padX}" y1="${gridY2}" x2="${width - padX}" y2="${gridY2}" stroke="currentColor" class="text-border/40" stroke-dasharray="4 4" stroke-width="1" />
+        <line x1="${padX}" y1="${gridY3}" x2="${width - padX}" y2="${gridY3}" stroke="currentColor" class="text-border/40" stroke-dasharray="4 4" stroke-width="1" />
 
-        <!-- Y Axis Labels (compact formatting allowed only here) -->
-        <text x="${padX - 8}" y="${gridY1}" text-anchor="end" class="fill-muted-foreground text-[10px]" dominant-baseline="middle">${fmtCompact(minVal)}</text>
-        <text x="${padX - 8}" y="${gridY2}" text-anchor="end" class="fill-muted-foreground text-[10px]" dominant-baseline="middle">${fmtCompact(Math.round(maxVal / 2))}</text>
-        <text x="${padX - 8}" y="${gridY3}" text-anchor="end" class="fill-muted-foreground text-[10px]" dominant-baseline="middle">${fmtCompact(maxVal)}</text>
+        <!-- Y Axis Labels -->
+        <text x="${padX - 8}" y="${gridY1}" text-anchor="end" class="fill-muted-foreground text-[10px] font-medium" dominant-baseline="middle">${fmtCompact(minVal)}</text>
+        <text x="${padX - 8}" y="${gridY2}" text-anchor="end" class="fill-muted-foreground text-[10px] font-medium" dominant-baseline="middle">${fmtCompact(Math.round(maxVal / 2))}</text>
+        <text x="${padX - 8}" y="${gridY3}" text-anchor="end" class="fill-muted-foreground text-[10px] font-medium" dominant-baseline="middle">${fmtCompact(maxVal)}</text>
 
-        <!-- Area Fill -->
+        <!-- Area Fills -->
+        <path d="${repinsArea}" fill="url(#repinsGrad)" />
         <path d="${savesArea}" fill="url(#savesGrad)" />
 
-        <!-- Repins Line -->
+        <!-- Repins Polyline -->
         <path d="${repinsPath}" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 
-        <!-- Saves Line -->
+        <!-- Saves Polyline -->
         <path d="${savesPath}" fill="none" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
 
-        <!-- Interactive Data Points with Full Number Tooltips -->
+        <!-- Interactive Data Points -->
         ${metrics
           .map(
             (m, i) => `
               <g class="group cursor-pointer">
                 <circle cx="${getX(i).toFixed(1)}" cy="${getY(Number(m.saves || 0)).toFixed(1)}" r="4.5" fill="#f43f5e" stroke="var(--color-card, #fff)" stroke-width="2" class="group-hover:r-6 transition-all" />
-                <title>${fmtDate(m.recorded_at)}: ${fmtNumber(m.saves)} saves · ${fmtNumber(m.repins)} repins</title>
+                <circle cx="${getX(i).toFixed(1)}" cy="${getY(Number(m.repins || 0)).toFixed(1)}" r="3.5" fill="#3b82f6" stroke="var(--color-card, #fff)" stroke-width="1.5" class="group-hover:r-5 transition-all" />
+                <title>${fmtDateTime(m.recorded_at)}: ${fmtNumber(m.saves)} saves · ${fmtNumber(m.repins)} repins</title>
               </g>
             `
           )
           .join('')}
 
         <!-- X Axis Labels -->
-        <text x="${padX}" y="${height - 10}" text-anchor="start" class="fill-muted-foreground text-[10px]">${fmtDate(metrics[0]?.recorded_at)}</text>
-        <text x="${width - padX}" y="${height - 10}" text-anchor="end" class="fill-muted-foreground text-[10px]">${fmtDate(metrics[metrics.length - 1]?.recorded_at)}</text>
+        <text x="${padX}" y="${height - 6}" text-anchor="start" class="fill-muted-foreground text-[10px] font-medium">${fmtDate(metrics[0]?.recorded_at)}</text>
+        <text x="${width - padX}" y="${height - 6}" text-anchor="end" class="fill-muted-foreground text-[10px] font-medium">${fmtDate(metrics[metrics.length - 1]?.recorded_at)}</text>
       </svg>
     `;
   }
@@ -602,10 +674,10 @@ import Layout from '../../layouts/Layout.astro';
         await navigator.clipboard.writeText(text);
         const originalHtml = btn.innerHTML;
         btn.innerHTML = '<span>Copied ✓</span>';
-        btn.classList.add('bg-emerald-500/20', 'text-emerald-600', 'dark:text-emerald-400');
+        btn.classList.add('bg-emerald-500/20', 'text-emerald-600', 'dark:text-emerald-400', 'border-emerald-500/30');
         setTimeout(() => {
           btn.innerHTML = originalHtml;
-          btn.classList.remove('bg-emerald-500/20', 'text-emerald-600', 'dark:text-emerald-400');
+          btn.classList.remove('bg-emerald-500/20', 'text-emerald-600', 'dark:text-emerald-400', 'border-emerald-500/30');
         }, 2000);
       } catch (err) {
         console.error('Failed to copy to clipboard', err);
@@ -628,7 +700,7 @@ import Layout from '../../layouts/Layout.astro';
     if (stickyStage) stickyStage.innerHTML = renderStageBadge(pin.stage);
 
     window.addEventListener('scroll', () => {
-      if (window.scrollY > 400) {
+      if (window.scrollY > 350) {
         stickyBar.classList.remove('-translate-y-full', 'opacity-0', 'pointer-events-none');
         stickyBar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
       } else {
@@ -722,12 +794,19 @@ import Layout from '../../layouts/Layout.astro';
       const siblings: any[] = json.canonical_siblings || [];
       const clusterStats = json.cluster_stats || { total_saves: pin.saves, variations_count: 1, rank: 1, share_pct: 100 };
 
+      // Breadcrumb title
+      const bcTitle = document.getElementById('breadcrumb-pin-title');
+      if (bcTitle) bcTitle.textContent = pin.title || `Pin #${pin.pin_id}`;
+
       // 1. Header Hero Card
       const img = document.getElementById('pin-detail-image') as HTMLImageElement | null;
       const fallbackIcon = document.getElementById('pin-detail-fallback-icon');
+      const imgOverlayLink = document.getElementById('pin-image-overlay-link') as HTMLAnchorElement | null;
+      
       if (img) {
         if (pin.image_url) {
           img.src = pin.image_url;
+          if (imgOverlayLink) imgOverlayLink.href = pin.image_url;
           img.onerror = () => {
             img.style.display = 'none';
             if (fallbackIcon) fallbackIcon.classList.remove('hidden');
@@ -744,9 +823,9 @@ import Layout from '../../layouts/Layout.astro';
       const anomalyBadge = document.getElementById('pin-anomaly-badge');
       if (anomalyBadge) {
         if (pin.anomaly === 'SPIKE') {
-          anomalyBadge.innerHTML = '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20 animate-pulse">🔥 SPIKE</span>';
+          anomalyBadge.innerHTML = '<span class="text-[10px] font-bold px-3 py-1 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20 animate-pulse">🔥 SPIKE</span>';
         } else if (pin.anomaly === 'COOLING') {
-          anomalyBadge.innerHTML = '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">❄️ COOLING</span>';
+          anomalyBadge.innerHTML = '<span class="text-[10px] font-bold px-3 py-1 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">❄️ COOLING</span>';
         } else {
           anomalyBadge.innerHTML = '';
         }
@@ -770,10 +849,20 @@ import Layout from '../../layouts/Layout.astro';
       const canonicalBadge = document.getElementById('pin-canonical-badge');
       if (canonicalBadge) {
         if (pin.canonical_pin_id) {
-          canonicalBadge.textContent = `Canonical #${pin.canonical_pin_id}`;
+          canonicalBadge.textContent = `🧬 Canonical #${pin.canonical_pin_id}`;
           canonicalBadge.classList.remove('hidden');
         } else {
           canonicalBadge.classList.add('hidden');
+        }
+      }
+
+      const accountBadge = document.getElementById('pin-account-badge');
+      if (accountBadge) {
+        if (pin.account_username) {
+          accountBadge.textContent = `@${pin.account_username}`;
+          accountBadge.classList.remove('hidden');
+        } else {
+          accountBadge.classList.add('hidden');
         }
       }
 
@@ -819,7 +908,7 @@ import Layout from '../../layouts/Layout.astro';
       setupCopyButton('copy-url-btn', () => `https://www.pinterest.com/pin/${pin.pin_id || pin.id}/`);
       setupCopyButton('copy-title-btn', () => pin.title || `Pin ${pin.pin_id}`);
 
-      // Annotations with linked clickable URLs for all chips
+      // Annotations with linked clickable URLs
       const annContainer = document.getElementById('pin-annotations-container');
       const annCounter = document.getElementById('annotations-counter');
       if (annContainer) {
@@ -849,17 +938,17 @@ import Layout from '../../layouts/Layout.astro';
                   href="${escapeHtml(fullUrl)}"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="inline-flex items-center gap-1 text-xs bg-primary/10 hover:bg-primary/20 text-primary px-2.5 py-1 rounded-lg font-medium border border-primary/20 transition-colors"
+                  class="inline-flex items-center gap-1.5 text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 px-3 py-1.5 rounded-xl font-medium border border-rose-500/20 transition-all group"
                   title="${escapeHtml(name)} (Pinterest Idea)"
                 >
                   <span>${escapeHtml(name)}</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 shrink-0 opacity-70 group-hover:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                 </a>
               `;
             })
             .join('');
 
-          if (annCounter) annCounter.textContent = `${linkedCount} linked annotation${linkedCount === 1 ? '' : 's'}`;
+          if (annCounter) annCounter.textContent = `${linkedCount} linked idea${linkedCount === 1 ? '' : 's'}`;
         }
       }
 
@@ -900,7 +989,7 @@ import Layout from '../../layouts/Layout.astro';
       renderSvgChart(metrics);
       renderMetricsTable(metrics);
 
-      // 4. Canonical Asset Consolidation Card (T2)
+      // 4. Canonical Asset Consolidation Card
       const consSection = document.getElementById('canonical-consolidation-section');
       const rankBadge = document.getElementById('cluster-rank-badge');
       const clusterSummary = document.getElementById('cluster-summary-text');
@@ -923,10 +1012,10 @@ import Layout from '../../layouts/Layout.astro';
                   return `
                     <a
                       href="/pinarchive/details?id=${escapeHtml(s.id)}"
-                      class="flex items-center justify-between p-3.5 hover:bg-muted/40 transition-colors group focus-visible:ring-2 focus-visible:ring-primary"
+                      class="flex items-center justify-between p-4 hover:bg-muted/40 transition-colors group focus-visible:ring-2 focus-visible:ring-primary"
                     >
-                      <div class="flex items-center gap-3 min-w-0">
-                        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500 font-bold text-xs shrink-0">
+                      <div class="flex items-center gap-3.5 min-w-0">
+                        <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold text-xs shrink-0">
                           #${idx + 2}
                         </span>
                         <div class="min-w-0">
@@ -938,7 +1027,7 @@ import Layout from '../../layouts/Layout.astro';
                       </div>
                       <div class="flex items-center gap-3 shrink-0">
                         <span class="text-[10px] text-muted-foreground font-mono">(${share}%)</span>
-                        <span class="text-xs font-bold text-rose-500">${fmtNumber(sSaves)} saves</span>
+                        <span class="text-xs font-bold text-rose-500 tabular-nums">${fmtNumber(sSaves)} saves</span>
                         <span class="text-muted-foreground group-hover:text-primary transition-colors text-xs font-bold">→</span>
                       </div>
                     </a>
@@ -947,7 +1036,7 @@ import Layout from '../../layouts/Layout.astro';
               )
               .join('');
           } else {
-            siblingsList.innerHTML = '<div class="p-4 text-center text-xs text-muted-foreground">No other pin variations in this cluster.</div>';
+            siblingsList.innerHTML = '<div class="p-5 text-center text-xs text-muted-foreground">Unique variation in this workspace (sole pinned instance).</div>';
           }
         }
       } else if (consSection) {

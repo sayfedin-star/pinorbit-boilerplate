@@ -60,6 +60,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return json({ success: false, error: 'Pin not found.' }, 404);
     }
 
+    // Fetch creator account username if available
+    if (pin.account_id) {
+      const { data: acc } = await db
+        .from('pa_accounts')
+        .select('id, username')
+        .eq('id', pin.account_id)
+        .maybeSingle();
+      if (acc && acc.username) {
+        pin.account_username = acc.username;
+      }
+    }
+
     // b) Fetch historical snapshots
     const { data: metrics, error: metErr } = await db
       .from('pa_pin_metrics')
