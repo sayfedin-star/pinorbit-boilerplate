@@ -72,6 +72,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // 2. Delete accounts (FK cascades handle pa_pins, pa_pin_metrics, pa_runs)
+    // Y5 deferred: GAS v2.6.3 will add delete_account handler; UI Pause guard (v1.2) is active
     const { error: delErr } = await db
       .from('pa_accounts')
       .delete()

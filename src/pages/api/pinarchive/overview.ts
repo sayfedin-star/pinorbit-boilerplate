@@ -112,16 +112,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const totalPins = totalPinsCount ?? 0;
 
-    // 2. Sums via SQL RPC; fallback to paginated scan if RPC not yet applied
+    // 2. Sums via SQL RPC; fallback to un-capped paginated scan if RPC unavailable
     let sumSaves = 0, sumShares = 0;
     const rpcRes = await db.rpc('pa_workspace_sums', { p_workspace_id: ws });
     if (!rpcRes.error && Array.isArray(rpcRes.data) && rpcRes.data.length > 0) {
       sumSaves = Number(rpcRes.data[0].sum_saves || 0);
       sumShares = Number(rpcRes.data[0].sum_shares || 0);
     } else {
-      const PAGE = 1000, MAX_PAGES = 20;
+      const PAGE = 1000;
       let offset = 0;
-      while (offset < PAGE * MAX_PAGES) {
+      while (true) {
         const { data, error } = await db
           .from('pa_pins')
           .select('saves, share_count')

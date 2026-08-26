@@ -198,18 +198,23 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     if (pins.length > 0) {
       const pinIds = pins.map((p: any) => p.id).filter(Boolean);
-      const { data: metricsData } = await db
-        .from('pa_pin_metrics')
-        .select('pin_ref, recorded_at, saves, repins, comments, shares, reactions_total')
-        .in('pin_ref', pinIds)
-        .order('recorded_at', { ascending: false });
-
       const metricsMap = new Map<string, any[]>();
-      if (Array.isArray(metricsData)) {
-        for (const m of metricsData) {
-          const list = metricsMap.get(m.pin_ref) || [];
-          if (list.length < 2) list.push(m);
-          metricsMap.set(m.pin_ref, list);
+      const CHUNK_SIZE = 100;
+      for (let i = 0; i < pinIds.length; i += CHUNK_SIZE) {
+        const chunk = pinIds.slice(i, i + CHUNK_SIZE);
+        const { data: metricsData } = await db
+          .from('pa_pin_metrics')
+          .select('pin_ref, recorded_at, saves, repins, comments, shares, reactions_total')
+          .in('pin_ref', chunk)
+          .order('recorded_at', { ascending: false })
+          .limit(chunk.length * 5);
+
+        if (Array.isArray(metricsData)) {
+          for (const m of metricsData) {
+            const list = metricsMap.get(m.pin_ref) || [];
+            if (list.length < 2) list.push(m);
+            metricsMap.set(m.pin_ref, list);
+          }
         }
       }
 

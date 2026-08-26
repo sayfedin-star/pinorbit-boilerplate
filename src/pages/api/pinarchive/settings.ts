@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS = {
   pin_filter_min_repins: 0,
   pin_filter_rising_age_days: 14,
   pin_filter_rising_saves: 34,
+  refresh_max_pins: 0,
 };
 
 const ALLOWED_PATCH_KEYS = new Set([
@@ -34,6 +35,7 @@ const ALLOWED_PATCH_KEYS = new Set([
   'pin_filter_min_repins',
   'pin_filter_rising_age_days',
   'pin_filter_rising_saves',
+  'refresh_max_pins',
 ]);
 
 export const GET: APIRoute = async ({ request, locals }) => {
@@ -92,6 +94,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       pin_filter_min_repins: settings.pin_filter_min_repins ?? DEFAULT_SETTINGS.pin_filter_min_repins,
       pin_filter_rising_age_days: settings.pin_filter_rising_age_days ?? DEFAULT_SETTINGS.pin_filter_rising_age_days,
       pin_filter_rising_saves: settings.pin_filter_rising_saves ?? DEFAULT_SETTINGS.pin_filter_rising_saves,
+      refresh_max_pins: settings.refresh_max_pins ?? DEFAULT_SETTINGS.refresh_max_pins,
       is_default: false,
       updated_at: settings.updated_at,
     });
@@ -194,6 +197,14 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
     }
   }
 
+  // Validate refresh_max_pins
+  if (body.refresh_max_pins !== undefined) {
+    const rmp = Number(body.refresh_max_pins);
+    if (!Number.isInteger(rmp) || rmp < 0 || rmp > 10000) {
+      return json({ success: false, error: 'refresh_max_pins must be an integer between 0 and 10000.' }, 422);
+    }
+  }
+
   let wsCtx;
   try {
     wsCtx = await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
@@ -245,6 +256,10 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
         body.pin_filter_rising_saves !== undefined
           ? Number(body.pin_filter_rising_saves)
           : (existing?.pin_filter_rising_saves ?? DEFAULT_SETTINGS.pin_filter_rising_saves),
+      refresh_max_pins:
+        body.refresh_max_pins !== undefined
+          ? Number(body.refresh_max_pins)
+          : (existing?.refresh_max_pins ?? DEFAULT_SETTINGS.refresh_max_pins),
       updated_at: new Date().toISOString(),
     };
 
@@ -269,6 +284,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
       pin_filter_min_repins: saved.pin_filter_min_repins,
       pin_filter_rising_age_days: saved.pin_filter_rising_age_days,
       pin_filter_rising_saves: saved.pin_filter_rising_saves,
+      refresh_max_pins: saved.refresh_max_pins ?? DEFAULT_SETTINGS.refresh_max_pins,
       is_default: false,
       updated_at: saved.updated_at,
     });

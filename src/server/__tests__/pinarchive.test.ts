@@ -3,6 +3,8 @@ import { timingSafeEqual } from '../lib/timing-safe';
 import { gasCall } from '../lib/gas-bridge';
 import { POST as ingestHandler } from '../../pages/api/internal/pinarchive/ingest';
 import { POST as dispatchHandler } from '../../pages/api/internal/pinarchive/dispatch';
+import { GET as configHandler } from '../../pages/api/internal/pinarchive/config';
+import { GET as settingsGetHandler, PATCH as settingsPatchHandler } from '../../pages/api/pinarchive/settings';
 import { dbClients } from '../db/clients';
 
 vi.mock('../db/clients', () => {
@@ -62,6 +64,19 @@ describe('PinArchive Module Test Suite', () => {
 
     mockAdminClient = dbClients.getSchedulingAdmin();
     mockPinArchiveClient = dbClients.getPinArchive();
+    mockPinArchiveClient.from.mockImplementation((table: string) => {
+      return {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+        }),
+      };
+    });
+    mockPinArchiveClient.rpc = vi.fn().mockResolvedValue({ data: { success: true }, error: null });
   });
 
   describe('1. timingSafeEqual Helper', () => {
@@ -169,7 +184,7 @@ describe('PinArchive Module Test Suite', () => {
           'Content-Type': 'application/json',
           'x-ingest-secret': 'env_secret_default_999',
         },
-        body: JSON.stringify({ workspace_id: 'nonexistent-workspace', username: 'testuser', pins: [] }),
+        body: JSON.stringify({ workspace_id: '00000000-0000-0000-0000-000000000999', username: 'testuser', pins: [] }),
       });
       const res = await ingestHandler({ request: req, locals: { runtime: { env: mockRuntimeEnv } } } as any);
       expect(res.status).toBe(403);
@@ -773,6 +788,177 @@ describe('PinArchive Module Test Suite', () => {
       expect(json.dispatched[0].ok).toBe(true);
 
       globalThis.fetch = originalFetch;
+    });
+  });
+
+  describe('5. Hotfix & Data Correctness Patches (X4, X5, refresh_max_pins)', () => {
+    it('X4: ingest rejects username "default" or invalid characters with 422', async () => {
+      mockAdminClient.from.mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: { id: mockWsId }, error: null }),
+      });
+      mockKvStore.set(`ingest_secret:ws:${mockWsId}`, mockSecret);
+
+      const reqDefault = new Request('http://localhost:4321/api/internal/pinarchive/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-ingest-secret': mockSecret },
+        body: JSON.stringify({ workspace_id: mockWsId, username: 'default', pins: [] }),
+      });
+      const resDefault = await ingestHandler({ request: reqDefault, locals: { runtime: { env: mockRuntimeEnv } } } as any);
+      expect(resDefault.status).toBe(422);
+
+      const reqInvalid = new Request('http://localhost:4321/api/internal/pinarchive/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-ingest-secret': mockSecret },
+        body: JSON.stringify({ workspace_id: mockWsId, username: 'invalid user with spaces!', pins: [] }),
+      });
+      const resInvalid = await ingestHandler({ request: reqInvalid, locals: { runtime: { env: mockRuntimeEnv } } } as any);
+      expect(resInvalid.status).toBe(422);
+    });
+
+    it('X4: ingest rejects invalid workspace UUID format with 400', async () => {
+      const reqInvalidUuid = new Request('http://localhost:4321/api/internal/pinarchive/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspace_id: 'not-a-valid-uuid', username: 'testuser', pins: [] }),
+      });
+      const resInvalidUuid = await ingestHandler({ request: reqInvalidUuid, locals: { runtime: { env: mockRuntimeEnv } } } as any);
+      expect(resInvalidUuid.status).toBe(400);
+    });
+
+    it('X5: ingest deduplicates duplicate pin_ids in batch payload before PostgREST upsert', async () => {
+      mockAdminClient.from.mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: { id: mockWsId }, error: null }),
+      });
+      mockKvStore.set(`ingest_secret:ws:${mockWsId}`, mockSecret);
+
+      let upsertedPins: any[] = [];
+      mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_workspace_settings') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'pa_accounts') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+                }),
+              }),
+            }),
+            upsert: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { id: 'acc-1', workspace_id: mockWsId, username: 'testuser' },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        if (table === 'pa_pins') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                in: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+            upsert: vi.fn().mockImplementation((pinsList: any[]) => {
+              upsertedPins = pinsList;
+              return {
+                select: vi.fn().mockResolvedValue({
+                  data: pinsList.map((p) => ({
+                    id: 'pin-uuid-' + p.pin_id,
+                    pin_id: p.pin_id,
+                    saves: p.saves,
+                    repins: p.repins,
+                    comments: p.comments,
+                    share_count: p.share_count,
+                    reactions: p.reactions,
+                  })),
+                  error: null,
+                }),
+              };
+            }),
+          };
+        }
+        return {
+          insert: vi.fn().mockResolvedValue({ data: [], error: null }),
+          upsert: vi.fn().mockResolvedValue({ data: [], error: null }),
+        };
+      });
+
+      const req = new Request('http://localhost:4321/api/internal/pinarchive/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-ingest-secret': mockSecret },
+        body: JSON.stringify({
+          workspace_id: mockWsId,
+          username: 'testuser',
+          pins: [
+            { pin_id: 'duplicate_1', title: 'First Version', saves: 10 },
+            { pin_id: 'duplicate_1', title: 'Second Version', saves: 20 },
+            { pin_id: 'unique_2', title: 'Unique Pin', saves: 5 },
+          ],
+        }),
+      });
+
+      const res = await ingestHandler({ request: req, locals: { runtime: { env: mockRuntimeEnv } } } as any);
+      expect(res.status).toBe(200);
+      expect(upsertedPins.length).toBe(2);
+      expect(upsertedPins.map((p) => p.pin_id)).toEqual(['duplicate_1', 'unique_2']);
+      expect(upsertedPins.find((p) => p.pin_id === 'duplicate_1')?.title).toBe('Second Version');
+    });
+
+    it('Config GET returns refresh_max_pins (default 0)', async () => {
+      mockAdminClient.from.mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: { id: mockWsId }, error: null }),
+      });
+      mockKvStore.set(`ingest_secret:ws:${mockWsId}`, mockSecret);
+
+      mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_workspace_settings') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: {
+                    refresh_max_pins: 2500,
+                    pin_filter_min_saves: 5,
+                    pin_filter_min_repins: 2,
+                    pin_filter_rising_age_days: 14,
+                    pin_filter_rising_saves: 34,
+                  },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        return {};
+      });
+
+      const req = new Request(`http://localhost:4321/api/internal/pinarchive/config?workspace_id=${mockWsId}`, {
+        method: 'GET',
+        headers: { 'x-ingest-secret': mockSecret },
+      });
+
+      const res = await configHandler({ request: req, locals: { runtime: { env: mockRuntimeEnv } } } as any);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.refresh_max_pins).toBe(2500);
+      expect(json.pin_filter_min_saves).toBe(5);
     });
   });
 });

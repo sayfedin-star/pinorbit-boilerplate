@@ -53,23 +53,31 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const board = searchParams.get('board')?.trim() || null;
 
   try {
-    // PostgREST rejects cs.[{...}] on jsonb arrays ("invalid input syntax for type json");
-    // fetch candidates and filter annotations in JS instead (same query as topics.ts).
-    const { data: candidates, error } = await db
-      .from('pa_pins')
-      .select('id, pin_id, title, image_url, link, saves, repins, comments, share_count, velocity, annotations, seo_category, canonical_pin_id, archived_at, board_name, board_id, account_id, is_video, created_at_pinterest, notes')
-      .eq('workspace_id', ws)
-      .order('saves', { ascending: false })
-      .limit(2000);
+    // Query honest, un-capped topic member pins via SQL JSON containment RPC
+    let namePins: any[] = [];
+    const rpcRes = await db.rpc('pa_topic_pins', {
+      p_workspace_id: ws,
+      p_name: name,
+      p_account_id: null,
+      p_board: null,
+    });
 
-    if (error) {
-      return json({ success: false, error: error.message }, 500);
+    if (!rpcRes.error && Array.isArray(rpcRes.data)) {
+      namePins = rpcRes.data;
+    } else {
+      // Fallback: direct contains query
+      const { data: candidates, error: fallbackErr } = await db
+        .from('pa_pins')
+        .select('id, pin_id, title, image_url, link, saves, repins, comments, share_count, velocity, annotations, seo_category, canonical_pin_id, archived_at, board_name, board_id, account_id, is_video, created_at_pinterest, notes')
+        .eq('workspace_id', ws)
+        .contains('annotations', JSON.stringify([{ name }]))
+        .order('saves', { ascending: false });
+
+      if (fallbackErr) {
+        return json({ success: false, error: fallbackErr.message }, 500);
+      }
+      namePins = candidates || [];
     }
-
-    const namePins = (candidates || []).filter((p: any) =>
-      (Array.isArray(p.annotations) ? p.annotations : [])
-        .some((a: any) => (typeof a === 'string' ? a.trim() : String(a?.name || '').trim()) === name)
-    );
 
     let rawPins = namePins.filter((p: any) =>
       (!accountId || p.account_id === accountId) &&
