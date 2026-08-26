@@ -207,11 +207,49 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const MONITOR = true;
     if (pins.length > 0 && typeof pinArchive.rpc === 'function') {
       try {
+        const s = (v: any) => (v === '' || v == null ? undefined : v); // '' → omitted → NULL → R4 keeps target (mirrors legacy ||)
+        const pinsPayload = pins.map((p: any) => {
+          const row: Record<string, any> = {
+            pin_id: String(p.pin_id || p.id),
+            title: s(p.title),
+            description: s(p.description),
+            link: s(p.link),
+            domain: s(p.domain),
+            board_name: s(p.board_name),
+            created_at_pinterest: p.created_at_pinterest ?? p.created_at ?? null,
+            image_url: s(p.image_url),
+            is_video: !!p.is_video,
+            is_product: !!p.is_product,
+            price: p.price,
+            currency: p.currency,
+            site_name: p.site_name,
+            saves: Number(p.saves || 0),
+            repins: Number(p.repins || 0),
+            comments: Number(p.comments || 0),
+            velocity: Number(p.velocity || 0),
+            promoted: !!p.promoted,
+          };
+          if (p.node_id !== undefined) row.node_id = p.node_id;
+          if (p.board_id !== undefined) row.board_id = p.board_id;
+          if (p.utm_link !== undefined) row.utm_link = p.utm_link;
+          if (p.share_count !== undefined) row.share_count = Number(p.share_count || 0);
+          if (p.reactions !== undefined) row.reactions = p.reactions;
+          if (p.annotations !== undefined) row.annotations = p.annotations;
+          if (p.seo_category !== undefined) row.seo_category = p.seo_category;
+          if (p.canonical_pin_id !== undefined) row.canonical_pin_id = p.canonical_pin_id;
+          if (p.seo_alt_text !== undefined) row.seo_alt_text = p.seo_alt_text;
+          if (p.board_pin_count !== undefined) row.board_pin_count = p.board_pin_count;
+          if (p.board_last_modified_at !== undefined) row.board_last_modified_at = p.board_last_modified_at;
+          if (p.image_signature !== undefined) row.image_signature = p.image_signature;
+          if (p.dominant_color !== undefined) row.dominant_color = p.dominant_color;
+          if (p.archived_at !== undefined) row.archived_at = p.archived_at;
+          return row;
+        });
         const { data: rpcData, error: rpcErr } = await pinArchive.rpc('pa_ingest_pin_batch', {
           p_workspace_id: workspaceId,
           p_account_id: accountId,
           p_fetched_at: fetchedAt,
-          p_pins: pins,
+          p_pins: pinsPayload,
           p_dry_run: MONITOR,
         });
         if (rpcErr) {
