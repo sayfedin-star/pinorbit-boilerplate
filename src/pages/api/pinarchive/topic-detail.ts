@@ -48,6 +48,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return json({ success: false, error: 'Validation Error: name (1-120 chars) is required.' }, 400);
   }
 
+  const rawAccountId = searchParams.get('account_id')?.trim();
+  const accountId = rawAccountId && UUID_REGEX.test(rawAccountId) ? rawAccountId : null;
+  const board = searchParams.get('board')?.trim() || null;
+
   try {
     // PostgREST rejects cs.[{...}] on jsonb arrays ("invalid input syntax for type json");
     // fetch candidates and filter annotations in JS instead (same query as topics.ts).
@@ -62,9 +66,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return json({ success: false, error: error.message }, 500);
     }
 
-    const rawPins = (candidates || []).filter((p: any) =>
+    const namePins = (candidates || []).filter((p: any) =>
       (Array.isArray(p.annotations) ? p.annotations : [])
         .some((a: any) => (typeof a === 'string' ? a.trim() : String(a?.name || '').trim()) === name)
+    );
+
+    let rawPins = namePins.filter((p: any) =>
+      (!accountId || p.account_id === accountId) &&
+      (!board || p.board_name === board || (p.board_name || 'General Board').trim() === board)
     );
     const pinsCount = rawPins.length;
     let total_saves = 0;

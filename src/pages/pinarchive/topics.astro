@@ -66,22 +66,6 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         </div>
 
         <div class="flex flex-wrap items-center gap-2.5">
-          <!-- Account Filter -->
-          <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-xs">
-            <label for="topics-account-select" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Account:</label>
-            <select id="topics-account-select" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer max-w-[150px] truncate">
-              <option value="" selected>All Accounts</option>
-            </select>
-          </div>
-
-          <!-- Board Filter -->
-          <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-xs">
-            <label for="topics-board-select" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Board:</label>
-            <select id="topics-board-select" disabled class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer max-w-[150px] truncate disabled:opacity-40 disabled:cursor-not-allowed">
-              <option value="" selected>All Boards</option>
-            </select>
-          </div>
-
           <!-- Min Pins Filter -->
           <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-xs">
             <label for="topics-min-pins-select" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Min Pins:</label>
@@ -147,7 +131,23 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
           <h2 id="topic-detail-title" class="text-xl font-bold tracking-tight text-foreground"></h2>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Account Filter (Detail) -->
+          <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-xs">
+            <label for="topic-detail-account-select" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Account:</label>
+            <select id="topic-detail-account-select" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer max-w-[150px] truncate">
+              <option value="" selected>All Accounts</option>
+            </select>
+          </div>
+
+          <!-- Board Filter (Detail) -->
+          <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-xs">
+            <label for="topic-detail-board-select" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Board:</label>
+            <select id="topic-detail-board-select" disabled class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer max-w-[150px] truncate disabled:opacity-40 disabled:cursor-not-allowed">
+              <option value="" selected>All Boards</option>
+            </select>
+          </div>
+
           <a
             id="topic-pinterest-search-link"
             href="#"
@@ -436,13 +436,15 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
   let clusterSearch = '';
   let clusterSort = 'sum_saves';
   let clusterMinPins = 1;
-  let clusterAccountId = '';
-  let clusterBoard = '';
   let clusterPage = 1;
   const clusterPageSize = 50;
 
-  async function loadAccountsList() {
-    const accSelect = document.getElementById('topics-account-select') as HTMLSelectElement | null;
+  let detailAccountId = '';
+  let detailBoard = '';
+  let cachedTopicName = '';
+
+  async function loadDetailAccountsList() {
+    const accSelect = document.getElementById('topic-detail-account-select') as HTMLSelectElement | null;
     if (!accSelect) return;
     try {
       const res = await fetch('/api/pinarchive/accounts');
@@ -457,33 +459,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         </option>
       `).join('');
     } catch (e) {
-      console.error('Failed to load accounts for topics filter:', e);
-    }
-  }
-
-  async function loadBoardsList(accId: string) {
-    const boardSelect = document.getElementById('topics-board-select') as HTMLSelectElement | null;
-    if (!boardSelect) return;
-    if (!accId) {
-      boardSelect.innerHTML = '<option value="" selected>All Boards</option>';
-      boardSelect.disabled = true;
-      clusterBoard = '';
-      return;
-    }
-    try {
-      const res = await fetch(`/api/pinarchive/account-boards?account_id=${encodeURIComponent(accId)}`);
-      if (!res.ok) return;
-      const json = await res.json();
-      if (!json.success || !Array.isArray(json.boards)) return;
-
-      boardSelect.disabled = false;
-      boardSelect.innerHTML = '<option value="" selected>All Boards</option>' + json.boards.map((b: any) => `
-        <option value="${escapeHtml(b.board_name)}">
-          ${escapeHtml(b.board_name)} (${fmtNumber(b.pins)})
-        </option>
-      `).join('');
-    } catch (e) {
-      console.error('Failed to load boards for topics filter:', e);
+      console.error('Failed to load accounts for topic detail filter:', e);
     }
   }
 
@@ -594,12 +570,6 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       if (clusterSearch) {
         params.set('q', clusterSearch);
       }
-      if (clusterAccountId) {
-        params.set('account_id', clusterAccountId);
-      }
-      if (clusterBoard) {
-        params.set('board', clusterBoard);
-      }
 
       const res = await fetch(`/api/pinarchive/topics?${params.toString()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -665,13 +635,18 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
   }
 
   async function loadClusterDetail(name: string) {
+    cachedTopicName = name;
     const loadingEl = document.getElementById('topics-loading');
     const detailModeEl = document.getElementById('topics-detail-mode');
     const errorEl = document.getElementById('topics-error');
     const errorMsg = document.getElementById('topics-error-msg');
 
     try {
-      const res = await fetch(`/api/pinarchive/topic-detail?name=${encodeURIComponent(name)}`);
+      const params = new URLSearchParams({ name });
+      if (detailAccountId) params.set('account_id', detailAccountId);
+      if (detailBoard) params.set('board', detailBoard);
+
+      const res = await fetch(`/api/pinarchive/topic-detail?${params.toString()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Failed to fetch topic details');
@@ -686,6 +661,19 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       const pinterestLink = document.getElementById('topic-pinterest-search-link') as HTMLAnchorElement | null;
       if (pinterestLink) {
         pinterestLink.href = `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(name)}`;
+      }
+
+      // Populate & enable Detail Board Select from cluster boards
+      const boardSelect = document.getElementById('topic-detail-board-select') as HTMLSelectElement | null;
+      if (boardSelect) {
+        boardSelect.disabled = false;
+        const boards = json.boards || [];
+        const currentSelectedBoard = detailBoard;
+        boardSelect.innerHTML = '<option value="">All Boards</option>' + boards.map((b: any) => `
+          <option value="${escapeHtml(b.name)}" ${currentSelectedBoard === b.name ? 'selected' : ''}>
+            ${escapeHtml(b.name)} (${fmtNumber(b.pins)})
+          </option>
+        `).join('');
       }
 
       // 2. KPIs
@@ -810,30 +798,29 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     const topicName = new URLSearchParams(window.location.search).get('name')?.trim();
 
     if (topicName) {
+      loadDetailAccountsList();
       loadClusterDetail(topicName);
+
+      const detailAccSelect = document.getElementById('topic-detail-account-select') as HTMLSelectElement | null;
+      if (detailAccSelect) {
+        detailAccSelect.addEventListener('change', () => {
+          detailAccountId = detailAccSelect.value;
+          detailBoard = '';
+          const bSelect = document.getElementById('topic-detail-board-select') as HTMLSelectElement | null;
+          if (bSelect) bSelect.value = '';
+          loadClusterDetail(topicName);
+        });
+      }
+
+      const detailBoardSelect = document.getElementById('topic-detail-board-select') as HTMLSelectElement | null;
+      if (detailBoardSelect) {
+        detailBoardSelect.addEventListener('change', () => {
+          detailBoard = detailBoardSelect.value;
+          loadClusterDetail(topicName);
+        });
+      }
     } else {
-      loadAccountsList();
       loadClusterList();
-
-      const accSelect = document.getElementById('topics-account-select') as HTMLSelectElement | null;
-      if (accSelect) {
-        accSelect.addEventListener('change', () => {
-          clusterAccountId = accSelect.value;
-          clusterBoard = '';
-          loadBoardsList(clusterAccountId);
-          clusterPage = 1;
-          loadClusterList();
-        });
-      }
-
-      const boardSelect = document.getElementById('topics-board-select') as HTMLSelectElement | null;
-      if (boardSelect) {
-        boardSelect.addEventListener('change', () => {
-          clusterBoard = boardSelect.value;
-          clusterPage = 1;
-          loadClusterList();
-        });
-      }
 
       const searchInput = document.getElementById('topics-search-input') as HTMLInputElement | null;
       if (searchInput) {
@@ -870,7 +857,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     const refreshBtn = document.getElementById('refresh-topics-btn');
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => {
-        const currentName = new URLSearchParams(window.location.search).get('name')?.trim();
+        const currentName = new URLSearchParams(window.location.search).get('name')?.trim() || cachedTopicName;
         if (currentName) {
           loadClusterDetail(currentName);
         } else {
