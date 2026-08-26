@@ -38,13 +38,30 @@
       <button
         id="cron-run-now-btn"
         type="button"
-        class="inline-flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 text-xs font-bold shadow-2xs transition-all cursor-pointer"
+        class="inline-flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 text-xs font-bold shadow-2xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         title="Dispatches GitHub refresh workflow immediately with force=true"
       >
         <svg id="cron-run-icon" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         <span id="cron-run-text">Run Now</span>
       </button>
     </div>
+  </div>
+
+  <!-- Read-Only Token Registry Row -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3.5 rounded-xl border border-border bg-background">
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">FastCron Token:</span>
+      <span id="cron-token-display" class="text-xs font-semibold text-foreground">
+        Loading token registry status...
+      </span>
+    </div>
+    <a
+      id="manage-tokens-link"
+      href="/accounts"
+      class="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline self-start sm:self-auto"
+    >
+      <span>Manage tokens →</span>
+    </a>
   </div>
 
   <!-- Read-Only Status & Cadence Meta Line -->
@@ -151,7 +168,7 @@
         <button
           id="cron-save-btn"
           type="submit"
-          class="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50"
+          class="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Save Schedule
         </button>
@@ -259,6 +276,7 @@
 
   async function loadCronStatus() {
     const badge = document.getElementById('cron-status-badge');
+    const tokenDisplay = document.getElementById('cron-token-display');
     const nextVal = document.getElementById('cron-next-run-val');
     const lastVal = document.getElementById('cron-last-run-val');
     const jobIdVal = document.getElementById('cron-job-id-val');
@@ -268,12 +286,32 @@
     const enabledCb = document.getElementById('cron-enabled-cb') as HTMLInputElement | null;
     const enabledLabel = document.getElementById('cron-enabled-label');
     const deleteBtn = document.getElementById('cron-delete-btn');
+    const saveBtn = document.getElementById('cron-save-btn') as HTMLButtonElement | null;
+    const runNowBtn = document.getElementById('cron-run-now-btn') as HTMLButtonElement | null;
 
     try {
       const res = await fetch('/api/pinarchive/cron');
       const json = await res.json();
 
-      if (!res.ok || !json.success) {
+      const hasToken = Boolean(json.token_source || json.masked_token);
+
+      // 1. Render FastCron Token Row
+      if (tokenDisplay) {
+        if (hasToken) {
+          const name = json.token_name || (json.token_source === 'workspace_registry' ? 'Workspace Default' : 'Environment Fallback');
+          const masked = json.masked_token || '********';
+          tokenDisplay.innerHTML = `<span class="font-bold text-foreground">${escapeHtml(name)}</span> <span class="font-mono text-muted-foreground text-xs">(${escapeHtml(masked)})</span>`;
+        } else {
+          tokenDisplay.innerHTML = '<span class="text-amber-500 font-semibold">Not configured in workspace registry or environment</span>';
+        }
+      }
+
+      // 2. Control Save / Run Now enable state based on token presence
+      if (saveBtn) saveBtn.disabled = !hasToken;
+      if (runNowBtn) runNowBtn.disabled = !hasToken;
+
+      // 3. Header badge & failure handling
+      if (!res.ok || (!hasToken && !json.success)) {
         if (badge) {
           badge.textContent = '● FastCron Unavailable';
           badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20';
@@ -283,13 +321,15 @@
         return;
       }
 
+      // Token resolved successfully -> Badge flips to green "FastCron Healthy"
+      if (badge) {
+        badge.textContent = '🟢 FastCron Healthy';
+        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
+      }
+
       cachedJobData = json.job;
 
       if (!json.job) {
-        if (badge) {
-          badge.textContent = '○ Not Configured';
-          badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border';
-        }
         if (nextVal) nextVal.textContent = 'Pending Setup';
         if (lastVal) lastVal.textContent = 'Never executed';
         if (jobIdVal) jobIdVal.textContent = 'None';
@@ -300,15 +340,6 @@
 
       const job = json.job;
       const isActive = job.status === 'enabled' || job.status === 1 || job.status === '1' || job.status === 'active';
-
-      if (badge) {
-        badge.textContent = isActive ? '🟢 Active' : '⏸ Paused';
-        badge.className = `text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-          isActive
-            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-        }`;
-      }
 
       if (jobIdVal) jobIdVal.textContent = `#${job.id}`;
       if (jobNameVal) jobNameVal.textContent = job.name || 'PinOrbit pinarchive';
@@ -349,8 +380,8 @@
     } catch (err: any) {
       console.error('Failed to load FastCron status:', err);
       if (badge) {
-        badge.textContent = '● Network Error';
-        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20';
+        badge.textContent = '● FastCron Unavailable';
+        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20';
       }
     }
   }

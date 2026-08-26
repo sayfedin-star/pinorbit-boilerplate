@@ -2,8 +2,9 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../server/auth/workspace-guard';
-import { getServerEnv } from '../../../server/db/clients';
-import { getEffectiveSecret } from '../../../server/services/webhook-secrets';
+import { dbClients } from '../../../server/db/clients';
+import { getEffectiveSecret, maskSecret } from '../../../server/services/webhook-secrets';
+import { resolveScheduleToken } from '../../../server/services/fastcron-service';
 
 const FASTCRON_BASE = 'https://www.fastcron.com/api/v1';
 
@@ -30,19 +31,60 @@ export function parseTimeToCron(timeStr?: string | null): { valid: boolean; cron
 }
 
 /**
- * Resolves active FastCron API token (W3 isolation).
+ * Resolves FastCron token and metadata via shared helper resolveScheduleToken
+ * (chains: fastcron_token_id -> workspace default in fastcron_tokens -> env fallback)
  */
-export function resolveFastCronToken(runtimeEnv?: Record<string, any>): string | null {
-  const env = getServerEnv(runtimeEnv);
-  const tok =
-    env.FASTCRON_API_TOKEN ||
-    (runtimeEnv?.FASTCRON_API_TOKEN as string) ||
-    (typeof process !== 'undefined' ? process.env.FASTCRON_API_TOKEN : '');
-
-  if (tok && typeof tok === 'string' && tok.trim().length >= 16) {
-    return tok.trim();
+export async function getPinArchiveTokenInfo(
+  workspaceId: string,
+  runtimeEnv: Record<string, any>
+): Promise<{
+  token: string | null;
+  token_source: 'workspace_registry' | 'env' | null;
+  token_name: string | null;
+  masked_token: string | null;
+}> {
+  let token: string | null = null;
+  try {
+    token = await resolveScheduleToken({ workspace_id: workspaceId }, runtimeEnv);
+  } catch {
+    token = null; // fail-lazy, never throw
   }
-  return null;
+
+  if (!token) {
+    return {
+      token: null,
+      token_source: null,
+      token_name: null,
+      masked_token: null,
+    };
+  }
+
+  let tokenSource: 'workspace_registry' | 'env' = 'env';
+  let tokenName: string | null = 'Environment Fallback';
+
+  try {
+    const schedulingClient = dbClients.getSchedulingAdmin(runtimeEnv);
+    const { data: defRow } = await schedulingClient
+      .from('fastcron_tokens')
+      .select('name, token_masked')
+      .eq('workspace_id', workspaceId)
+      .eq('is_default', true)
+      .maybeSingle();
+
+    if (defRow) {
+      tokenSource = 'workspace_registry';
+      tokenName = defRow.name || 'Workspace Default';
+    }
+  } catch {
+    // fail-lazy fallback to env
+  }
+
+  return {
+    token,
+    token_source: tokenSource,
+    token_name: tokenName,
+    masked_token: maskSecret(token),
+  };
 }
 
 /**
@@ -172,26 +214,40 @@ export const GET: APIRoute = async ({ locals }) => {
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id);
 
-    const token = resolveFastCronToken(runtimeEnv);
-    if (!token) {
+    const tokenInfo = await getPinArchiveTokenInfo(workspaceId, runtimeEnv);
+    if (!tokenInfo.token) {
       return new Response(
-        JSON.stringify({ success: false, error: 'FastCron API token not configured on server', configured: false }),
+        JSON.stringify({
+          success: false,
+          error: 'FastCron API token not configured on server',
+          configured: false,
+          token_source: null,
+          masked_token: null,
+          token_name: null,
+        }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const job = await discoverPinArchiveJob(token, workspaceId);
+    const job = await discoverPinArchiveJob(tokenInfo.token, workspaceId);
     if (!job) {
       return new Response(
-        JSON.stringify({ success: true, job: null, configured: false }),
+        JSON.stringify({
+          success: true,
+          job: null,
+          configured: false,
+          token_source: tokenInfo.token_source,
+          masked_token: tokenInfo.masked_token,
+          token_name: tokenInfo.token_name,
+        }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
     // Fetch cron_next and cron_logs (last 10) in parallel
     const [nextRes, logsRes] = await Promise.all([
-      fastcronCall('cron_next', { id: job.id }, token),
-      fastcronCall('cron_logs', { id: job.id }, token),
+      fastcronCall('cron_next', { id: job.id }, tokenInfo.token),
+      fastcronCall('cron_logs', { id: job.id }, tokenInfo.token),
     ]);
 
     const nextRuns = Array.isArray(nextRes.data)
@@ -214,6 +270,9 @@ export const GET: APIRoute = async ({ locals }) => {
       JSON.stringify({
         success: true,
         configured: true,
+        token_source: tokenInfo.token_source,
+        masked_token: tokenInfo.masked_token,
+        token_name: tokenInfo.token_name,
         job: {
           ...job,
           cron_next: nextRuns,
@@ -318,7 +377,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Branch B: FastCron Job Add/Edit
-    const token = resolveFastCronToken(runtimeEnv);
+    let token: string | null = null;
+    try {
+      token = await resolveScheduleToken({ workspace_id: workspaceId }, runtimeEnv);
+    } catch {
+      token = null;
+    }
+
     if (!token) {
       return new Response(
         JSON.stringify({ success: false, error: 'FastCron API token not configured on server.' }),
@@ -429,7 +494,13 @@ export const DELETE: APIRoute = async ({ locals }) => {
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id);
 
-    const token = resolveFastCronToken(runtimeEnv);
+    let token: string | null = null;
+    try {
+      token = await resolveScheduleToken({ workspace_id: workspaceId }, runtimeEnv);
+    } catch {
+      token = null;
+    }
+
     if (!token) {
       return new Response(
         JSON.stringify({ success: false, error: 'FastCron API token not configured on server.' }),

@@ -4,7 +4,7 @@ import * as cronApi from '../../pages/api/pinarchive/cron';
 import fs from 'fs';
 import path from 'path';
 
-describe('PinArchive FastCron Migration & Dispatch Test Suite', () => {
+describe('PinArchive FastCron Migration & Dispatch Test Suite (v3 Delta)', () => {
   const mockWorkspaceId = '11111111-2222-3333-4444-555555555555';
   const validSecret = 'sec_valid_ingest_test_secret_12345';
   const mockToken = 'fastcron_test_api_token_12345678';
@@ -13,7 +13,7 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite', () => {
     vi.restoreAllMocks();
   });
 
-  describe('1. W3 Isolation & Anti-Leak Architectural Guarantees', () => {
+  describe('1. W3 Isolation & Helper Usage Guarantees', () => {
     it('verifies dispatch.ts and cron.ts do not import analyticsDb or competitor clients', () => {
       const dispatchSrc = fs.readFileSync(
         path.resolve(__dirname, '../../pages/api/internal/pinarchive/dispatch.ts'),
@@ -35,6 +35,16 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite', () => {
       expect(cronSrc).not.toMatch(/from\(['"]analytics_/);
       expect(cronSrc).not.toMatch(/from\(['"]competitors/);
       expect(cronSrc).not.toMatch(/CRON_DISPATCH_SECRET/);
+    });
+
+    it('verifies resolveScheduleToken is used in cron.ts and 0 direct FASTCRON_API_TOKEN reads exist', () => {
+      const cronSrc = fs.readFileSync(
+        path.resolve(__dirname, '../../pages/api/pinarchive/cron.ts'),
+        'utf8'
+      );
+
+      expect(cronSrc).toMatch(/resolveScheduleToken/);
+      expect(cronSrc).not.toMatch(/FASTCRON_API_TOKEN/);
     });
 
     it('verifies old schedule block is removed from pinarchive-refresh.yml', () => {
@@ -215,7 +225,7 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite', () => {
       expect(discovered.id).toBe(202);
     });
 
-    it('GET returns discovered job with cron_next and last 10 logs', async () => {
+    it('GET returns discovered job with token_source, masked_token, cron_next and last 10 logs', async () => {
       const mockJob = {
         id: 202,
         name: `PinOrbit pinarchive — ${mockWorkspaceId.slice(0, 8)}`,
@@ -239,11 +249,12 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite', () => {
       });
 
       const mockSupabase = {
-        from: () => ({
+        from: (table: string) => ({
           select: () => ({
             eq: () => ({
               eq: () => ({
                 single: async () => ({ data: { id: 'm1', role: 'admin' }, error: null }),
+                maybeSingle: async () => ({ data: { name: 'Main Registry Token', token_masked: 'fastcron...' }, error: null }),
               }),
             }),
           }),
@@ -265,6 +276,9 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite', () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       expect(json.configured).toBe(true);
+      expect(json.token_source).toBe('workspace_registry');
+      expect(json.token_name).toBe('Workspace Default');
+      expect(json.masked_token).toBe('fastcron...');
       expect(json.job.id).toBe(202);
       expect(json.job.cron_next.length).toBe(2);
       expect(json.job.cron_logs.length).toBe(1);
@@ -337,6 +351,7 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite', () => {
             eq: () => ({
               eq: () => ({
                 single: async () => ({ data: { id: 'm1', role: 'admin' }, error: null }),
+                maybeSingle: async () => ({ data: null, error: null }),
               }),
             }),
           }),
@@ -400,6 +415,7 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite', () => {
             eq: () => ({
               eq: () => ({
                 single: async () => ({ data: { id: 'm1', role: 'admin' }, error: null }),
+                maybeSingle: async () => ({ data: null, error: null }),
               }),
             }),
           }),
