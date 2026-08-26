@@ -168,8 +168,8 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
 
     <!-- Collapsible Body -->
     <div id="settings-panel-body" class="hidden space-y-4 p-5 bg-card">
-      <!-- Tier 1: Gates & Defaults (4-col grid) -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <!-- Tier 1: Gates & Defaults (5-col grid) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         <!-- Master Ingest Switch -->
         <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
           <div class="flex items-center justify-between">
@@ -223,6 +223,25 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
               min="10"
               max="5000"
               value="500"
+              class="w-full rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:outline-none"
+            />
+            <span class="text-xs font-semibold text-muted-foreground">pins</span>
+          </div>
+        </div>
+
+        <!-- Refresh Max Pins -->
+        <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <label for="setting-refresh-max-pins" class="text-xs font-bold text-foreground">Refresh Max Pins</label>
+            <span class="text-[10px] text-muted-foreground font-semibold">0 = unlimited</span>
+          </div>
+          <div class="mt-2 flex items-center gap-1.5">
+            <input
+              id="setting-refresh-max-pins"
+              type="number"
+              min="0"
+              max="10000"
+              value="0"
               class="w-full rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:outline-none"
             />
             <span class="text-xs font-semibold text-muted-foreground">pins</span>
@@ -686,6 +705,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       const minRepinsInp = document.getElementById('setting-min-repins') as HTMLInputElement | null;
       const risingAgeInp = document.getElementById('setting-rising-age') as HTMLInputElement | null;
       const risingSavesInp = document.getElementById('setting-rising-saves') as HTMLInputElement | null;
+      const refreshMaxPinsInp = document.getElementById('setting-refresh-max-pins') as HTMLInputElement | null;
       const summaryBadge = document.getElementById('settings-summary-badge');
 
       if (ingestCb) {
@@ -710,6 +730,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       if (minRepinsInp) minRepinsInp.value = String(json.pin_filter_min_repins ?? 0);
       if (risingAgeInp) risingAgeInp.value = String(json.pin_filter_rising_age_days ?? 14);
       if (risingSavesInp) risingSavesInp.value = String(json.pin_filter_rising_saves ?? 34);
+      if (refreshMaxPinsInp) refreshMaxPinsInp.value = String(json.refresh_max_pins ?? 0);
     } catch (e) {
       console.error('Failed to load settings:', e);
     }
@@ -749,7 +770,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     const saveBtn = document.getElementById('save-ingest-settings-btn') as HTMLButtonElement | null;
     const roleBadge = document.getElementById('settings-role-badge');
     const inputs = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
-      '#setting-ingest-enabled, #setting-paused-policy, #setting-default-interval, #setting-max-batch, #setting-min-saves, #setting-min-repins, #setting-rising-age, #setting-rising-saves'
+      '#setting-ingest-enabled, #setting-paused-policy, #setting-default-interval, #setting-max-batch, #setting-refresh-max-pins, #setting-min-saves, #setting-min-repins, #setting-rising-age, #setting-rising-saves'
     );
     inputs.forEach((el) => {
       el.disabled = true;
@@ -766,6 +787,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     const policySel = document.getElementById('setting-paused-policy') as HTMLSelectElement | null;
     const intervalInp = document.getElementById('setting-default-interval') as HTMLInputElement | null;
     const maxBatchInp = document.getElementById('setting-max-batch') as HTMLInputElement | null;
+    const refreshMaxPinsInp = document.getElementById('setting-refresh-max-pins') as HTMLInputElement | null;
     const minSavesInp = document.getElementById('setting-min-saves') as HTMLInputElement | null;
     const minRepinsInp = document.getElementById('setting-min-repins') as HTMLInputElement | null;
     const risingAgeInp = document.getElementById('setting-rising-age') as HTMLInputElement | null;
@@ -791,6 +813,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           paused_account_policy: policySel.value,
           default_interval_days: parseInt(intervalInp.value, 10) || 3,
           max_batch_pins: parseInt(maxBatchInp.value, 10) || 500,
+          refresh_max_pins: parseInt(refreshMaxPinsInp?.value || '0', 10) || 0,
           pin_filter_min_saves: parseInt(minSavesInp.value, 10) || 0,
           pin_filter_min_repins: parseInt(minRepinsInp.value, 10) || 0,
           pin_filter_rising_age_days: Number.isInteger(parseInt(risingAgeInp.value, 10)) ? parseInt(risingAgeInp.value, 10) : 14,

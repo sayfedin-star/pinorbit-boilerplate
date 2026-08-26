@@ -72,19 +72,19 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    // b) Fetch historical snapshots
+    // b) Fetch historical snapshots (newest 500 snapshots ordered chronologically)
     const { data: metrics, error: metErr } = await db
       .from('pa_pin_metrics')
       .select('id, recorded_at, saves, repins, comments, shares, reactions_total')
       .eq('pin_ref', id)
-      .order('recorded_at', { ascending: true })
+      .order('recorded_at', { ascending: false })
       .limit(500);
 
     if (metErr) {
       return json({ success: false, error: metErr.message }, 500);
     }
 
-    const metricsList = metrics || [];
+    const metricsList = Array.isArray(metrics) ? [...metrics].reverse() : [];
     let deltaSaves = 0;
     let deltaRepins = 0;
     let deltaComments = 0;

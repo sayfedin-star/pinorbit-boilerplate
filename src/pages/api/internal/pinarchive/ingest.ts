@@ -43,6 +43,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
   }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
+
   // 2. Validate workspace_id
   if (!payload || !payload.workspace_id || typeof payload.workspace_id !== 'string') {
     return new Response(
@@ -52,6 +55,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const workspaceId = payload.workspace_id.trim();
+  if (!UUID_REGEX.test(workspaceId)) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Validation Error: valid workspace_id UUID is required.' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 
   // 3. Authenticate via getEffectiveSecret + timingSafeEqual FIRST
   const eff = await getEffectiveSecret(workspaceId, runtimeEnv);
@@ -120,9 +129,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const account_meta = payload.account_meta || {};
-    const username = String(payload.username || account_meta.username || '').trim() || 'default';
+    const rawUsername = String(payload.username || account_meta.username || '').trim().toLowerCase();
+    if (!rawUsername || !USERNAME_REGEX.test(rawUsername) || rawUsername === 'default') {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Validation Error: valid account username is required.' }),
+        { status: 422, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    const username = rawUsername;
     const fetchedAt = payload.fetched_at || new Date().toISOString();
-    const rawPins: any[] = Array.isArray(payload.pins) ? payload.pins : [];
+    
+    // Deduplicate incoming pins by pin_id (taking the last occurrence)
+    const rawPinsList: any[] = Array.isArray(payload.pins) ? payload.pins : [];
+    const dedupedMap = new Map<string, any>();
+    for (const p of rawPinsList) {
+      const pid = String(p.pin_id || p.id || '').trim();
+      if (pid) {
+        dedupedMap.set(pid, p);
+      }
+    }
+    const rawPins = Array.from(dedupedMap.values());
 
     // Gating 3: Fetch current pa_accounts row before upsert
     const { data: existingAccount } = await pinArchive
@@ -266,12 +292,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let pinsUpdatedCount = 0;
 
     if (pins.length > 0) {
-      // Fetch existing pin metric & enrichment state for comparison and two-writer protection
-      const { data: existingPins } = await pinArchive
-        .from('pa_pins')
-        .select('id, pin_id, saves, repins, comments, share_count, reactions, archived_at, annotations, board_pin_count, board_last_modified_at, seo_category, canonical_pin_id, utm_link, image_signature, dominant_color, seo_alt_text, title, description, link, domain, board_name, board_id, created_at_pinterest, image_url, node_id')
-        .eq('workspace_id', workspaceId)
-        .in('pin_id', pinIds);
+      // Fetch existing pin metric & enrichment state in chunks of 100 to avoid URI 414 errors
+      const existingPins: any[] = [];
+      const CHUNK_SIZE = 100;
+      for (let i = 0; i < pinIds.length; i += CHUNK_SIZE) {
+        const chunk = pinIds.slice(i, i + CHUNK_SIZE);
+        const { data, error } = await pinArchive
+          .from('pa_pins')
+          .select('id, pin_id, saves, repins, comments, share_count, reactions, archived_at, annotations, board_pin_count, board_last_modified_at, seo_category, canonical_pin_id, utm_link, image_signature, dominant_color, seo_alt_text, title, description, link, domain, board_name, board_id, created_at_pinterest, image_url, node_id')
+          .eq('workspace_id', workspaceId)
+          .in('pin_id', chunk);
+
+        if (error) {
+          console.error('[ingest] Error querying existing pins chunk:', error);
+          throw error;
+        }
+        if (Array.isArray(data)) {
+          existingPins.push(...data);
+        }
+      }
 
       const existingMap = new Map<string, {
         id: string;

@@ -55,7 +55,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const pinArchive = dbClients.getPinArchive(runtimeEnv);
     const { data: settings, error } = await pinArchive
       .from('pa_workspace_settings')
-      .select('pin_filter_min_saves, pin_filter_min_repins, pin_filter_rising_age_days, pin_filter_rising_saves')
+      .select('pin_filter_min_saves, pin_filter_min_repins, pin_filter_rising_age_days, pin_filter_rising_saves, refresh_max_pins')
       .eq('workspace_id', workspaceId)
       .maybeSingle();
 
@@ -67,6 +67,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           pin_filter_min_repins: 0,
           pin_filter_rising_age_days: 14,
           pin_filter_rising_saves: 34,
+          refresh_max_pins: 0,
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
@@ -79,6 +80,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         pin_filter_min_repins: Number(settings.pin_filter_min_repins || 0),
         pin_filter_rising_age_days: Number(settings.pin_filter_rising_age_days ?? 14),
         pin_filter_rising_saves: Number(settings.pin_filter_rising_saves ?? 34),
+        refresh_max_pins: Number(settings.refresh_max_pins || 0),
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
@@ -91,6 +93,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         pin_filter_min_repins: 0,
         pin_filter_rising_age_days: 14,
         pin_filter_rising_saves: 34,
+        refresh_max_pins: 0,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
