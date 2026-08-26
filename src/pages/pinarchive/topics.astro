@@ -447,7 +447,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     const accSelect = document.getElementById('topic-detail-account-select') as HTMLSelectElement | null;
     if (!accSelect) return;
     try {
-      const res = await fetch('/api/pinarchive/accounts');
+      const res = await fetch('/api/pinarchive/overview');
       if (!res.ok) return;
       const json = await res.json();
       if (!json.success || !Array.isArray(json.accounts)) return;
@@ -661,6 +661,18 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       const pinterestLink = document.getElementById('topic-pinterest-search-link') as HTMLAnchorElement | null;
       if (pinterestLink) {
         pinterestLink.href = `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(name)}`;
+      }
+
+      // Populate Detail Account Select from cluster accounts
+      const accSelect = document.getElementById('topic-detail-account-select') as HTMLSelectElement | null;
+      if (accSelect) {
+        const accounts = json.accounts || [];
+        const currentSelectedAccount = detailAccountId;
+        accSelect.innerHTML = '<option value="">All Accounts</option>' + accounts.map((a: any) => `
+          <option value="${escapeHtml(a.account_id)}" ${currentSelectedAccount === a.account_id ? 'selected' : ''}>
+            @${escapeHtml(a.username || 'unknown')} (${fmtNumber(a.pins)})
+          </option>
+        `).join('');
       }
 
       // Populate & enable Detail Board Select from cluster boards

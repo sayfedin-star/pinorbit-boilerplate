@@ -382,8 +382,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           price: p.price !== undefined ? p.price : null,
           currency: p.currency || null,
           site_name: p.site_name || null,
-          saves: Number(p.saves || 0),
-          repins: Number(p.repins || 0),
+          saves: Math.max(Number(p.saves || 0), existing?.saves || 0),
+          repins: Math.max(Number(p.repins || 0), existing?.repins || 0),
           comments: Number(p.comments || 0),
           reactions: p.reactions === undefined
             ? (existing?.reactions ?? {})
@@ -391,7 +391,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           velocity: Number(p.velocity || 0),
           promoted: Boolean(p.promoted),
           last_updated_at: fetchedAt,
-          share_count: p.share_count === undefined ? (existing?.share_count ?? 0) : Number(p.share_count || 0),
+          share_count: Math.max(
+            p.share_count === undefined ? (existing?.share_count ?? 0) : Number(p.share_count || 0),
+            existing?.share_count || 0
+          ),
 
           // Preserved Enrichment & Scalar non-null fallback
           archived_at: p.archived_at || existing?.archived_at || (isNew ? fetchedAt : null),
@@ -419,7 +422,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
       }
 
-      // C) Insert pa_pin_metrics snapshot ONLY when saves, repins, or share_count differ from stored row
+      // C) Insert pa_pin_metrics snapshot ONLY on new pins or when metrics strictly advance
       const metricsToInsert: Array<{
         workspace_id: string;
         pin_ref: string;
@@ -438,7 +441,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const curRepins = Number(up.repins || 0);
           const curShares = Number(up.share_count || 0);
 
-          if (!existing || existing.saves !== curSaves || existing.repins !== curRepins || existing.share_count !== curShares) {
+          if (!existing || curSaves > existing.saves || curRepins > existing.repins || curShares > existing.share_count) {
             metricsToInsert.push({
               workspace_id: workspaceId,
               pin_ref: up.id,
