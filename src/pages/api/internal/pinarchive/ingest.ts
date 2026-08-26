@@ -203,6 +203,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const accountId = accountRow.id;
     const pinIds = pins.map((p: any) => String(p.pin_id || p.id || '')).filter(Boolean);
 
+    // Phase C1: Atomic Ingest Monitor Mode (pa_ingest_pin_batch dry-run verification)
+    const MONITOR = true;
+    if (pins.length > 0 && typeof pinArchive.rpc === 'function') {
+      try {
+        const { data: rpcData, error: rpcErr } = await pinArchive.rpc('pa_ingest_pin_batch', {
+          p_workspace_id: workspaceId,
+          p_account_id: accountId,
+          p_fetched_at: fetchedAt,
+          p_pins: pins,
+          p_dry_run: MONITOR,
+        });
+        if (rpcErr) {
+          console.error('[ingest-rpc-dry] RPC error:', rpcErr);
+        } else {
+          console.log('[ingest-rpc-dry]', rpcData);
+        }
+      } catch (dryErr: any) {
+        console.error('[ingest-rpc-dry] Exception invoking pa_ingest_pin_batch:', dryErr);
+      }
+    }
+
     let pinsAddedCount = 0;
     let pinsUpdatedCount = 0;
 
