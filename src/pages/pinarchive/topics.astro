@@ -66,6 +66,22 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         </div>
 
         <div class="flex flex-wrap items-center gap-2.5">
+          <!-- Account Filter -->
+          <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-xs">
+            <label for="topics-account-select" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Account:</label>
+            <select id="topics-account-select" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer max-w-[150px] truncate">
+              <option value="" selected>All Accounts</option>
+            </select>
+          </div>
+
+          <!-- Board Filter -->
+          <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-xs">
+            <label for="topics-board-select" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Board:</label>
+            <select id="topics-board-select" disabled class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer max-w-[150px] truncate disabled:opacity-40 disabled:cursor-not-allowed">
+              <option value="" selected>All Boards</option>
+            </select>
+          </div>
+
           <!-- Min Pins Filter -->
           <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-xs">
             <label for="topics-min-pins-select" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Min Pins:</label>
@@ -420,8 +436,56 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
   let clusterSearch = '';
   let clusterSort = 'sum_saves';
   let clusterMinPins = 1;
+  let clusterAccountId = '';
+  let clusterBoard = '';
   let clusterPage = 1;
   const clusterPageSize = 50;
+
+  async function loadAccountsList() {
+    const accSelect = document.getElementById('topics-account-select') as HTMLSelectElement | null;
+    if (!accSelect) return;
+    try {
+      const res = await fetch('/api/pinarchive/accounts');
+      if (!res.ok) return;
+      const json = await res.json();
+      if (!json.success || !Array.isArray(json.accounts)) return;
+
+      const currentVal = accSelect.value;
+      accSelect.innerHTML = '<option value="" selected>All Accounts</option>' + json.accounts.map((a: any) => `
+        <option value="${escapeHtml(a.id)}" ${currentVal === a.id ? 'selected' : ''}>
+          @${escapeHtml(a.username)}
+        </option>
+      `).join('');
+    } catch (e) {
+      console.error('Failed to load accounts for topics filter:', e);
+    }
+  }
+
+  async function loadBoardsList(accId: string) {
+    const boardSelect = document.getElementById('topics-board-select') as HTMLSelectElement | null;
+    if (!boardSelect) return;
+    if (!accId) {
+      boardSelect.innerHTML = '<option value="" selected>All Boards</option>';
+      boardSelect.disabled = true;
+      clusterBoard = '';
+      return;
+    }
+    try {
+      const res = await fetch(`/api/pinarchive/account-boards?account_id=${encodeURIComponent(accId)}`);
+      if (!res.ok) return;
+      const json = await res.json();
+      if (!json.success || !Array.isArray(json.boards)) return;
+
+      boardSelect.disabled = false;
+      boardSelect.innerHTML = '<option value="" selected>All Boards</option>' + json.boards.map((b: any) => `
+        <option value="${escapeHtml(b.board_name)}">
+          ${escapeHtml(b.board_name)} (${fmtNumber(b.pins)})
+        </option>
+      `).join('');
+    } catch (e) {
+      console.error('Failed to load boards for topics filter:', e);
+    }
+  }
 
   function renderClusterPagination(total: number, currentPage: number, limit: number) {
     const paginationEl = document.getElementById('topics-pagination');
@@ -529,6 +593,12 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       });
       if (clusterSearch) {
         params.set('q', clusterSearch);
+      }
+      if (clusterAccountId) {
+        params.set('account_id', clusterAccountId);
+      }
+      if (clusterBoard) {
+        params.set('board', clusterBoard);
       }
 
       const res = await fetch(`/api/pinarchive/topics?${params.toString()}`);
@@ -742,7 +812,28 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     if (topicName) {
       loadClusterDetail(topicName);
     } else {
+      loadAccountsList();
       loadClusterList();
+
+      const accSelect = document.getElementById('topics-account-select') as HTMLSelectElement | null;
+      if (accSelect) {
+        accSelect.addEventListener('change', () => {
+          clusterAccountId = accSelect.value;
+          clusterBoard = '';
+          loadBoardsList(clusterAccountId);
+          clusterPage = 1;
+          loadClusterList();
+        });
+      }
+
+      const boardSelect = document.getElementById('topics-board-select') as HTMLSelectElement | null;
+      if (boardSelect) {
+        boardSelect.addEventListener('change', () => {
+          clusterBoard = boardSelect.value;
+          clusterPage = 1;
+          loadClusterList();
+        });
+      }
 
       const searchInput = document.getElementById('topics-search-input') as HTMLInputElement | null;
       if (searchInput) {

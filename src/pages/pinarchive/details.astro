@@ -144,6 +144,11 @@ import Layout from '../../layouts/Layout.astro';
               <span class="font-medium text-foreground" id="pin-archived-date-str">—</span>
             </div>
             <span>•</span>
+            <div class="flex items-center gap-1.5">
+              <span>First Pulled:</span>
+              <span class="font-medium text-foreground" id="pin-first-seen-date-str">—</span>
+            </div>
+            <span>•</span>
             <a
               id="pin-external-link"
               href="#"
@@ -787,6 +792,9 @@ import Layout from '../../layouts/Layout.astro';
 
       const dateStr = document.getElementById('pin-archived-date-str');
       if (dateStr) dateStr.textContent = fmtDate(pin.archived_at);
+
+      const firstSeenDateStr = document.getElementById('pin-first-seen-date-str');
+      if (firstSeenDateStr) firstSeenDateStr.textContent = fmtDate(pin.first_seen_at);
 
       const extLink = document.getElementById('pin-external-link') as HTMLAnchorElement | null;
       if (extLink) {

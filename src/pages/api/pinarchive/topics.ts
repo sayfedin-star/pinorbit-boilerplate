@@ -45,6 +45,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const search = searchParams.get('q')?.trim() || searchParams.get('search')?.trim() || null;
   const minPins = Math.max(parseInt(searchParams.get('min_pins') || '1', 10) || 1, 1);
   const sort = searchParams.get('sort')?.trim() || 'sum_saves';
+  const rawAccountId = searchParams.get('account_id')?.trim();
+  const accountId = rawAccountId && UUID_REGEX.test(rawAccountId) ? rawAccountId : null;
+  const board = searchParams.get('board')?.trim() || null;
 
   const rawLimit = parseInt(searchParams.get('limit') || searchParams.get('page_size') || '50', 10);
   const limit = Math.min(Math.max(isNaN(rawLimit) ? 50 : rawLimit, 1), 200);
@@ -66,6 +69,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       p_sort: sort,
       p_limit: limit,
       p_offset: offset,
+      p_account_id: accountId,
+      p_board: board,
     });
 
     if (error) {

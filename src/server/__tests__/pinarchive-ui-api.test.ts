@@ -321,6 +321,8 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
         p_sort: 'sum_saves',
         p_limit: 50,
         p_offset: 0,
+        p_account_id: null,
+        p_board: null,
       });
 
       const json = await res.json();

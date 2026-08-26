@@ -690,6 +690,100 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     }
   }
 
+  function renderPinSvgChart(metrics: any[], gradId: string): string {
+    if (!Array.isArray(metrics) || metrics.length === 0) {
+      return '<div class="h-44 flex items-center justify-center text-xs text-muted-foreground bg-muted/10 rounded-xl border border-dashed border-border/80">No historical snapshots recorded yet</div>';
+    }
+
+    if (metrics.length === 1) {
+      const m = metrics[0];
+      return `
+        <div class="h-44 flex flex-col items-center justify-center text-xs text-muted-foreground bg-muted/10 rounded-xl border border-dashed border-border/80 p-4 text-center">
+          <span class="font-semibold text-foreground mb-1">1 Snapshot Recorded</span>
+          <span>${fmtDate(m.recorded_at)}: ${fmtNumber(m.saves)} saves · ${fmtNumber(m.repins)} repins</span>
+          <span class="text-[10px] text-muted-foreground mt-1">Refresh cycle will plot trajectory curve</span>
+        </div>
+      `;
+    }
+
+    const width = 380;
+    const height = 180;
+    const padX = 40;
+    const padY = 24;
+
+    const saves = metrics.map((m) => Number(m.saves || 0));
+    const repins = metrics.map((m) => Number(m.repins || 0));
+    const maxVal = Math.max(...saves, ...repins, 10);
+    const minVal = 0;
+
+    const ptsCount = metrics.length;
+    const getX = (i: number) => padX + (i / (ptsCount - 1)) * (width - padX * 2);
+    const getY = (v: number) => height - padY - ((v - minVal) / (maxVal - minVal)) * (height - padY * 2);
+
+    const savesPath = metrics
+      .map((m, i) => `${i === 0 ? 'M' : 'L'} ${getX(i).toFixed(1)} ${getY(Number(m.saves || 0)).toFixed(1)}`)
+      .join(' ');
+
+    const repinsPath = metrics
+      .map((m, i) => `${i === 0 ? 'M' : 'L'} ${getX(i).toFixed(1)} ${getY(Number(m.repins || 0)).toFixed(1)}`)
+      .join(' ');
+
+    const savesArea = `${savesPath} L ${getX(ptsCount - 1)} ${height - padY} L ${getX(0)} ${height - padY} Z`;
+
+    const gridY1 = height - padY;
+    const gridY2 = height - padY - (height - padY * 2) * 0.5;
+    const gridY3 = padY;
+
+    return `
+      <div class="h-48 w-full bg-card rounded-xl border border-border/60 p-2">
+        <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" class="overflow-visible" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f43f5e" stop-opacity="0.25"/>
+              <stop offset="100%" stop-color="#f43f5e" stop-opacity="0.0"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Grid lines -->
+          <line x1="${padX}" y1="${gridY1}" x2="${width - padX}" y2="${gridY1}" stroke="currentColor" class="text-border" stroke-width="1" />
+          <line x1="${padX}" y1="${gridY2}" x2="${width - padX}" y2="${gridY2}" stroke="currentColor" class="text-border" stroke-dasharray="4 4" stroke-width="1" />
+          <line x1="${padX}" y1="${gridY3}" x2="${width - padX}" y2="${gridY3}" stroke="currentColor" class="text-border" stroke-dasharray="4 4" stroke-width="1" />
+
+          <!-- Y Axis Labels -->
+          <text x="${padX - 6}" y="${gridY1}" text-anchor="end" class="fill-muted-foreground text-[9px]" dominant-baseline="middle">${fmtCompact(minVal)}</text>
+          <text x="${padX - 6}" y="${gridY2}" text-anchor="end" class="fill-muted-foreground text-[9px]" dominant-baseline="middle">${fmtCompact(Math.round(maxVal / 2))}</text>
+          <text x="${padX - 6}" y="${gridY3}" text-anchor="end" class="fill-muted-foreground text-[9px]" dominant-baseline="middle">${fmtCompact(maxVal)}</text>
+
+          <!-- Area Fill -->
+          <path d="${savesArea}" fill="url(#${gradId})" />
+
+          <!-- Repins Line -->
+          <path d="${repinsPath}" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+
+          <!-- Saves Line -->
+          <path d="${savesPath}" fill="none" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+
+          <!-- Data Points -->
+          ${metrics
+            .map(
+              (m, i) => `
+                <g class="group cursor-pointer">
+                  <circle cx="${getX(i).toFixed(1)}" cy="${getY(Number(m.saves || 0)).toFixed(1)}" r="3.5" fill="#f43f5e" stroke="var(--color-card, #fff)" stroke-width="1.5" />
+                  <title>${fmtDate(m.recorded_at)}: ${fmtNumber(m.saves)} saves · ${fmtNumber(m.repins)} repins</title>
+                </g>
+              `
+            )
+            .join('')}
+        </svg>
+      </div>
+      <div class="flex items-center justify-between text-[10px] text-muted-foreground px-2 pt-1">
+        <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-rose-500"></span> Saves</span>
+        <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-blue-500"></span> Repins</span>
+        <span>${metrics.length} snapshot(s)</span>
+      </div>
+    `;
+  }
+
   async function openCompareModal() {
     const modal = document.getElementById('compare-modal');
     const content = document.getElementById('compare-modal-content');
@@ -709,11 +803,13 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
 
       const pinA = resA.pin;
       const pinB = resB.pin;
+      const metricsA = Array.isArray(resA.metrics) ? resA.metrics : [];
+      const metricsB = Array.isArray(resB.metrics) ? resB.metrics : [];
 
       content.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- Pin A -->
-          <div class="rounded-xl border border-border bg-card p-4 space-y-3">
+          <div class="rounded-xl border border-border bg-card p-4 space-y-4">
             <div class="flex items-center gap-3">
               <img src="${escapeHtml(pinA.image_url)}" class="h-16 w-16 object-cover rounded-lg border border-border" />
               <div class="min-w-0 flex-1">
@@ -739,10 +835,15 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
                 <span class="text-sm font-bold text-emerald-500">${Number(pinA.velocity || 0).toFixed(1)}/d</span>
               </div>
             </div>
+            <!-- Trajectory Chart A -->
+            <div class="space-y-1.5 pt-2 border-t border-border">
+              <span class="text-[11px] font-bold text-foreground block">Historical Growth Trajectory</span>
+              ${renderPinSvgChart(metricsA, 'compareGradA')}
+            </div>
           </div>
 
           <!-- Pin B -->
-          <div class="rounded-xl border border-border bg-card p-4 space-y-3">
+          <div class="rounded-xl border border-border bg-card p-4 space-y-4">
             <div class="flex items-center gap-3">
               <img src="${escapeHtml(pinB.image_url)}" class="h-16 w-16 object-cover rounded-lg border border-border" />
               <div class="min-w-0 flex-1">
@@ -767,6 +868,11 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
                 <span class="text-[10px] text-muted-foreground block">Velocity</span>
                 <span class="text-sm font-bold text-emerald-500">${Number(pinB.velocity || 0).toFixed(1)}/d</span>
               </div>
+            </div>
+            <!-- Trajectory Chart B -->
+            <div class="space-y-1.5 pt-2 border-t border-border">
+              <span class="text-[11px] font-bold text-foreground block">Historical Growth Trajectory</span>
+              ${renderPinSvgChart(metricsB, 'compareGradB')}
             </div>
           </div>
         </div>
