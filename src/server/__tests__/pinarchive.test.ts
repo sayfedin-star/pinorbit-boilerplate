@@ -722,9 +722,8 @@ describe('PinArchive Module Test Suite', () => {
       const originalFetch = globalThis.fetch;
       globalThis.fetch = vi.fn().mockImplementation(() =>
         Promise.resolve(
-          new Response(JSON.stringify({ ok: true, dispatched: true }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
+          new Response(null, {
+            status: 204,
           })
         )
       );
@@ -738,15 +737,13 @@ describe('PinArchive Module Test Suite', () => {
         body: JSON.stringify({ workspace_id: mockWsId }),
       });
 
-      const res = await dispatchHandler({ request: req, locals: { runtime: { env: mockRuntimeEnv } } } as any);
-      expect(res.status).toBe(200);
+      const runtimeWithToken = { ...mockRuntimeEnv, GITHUB_DISPATCH_TOKEN: 'ghp_mock_token_123' };
+      const res = await dispatchHandler({ request: req, locals: { runtime: { env: runtimeWithToken } } } as any);
+      expect(res.status).toBe(202);
       const json = await res.json();
       expect(json.success).toBe(true);
-      expect(json.dispatched.length).toBe(2);
-      expect(json.dispatched[0].username).toBe('account_one');
-      expect(json.dispatched[0].ok).toBe(true);
-      expect(json.dispatched[1].username).toBe('account_two');
-      expect(json.dispatched[1].ok).toBe(true);
+      expect(json.dispatched).toBe(true);
+      expect(json.workspace_id).toBe(mockWsId);
 
       globalThis.fetch = originalFetch;
     });
@@ -763,9 +760,8 @@ describe('PinArchive Module Test Suite', () => {
       const originalFetch = globalThis.fetch;
       globalThis.fetch = vi.fn().mockImplementation(() =>
         Promise.resolve(
-          new Response(JSON.stringify({ ok: true, status: 'dispatched' }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
+          new Response(null, {
+            status: 204,
           })
         )
       );
@@ -779,13 +775,12 @@ describe('PinArchive Module Test Suite', () => {
         body: JSON.stringify({ workspace_id: mockWsId, username: 'custom_target_user' }),
       });
 
-      const res = await dispatchHandler({ request: req, locals: { runtime: { env: mockRuntimeEnv } } } as any);
-      expect(res.status).toBe(200);
+      const runtimeWithToken = { ...mockRuntimeEnv, GITHUB_DISPATCH_TOKEN: 'ghp_mock_token_123' };
+      const res = await dispatchHandler({ request: req, locals: { runtime: { env: runtimeWithToken } } } as any);
+      expect(res.status).toBe(202);
       const json = await res.json();
       expect(json.success).toBe(true);
-      expect(json.dispatched.length).toBe(1);
-      expect(json.dispatched[0].username).toBe('custom_target_user');
-      expect(json.dispatched[0].ok).toBe(true);
+      expect(json.dispatched).toBe(true);
 
       globalThis.fetch = originalFetch;
     });
