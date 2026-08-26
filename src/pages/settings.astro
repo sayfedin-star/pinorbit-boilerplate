@@ -1,7 +1,13 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import SectionHeader from '../components/ui/SectionHeader.astro';
+import SectionTabs from '../components/ui/SectionTabs.astro';
 import { getActiveWorkspaceId, getWorkspaces } from '../lib/workspaces';
+
+const settingsTabs = [
+  { label: 'Workspace', href: '/settings' },
+  { label: 'Audit Trail', href: '/settings/audit' },
+];
 
 const user = Astro.locals.user;
 if (!user) {
@@ -137,6 +143,8 @@ function formatLastRunP3(result: any) {
       title="Workspace Settings"
       description="Configure workspace profile, member roles, security quick-links, and UI preferences."
     />
+
+    <SectionTabs tabs={settingsTabs} activeHref="/settings" />
 
     <!-- Card 1: Workspace Profile & Team Members -->
     <div class="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-6">

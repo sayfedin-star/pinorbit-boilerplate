@@ -15,15 +15,21 @@ const userInitials = userEmail
   : 'AD';
 
 // Compute Breadcrumbs: Section ▸ Page
-let section = 'Scheduling';
-let page = 'Dashboard';
+let section = 'Dashboard';
+let page = 'Command Center';
 
-if (pathname === '/' || pathname.startsWith('/dashboard')) {
+if (pathname === '/' || pathname === '/dashboard') {
+  section = 'Dashboard';
+  page = 'Command Center';
+} else if (pathname === '/scheduling') {
   section = 'Scheduling';
-  page = 'Dashboard';
-} else if (pathname.startsWith('/accounts')) {
+  page = 'Overview';
+} else if (pathname.startsWith('/scheduling/accounts') || pathname.startsWith('/accounts')) {
   section = 'Scheduling';
   page = pathname.includes('/pins') ? 'Account Pins' : 'Accounts';
+} else if (pathname.startsWith('/scheduling/logs') || pathname.startsWith('/logs')) {
+  section = 'Scheduling';
+  page = 'Logs';
 } else if (pathname.startsWith('/boards')) {
   section = 'Scheduling';
   page = 'Boards';
@@ -33,12 +39,21 @@ if (pathname === '/' || pathname.startsWith('/dashboard')) {
 } else if (pathname.startsWith('/imports')) {
   section = 'Scheduling';
   page = 'Imports';
-} else if (pathname.startsWith('/logs')) {
+} else if (pathname.startsWith('/schedules')) {
   section = 'Scheduling';
-  page = 'Logs';
+  page = 'Schedules';
 } else if (pathname.startsWith('/competitors')) {
   section = 'Competitors';
   page = pathname.includes('/details') || pathname.split('/').length > 2 ? 'Deep-Dive' : 'Overview';
+} else if (pathname.startsWith('/pinarchive')) {
+  section = 'PinArchive';
+  page = pathname.includes('/winning-pins')
+    ? 'Winning Pins'
+    : pathname.includes('/topics')
+    ? 'Topic Clusters'
+    : pathname.includes('/account')
+    ? 'Creator Archive'
+    : 'Intelligence';
 } else if (pathname.startsWith('/analytics/secrets')) {
   section = 'Analytics';
   page = 'Ingest Secrets';
@@ -46,15 +61,15 @@ if (pathname === '/' || pathname.startsWith('/dashboard')) {
   section = 'Analytics';
   // On /analytics/[id], title is "${accountName} — Analytics"
   page = title ? title.replace(/— Analytics.*$/, '').replace(/\|.*$/, '').trim() : 'Connection';
-} else if (pathname === '/analytics') {
+} else if (pathname === '/analytics' || pathname === '/analytics/connections') {
   section = 'Analytics';
-  page = 'Connections';
+  page = 'Pinner Analytics';
+} else if (pathname.startsWith('/settings/audit') || pathname.startsWith('/audit')) {
+  section = 'Settings';
+  page = 'Audit Trail';
 } else if (pathname.startsWith('/settings')) {
   section = 'Settings';
   page = 'Workspace';
-} else if (pathname.startsWith('/audit')) {
-  section = 'Settings';
-  page = 'Audit Trail';
 } else {
   section = 'App';
   page = title || 'Overview';

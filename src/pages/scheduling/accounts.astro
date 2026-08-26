@@ -1,7 +1,7 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import SectionHeader from '../components/ui/SectionHeader.astro';
-import SectionTabs from '../components/ui/SectionTabs.astro';
+import Layout from '../../layouts/Layout.astro';
+import SectionHeader from '../../components/ui/SectionHeader.astro';
+import SectionTabs from '../../components/ui/SectionTabs.astro';
 
 const schedulingTabs = [
   { label: 'Overview', href: '/scheduling' },
@@ -357,7 +357,7 @@ const schedulingTabs = [
 </Layout>
 
 <script>
-  import { requireAuth } from '../lib/auth';
+  import { requireAuth } from '../../lib/auth';
   import {
     getAccounts,
     createAccount,
@@ -368,10 +368,10 @@ const schedulingTabs = [
     updateAccountWebhook,
     setPrimaryWebhook,
     toggleAccountWebhookActive,
-  } from '../lib/supabase';
-  import { renderStatusBadge, formatDate, renderEmptyStateHTML, escapeHtml, maskWebhookUrl } from '../lib/ui-helpers';
-  import type { Account, AccountWebhook } from '../lib/types';
-  import { getActiveWorkspaceId } from '../lib/workspaces';
+  } from '../../lib/supabase';
+  import { renderStatusBadge, formatDate, renderEmptyStateHTML, escapeHtml, maskWebhookUrl } from '../../lib/ui-helpers';
+  import type { Account, AccountWebhook } from '../../lib/types';
+  import { getActiveWorkspaceId } from '../../lib/workspaces';
 
   let currentAccounts: Account[] = [];
   let activeManageAccount: Account | null = null;

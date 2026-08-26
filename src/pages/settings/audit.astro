@@ -1,7 +1,7 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import SectionHeader from '../components/ui/SectionHeader.astro';
-import SectionTabs from '../components/ui/SectionTabs.astro';
+import Layout from '../../layouts/Layout.astro';
+import SectionHeader from '../../components/ui/SectionHeader.astro';
+import SectionTabs from '../../components/ui/SectionTabs.astro';
 
 const settingsTabs = [
   { label: 'Workspace', href: '/settings' },
@@ -84,10 +84,10 @@ const settingsTabs = [
 </Layout>
 
 <script>
-  import { requireAuth } from '../lib/auth';
-  import { getAuditLogs } from '../lib/supabase';
-  import { formatDate, renderEmptyStateHTML, escapeHtml, maskWebhookUrl } from '../lib/ui-helpers';
-  import type { AuditLog } from '../lib/types';
+  import { requireAuth } from '../../lib/auth';
+  import { getAuditLogs } from '../../lib/supabase';
+  import { formatDate, renderEmptyStateHTML, escapeHtml, maskWebhookUrl } from '../../lib/ui-helpers';
+  import type { AuditLog } from '../../lib/types';
 
   let auditEntries: AuditLog[] = [];
 

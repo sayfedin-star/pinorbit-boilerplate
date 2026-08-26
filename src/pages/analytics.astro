@@ -1,13 +1,19 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import SectionHeader from '../components/ui/SectionHeader.astro';
+import SectionTabs from '../components/ui/SectionTabs.astro';
 
 export const prerender = false;
+
+const analyticsTabs = [
+  { label: 'Pinner Analytics', href: '/analytics' },
+  { label: 'Ingest Secrets', href: '/analytics/secrets' },
+];
 ---
 
 <Layout title="Pinterest Analytics" description="Multi-tenant Pinterest performance analytics, connection statistics, and control plane.">
   <!-- Page Header -->
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
     <SectionHeader
       title="Pinner Analytics"
       description="Aggregated reach, engagement metrics, and operational control plane across all connected Pinterest accounts."
@@ -77,6 +83,8 @@ export const prerender = false;
       </button>
     </div>
   </div>
+
+  <SectionTabs tabs={analyticsTabs} activeHref="/analytics" />
 
   <!-- Operational Ingestion Sync Status Bar -->
   <div class="mb-6 rounded-2xl border border-border bg-card p-4 shadow-sm">

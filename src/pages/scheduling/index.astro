@@ -1,0 +1,396 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import SectionHeader from '../../components/ui/SectionHeader.astro';
+import SectionTabs from '../../components/ui/SectionTabs.astro';
+import KPIStatCard from '../../components/ui/KPIStatCard.astro';
+
+const schedulingTabs = [
+  { label: 'Overview', href: '/scheduling' },
+  { label: 'Accounts', href: '/scheduling/accounts' },
+  { label: 'Logs', href: '/scheduling/logs' },
+];
+---
+
+<Layout title="Scheduling" description="Real-time status monitor for automated Pinterest recipe publishing.">
+  <SectionHeader
+    title="Overview & Performance"
+    description="Real-time status monitor for automated Pinterest recipe publishing."
+  />
+
+  <SectionTabs tabs={schedulingTabs} activeHref="/scheduling" />
+
+  <!-- 4 Primary KPI Cards -->
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+    <div id="kpi-total-accounts">
+      <KPIStatCard
+        title="Total Accounts"
+        value="---"
+        subtitle="Loading active accounts..."
+        iconName="users"
+        color="slate"
+      />
+    </div>
+    <div id="kpi-pending-pins">
+      <KPIStatCard
+        title="Pending Pins"
+        value="---"
+        subtitle="Loading pending queue..."
+        iconName="clock"
+        color="amber"
+      />
+    </div>
+    <div id="kpi-posted-pins">
+      <KPIStatCard
+        title="Posted Pins"
+        value="---"
+        subtitle="Loading posted count..."
+        iconName="check-circle"
+        color="emerald"
+      />
+    </div>
+    <div id="kpi-failed-pins">
+      <KPIStatCard
+        title="Failed Pins"
+        value="---"
+        subtitle="Loading error count..."
+        iconName="alert-triangle"
+        color="rose"
+      />
+    </div>
+  </div>
+
+  <!-- Webhook Orchestration Metrics Bar -->
+  <div class="mb-8 rounded-2xl border border-border bg-card p-5 shadow-sm space-y-4">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-3">
+      <div class="flex items-center gap-2">
+        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-foreground">Multi-Webhook Orchestration Engine</h3>
+          <p class="text-xs text-muted-foreground">Outbound capacity routing and Make.com channel health</p>
+        </div>
+      </div>
+      <a href="/scheduling/accounts" class="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+        Manage account webhooks &rarr;
+      </a>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="rounded-xl border border-border bg-background p-3.5 flex items-center justify-between">
+        <div>
+          <span class="text-xs text-muted-foreground font-medium">Total Webhook Channels</span>
+          <p id="wb-total-count" class="text-xl font-bold text-foreground mt-0.5">---</p>
+        </div>
+        <span class="rounded-full bg-slate-500/10 px-2.5 py-1 text-xs font-semibold text-slate-500">Channels</span>
+      </div>
+
+      <div class="rounded-xl border border-border bg-background p-3.5 flex items-center justify-between">
+        <div>
+          <span class="text-xs text-muted-foreground font-medium">Active Channels</span>
+          <p id="wb-active-count" class="text-xl font-bold text-emerald-500 mt-0.5">---</p>
+        </div>
+        <span class="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">Operational</span>
+      </div>
+
+      <div class="rounded-xl border border-border bg-background p-3.5 flex items-center justify-between">
+        <div>
+          <span class="text-xs text-muted-foreground font-medium">Exhausted Channels</span>
+          <p id="wb-exhausted-count" class="text-xl font-bold text-amber-500 mt-0.5">---</p>
+        </div>
+        <span class="rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400">Capacity Alert</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content Grid: Recent Pins & System Logs & Import Sessions -->
+  <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
+    <!-- Recent Pins (2 columns on large screens) -->
+    <div class="lg:col-span-2 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-semibold text-foreground">Recent Pins Queue</h3>
+        <div class="flex items-center gap-3">
+          <a href="/imports" class="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+            + Import scheduled pins
+          </a>
+          <a href="/scheduling/accounts" class="text-xs font-medium text-muted-foreground hover:text-foreground flex items-center gap-1">
+            View accounts &rarr;
+          </a>
+        </div>
+      </div>
+
+      <div id="dashboard-pins-container">
+        <div class="overflow-hidden rounded-xl border border-border bg-card p-6 text-center text-xs text-muted-foreground animate-pulse">
+          Loading recent pins queue...
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Latest Activity Logs & Import Sessions (1 column) -->
+    <div class="space-y-6">
+      <!-- Latest System Logs -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-foreground">Latest System Logs</h3>
+          <a href="/scheduling/logs" class="text-xs font-medium text-primary hover:underline flex items-center gap-1">
+            View all logs &rarr;
+          </a>
+        </div>
+
+        <div id="dashboard-logs-container">
+          <div class="overflow-hidden rounded-xl border border-border bg-card p-6 text-center text-xs text-muted-foreground animate-pulse">
+            Loading system activity logs...
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Import Activity Sessions -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between border-t border-border pt-4">
+          <h3 class="text-sm font-bold text-foreground">Recent Importer Batches</h3>
+          <a href="/imports" class="text-xs font-medium text-primary hover:underline flex items-center gap-1">
+            New import &rarr;
+          </a>
+        </div>
+
+        <div id="dashboard-imports-container">
+          <div class="overflow-hidden rounded-xl border border-border bg-card p-4 text-center text-xs text-muted-foreground animate-pulse">
+            Loading recent import batches...
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { requireAuth } from '../../lib/auth';
+  import { getDashboardKPIs, getPins, getLogs, getImportSessions } from '../../lib/supabase';
+  import { renderStatusBadge, formatDate, formatTime, renderEmptyStateHTML, escapeHtml } from '../../lib/ui-helpers';
+  import { getActiveWorkspaceId } from '../../lib/workspaces';
+
+  async function init() {
+    const isAuth = await requireAuth();
+    if (!isAuth) return;
+    await loadDashboardData();
+  }
+
+  async function loadDashboardData() {
+    try {
+      const activeWsId = getActiveWorkspaceId();
+      const [kpis, recentPins, latestLogs, importSessions] = await Promise.all([
+        getDashboardKPIs(activeWsId),
+        getPins('all', undefined, activeWsId),
+        getLogs(4, activeWsId),
+        getImportSessions(4, activeWsId),
+      ]);
+
+      // Update Webhook Metrics
+      const totalWb = document.getElementById('wb-total-count');
+      const activeWb = document.getElementById('wb-active-count');
+      const exhaustedWb = document.getElementById('wb-exhausted-count');
+
+      if (totalWb) totalWb.textContent = String(kpis.totalWebhooks ?? 0);
+      if (activeWb) activeWb.textContent = String(kpis.activeWebhooks ?? 0);
+      if (exhaustedWb) exhaustedWb.textContent = String(kpis.exhaustedWebhooks ?? 0);
+
+      // Update KPI Total Accounts
+      const totalAccElem = document.getElementById('kpi-total-accounts');
+      if (totalAccElem) {
+        totalAccElem.innerHTML = `
+          <div class="relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:shadow-md">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-muted-foreground">Total Accounts</span>
+              <div class="flex h-9 w-9 items-center justify-center rounded-lg border bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+            </div>
+            <div class="mt-4">
+              <div class="text-3xl font-bold tracking-tight text-foreground">${kpis.totalAccounts}</div>
+              <p class="mt-1 text-xs text-muted-foreground">${kpis.activeAccounts} accounts active</p>
+            </div>
+          </div>
+        `;
+      }
+
+      // Update KPI Pending Pins
+      const pendingElem = document.getElementById('kpi-pending-pins');
+      if (pendingElem) {
+        pendingElem.innerHTML = `
+          <div class="relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:shadow-md">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-muted-foreground">Pending Pins</span>
+              <div class="flex h-9 w-9 items-center justify-center rounded-lg border bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+            </div>
+            <div class="mt-4">
+              <div class="text-3xl font-bold tracking-tight text-foreground">${kpis.pendingPins}</div>
+              <p class="mt-1 text-xs text-muted-foreground">Queued for next cycle</p>
+            </div>
+          </div>
+        `;
+      }
+
+      // Update KPI Posted Pins
+      const postedElem = document.getElementById('kpi-posted-pins');
+      if (postedElem) {
+        postedElem.innerHTML = `
+          <div class="relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:shadow-md">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-muted-foreground">Posted Pins</span>
+              <div class="flex h-9 w-9 items-center justify-center rounded-lg border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </div>
+            </div>
+            <div class="mt-4">
+              <div class="text-3xl font-bold tracking-tight text-foreground">${kpis.postedPins}</div>
+              <p class="mt-1 text-xs text-muted-foreground">Successfully published</p>
+            </div>
+          </div>
+        `;
+      }
+
+      // Update KPI Failed Pins
+      const failedElem = document.getElementById('kpi-failed-pins');
+      if (failedElem) {
+        failedElem.innerHTML = `
+          <div class="relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:shadow-md">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-muted-foreground">Failed Pins</span>
+              <div class="flex h-9 w-9 items-center justify-center rounded-lg border bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 1 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+            </div>
+            <div class="mt-4">
+              <div class="text-3xl font-bold tracking-tight text-foreground">${kpis.failedPins}</div>
+              <p class="mt-1 text-xs text-muted-foreground">Requires review</p>
+            </div>
+          </div>
+        `;
+      }
+
+      // Render Recent Pins Container
+      const pinsContainer = document.getElementById('dashboard-pins-container');
+      if (pinsContainer) {
+        if (!recentPins || recentPins.length === 0) {
+          pinsContainer.innerHTML = renderEmptyStateHTML(
+            'No Pins Found',
+            'New pins uploaded via CSV or Google Sheets will appear here.',
+            'inbox'
+          );
+        } else {
+          const topPins = recentPins.slice(0, 5);
+          const pinsHtml = topPins
+            .map((pin) => `
+              <div class="flex items-center justify-between p-4 transition-colors hover:bg-muted/40">
+                <div class="flex items-center gap-3.5 min-w-0">
+                  <img
+                    src="${escapeHtml(pin.image_url)}"
+                    alt="${escapeHtml(pin.title)}"
+                    class="h-12 w-12 rounded-lg object-cover border border-border bg-muted flex-shrink-0"
+                    onerror="this.src='https://images.unsplash.com/photo-1495521821757-a1efb6729352?auto=format&fit=crop&w=150&q=80'"
+                  />
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium text-foreground truncate">${escapeHtml(pin.title)}</p>
+                    <div class="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                      <span>${escapeHtml(pin.account_name || 'Account')}</span>
+                      <span>•</span>
+                      <span class="truncate">${escapeHtml(pin.board_name || 'No Board')}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-3 flex-shrink-0 ml-4">
+                  ${renderStatusBadge(pin.status)}
+                  <span class="text-xs text-muted-foreground hidden sm:inline">
+                    ${formatDate(pin.created_at)}
+                  </span>
+                </div>
+              </div>
+            `)
+            .join('');
+
+          pinsContainer.innerHTML = `
+            <div class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+              <div class="divide-y divide-border">
+                ${pinsHtml}
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      // Render Latest Logs Container
+      const logsContainer = document.getElementById('dashboard-logs-container');
+      if (logsContainer) {
+        if (!latestLogs || latestLogs.length === 0) {
+          logsContainer.innerHTML = renderEmptyStateHTML(
+            'No Execution Logs',
+            'Logs will record status as webhooks trigger.',
+            'alert-circle'
+          );
+        } else {
+          const logsHtml = latestLogs
+            .map((log) => `
+              <div class="rounded-lg border border-border bg-background p-3 text-xs space-y-1.5">
+                <div class="flex items-center justify-between">
+                  ${renderStatusBadge(log.status, undefined, 'sm')}
+                  <span class="text-[11px] text-muted-foreground">
+                    ${formatTime(log.created_at)}
+                  </span>
+                </div>
+                <p class="font-medium text-foreground truncate">${escapeHtml(log.pin_title || 'System Operation')}</p>
+                ${
+                  log.message
+                    ? `<p class="text-muted-foreground line-clamp-2 leading-relaxed">${escapeHtml(log.message)}</p>`
+                    : ''
+                }
+              </div>
+            `)
+            .join('');
+
+          logsContainer.innerHTML = `
+            <div class="overflow-hidden rounded-xl border border-border bg-card shadow-sm p-4 space-y-3">
+              ${logsHtml}
+            </div>
+          `;
+        }
+      }
+
+      // Render Recent Import Batches Container
+      const importsContainer = document.getElementById('dashboard-imports-container');
+      if (importsContainer) {
+        if (!importSessions || importSessions.length === 0) {
+          importsContainer.innerHTML = `
+            <div class="rounded-xl border border-border bg-background p-4 text-center text-xs text-muted-foreground">
+              No recent import batches. Click "+ Import scheduled pins" to upload recipe pins.
+            </div>
+          `;
+        } else {
+          const sessionsHtml = importSessions
+            .map((s: any) => `
+              <div class="flex items-center justify-between rounded-lg border border-border bg-background p-3 text-xs">
+                <div>
+                  <p class="font-bold text-foreground">${escapeHtml(s.account_name || 'Account')}</p>
+                  <p class="text-[11px] text-muted-foreground">${s.source_type === 'csv_upload' ? 'CSV Upload' : 'Google Sheet'} • ${s.imported_rows} pins imported</p>
+                </div>
+                <span class="text-[11px] text-muted-foreground font-medium">${formatDate(s.created_at)}</span>
+              </div>
+            `)
+            .join('');
+
+          importsContainer.innerHTML = `
+            <div class="space-y-2">
+              ${sessionsHtml}
+            </div>
+          `;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch dashboard data client-side:', err);
+    }
+  }
+
+  init();
+</script>

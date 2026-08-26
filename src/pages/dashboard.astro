@@ -4,150 +4,239 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
 import KPIStatCard from '../components/ui/KPIStatCard.astro';
 ---
 
-<Layout title="Dashboard" description="Real-time status monitor for automated Pinterest recipe publishing.">
-  <SectionHeader
-    title="Overview & Performance"
-    description="Real-time status monitor for automated Pinterest recipe publishing."
-  />
+<Layout title="Dashboard" description="Command Center — Centralized intelligence and operational monitoring across PinOrbit modules.">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+    <SectionHeader
+      title="Command Center"
+      description="Centralized operational monitoring and intelligence across all PinOrbit modules."
+    />
 
-  <!-- 4 Primary KPI Cards -->
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-    <div id="kpi-total-accounts">
-      <KPIStatCard
-        title="Total Accounts"
-        value="---"
-        subtitle="Loading active accounts..."
-        iconName="users"
-        color="slate"
-      />
-    </div>
-    <div id="kpi-pending-pins">
-      <KPIStatCard
-        title="Pending Pins"
-        value="---"
-        subtitle="Loading pending queue..."
-        iconName="clock"
-        color="amber"
-      />
-    </div>
-    <div id="kpi-posted-pins">
-      <KPIStatCard
-        title="Posted Pins"
-        value="---"
-        subtitle="Loading posted count..."
-        iconName="check-circle"
-        color="emerald"
-      />
-    </div>
-    <div id="kpi-failed-pins">
-      <KPIStatCard
-        title="Failed Pins"
-        value="---"
-        subtitle="Loading error count..."
-        iconName="alert-triangle"
-        color="rose"
-      />
+    <!-- Quick Actions Row -->
+    <div class="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+      <a
+        href="/imports"
+        class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        <span>+ Import Pins</span>
+      </a>
+
+      <a
+        href="/analytics"
+        class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition-all"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        <span>+ Add Connection</span>
+      </a>
+
+      <a
+        href="/competitors"
+        class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition-all"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span>Track Competitor</span>
+      </a>
+
+      <a
+        href="/pinarchive/winning-pins"
+        class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition-all"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span>Winning Pins</span>
+      </a>
     </div>
   </div>
 
-  <!-- Webhook Orchestration Metrics Bar -->
-  <div class="mb-8 rounded-2xl border border-border bg-card p-5 shadow-sm space-y-4">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-3">
-      <div class="flex items-center gap-2">
-        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+  <!-- 4 Clickable Primary Module KPI Cards -->
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+    <!-- Module 1: Scheduling -->
+    <div id="module-card-scheduling">
+      <a href="/scheduling" class="group block h-full">
+        <div class="relative h-full overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:border-primary/50 hover:shadow-md">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Scheduling</span>
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+            </div>
+          </div>
+          <div class="mt-3">
+            <div id="metric-scheduling-val" class="text-2xl font-bold tracking-tight text-foreground">---</div>
+            <p id="metric-scheduling-sub" class="mt-1 text-xs text-muted-foreground">Loading queue & status...</p>
+          </div>
+          <!-- Mini capacity bar -->
+          <div class="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span id="metric-scheduling-badge" class="font-medium text-foreground">Webhooks: Loading...</span>
+            <span class="text-primary font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+              Overview &rarr;
+            </span>
+          </div>
         </div>
-        <div>
-          <h3 class="text-sm font-bold text-foreground">Multi-Webhook Orchestration Engine</h3>
-          <p class="text-xs text-muted-foreground">Outbound capacity routing and Make.com channel health</p>
-        </div>
-      </div>
-      <a href="/accounts" class="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
-        Manage account webhooks &rarr;
       </a>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div class="rounded-xl border border-border bg-background p-3.5 flex items-center justify-between">
-        <div>
-          <span class="text-xs text-muted-foreground font-medium">Total Webhook Channels</span>
-          <p id="wb-total-count" class="text-xl font-bold text-foreground mt-0.5">---</p>
+    <!-- Module 2: Analytics -->
+    <div id="module-card-analytics">
+      <a href="/analytics" class="group block h-full">
+        <div class="relative h-full overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:border-primary/50 hover:shadow-md">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Analytics (30D)</span>
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            </div>
+          </div>
+          <div class="mt-3">
+            <div id="metric-analytics-val" class="text-2xl font-bold tracking-tight text-foreground">---</div>
+            <p id="metric-analytics-sub" class="mt-1 text-xs text-muted-foreground">Loading impressions...</p>
+          </div>
+          <!-- Sparkline container -->
+          <div class="mt-3 pt-2 border-t border-border/60 flex items-center justify-between">
+            <div id="analytics-sparkline" class="h-6 w-24">
+              <svg class="h-full w-full overflow-visible" viewBox="0 0 100 25">
+                <path d="M0,20 Q25,5 50,15 T100,5" fill="none" stroke="currentColor" stroke-width="2.5" class="text-blue-500" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <span class="text-primary text-[11px] font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+              Pinner &rarr;
+            </span>
+          </div>
         </div>
-        <span class="rounded-full bg-slate-500/10 px-2.5 py-1 text-xs font-semibold text-slate-500">Channels</span>
-      </div>
+      </a>
+    </div>
 
-      <div class="rounded-xl border border-border bg-background p-3.5 flex items-center justify-between">
-        <div>
-          <span class="text-xs text-muted-foreground font-medium">Active Channels</span>
-          <p id="wb-active-count" class="text-xl font-bold text-emerald-500 mt-0.5">---</p>
+    <!-- Module 3: Competitor -->
+    <div id="module-card-competitors">
+      <a href="/competitors" class="group block h-full">
+        <div class="relative h-full overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:border-primary/50 hover:shadow-md">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Competitor</span>
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500 border border-purple-500/20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+          </div>
+          <div class="mt-3">
+            <div id="metric-competitors-val" class="text-2xl font-bold tracking-tight text-foreground">---</div>
+            <p id="metric-competitors-sub" class="mt-1 text-xs text-muted-foreground">Loading tracked profiles...</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span id="metric-competitors-badge" class="font-medium text-foreground">Intelligence active</span>
+            <span class="text-primary font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+              View &rarr;
+            </span>
+          </div>
         </div>
-        <span class="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">Operational</span>
-      </div>
+      </a>
+    </div>
 
-      <div class="rounded-xl border border-border bg-background p-3.5 flex items-center justify-between">
-        <div>
-          <span class="text-xs text-muted-foreground font-medium">Exhausted Channels</span>
-          <p id="wb-exhausted-count" class="text-xl font-bold text-amber-500 mt-0.5">---</p>
+    <!-- Module 4: PinArchive -->
+    <div id="module-card-pinarchive">
+      <a href="/pinarchive" class="group block h-full">
+        <div class="relative h-full overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:border-primary/50 hover:shadow-md">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">PinArchive</span>
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
+            </div>
+          </div>
+          <div class="mt-3">
+            <div id="metric-pinarchive-val" class="text-2xl font-bold tracking-tight text-foreground">---</div>
+            <p id="metric-pinarchive-sub" class="mt-1 text-xs text-muted-foreground">Loading archived pins...</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span id="metric-pinarchive-badge" class="font-medium text-foreground">Recipe clusters</span>
+            <span class="text-primary font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+              Archive &rarr;
+            </span>
+          </div>
         </div>
-        <span class="rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400">Capacity Alert</span>
-      </div>
+      </a>
     </div>
   </div>
 
-  <!-- Content Grid: Recent Pins & System Logs & Import Sessions -->
+  <!-- Content Grid: Recent Queue & Cross-Module Shortcuts & Live Stream -->
   <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
-    <!-- Recent Pins (2 columns on large screens) -->
-    <div class="lg:col-span-2 space-y-4">
-      <div class="flex items-center justify-between">
-        <h3 class="text-base font-semibold text-foreground">Recent Pins Queue</h3>
-        <div class="flex items-center gap-3">
-          <a href="/imports" class="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
-            + Import scheduled pins
-          </a>
-          <a href="/accounts" class="text-xs font-medium text-muted-foreground hover:text-foreground flex items-center gap-1">
-            View accounts &rarr;
-          </a>
+    <!-- Left 2 columns: Active Queue & Quick Modules Overview -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Recent Pins Queue -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <h3 class="text-base font-bold text-foreground">Active Publishing Queue</h3>
+            <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">Live</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <a href="/scheduling" class="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+              Scheduling Console &rarr;
+            </a>
+          </div>
+        </div>
+
+        <div id="command-pins-container">
+          <div class="overflow-hidden rounded-2xl border border-border bg-card p-8 text-center text-xs text-muted-foreground animate-pulse">
+            Loading recent publishing queue...
+          </div>
         </div>
       </div>
 
-      <div id="dashboard-pins-container">
-        <div class="overflow-hidden rounded-xl border border-border bg-card p-6 text-center text-xs text-muted-foreground animate-pulse">
-          Loading recent pins queue...
+      <!-- Cross-Module Deep-Dive Panels -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Panel 1: Multi-Webhook Capacity Health -->
+        <div class="rounded-2xl border border-border bg-card p-5 space-y-3 shadow-sm">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-foreground">Make.com Webhooks</h4>
+            <a href="/scheduling/accounts" class="text-[11px] font-semibold text-primary hover:underline">Manage</a>
+          </div>
+          <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="rounded-xl border border-border bg-background p-2.5">
+              <span class="text-[10px] text-muted-foreground font-medium block">Total</span>
+              <span id="sub-wb-total" class="text-base font-bold text-foreground mt-0.5 block">---</span>
+            </div>
+            <div class="rounded-xl border border-border bg-background p-2.5">
+              <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium block">Active</span>
+              <span id="sub-wb-active" class="text-base font-bold text-emerald-500 mt-0.5 block">---</span>
+            </div>
+            <div class="rounded-xl border border-border bg-background p-2.5">
+              <span class="text-[10px] text-amber-600 dark:text-amber-400 font-medium block">Alert</span>
+              <span id="sub-wb-exhausted" class="text-base font-bold text-amber-500 mt-0.5 block">---</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 2: Pinner Analytics 30D Highlights -->
+        <div class="rounded-2xl border border-border bg-card p-5 space-y-3 shadow-sm">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-foreground">Pinner Engagement</h4>
+            <a href="/analytics" class="text-[11px] font-semibold text-primary hover:underline">Details</a>
+          </div>
+          <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="rounded-xl border border-border bg-background p-2.5">
+              <span class="text-[10px] text-muted-foreground font-medium block">Clicks</span>
+              <span id="sub-an-clicks" class="text-base font-bold text-foreground mt-0.5 block">---</span>
+            </div>
+            <div class="rounded-xl border border-border bg-background p-2.5">
+              <span class="text-[10px] text-blue-600 dark:text-blue-400 font-medium block">Outbound</span>
+              <span id="sub-an-outbound" class="text-base font-bold text-blue-500 mt-0.5 block">---</span>
+            </div>
+            <div class="rounded-xl border border-border bg-background p-2.5">
+              <span class="text-[10px] text-purple-600 dark:text-purple-400 font-medium block">Saves</span>
+              <span id="sub-an-saves" class="text-base font-bold text-purple-500 mt-0.5 block">---</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Right Column: Latest Activity Logs & Import Sessions (1 column) -->
-    <div class="space-y-6">
-      <!-- Latest System Logs -->
-      <div class="space-y-3">
-        <div class="flex items-center justify-between">
-          <h3 class="text-sm font-bold text-foreground">Latest System Logs</h3>
-          <a href="/logs" class="text-xs font-medium text-primary hover:underline flex items-center gap-1">
-            View all logs &rarr;
-          </a>
-        </div>
-
-        <div id="dashboard-logs-container">
-          <div class="overflow-hidden rounded-xl border border-border bg-card p-6 text-center text-xs text-muted-foreground animate-pulse">
-            Loading system activity logs...
-          </div>
-        </div>
+    <!-- Right 1 column: Recent Execution Logs Stream -->
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-foreground">Recent Activity Stream</h3>
+        <a href="/scheduling/logs" class="text-xs font-medium text-primary hover:underline flex items-center gap-1">
+          View all &rarr;
+        </a>
       </div>
 
-      <!-- Recent Import Activity Sessions -->
-      <div class="space-y-3">
-        <div class="flex items-center justify-between border-t border-border pt-4">
-          <h3 class="text-sm font-bold text-foreground">Recent Importer Batches</h3>
-          <a href="/imports" class="text-xs font-medium text-primary hover:underline flex items-center gap-1">
-            New import &rarr;
-          </a>
-        </div>
-
-        <div id="dashboard-imports-container">
-          <div class="overflow-hidden rounded-xl border border-border bg-card p-4 text-center text-xs text-muted-foreground animate-pulse">
-            Loading recent import batches...
-          </div>
+      <div id="command-logs-container">
+        <div class="overflow-hidden rounded-2xl border border-border bg-card p-6 text-center text-xs text-muted-foreground animate-pulse">
+          Loading operational stream...
         </div>
       </div>
     </div>
@@ -156,135 +245,87 @@ import KPIStatCard from '../components/ui/KPIStatCard.astro';
 
 <script>
   import { requireAuth } from '../lib/auth';
-  import { getDashboardKPIs, getPins, getLogs, getImportSessions } from '../lib/supabase';
+  import { getDashboardKPIs, getPins, getLogs } from '../lib/supabase';
   import { renderStatusBadge, formatDate, formatTime, renderEmptyStateHTML, escapeHtml } from '../lib/ui-helpers';
   import { getActiveWorkspaceId } from '../lib/workspaces';
 
   async function init() {
     const isAuth = await requireAuth();
     if (!isAuth) return;
-    await loadDashboardData();
+    await loadCommandCenter();
   }
 
-  async function loadDashboardData() {
-    try {
-      const activeWsId = getActiveWorkspaceId();
-      const [kpis, recentPins, latestLogs, importSessions] = await Promise.all([
+  async function loadCommandCenter() {
+    const activeWsId = getActiveWorkspaceId();
+    const numFmt = new Intl.NumberFormat('en-US');
+
+    // Rule R3 & GATE G4: Fault-isolated loading via Promise.allSettled
+    const [p1Result, analyticsResult, compResult, paResult] = await Promise.allSettled([
+      // P1: Scheduling & Auth DB
+      Promise.all([
         getDashboardKPIs(activeWsId),
         getPins('all', undefined, activeWsId),
-        getLogs(4, activeWsId),
-        getImportSessions(4, activeWsId),
-      ]);
+        getLogs(5, activeWsId),
+      ]),
+      // P3: Analytics DB (30D window)
+      fetch(`/api/analytics/connections?window_days=30&workspace_id=${encodeURIComponent(activeWsId)}`).then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      }),
+      // P2: Competitors DB
+      fetch(`/api/admin/competitors?workspace_id=${encodeURIComponent(activeWsId)}`).then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      }),
+      // PinArchive DB
+      fetch(`/api/pinarchive/overview?workspace_id=${encodeURIComponent(activeWsId)}`).then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      }),
+    ]);
 
-      // Update Webhook Metrics
-      const totalWb = document.getElementById('wb-total-count');
-      const activeWb = document.getElementById('wb-active-count');
-      const exhaustedWb = document.getElementById('wb-exhausted-count');
+    // 1. Render Module: Scheduling
+    const schedVal = document.getElementById('metric-scheduling-val');
+    const schedSub = document.getElementById('metric-scheduling-sub');
+    const schedBadge = document.getElementById('metric-scheduling-badge');
+    const subWbTotal = document.getElementById('sub-wb-total');
+    const subWbActive = document.getElementById('sub-wb-active');
+    const subWbExhausted = document.getElementById('sub-wb-exhausted');
+    const pinsContainer = document.getElementById('command-pins-container');
+    const logsContainer = document.getElementById('command-logs-container');
 
-      if (totalWb) totalWb.textContent = String(kpis.totalWebhooks ?? 0);
-      if (activeWb) activeWb.textContent = String(kpis.activeWebhooks ?? 0);
-      if (exhaustedWb) exhaustedWb.textContent = String(kpis.exhaustedWebhooks ?? 0);
+    if (p1Result.status === 'fulfilled') {
+      const [kpis, recentPins, latestLogs] = p1Result.value;
+      if (schedVal) schedVal.textContent = `${numFmt.format(kpis.pendingPins)} queued`;
+      if (schedSub) schedSub.textContent = `${kpis.activeAccounts} accounts active • ${kpis.failedPins} failed`;
+      if (schedBadge) schedBadge.textContent = `${kpis.activeWebhooks} / ${kpis.totalWebhooks} webhooks operational`;
+      if (subWbTotal) subWbTotal.textContent = String(kpis.totalWebhooks ?? 0);
+      if (subWbActive) subWbActive.textContent = String(kpis.activeWebhooks ?? 0);
+      if (subWbExhausted) subWbExhausted.textContent = String(kpis.exhaustedWebhooks ?? 0);
 
-      // Update KPI Total Accounts
-      const totalAccElem = document.getElementById('kpi-total-accounts');
-      if (totalAccElem) {
-        totalAccElem.innerHTML = `
-          <div class="relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:shadow-md">
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-muted-foreground">Total Accounts</span>
-              <div class="flex h-9 w-9 items-center justify-center rounded-lg border bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              </div>
-            </div>
-            <div class="mt-4">
-              <div class="text-3xl font-bold tracking-tight text-foreground">${kpis.totalAccounts}</div>
-              <p class="mt-1 text-xs text-muted-foreground">${kpis.activeAccounts} accounts active</p>
-            </div>
-          </div>
-        `;
-      }
-
-      // Update KPI Pending Pins
-      const pendingElem = document.getElementById('kpi-pending-pins');
-      if (pendingElem) {
-        pendingElem.innerHTML = `
-          <div class="relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:shadow-md">
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-muted-foreground">Pending Pins</span>
-              <div class="flex h-9 w-9 items-center justify-center rounded-lg border bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              </div>
-            </div>
-            <div class="mt-4">
-              <div class="text-3xl font-bold tracking-tight text-foreground">${kpis.pendingPins}</div>
-              <p class="mt-1 text-xs text-muted-foreground">Queued for next cycle</p>
-            </div>
-          </div>
-        `;
-      }
-
-      // Update KPI Posted Pins
-      const postedElem = document.getElementById('kpi-posted-pins');
-      if (postedElem) {
-        postedElem.innerHTML = `
-          <div class="relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:shadow-md">
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-muted-foreground">Posted Pins</span>
-              <div class="flex h-9 w-9 items-center justify-center rounded-lg border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              </div>
-            </div>
-            <div class="mt-4">
-              <div class="text-3xl font-bold tracking-tight text-foreground">${kpis.postedPins}</div>
-              <p class="mt-1 text-xs text-muted-foreground">Successfully published</p>
-            </div>
-          </div>
-        `;
-      }
-
-      // Update KPI Failed Pins
-      const failedElem = document.getElementById('kpi-failed-pins');
-      if (failedElem) {
-        failedElem.innerHTML = `
-          <div class="relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:shadow-md">
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-muted-foreground">Failed Pins</span>
-              <div class="flex h-9 w-9 items-center justify-center rounded-lg border bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 1 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              </div>
-            </div>
-            <div class="mt-4">
-              <div class="text-3xl font-bold tracking-tight text-foreground">${kpis.failedPins}</div>
-              <p class="mt-1 text-xs text-muted-foreground">Requires review</p>
-            </div>
-          </div>
-        `;
-      }
-
-      // Render Recent Pins Container
-      const pinsContainer = document.getElementById('dashboard-pins-container');
+      // Render Pins Queue
       if (pinsContainer) {
         if (!recentPins || recentPins.length === 0) {
           pinsContainer.innerHTML = renderEmptyStateHTML(
             'No Pins Found',
-            'New pins uploaded via CSV or Google Sheets will appear here.',
+            'Pins uploaded via CSV or Google Sheets will appear in the active queue.',
             'inbox'
           );
         } else {
           const topPins = recentPins.slice(0, 5);
           const pinsHtml = topPins
             .map((pin) => `
-              <div class="flex items-center justify-between p-4 transition-colors hover:bg-muted/40">
-                <div class="flex items-center gap-3.5 min-w-0">
+              <div class="flex items-center justify-between p-3.5 transition-colors hover:bg-muted/40">
+                <div class="flex items-center gap-3 min-w-0">
                   <img
                     src="${escapeHtml(pin.image_url)}"
                     alt="${escapeHtml(pin.title)}"
-                    class="h-12 w-12 rounded-lg object-cover border border-border bg-muted flex-shrink-0"
+                    class="h-11 w-11 rounded-xl object-cover border border-border bg-muted flex-shrink-0"
                     onerror="this.src='https://images.unsplash.com/photo-1495521821757-a1efb6729352?auto=format&fit=crop&w=150&q=80'"
                   />
                   <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium text-foreground truncate">${escapeHtml(pin.title)}</p>
-                    <div class="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                    <p class="text-xs font-semibold text-foreground truncate">${escapeHtml(pin.title)}</p>
+                    <div class="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
                       <span>${escapeHtml(pin.account_name || 'Account')}</span>
                       <span>•</span>
                       <span class="truncate">${escapeHtml(pin.board_name || 'No Board')}</span>
@@ -292,9 +333,9 @@ import KPIStatCard from '../components/ui/KPIStatCard.astro';
                   </div>
                 </div>
 
-                <div class="flex items-center gap-3 flex-shrink-0 ml-4">
+                <div class="flex items-center gap-2.5 flex-shrink-0 ml-3">
                   ${renderStatusBadge(pin.status)}
-                  <span class="text-xs text-muted-foreground hidden sm:inline">
+                  <span class="text-[11px] text-muted-foreground hidden sm:inline">
                     ${formatDate(pin.created_at)}
                   </span>
                 </div>
@@ -303,7 +344,7 @@ import KPIStatCard from '../components/ui/KPIStatCard.astro';
             .join('');
 
           pinsContainer.innerHTML = `
-            <div class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+            <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
               <div class="divide-y divide-border">
                 ${pinsHtml}
               </div>
@@ -312,29 +353,28 @@ import KPIStatCard from '../components/ui/KPIStatCard.astro';
         }
       }
 
-      // Render Latest Logs Container
-      const logsContainer = document.getElementById('dashboard-logs-container');
+      // Render Logs Activity Stream
       if (logsContainer) {
         if (!latestLogs || latestLogs.length === 0) {
           logsContainer.innerHTML = renderEmptyStateHTML(
-            'No Execution Logs',
-            'Logs will record status as webhooks trigger.',
+            'No Recent Activity',
+            'Activity events will stream here as pins publish.',
             'alert-circle'
           );
         } else {
           const logsHtml = latestLogs
             .map((log) => `
-              <div class="rounded-lg border border-border bg-background p-3 text-xs space-y-1.5">
+              <div class="rounded-xl border border-border bg-background p-3 text-xs space-y-1.5 shadow-sm">
                 <div class="flex items-center justify-between">
                   ${renderStatusBadge(log.status, undefined, 'sm')}
-                  <span class="text-[11px] text-muted-foreground">
+                  <span class="text-[10px] text-muted-foreground font-mono">
                     ${formatTime(log.created_at)}
                   </span>
                 </div>
-                <p class="font-medium text-foreground truncate">${escapeHtml(log.pin_title || 'System Operation')}</p>
+                <p class="font-semibold text-foreground truncate">${escapeHtml(log.pin_title || 'System Operation')}</p>
                 ${
                   log.message
-                    ? `<p class="text-muted-foreground line-clamp-2 leading-relaxed">${escapeHtml(log.message)}</p>`
+                    ? `<p class="text-muted-foreground line-clamp-2 leading-relaxed text-[11px]">${escapeHtml(log.message)}</p>`
                     : ''
                 }
               </div>
@@ -342,44 +382,87 @@ import KPIStatCard from '../components/ui/KPIStatCard.astro';
             .join('');
 
           logsContainer.innerHTML = `
-            <div class="overflow-hidden rounded-xl border border-border bg-card shadow-sm p-4 space-y-3">
+            <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm p-4 space-y-3">
               ${logsHtml}
             </div>
           `;
         }
       }
+    } else {
+      // Degraded card state for Scheduling
+      if (schedVal) schedVal.textContent = 'Degraded';
+      if (schedSub) schedSub.textContent = 'Scheduling service unreachable';
+      if (schedBadge) schedBadge.innerHTML = '<span class="text-rose-500 font-bold">Failed to load P1</span>';
+    }
 
-      // Render Recent Import Batches Container
-      const importsContainer = document.getElementById('dashboard-imports-container');
-      if (importsContainer) {
-        if (!importSessions || importSessions.length === 0) {
-          importsContainer.innerHTML = `
-            <div class="rounded-xl border border-border bg-background p-4 text-center text-xs text-muted-foreground">
-              No recent import batches. Click "+ Import scheduled pins" to upload recipe pins.
-            </div>
-          `;
-        } else {
-          const sessionsHtml = importSessions
-            .map((s: any) => `
-              <div class="flex items-center justify-between rounded-lg border border-border bg-background p-3 text-xs">
-                <div>
-                  <p class="font-bold text-foreground">${escapeHtml(s.account_name || 'Account')}</p>
-                  <p class="text-[11px] text-muted-foreground">${s.source_type === 'csv_upload' ? 'CSV Upload' : 'Google Sheet'} • ${s.imported_rows} pins imported</p>
-                </div>
-                <span class="text-[11px] text-muted-foreground font-medium">${formatDate(s.created_at)}</span>
-              </div>
-            `)
-            .join('');
+    // 2. Render Module: Analytics
+    const anVal = document.getElementById('metric-analytics-val');
+    const anSub = document.getElementById('metric-analytics-sub');
+    const subAnClicks = document.getElementById('sub-an-clicks');
+    const subAnOutbound = document.getElementById('sub-an-outbound');
+    const subAnSaves = document.getElementById('sub-an-saves');
 
-          importsContainer.innerHTML = `
-            <div class="space-y-2">
-              ${sessionsHtml}
-            </div>
-          `;
-        }
+    if (analyticsResult.status === 'fulfilled' && analyticsResult.value.success) {
+      const connections = analyticsResult.value.data || [];
+      let totalImpr = 0, totalEng = 0, totalClicks = 0, totalOutbound = 0, totalSaves = 0;
+
+      for (const conn of connections) {
+        const s = conn.stats || {};
+        totalImpr += Number(s.impressions || 0);
+        totalEng += Number(s.engagements || 0);
+        totalClicks += Number(s.pin_clicks || 0);
+        totalOutbound += Number(s.outbound_clicks || 0);
+        totalSaves += Number(s.saves || 0);
       }
-    } catch (err) {
-      console.error('Failed to fetch dashboard data client-side:', err);
+
+      if (anVal) anVal.textContent = numFmt.format(totalImpr);
+      if (anSub) anSub.textContent = `${numFmt.format(totalEng)} engagements • ${connections.length} connections`;
+      if (subAnClicks) subAnClicks.textContent = numFmt.format(totalClicks);
+      if (subAnOutbound) subAnOutbound.textContent = numFmt.format(totalOutbound);
+      if (subAnSaves) subAnSaves.textContent = numFmt.format(totalSaves);
+    } else {
+      if (anVal) anVal.textContent = 'Degraded';
+      if (anSub) anSub.textContent = 'Analytics pipeline unreachable';
+      if (subAnClicks) subAnClicks.textContent = '—';
+      if (subAnOutbound) subAnOutbound.textContent = '—';
+      if (subAnSaves) subAnSaves.textContent = '—';
+    }
+
+    // 3. Render Module: Competitors
+    const compVal = document.getElementById('metric-competitors-val');
+    const compSub = document.getElementById('metric-competitors-sub');
+    const compBadge = document.getElementById('metric-competitors-badge');
+
+    if (compResult.status === 'fulfilled' && compResult.value.success) {
+      const comps = compResult.value.competitors || [];
+      const ownCount = comps.filter((c: any) => c.account_type === 'own').length;
+      const compCount = comps.length - ownCount;
+
+      if (compVal) compVal.textContent = `${comps.length} Profiles`;
+      if (compSub) compSub.textContent = `${ownCount} own • ${compCount} competitor accounts`;
+      if (compBadge) compBadge.textContent = `${comps.length} tracked profiles active`;
+    } else {
+      if (compVal) compVal.textContent = 'Degraded';
+      if (compSub) compSub.textContent = 'Competitor engine unreachable';
+    }
+
+    // 4. Render Module: PinArchive
+    const paVal = document.getElementById('metric-pinarchive-val');
+    const paSub = document.getElementById('metric-pinarchive-sub');
+    const paBadge = document.getElementById('metric-pinarchive-badge');
+
+    if (paResult.status === 'fulfilled' && paResult.value.success) {
+      const totals = paResult.value.totals || {};
+      const pinsCount = totals.archived_pins ?? totals.total_pins ?? 0;
+      const saves = totals.sum_saves ?? 0;
+      const shares = totals.sum_shares ?? 0;
+
+      if (paVal) paVal.textContent = `${numFmt.format(pinsCount)} Pins`;
+      if (paSub) paSub.textContent = `${numFmt.format(saves)} saves • ${numFmt.format(shares)} shares`;
+      if (paBadge) paBadge.textContent = `${totals.accounts || 0} creator archives`;
+    } else {
+      if (paVal) paVal.textContent = 'Degraded';
+      if (paSub) paSub.textContent = 'PinArchive unreachable';
     }
   }
 
