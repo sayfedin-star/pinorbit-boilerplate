@@ -148,6 +148,7 @@ describe('PinArchive Refresh Relay Endpoint (/api/internal/pinarchive/refresh)',
           inputs: {
             workspace_id: mockWsId,
             username: 'foodblogger',
+            usernames: '',
           },
         }),
       })
@@ -270,5 +271,123 @@ describe('PinArchive Refresh Relay Endpoint (/api/internal/pinarchive/refresh)',
     const text = await res.text();
     expect(text).not.toContain(rawPAT);
     expect(text).not.toContain('ingest_secret_xyz');
+  });
+
+  it('returns 202 queued when usernames array is provided, sending comma-joined usernames to GitHub', async () => {
+    vi.mocked(getEffectiveSecret).mockResolvedValue({ source: 'workspace', value: 'valid-secret-xyz' });
+
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      status: 204,
+      ok: true,
+      headers: new Headers(),
+    } as any);
+
+    const req = new Request('http://localhost:4321/api/internal/pinarchive/refresh', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-ingest-secret': 'valid-secret-xyz',
+      },
+      body: JSON.stringify({
+        workspace_id: mockWsId,
+        usernames: ['foodblogger', 'Travel_Tips', 'foodblogger'], // with casing & dupes
+      }),
+    });
+
+    const res = await refreshHandler({
+      request: req,
+      locals: { runtime: { env: { GH_REFRESH_TOKEN: 'ghp_secret_token_123' } } },
+    } as any);
+
+    expect(res.status).toBe(202);
+    const json = await res.json();
+    expect(json.success).toBe(true);
+    expect(json.queued).toBe(true);
+    expect(json.queued_runs).toBe(1);
+    expect(json.workspace_id).toBe(mockWsId);
+    expect(json.usernames).toEqual(['foodblogger', 'travel_tips']);
+    expect(json.accounts).toBe(2);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.github.com/repos/sayfedin-star/pinorbit-v2/actions/workflows/pinarchive-refresh.yml/dispatches',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          ref: 'main',
+          inputs: {
+            workspace_id: mockWsId,
+            username: '',
+            usernames: 'foodblogger,travel_tips',
+          },
+        }),
+      })
+    );
+  });
+
+  it('returns 202 queued when comma-separated usernames string is provided and prefers usernames over username', async () => {
+    vi.mocked(getEffectiveSecret).mockResolvedValue({ source: 'workspace', value: 'valid-secret-xyz' });
+
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      status: 204,
+      ok: true,
+      headers: new Headers(),
+    } as any);
+
+    const req = new Request('http://localhost:4321/api/internal/pinarchive/refresh', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-ingest-secret': 'valid-secret-xyz',
+      },
+      body: JSON.stringify({
+        workspace_id: mockWsId,
+        username: 'single_account',
+        usernames: 'acc_one, acc_two',
+      }),
+    });
+
+    const res = await refreshHandler({
+      request: req,
+      locals: { runtime: { env: { GH_REFRESH_TOKEN: 'ghp_secret_token_123' } } },
+    } as any);
+
+    expect(res.status).toBe(202);
+    const json = await res.json();
+    expect(json.success).toBe(true);
+    expect(json.queued_runs).toBe(1);
+    expect(json.accounts).toBe(2);
+    expect(json.usernames).toEqual(['acc_one', 'acc_two']);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.github.com/repos/sayfedin-star/pinorbit-v2/actions/workflows/pinarchive-refresh.yml/dispatches',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          ref: 'main',
+          inputs: {
+            workspace_id: mockWsId,
+            username: '',
+            usernames: 'acc_one,acc_two',
+          },
+        }),
+      })
+    );
+  });
+
+  it('returns 400 when usernames contains an invalid username string', async () => {
+    const req = new Request('http://localhost:4321/api/internal/pinarchive/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workspace_id: mockWsId,
+        usernames: ['valid_name', 'bad name with spaces!'],
+      }),
+    });
+
+    const res = await refreshHandler({ request: req, locals: {} } as any);
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.success).toBe(false);
+    expect(json.error).toContain('Invalid username format');
   });
 });
