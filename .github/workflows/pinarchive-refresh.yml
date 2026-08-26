@@ -1,8 +1,6 @@
 name: PinArchive Refresh
 
 on:
-  schedule:
-    - cron: '0 3 */2 * *'
   workflow_dispatch:
     inputs:
       workspace_id:
@@ -17,6 +15,11 @@ on:
         description: 'Comma-separated usernames (optional)'
         required: false
         type: string
+      force:
+        description: 'Force refresh ignoring interval eligibility (true/empty)'
+        required: false
+        type: string
+        default: ''
 
 concurrency:
   group: pinarchive-refresh
@@ -53,6 +56,7 @@ jobs:
           REFRESH_WORKSPACE_ID: ${{ github.event.inputs.workspace_id || '' }}
           REFRESH_USERNAME: ${{ github.event.inputs.username || '' }}
           REFRESH_USERNAMES: ${{ github.event.inputs.usernames || '' }}
+          REFRESH_FORCE: ${{ github.event.inputs.force || '' }}
           REFRESH_SHARD: ${{ matrix.shard }}
           SHARD_COUNT: 4
           REFRESH_MAX_PINS: '0'

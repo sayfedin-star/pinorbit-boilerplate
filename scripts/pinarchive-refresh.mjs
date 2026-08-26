@@ -38,6 +38,7 @@ const REFRESH_USERNAMES = (process.env.REFRESH_USERNAMES || '')
   .split(',')
   .map(s => s.trim().toLowerCase())
   .filter(Boolean);
+const REFRESH_FORCE = (process.env.REFRESH_FORCE || '').trim().toLowerCase() === 'true';
 
 function checkEnv() {
   const missing = [];
@@ -419,7 +420,7 @@ async function main() {
   // Load workspace settings to map gating controls
   const settingsMap = new Map();
   try {
-    const wsSettings = await supaQuery('pa_workspace_settings', 'select=workspace_id,ingest_enabled,paused_account_policy,refresh_max_pins');
+    const wsSettings = await supaQuery('pa_workspace_settings', 'select=workspace_id,ingest_enabled,paused_account_policy,refresh_max_pins,default_interval_days');
     if (Array.isArray(wsSettings)) {
       for (const s of wsSettings) {
         settingsMap.set(s.workspace_id, s);
@@ -429,7 +430,7 @@ async function main() {
     console.warn('Could not query pa_workspace_settings (using defaults):', e.message);
   }
 
-  let accounts = await supaQuery('pa_accounts', 'select=id,workspace_id,username,follower_count,status,ingest_enabled');
+  let accounts = await supaQuery('pa_accounts', 'select=id,workspace_id,username,follower_count,status,ingest_enabled,interval_days,last_run_at');
   if (!accounts.length) { console.log('No accounts found.'); return; }
 
   if (REFRESH_USERNAME) {
@@ -473,6 +474,37 @@ async function main() {
     }
     if (REFRESH_USERNAME && acc.username.toLowerCase() !== REFRESH_USERNAME) {
       console.log(`[SKIP] ${acc.username}: outside requested account.`); continue;
+    }
+
+    // Eligibility Gate: Check interval_days vs last_run_at / max(last_updated_at)
+    const intervalDays = Number(acc.interval_days) || Number(wsSetting?.default_interval_days) || 3;
+    let lastRefreshed = acc.last_run_at;
+
+    if (!lastRefreshed) {
+      try {
+        const latestPins = await supaQuery(
+          'pa_pins',
+          `select=last_updated_at&account_id=eq.${acc.id}&order=last_updated_at.desc&limit=1`
+        );
+        if (Array.isArray(latestPins) && latestPins.length > 0 && latestPins[0]?.last_updated_at) {
+          lastRefreshed = latestPins[0].last_updated_at;
+        }
+      } catch (e) {
+        // query fallback ignore
+      }
+    }
+
+    if (!REFRESH_FORCE && lastRefreshed) {
+      const lastTime = new Date(lastRefreshed).getTime();
+      if (!isNaN(lastTime)) {
+        const diffMs = Date.now() - lastTime;
+        const intervalMs = intervalDays * 86400000;
+        if (diffMs < intervalMs) {
+          const daysAgo = (diffMs / 86400000).toFixed(1);
+          console.log(`[SKIP] Account @${acc.username}: refreshed ${daysAgo}d ago (interval: ${intervalDays}d, force=false).`);
+          continue;
+        }
+      }
     }
 
     // X2: Precedence: env REFRESH_MAX_PINS if set -> else DB setting -> else 0 (unlimited with pagination)
