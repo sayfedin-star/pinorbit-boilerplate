@@ -53,7 +53,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return json({ success: false, error: accRes.error.message }, 500);
     }
 
-    const accounts = (accRes.data || []).map((a: any) => ({ ...a }));
+    let accounts = (accRes.data || []).map((a: any) => ({ ...a }));
 
     // Fetch live DB pin count per account
     const countMap = new Map<string, number>();
@@ -73,6 +73,32 @@ export const GET: APIRoute = async ({ request, locals }) => {
     for (const a of accounts) {
       a.db_pins_count = countMap.has(a.id) ? countMap.get(a.id) : a.pins_count;
     }
+
+    // Last full Refresh = 4 shards of the newest run. They start within ~2 minutes.
+    let changedMap = new Map<string, number>();
+    try {
+      const { data: maxRow } = await db.from('pa_runs')
+        .select('started_at').eq('workspace_id', ws).eq('trigger','refresh')
+        .order('started_at', {ascending:false}).limit(1).maybeSingle();
+      if (maxRow?.started_at) {
+        const since = new Date(new Date(maxRow.started_at).getTime() - 5*60*1000).toISOString();
+        const { data: rows } = await db.from('pa_runs')
+          .select('account_id, pins_updated, started_at')
+          .eq('workspace_id', ws).eq('trigger','refresh').gte('started_at', since);
+        for (const r of rows||[]) {
+          if (!r.account_id) continue;
+          changedMap.set(r.account_id, (changedMap.get(r.account_id)||0) + Number(r.pins_updated||0));
+        }
+      }
+    } catch (err) {
+      console.warn('Could not query pa_runs refresh delta:', err);
+    }
+    // Attach to each account:
+    accounts = accounts.map((a: any) => ({
+      ...a,
+      changed_last_refresh: changedMap.get(a.id) ?? 0,
+      checked_last_refresh: Number(a.db_pins_count ?? 0), // total pins for account = checked
+    }));
 
     // 1. Get exact total pins count once via lightweight HEAD request
     const { count: totalPinsCount, error: countErr } = await db

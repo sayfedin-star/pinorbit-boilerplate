@@ -427,6 +427,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
             <th class="py-3 px-4 font-semibold text-foreground">Creator Account</th>
             <th class="py-3 px-4 font-semibold">Followers</th>
             <th class="py-3 px-4 font-semibold">Pins Total</th>
+            <th class="py-3 px-4 font-semibold">Δ Changed</th>
             <th class="py-3 px-4 font-semibold">Interval</th>
             <th class="py-3 px-4 font-semibold">Last / Next Run</th>
             <th class="py-3 px-4 font-semibold text-center">Accept GAS</th>
@@ -435,7 +436,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         </thead>
         <tbody id="accounts-table-body" class="divide-y divide-border/60">
           <tr>
-            <td colspan="8" class="p-8 text-center text-xs text-muted-foreground animate-pulse">Loading tracked accounts…</td>
+            <td colspan="9" class="p-8 text-center text-xs text-muted-foreground animate-pulse">Loading tracked accounts…</td>
           </tr>
         </tbody>
       </table>
@@ -883,7 +884,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     if (accounts.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" class="p-8 text-center text-xs text-muted-foreground bg-muted/10">
+          <td colspan="9" class="p-8 text-center text-xs text-muted-foreground bg-muted/10">
             ${rawAccounts.length === 0 ? 'No Pinterest accounts tracked in archive yet.' : 'No accounts matching search query.'}
           </td>
         </tr>
@@ -902,6 +903,8 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           ? new Date(new Date(acc.last_run_at).getTime() + Number(acc.interval_days) * 86400000).toLocaleString() + ' (est.)'
           : 'Pending';
         const nextRunStr = acc.next_run_at ? fmtDateTime(acc.next_run_at) : (acc.last_run_at ? `${fmtDate(new Date(new Date(acc.last_run_at).getTime() + Number(acc.interval_days || 3) * 86400000).toISOString())} (est.)` : 'Pending');
+        const changed = Number(acc.changed_last_refresh ?? 0);
+        const total = Number(acc.checked_last_refresh ?? (acc.db_pins_count !== undefined ? acc.db_pins_count : (acc.pins_count ?? 0)));
 
         return `
           <tr class="hover:bg-muted/40 transition-colors group">
@@ -945,6 +948,9 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
                 ${fmtNumber(acc.db_pins_count !== undefined ? acc.db_pins_count : acc.pins_count)}
               </span>
             </td>
+            <td class="py-3 px-4 font-medium" title="Last refresh: ${changed} of ${total} checked">
+              <span class="font-bold ${changed>0?'text-emerald-500':'text-muted-foreground'}">${changed}/${total}</span>
+            </td>
             <td class="py-3 px-4 text-muted-foreground">
               <span class="inline-flex items-center rounded-md bg-muted/60 px-2 py-0.5 text-[11px] font-medium text-foreground">
                 ${escapeHtml(String(acc.interval_days || 3))}d cycle
@@ -954,6 +960,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
               <div class="text-foreground font-semibold text-xs" title="Last run: ${lastRunFull}">
                 ${lastRunStr}
               </div>
+              <span class="text-[10px] ${changed>0?'text-emerald-500':'text-muted-foreground'}">+${changed} today</span>
               <div class="text-[10px] text-muted-foreground/80 mt-0.5" title="Next run: ${acc.next_run_at ? new Date(acc.next_run_at).toLocaleString() : nextEst}">
                 Next: ${nextRunStr}
               </div>
