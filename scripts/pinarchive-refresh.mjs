@@ -349,24 +349,32 @@ function extractPinData(html, pinId) {
 }
 
 async function fetchPinFromPinterest(pinId) {
-  const res = await fetch(`https://www.pinterest.com/pin/${pinId}/`, { headers: HEADERS, redirect: 'follow', signal: AbortSignal.timeout(15000) });
-  if (res.status !== 200) return { ok: false, code: res.status };
-  const html = await res.text();
-  const data = extractPinData(html, pinId);
-  if (!data) {
+  try {
+    const res = await fetch(`https://www.pinterest.com/pin/${pinId}/`, { headers: HEADERS, redirect: 'follow', signal: AbortSignal.timeout(15000) });
+    if (res.status !== 200) return { ok: false, code: res.status };
+    const html = await res.text();
+    const data = extractPinData(html, pinId);
+    if (!data) {
+      return {
+        ok: false,
+        code: 200,
+        error: 'extraction-failed',
+        diag: {
+          htmlLen: html.length,
+          relay: html.includes('__PWS_RELAY_REGISTER_COMPLETED_REQUEST__'),
+          pws: html.includes('__PWS_DATA__'),
+          hasPinId: html.includes(pinId),
+        },
+      };
+    }
+    return { ok: true, ...data };
+  } catch (err) {
     return {
       ok: false,
-      code: 200,
-      error: 'extraction-failed',
-      diag: {
-        htmlLen: html.length,
-        relay: html.includes('__PWS_RELAY_REGISTER_COMPLETED_REQUEST__'),
-        pws: html.includes('__PWS_DATA__'),
-        hasPinId: html.includes(pinId),
-      },
+      code: 0,
+      error: err?.name === 'TimeoutError' || err?.name === 'AbortError' ? 'fetch-timeout-15s' : (err?.message || 'fetch-failed'),
     };
   }
-  return { ok: true, ...data };
 }
 
 async function pushBatch(workspaceId, username, pins, followerCount, totalPins) {
@@ -411,7 +419,7 @@ async function main() {
   // Load workspace settings to map gating controls
   const settingsMap = new Map();
   try {
-    const wsSettings = await supaQuery('pa_workspace_settings', 'select=workspace_id,ingest_enabled,paused_account_policy');
+    const wsSettings = await supaQuery('pa_workspace_settings', 'select=workspace_id,ingest_enabled,paused_account_policy,refresh_max_pins');
     if (Array.isArray(wsSettings)) {
       for (const s of wsSettings) {
         settingsMap.set(s.workspace_id, s);
@@ -467,8 +475,34 @@ async function main() {
       console.log(`[SKIP] ${acc.username}: outside requested account.`); continue;
     }
 
-    const pinQueryLimit = CFG.MAX_PINS > 0 ? `&limit=${CFG.MAX_PINS}` : '';
-    const allPins = await supaQuery('pa_pins', `select=pin_id,saves,repins,comments,share_count,reactions,annotations,seo_category,canonical_pin_id,seo_alt_text,board_pin_count,board_last_modified_at,archived_at,title,description,link,utm_link,domain,board_name,board_id,created_at_pinterest,image_url,dominant_color,image_signature,node_id,is_video,velocity&workspace_id=eq.${acc.workspace_id}&account_id=eq.${acc.id}&order=last_updated_at.asc${pinQueryLimit}`);
+    // X2: Precedence: env REFRESH_MAX_PINS if set -> else DB setting -> else 0 (unlimited with pagination)
+    const envMaxPinsRaw = process.env.REFRESH_MAX_PINS !== undefined && process.env.REFRESH_MAX_PINS.trim() !== ''
+      ? parseInt(process.env.REFRESH_MAX_PINS, 10)
+      : null;
+    const settingsRefreshMaxPins = typeof wsSetting?.refresh_max_pins === 'number' ? wsSetting.refresh_max_pins : null;
+    const configuredCap = envMaxPinsRaw !== null && !isNaN(envMaxPinsRaw)
+      ? envMaxPinsRaw
+      : (settingsRefreshMaxPins !== null && !isNaN(settingsRefreshMaxPins) ? settingsRefreshMaxPins : 0);
+
+    const cap = configuredCap > 0 ? configuredCap : Number.MAX_SAFE_INTEGER;
+    const effectiveCap = Math.min(cap, 10000);
+
+    // True pagination loop (1000 per page)
+    const allPins = [];
+    let offset = 0;
+    const PAGE = 1000;
+    while (allPins.length < effectiveCap) {
+      const fetchLimit = Math.min(PAGE, effectiveCap - allPins.length);
+      const chunk = await supaQuery(
+        'pa_pins',
+        `select=pin_id,saves,repins,comments,share_count,reactions,annotations,seo_category,canonical_pin_id,seo_alt_text,board_pin_count,board_last_modified_at,archived_at,title,description,link,utm_link,domain,board_name,board_id,created_at_pinterest,image_url,dominant_color,image_signature,node_id,is_video,velocity&workspace_id=eq.${acc.workspace_id}&account_id=eq.${acc.id}&order=last_updated_at.asc&limit=${fetchLimit}&offset=${offset}`
+      );
+      if (!Array.isArray(chunk) || chunk.length === 0) break;
+      allPins.push(...chunk);
+      if (chunk.length < fetchLimit) break;
+      offset += chunk.length;
+    }
+
     const pins = allPins.filter((_, idx) => idx % SHARD_COUNT === REFRESH_SHARD);
 
     if (!pins.length) continue;
@@ -482,8 +516,8 @@ async function main() {
 
     const sem = new Semaphore(CFG.CONCURRENCY);
 
-    // Two-Phase: Phase 1 (Concurrent Fetch & Extract)
-    await Promise.all(
+    // Two-Phase: Phase 1 (Concurrent Fetch & Extract with Promise.allSettled)
+    await Promise.allSettled(
       pins.map(async (p) => {
         await sem.acquire();
         try {
@@ -546,8 +580,10 @@ async function main() {
           const newAnnotations = (Array.isArray(fresh.annotations) ? fresh.annotations : [])
             .filter(a => a?.name && !existingAnnotationNames.has(a.name));
 
+          // X3: ageDays NaN protection
           const createdAt = p.created_at_pinterest || fresh.created_at_pinterest;
-          const ageDays = createdAt ? Math.max(1, Math.round((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24))) : 1;
+          const ms = createdAt ? Date.now() - new Date(createdAt).getTime() : NaN;
+          const ageDays = !Number.isFinite(ms) || ms <= 0 ? 1 : Math.max(1, Math.round(ms / (1000 * 60 * 60 * 24)));
 
           if (
             fresh.saves !== oldSaves ||
