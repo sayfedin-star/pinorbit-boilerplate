@@ -1,6 +1,8 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import SectionHeader from '../../components/ui/SectionHeader.astro';
+import CronProviderSelector from '../../components/cron/CronProviderSelector.astro';
+import AddNewScheduleModal from '../../components/cron/AddNewScheduleModal.astro';
 ---
 
 <Layout title="Competitor Intelligence Settings" description="Closed-loop control plane for Pinterest competitor ingestion, credential vault, pipeline schedules, and live job auditing.">
@@ -28,6 +30,86 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
   </div>
 
   <div class="space-y-8">
+    <!-- ═══ SECTION 0: Automation Schedules & Cron Provider ═══ -->
+    <div class="rounded-xl border border-border bg-card p-6 shadow-sm space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5">
+        <div>
+          <h2 class="text-base font-bold text-foreground flex items-center gap-2">
+            <span>⚡</span>
+            <span>Automation Schedules & Cron Provider</span>
+          </h2>
+          <p class="text-xs text-muted-foreground mt-0.5">Stateless multi-job scheduler for Competitor profile scraping, board change detection, and metrics refresh.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button
+            id="btn-open-schedule-modal"
+            type="button"
+            class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary/90 transition-all cursor-pointer"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>Configure Schedule</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Cron Provider Selector Component -->
+      <CronProviderSelector
+        currentProvider="fastcron"
+        workspaceId=""
+        project="competitors"
+      />
+
+      <!-- FastCron API Tokens Table Card -->
+      <div class="rounded-xl border border-border/80 bg-background/50 p-4 space-y-3">
+        <div class="flex flex-wrap items-center justify-between border-b border-border/80 pb-2.5 gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-foreground">FastCron API Tokens</span>
+            <span class="text-[10px] font-semibold text-muted-foreground px-2 py-0.5 rounded-full bg-muted">Workspace Registry</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              id="btn-ping-tokens"
+              type="button"
+              class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground font-semibold px-2 py-1 rounded-lg border border-border bg-card hover:bg-muted transition-all cursor-pointer"
+            >
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              <span>Test Connection</span>
+            </button>
+            <button
+              id="btn-add-token"
+              type="button"
+              class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer"
+            >
+              + Add Token
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="text-left border-b border-border text-muted-foreground">
+                <th class="p-2.5 font-semibold">TOKEN NAME</th>
+                <th class="p-2.5 font-semibold">MASKED KEY</th>
+                <th class="p-2.5 font-semibold">SOURCE</th>
+                <th class="p-2.5 font-semibold">STATUS</th>
+                <th class="p-2.5 font-semibold text-right">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody id="tokens-table-rows">
+              <tr>
+                <td colspan="5" class="p-4 text-center text-muted-foreground">Loading FastCron token registry...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pt-2 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
+          <span>Tokens are encrypted with AES-GCM at rest using workspace KEK</span>
+          <span id="token-status-msg" class="text-emerald-500 font-medium">✓ Vault healthy</span>
+        </div>
+      </div>
+    </div>
+
     <!-- ═══ SECTION 1: Pipeline Settings ═══ -->
     <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5 mb-5">
@@ -241,6 +323,57 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     </div>
   </div>
 
+  <!-- ═══ MODAL: Add FastCron Token ═══ -->
+  <div id="comp-token-modal" class="overlay-root fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4" aria-modal="true" role="dialog">
+    <div class="fixed inset-0" data-close></div>
+    <div class="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4 z-10">
+      <div class="flex items-center justify-between border-b border-border pb-3">
+        <h3 class="text-base font-bold text-foreground">Add FastCron API Token</h3>
+        <button data-close class="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
+          ✕
+        </button>
+      </div>
+      <div id="comp-token-error" class="hidden rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-500"></div>
+      <form id="comp-token-form" class="space-y-4 text-xs">
+        <div>
+          <label for="comp-f-token-name" class="block font-bold text-foreground mb-1">Token Name / Label</label>
+          <input
+            type="text"
+            id="comp-f-token-name"
+            placeholder="e.g. Competitor FastCron API Key"
+            class="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground font-semibold focus:border-primary focus:outline-none"
+            required
+          />
+        </div>
+        <div>
+          <label for="comp-f-token-value" class="block font-bold text-foreground mb-1">FastCron API Secret Key</label>
+          <input
+            type="password"
+            id="comp-f-token-value"
+            placeholder="Paste FastCron API Token"
+            class="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground font-mono focus:border-primary focus:outline-none"
+            required
+          />
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="comp-f-token-default" class="h-4 w-4 rounded border-border text-primary cursor-pointer" />
+          <label for="comp-f-token-default" class="text-xs font-semibold text-foreground cursor-pointer">Set as default workspace token</label>
+        </div>
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-border">
+          <button type="button" data-close class="rounded-xl border border-border bg-background px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-all cursor-pointer">
+            Cancel
+          </button>
+          <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer">
+            Save Token
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL: Automation Schedule Builder ═══ -->
+  <AddNewScheduleModal modalId="competitors-schedule-modal" pipeline="competitors" />
+
   <!-- Toast Notification Anchor -->
   <div id="toast-root" aria-live="polite" class="fixed bottom-4 right-4 z-[70] flex flex-col gap-2 w-80 max-w-[calc(100vw-2rem)]"></div>
 </Layout>
@@ -340,6 +473,69 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     } else {
       dryBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground';
       dryBadge.textContent = 'Off';
+    }
+
+    updateProviderUI(settings?.cron_provider);
+  }
+
+  function updateProviderUI(provider?: string) {
+    const p = (provider || 'fastcron').toLowerCase();
+    const isFastCron = p === 'fastcron';
+    const isCronJobOrg = p === 'cronjoborg' || p === 'cron-job.org';
+    document.querySelectorAll('[data-provider]').forEach((btn) => {
+      const bType = btn.getAttribute('data-provider');
+      const isCurrent = (bType === 'fastcron' && isFastCron) || (bType === 'cronjoborg' && isCronJobOrg);
+      btn.className = `px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${
+        isCurrent ? 'bg-indigo-600 text-white shadow-sm font-semibold' : 'text-zinc-400 hover:text-zinc-200'
+      }`;
+      const dot = btn.querySelector('span');
+      if (dot) {
+        dot.className = `w-2 h-2 rounded-full ${isCurrent ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`;
+      }
+    });
+  }
+
+  async function loadTokens() {
+    const tbody = $('tokens-table-rows');
+    const select = $('cron-token-select') as HTMLSelectElement;
+    try {
+      const res = await fetchAPI('/api/competitors/tokens');
+      const tokens = Array.isArray(res) ? res : [];
+      if (!tbody) return;
+
+      if (tokens.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted-foreground">No FastCron tokens registered. Click "+ Add Token" above to add one.</td></tr>`;
+      } else {
+        tbody.innerHTML = tokens.map((t: any) => {
+          const isEnv = t.source === 'env';
+          const isDefault = Boolean(t.is_default);
+          const defaultBadge = isDefault
+            ? `<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/30">★ Default</span>`
+            : `<span class="text-muted-foreground text-[10px]">Active</span>`;
+          const sourceBadge = isEnv
+            ? `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-500">Env</span>`
+            : `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground">Vault</span>`;
+          const delBtn = isEnv
+            ? `<span class="text-[10px] text-muted-foreground">Managed by Server</span>`
+            : `<button data-token-id="${t.id}" class="token-del text-rose-500 hover:text-rose-400 font-semibold text-xs transition-colors cursor-pointer">Delete</button>`;
+
+          return `<tr class="hover:bg-muted/30 transition-colors border-b border-border/60">
+            <td class="p-2.5 font-semibold text-foreground">${escHtml(t.name)}</td>
+            <td class="p-2.5 font-mono text-muted-foreground text-[11px]">${escHtml(t.masked_token)}</td>
+            <td class="p-2.5">${sourceBadge}</td>
+            <td class="p-2.5">${defaultBadge}</td>
+            <td class="p-2.5 text-right">${delBtn}</td>
+          </tr>`;
+        }).join('');
+      }
+
+      if (select) {
+        select.innerHTML = tokens.length === 0
+          ? `<option value="">Server Default (Environment Variable)</option>`
+          : tokens.map((t: any) => `<option value="${t.id || ''}" ${t.is_default ? 'selected' : ''}>${escHtml(t.name)} (${escHtml(t.masked_token)}) ${t.is_default ? '★ Default' : ''}</option>`).join('');
+      }
+    } catch (err: any) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-rose-500">Failed to load tokens: ${escHtml(err.message)}</td></tr>`;
     }
   }
 
@@ -489,6 +685,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       const [opsData, cookiesData] = await Promise.all([
         fetchAPI('/api/admin/competitor-ops'),
         fetchAPI('/api/admin/pinterest-cookies'),
+        loadTokens(),
       ]);
 
       if (opsData.success) {
@@ -701,6 +898,21 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       }
     }
 
+    // Delete FastCron Token
+    if (target.classList.contains('token-del')) {
+      const id = target.dataset.tokenId;
+      if (!id || !confirm('Are you sure you want to delete this API token from the vault?')) return;
+      try {
+        await fetchAPI(`/api/competitors/tokens/${id}`, {
+          method: 'DELETE',
+        });
+        toast('Token removed from vault', 'info');
+        await loadTokens();
+      } catch (err: any) {
+        toast(`Failed to delete token: ${err.message}`, 'error');
+      }
+    }
+
     // Update single competitor now
     if (target.classList.contains('update-now')) {
       const competitor_id = target.dataset.id;
@@ -716,6 +928,111 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         toast(`Dispatch failed: ${err.message}`, 'error');
       }
     }
+  });
+
+  // 6. FastCron Token Vault Actions
+  $('btn-add-token')?.addEventListener('click', () => {
+    $('comp-token-error')?.classList.add('hidden');
+    ( $('comp-f-token-name') as HTMLInputElement ).value = '';
+    ( $('comp-f-token-value') as HTMLInputElement ).value = '';
+    ( $('comp-f-token-default') as HTMLInputElement ).checked = true;
+    showModal($('comp-token-modal'));
+  });
+
+  $('add-token-modal-btn')?.addEventListener('click', () => {
+    $('comp-token-error')?.classList.add('hidden');
+    ( $('comp-f-token-name') as HTMLInputElement ).value = '';
+    ( $('comp-f-token-value') as HTMLInputElement ).value = '';
+    ( $('comp-f-token-default') as HTMLInputElement ).checked = true;
+    showModal($('comp-token-modal'));
+  });
+
+  $('comp-token-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = ( $('comp-f-token-name') as HTMLInputElement ).value.trim();
+    const token = ( $('comp-f-token-value') as HTMLInputElement ).value.trim();
+    const is_default = ( $('comp-f-token-default') as HTMLInputElement ).checked;
+
+    if (!name || token.length < 8) {
+      const errEl = $('comp-token-error');
+      if (errEl) {
+        errEl.textContent = 'Token name and key (at least 8 characters) are required.';
+        errEl.classList.remove('hidden');
+      }
+      return;
+    }
+
+    try {
+      const res = await fetchAPI('/api/competitors/tokens', {
+        method: 'POST',
+        body: JSON.stringify({ name, token, is_default }),
+      });
+      if (res.success) {
+        hideModal($('comp-token-modal'));
+        toast('Token saved and encrypted in vault', 'success');
+        await loadTokens();
+      }
+    } catch (err: any) {
+      const errEl = $('comp-token-error');
+      if (errEl) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+      }
+    }
+  });
+
+  $('btn-ping-tokens')?.addEventListener('click', async () => {
+    const statusEl = $('token-status-msg');
+    if (statusEl) statusEl.textContent = 'Testing connection...';
+    try {
+      await fetchAPI('/api/competitors/tokens');
+      if (statusEl) statusEl.textContent = '✓ Vault healthy';
+      toast('FastCron token registry connection verified', 'success');
+    } catch (err: any) {
+      if (statusEl) statusEl.textContent = '⚠ Connection error';
+      toast(`Connection check failed: ${err.message}`, 'error');
+    }
+  });
+
+  // 7. Schedule Modal & Provider Selection
+  $('btn-open-schedule-modal')?.addEventListener('click', () => {
+    document.getElementById('competitors-schedule-modal')?.classList.remove('hidden');
+  });
+
+  window.addEventListener('cron:schedule-selected', async (e: any) => {
+    const { expression, timezone } = e.detail;
+    try {
+      const res = await fetchAPI('/api/admin/competitor-ops', {
+        method: 'PUT',
+        body: JSON.stringify({ cron_expression: expression, timezone, schedule_status: 'active' }),
+      });
+      if (res.success) {
+        toast(`Schedule updated to ${expression} (${timezone})`, 'success');
+        loadAllState();
+      }
+    } catch (err: any) {
+      toast(`Failed to update schedule: ${err.message}`, 'error');
+    }
+  });
+
+  document.querySelectorAll('[data-provider]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const provider = btn.getAttribute('data-provider');
+      if (!provider) return;
+      try {
+        const res = await fetchAPI('/api/admin/competitor-ops', {
+          method: 'PUT',
+          body: JSON.stringify({ cron_provider: provider }),
+        });
+        if (res.success) {
+          updateProviderUI(provider);
+          toast(`Cron provider set to ${provider === 'cronjoborg' ? 'cron-job.org' : 'FastCron'}`, 'success');
+          loadAllState();
+        }
+      } catch (err: any) {
+        toast(`Failed to switch provider: ${err.message}`, 'error');
+      }
+    });
   });
 
   // Initial Boot

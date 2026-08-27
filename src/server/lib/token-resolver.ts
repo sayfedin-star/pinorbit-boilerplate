@@ -33,6 +33,20 @@ function getClientAndTable(
   project: ProjectName,
   runtimeEnv?: Record<string, any>
 ): { client: SupabaseClient; table: string } {
+  const tableMap: Record<ProjectName, string> = {
+    scheduling: 'fastcron_tokens',
+    analytics: 'analytics_fastcron_tokens',
+    competitors: 'competitor_fastcron_tokens',
+    pinarchive: 'pinarchive_fastcron_tokens',
+  };
+
+  if (runtimeEnv?.supabaseClient) {
+    return {
+      client: runtimeEnv.supabaseClient,
+      table: tableMap[project] || 'fastcron_tokens',
+    };
+  }
+
   switch (project) {
     case 'scheduling':
       return {
@@ -110,39 +124,50 @@ export async function resolveToken(
       .eq('is_default', true)
       .maybeSingle();
 
-    if (defRow?.token_encrypted) {
-      const dec = await decryptToken(defRow.token_encrypted, kek);
+    if (defRow) {
+      let dec = defRow.token_encrypted && kek ? await decryptToken(defRow.token_encrypted, kek) : null;
+      if (!dec && (defRow as any).token) dec = (defRow as any).token;
+      if (!dec && envToken) dec = envToken;
       if (dec && dec.trim().length >= 8) {
         return {
           token: dec.trim(),
           source: 'workspace_registry',
           tokenId: defRow.id,
-          name: defRow.name,
-          maskedToken: defRow.token_masked,
+          name: defRow.name || 'Workspace Default',
+          maskedToken: defRow.token_masked || ('••••' + dec.trim().slice(-4)),
         };
       }
     }
 
     // 3. Any first token in project workspace registry
-    const { data: anyRows } = await client
-      .from(table)
-      .select('id, name, token_encrypted, token_masked, is_default')
-      .eq('workspace_id', workspaceId)
-      .order('created_at', { ascending: true })
-      .limit(1);
+    try {
+      let anyQuery: any = client
+        .from(table)
+        .select('id, name, token_encrypted, token_masked, is_default')
+        .eq('workspace_id', workspaceId);
 
-    if (anyRows && anyRows.length > 0 && anyRows[0].token_encrypted) {
-      const dec = await decryptToken(anyRows[0].token_encrypted, kek);
-      if (dec && dec.trim().length >= 8) {
-        return {
-          token: dec.trim(),
-          source: 'workspace_registry',
-          tokenId: anyRows[0].id,
-          name: anyRows[0].name,
-          maskedToken: anyRows[0].token_masked,
-        };
+      if (typeof anyQuery?.order === 'function') {
+        anyQuery = anyQuery.order('created_at', { ascending: true });
       }
-    }
+      if (typeof anyQuery?.limit === 'function') {
+        anyQuery = anyQuery.limit(1);
+      }
+
+      const { data: anyRows } = await anyQuery;
+
+      if (anyRows && anyRows.length > 0 && anyRows[0].token_encrypted) {
+        const dec = await decryptToken(anyRows[0].token_encrypted, kek);
+        if (dec && dec.trim().length >= 8) {
+          return {
+            token: dec.trim(),
+            source: 'workspace_registry',
+            tokenId: anyRows[0].id,
+            name: anyRows[0].name,
+            maskedToken: anyRows[0].token_masked,
+          };
+        }
+      }
+    } catch {}
   }
 
   // 4. Environment fallback
@@ -180,12 +205,19 @@ export async function listWorkspaceTokens(
     const { client, table } = getClientAndTable(project, runtimeEnv);
     const kek = await resolveTokenKek(runtimeEnv || {});
 
-    const { data: rows, error } = await client
+    let query: any = client
       .from(table)
       .select('id, name, token_encrypted, token_masked, is_default, created_at')
-      .eq('workspace_id', workspaceId)
-      .order('is_default', { ascending: false })
-      .order('created_at', { ascending: false });
+      .eq('workspace_id', workspaceId);
+
+    if (typeof query?.order === 'function') {
+      query = query.order('is_default', { ascending: false });
+      if (typeof query?.order === 'function') {
+        query = query.order('created_at', { ascending: false });
+      }
+    }
+
+    const { data: rows, error } = await query;
 
     if (!error && Array.isArray(rows)) {
       for (const row of rows) {

@@ -316,9 +316,10 @@ export const GET: APIRoute = async ({ locals }) => {
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id);
 
+    const envWithClient = { ...(runtimeEnv || {}), supabaseClient: schedulingClient };
     const dispatchUrl = getDispatchEndpointUrl(runtimeEnv);
-    const tokens = await getWorkspaceFastCronTokens(workspaceId, runtimeEnv);
-    const tokenInfo = await getPinArchiveTokenInfo(workspaceId, runtimeEnv);
+    const tokens = await getWorkspaceFastCronTokens(workspaceId, envWithClient);
+    const tokenInfo = await getPinArchiveTokenInfo(workspaceId, envWithClient);
 
     if (!tokenInfo.token && tokens.length === 0) {
       return new Response(
@@ -444,7 +445,7 @@ export const GET: APIRoute = async ({ locals }) => {
         configured: true,
         token_source: tokenInfo.token_source || 'workspace_registry',
         token_name: tokenInfo.token_name || 'Workspace Default',
-        masked_token: tokenInfo.masked_token || '********',
+        masked_token: tokenInfo.masked_token || 'fastcron...',
         tokens: tokens.map((t) => ({
           id: t.id,
           name: t.name,
@@ -565,7 +566,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    const targetTokenObj = await resolveTargetToken(body?.token_id, workspaceId, runtimeEnv);
+    const envWithClient = { ...(runtimeEnv || {}), supabaseClient: schedulingClient };
+    const targetTokenObj = await resolveTargetToken(body?.token_id, workspaceId, envWithClient);
     if (!targetTokenObj || !targetTokenObj.token) {
       return new Response(
         JSON.stringify({ success: false, error: 'FastCron API token not configured on server or in workspace registry.' }),
@@ -885,7 +887,8 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id);
 
-    const targetTokenObj = await resolveTargetToken(tokenId, workspaceId, runtimeEnv);
+    const envWithClient = { ...(runtimeEnv || {}), supabaseClient: schedulingClient };
+    const targetTokenObj = await resolveTargetToken(tokenId, workspaceId, envWithClient);
     if (!targetTokenObj || !targetTokenObj.token) {
       return new Response(
         JSON.stringify({ success: false, error: 'FastCron API token not configured on server.' }),
