@@ -1,46 +1,53 @@
 name: Update Pinterest Competitors
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'   # Poller: adopts dashboard-queued jobs (<=5min, no PAT)
-    - cron: '0 2 * * *'     # Daily full sync (all active workspaces)
   workflow_dispatch:
     inputs:
-      target_username: { description: 'Username (empty = all active)', type: string, required: false }
-      dry_run: { description: 'Dry-run mode', type: boolean, required: false, default: false }
-      force_run: { description: 'Override pipeline-disabled', type: boolean, required: false, default: false }
+      workspace_id:
+        description: 'Workspace UUID (empty = all workspaces)'
+        type: string
+        required: false
+      target_scope:
+        description: 'Scope: All Active or Selected'
+        type: string
+        required: false
+        default: 'All Active'
+      competitor_ids:
+        description: 'Comma-separated competitor UUIDs'
+        type: string
+        required: false
+      target_username:
+        description: 'Username (empty = all in scope)'
+        type: string
+        required: false
+      dry_run:
+        description: 'Dry-run mode (true/false)'
+        type: boolean
+        required: false
+        default: false
+      force_run:
+        description: 'Override pipeline-disabled and frequency checks'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
-  poll-queued:
-    if: github.event_name == 'schedule' && github.event.schedule == '*/5 * * * *'
-    runs-on: ubuntu-latest
-    env:
-      POLL_QUEUED: 'true'
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      PINTEREST_COOKIE: ${{ secrets.PINTEREST_COOKIE }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22 }
-      - run: npm install @supabase/supabase-js --no-save
-      - run: node scripts/update-competitors.mjs
-
   sync:
-    if: >-
-      (github.event_name == 'schedule' && github.event.schedule == '0 2 * * *') ||
-      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       PINTEREST_COOKIE: ${{ secrets.PINTEREST_COOKIE }}
+      WORKSPACE_ID: ${{ github.event.inputs.workspace_id || '' }}
+      TARGET_SCOPE: ${{ github.event.inputs.target_scope || '' }}
+      COMPETITOR_IDS: ${{ github.event.inputs.competitor_ids || '' }}
       TARGET_USERNAME: ${{ github.event.inputs.target_username || '' }}
-      DRY_RUN: ${{ (github.event.inputs.dry_run == true) && 'true' || '' }}
-      FORCE_RUN: ${{ (github.event.inputs.force_run == true) && 'true' || '' }}
+      DRY_RUN: ${{ (github.event.inputs.dry_run == true || github.event.inputs.dry_run == 'true') && 'true' || '' }}
+      FORCE_RUN: ${{ (github.event.inputs.force_run == true || github.event.inputs.force_run == 'true') && 'true' || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22 }
+        with:
+          node-version: 22
       - run: npm install @supabase/supabase-js --no-save
       - run: node scripts/update-competitors.mjs

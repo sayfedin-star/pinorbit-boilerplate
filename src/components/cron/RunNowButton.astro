@@ -1,0 +1,235 @@
+---
+export interface Props {
+  endpoint: string;
+  method?: 'POST' | 'GET';
+  payload?: Record<string, any>;
+  label?: string;
+  forceLabel?: string;
+  size?: 'sm' | 'md' | 'lg';
+  variant?: 'primary' | 'secondary' | 'amber' | 'emerald' | 'subtle';
+  disabled?: boolean;
+  class?: string;
+  buttonId?: string;
+  onSuccessEvent?: string;
+  scope?: string;
+}
+
+const {
+  endpoint,
+  method = 'POST',
+  payload = {},
+  label = 'Run Now',
+  forceLabel = 'Force Run',
+  size = 'md',
+  variant = 'primary',
+  disabled = false,
+  class: className = '',
+  buttonId = `run-now-btn-${Math.random().toString(36).slice(2, 9)}`,
+  onSuccessEvent = 'cron:run-completed',
+  scope = 'default',
+} = Astro.props;
+
+const sizeClasses = {
+  sm: 'px-2.5 py-1 text-xs gap-1.5',
+  md: 'px-3.5 py-2 text-sm gap-2',
+  lg: 'px-5 py-2.5 text-base gap-2.5',
+}[size];
+
+const variantClasses = {
+  primary: 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-sm border border-blue-500/30',
+  secondary: 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 shadow-sm',
+  amber: 'bg-amber-600 hover:bg-amber-500 text-white shadow-sm border border-amber-500/30',
+  emerald: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm border border-emerald-500/30',
+  subtle: 'bg-zinc-900/60 hover:bg-zinc-800/80 text-zinc-300 border border-zinc-800',
+}[variant];
+---
+
+<div class="relative inline-flex items-center group/runnow">
+  <button
+    id={buttonId}
+    type="button"
+    disabled={disabled}
+    data-endpoint={endpoint}
+    data-method={method}
+    data-payload={JSON.stringify(payload)}
+    data-label={label}
+    data-force-label={forceLabel}
+    data-success-event={onSuccessEvent}
+    data-scope={scope}
+    class={`relative select-none overflow-hidden font-medium rounded-lg inline-flex items-center justify-center transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${sizeClasses} ${variantClasses} ${className}`}
+    title="Click to Run Now. Hold for 800ms to Force Run (bypasses active windows, rate caps & disabled flags)."
+  >
+    <!-- Circular Progress SVG Ring (Charges on Long Press) -->
+    <svg
+      class="runnow-progress-ring absolute inset-0 w-full h-full pointer-events-none opacity-0 transition-opacity duration-150"
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+    >
+      <rect
+        class="runnow-progress-bar"
+        x="0"
+        y="0"
+        width="100"
+        height="100"
+        fill="rgba(234, 179, 8, 0.25)"
+        style="transform-origin: left; transform: scaleX(0); transition: transform 800ms linear;"
+      />
+    </svg>
+
+    <!-- Normal State Icon & Label -->
+    <span class="runnow-content inline-flex items-center gap-1.5 z-10 pointer-events-none">
+      <svg class="runnow-normal-icon w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span class="runnow-label">{label}</span>
+    </span>
+
+    <!-- Charging State Indicator -->
+    <span class="runnow-charging-text hidden items-center gap-1.5 text-amber-300 font-bold z-10 pointer-events-none animate-pulse">
+      <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+      <span>Hold for Force...</span>
+    </span>
+
+    <!-- Running Spinner State -->
+    <span class="runnow-running-text hidden items-center gap-1.5 z-10 pointer-events-none">
+      <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <span>Executing...</span>
+    </span>
+  </button>
+</div>
+
+<script>
+  function setupRunNowButtons() {
+    document.querySelectorAll<HTMLButtonElement>('button[data-endpoint]').forEach((btn) => {
+      if (btn.dataset.initialized) return;
+      btn.dataset.initialized = 'true';
+
+      let pressTimer: number | null = null;
+      let isLongPress = false;
+      const PRESS_DURATION = 800; // ms
+
+      const ring = btn.querySelector('.runnow-progress-ring') as HTMLElement;
+      const bar = btn.querySelector('.runnow-progress-bar') as HTMLElement;
+      const normalContent = btn.querySelector('.runnow-content') as HTMLElement;
+      const chargingText = btn.querySelector('.runnow-charging-text') as HTMLElement;
+      const runningText = btn.querySelector('.runnow-running-text') as HTMLElement;
+      const normalLabel = btn.querySelector('.runnow-label') as HTMLElement;
+
+      function startPress(e: Event) {
+        if (btn.disabled) return;
+        isLongPress = false;
+
+        if (ring && bar) {
+          ring.style.opacity = '1';
+          bar.style.transition = `transform ${PRESS_DURATION}ms linear`;
+          bar.style.transform = 'scaleX(1)';
+        }
+
+        if (chargingText && normalContent) {
+          pressTimer = window.setTimeout(() => {
+            isLongPress = true;
+            normalContent.classList.add('hidden');
+            chargingText.classList.remove('hidden');
+            chargingText.classList.add('inline-flex');
+            
+            // Trigger Force Run immediately on reaching 800ms
+            cancelPress();
+            triggerExecution(true);
+          }, PRESS_DURATION);
+        }
+      }
+
+      function cancelPress() {
+        if (pressTimer) {
+          clearTimeout(pressTimer);
+          pressTimer = null;
+        }
+        if (ring && bar) {
+          ring.style.opacity = '0';
+          bar.style.transition = 'none';
+          bar.style.transform = 'scaleX(0)';
+        }
+        if (chargingText && normalContent) {
+          chargingText.classList.add('hidden');
+          chargingText.classList.remove('inline-flex');
+          normalContent.classList.remove('hidden');
+        }
+      }
+
+      function handleClick(e: MouseEvent) {
+        if (isLongPress) {
+          // Already handled via long-press timeout
+          isLongPress = false;
+          return;
+        }
+        cancelPress();
+        triggerExecution(false);
+      }
+
+      async function triggerExecution(force: boolean) {
+        const endpoint = btn.dataset.endpoint;
+        const method = btn.dataset.method || 'POST';
+        const rawPayload = btn.dataset.payload ? JSON.parse(btn.dataset.payload) : {};
+        const successEvent = btn.dataset.successEvent || 'cron:run-completed';
+
+        const payload = { ...rawPayload, force: force ? true : undefined };
+
+        // Set Loading State
+        btn.disabled = true;
+        normalContent?.classList.add('hidden');
+        chargingText?.classList.add('hidden');
+        runningText?.classList.remove('hidden');
+        runningText?.classList.add('inline-flex');
+
+        try {
+          const fetchOpts: RequestInit = {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+          };
+          if (method !== 'GET' && method !== 'HEAD') {
+            fetchOpts.body = JSON.stringify(payload);
+          }
+
+          const res = await fetch(endpoint!, fetchOpts);
+          const data = await res.json().catch(() => ({}));
+
+          if (res.ok && (data.success !== false)) {
+            // Dispatch success custom event
+            window.dispatchEvent(
+              new CustomEvent(successEvent, {
+                detail: { success: true, force, data, scope: btn.dataset.scope },
+              })
+            );
+          } else {
+            const msg = data.error || data.message || `Request failed with HTTP ${res.status}`;
+            alert(`Execution failed: ${msg}`);
+          }
+        } catch (err: any) {
+          alert(`Network error: ${err.message || 'Failed to dispatch request'}`);
+        } finally {
+          btn.disabled = false;
+          runningText?.classList.add('hidden');
+          runningText?.classList.remove('inline-flex');
+          normalContent?.classList.remove('hidden');
+        }
+      }
+
+      // Pointer & Mouse Events
+      btn.addEventListener('pointerdown', startPress);
+      btn.addEventListener('pointerup', cancelPress);
+      btn.addEventListener('pointerleave', cancelPress);
+      btn.addEventListener('pointercancel', cancelPress);
+      btn.addEventListener('click', handleClick);
+    });
+  }
+
+  // Init on DOM ready and Astro page swaps
+  setupRunNowButtons();
+  document.addEventListener('astro:page-load', setupRunNowButtons);
+</script>

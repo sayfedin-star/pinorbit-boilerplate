@@ -207,33 +207,47 @@ describe('Competitor Ops Console API Endpoints', () => {
       expect(body.jobs).toHaveLength(1);
     });
 
-    it('POST enqueues job and returns 202 queued:true for poller adoption', async () => {
+    it('POST dispatches job and returns 202 dispatched:true', async () => {
       mockCompetitorsClient.from.mockReturnValue({
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
-              data: { id: 'job-uuid-123', status: 'queued' },
+              data: { id: 'job-uuid-123', status: 'running' },
               error: null,
             }),
           }),
         }),
       });
 
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        status: 204,
+        ok: true,
+        text: async () => '',
+      } as any);
+
       const req = new Request('http://localhost/api/admin/competitor-ops', {
         method: 'POST',
-        body: JSON.stringify({ username: 'testcomp' }),
+        body: JSON.stringify({ username: 'testcomp', scope: 'all' }),
       });
 
       const res = await postOps({
         request: req,
-        locals: { user: { id: 'admin-user' }, supabase: {} as any, activeWorkspaceId: 'ws-123' },
+        locals: {
+          user: { id: 'admin-user' },
+          supabase: {} as any,
+          activeWorkspaceId: 'ws-123',
+          runtimeEnv: { GITHUB_DISPATCH_TOKEN: 'gh_test_token_123' },
+        },
       } as any);
 
       expect(res.status).toBe(202);
       const body = await res.json();
       expect(body.success).toBe(true);
       expect(body.job_id).toBe('job-uuid-123');
-      expect(body.queued).toBe(true);
+      expect(body.dispatched).toBe(true);
+      expect(body.target_scope).toBe('All Active');
+
+      fetchSpy.mockRestore();
     });
   });
 

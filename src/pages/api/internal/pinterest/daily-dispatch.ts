@@ -175,8 +175,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
   }
 
-  // 7. Check if connection is disabled
-  if (connection.analytics_enabled === false) {
+  // 7. Check if connection is disabled (bypassed if force=true)
+  const force = body?.force === true || body?.force === 'true';
+  if (!force && connection.analytics_enabled === false) {
     return new Response(
       JSON.stringify({
         success: false,

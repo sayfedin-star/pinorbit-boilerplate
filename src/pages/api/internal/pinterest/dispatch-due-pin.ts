@@ -22,16 +22,20 @@ async function handleDispatch(body: any, locals: any) {
 
   const admin = dbClients.getSchedulingAdmin(runtimeEnv);
 
+  const force = body?.force === true || body?.force === 'true';
+
   // 1) Load schedule + authenticate via per-schedule dispatch token
   const { data: schedule } = await admin.from('posting_schedules').select('*').eq('id', scheduleId).maybeSingle();
   if (!schedule || !schedule.dispatch_token || !(await timingSafeEqual(schedule.dispatch_token, token))) return json({ success: false, error: 'Unauthorized: invalid schedule or dispatch token.' }, 401);
-  if (schedule.status !== 'active') return json({ success: true, dispatched: false, reason: 'paused' });
-  if (schedule.started_at && new Date(schedule.started_at).getTime() > Date.now()) return json({ success: true, dispatched: false, reason: 'not_started' });
+  if (!force && schedule.status !== 'active') return json({ success: true, dispatched: false, reason: 'paused' });
+  if (!force && schedule.started_at && new Date(schedule.started_at).getTime() > Date.now()) return json({ success: true, dispatched: false, reason: 'not_started' });
 
-  // Timezone-aware window and active days enforcement (skipped when explicit cron_expression is configured)
-  const windowCheck = checkScheduleWindow(schedule);
-  if (!windowCheck.allowed) {
-    return json({ success: true, dispatched: false, reason: windowCheck.reason });
+  // Timezone-aware window and active days enforcement (skipped when explicit cron_expression is configured or force=true)
+  if (!force) {
+    const windowCheck = checkScheduleWindow(schedule);
+    if (!windowCheck.allowed) {
+      return json({ success: true, dispatched: false, reason: windowCheck.reason });
+    }
   }
 
   const accountId = schedule.account_id;
@@ -51,11 +55,11 @@ async function handleDispatch(body: any, locals: any) {
 
   // 3) Account + daily cap
   const { data: account } = await admin.from('accounts').select('*').eq('id', accountId).maybeSingle();
-  if (!account || account.is_active === false) return json({ success: true, dispatched: false, reason: 'account_inactive' });
+  if (!force && (!account || account.is_active === false)) return json({ success: true, dispatched: false, reason: 'account_inactive' });
   const todayStart = new Date(); todayStart.setUTCHours(0, 0, 0, 0);
   const { count: postedToday } = await admin.from('pins').select('*', { count: 'exact', head: true })
     .eq('account_id', accountId).eq('status', 'posted').gte('posted_at', todayStart.toISOString());
-  if ((postedToday ?? 0) >= (account.max_pins_per_day ?? 20)) return json({ success: true, dispatched: false, reason: 'cap_reached' });
+  if (!force && (postedToday ?? 0) >= (account?.max_pins_per_day ?? 20)) return json({ success: true, dispatched: false, reason: 'cap_reached' });
 
   // 4) Atomic claim
   const { data: claimed, error: rpcErr } = await admin.rpc('claim_due_pins_simple', { p_account_id: accountId, p_limit: schedule.batch ?? 1 });

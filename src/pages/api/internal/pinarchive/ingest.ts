@@ -191,6 +191,9 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
       last_run_at: fetchedAt,
       last_result: account_meta.last_result || 'success',
     };
+    if (payload.trigger === 'refresh') {
+      accountData.last_refresh_at = fetchedAt;
+    }
     if (payload.trigger !== 'refresh' && typeof account_meta.pins_count === 'number' && Number.isFinite(account_meta.pins_count)) {
       accountData.pins_count = Math.max(0, Math.round(account_meta.pins_count));
     }

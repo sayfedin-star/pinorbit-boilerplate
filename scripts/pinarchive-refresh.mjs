@@ -476,9 +476,9 @@ async function main() {
       console.log(`[SKIP] ${acc.username}: outside requested account.`); continue;
     }
 
-    // Eligibility Gate: Check interval_days vs last_run_at / max(last_updated_at)
+    // Eligibility Gate: Check interval_days vs last_refresh_at / last_run_at / max(last_updated_at)
     const intervalDays = Number(acc.interval_days) || Number(wsSetting?.default_interval_days) || 3;
-    let lastRefreshed = acc.last_run_at;
+    let lastRefreshed = acc.last_refresh_at || acc.last_run_at;
 
     if (!lastRefreshed) {
       try {

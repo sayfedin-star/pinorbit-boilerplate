@@ -3,6 +3,8 @@ import Layout from '../../layouts/Layout.astro';
 import SectionHeader from '../../components/ui/SectionHeader.astro';
 import FastCronOptionsCard from '../../components/analytics/FastCronOptionsCard.astro';
 import ConnectionHealthBanner from '../../components/analytics/ConnectionHealthBanner.astro';
+import RunNowButton from '../../components/cron/RunNowButton.astro';
+import CronProviderSelector from '../../components/cron/CronProviderSelector.astro';
 
 import { dbClients } from '../../server/db/clients';
 import { assertWorkspaceAccess } from '../../server/auth/workspace-guard';
@@ -353,9 +355,16 @@ const accountName = connection.display_name || 'Account';
           </div>
         </div>
 
-        <footer class="flex flex-wrap gap-2 border-t border-border pt-3 mt-auto">
+        <footer class="flex flex-wrap items-center gap-2 border-t border-border pt-3 mt-auto">
           <button data-action="ping" class="rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-muted">Test Ping</button>
-          <button data-action="run"  class="rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary/90">Run Now</button>
+          <RunNowButton
+            endpoint="/api/analytics/trigger-sync"
+            payload={{ connection_id: connectionId, channel: "account_analytics" }}
+            label="Run Now"
+            forceLabel="⚡ Force Run"
+            size="sm"
+            variant="primary"
+          />
           <button data-action="sync" class="rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-muted">⚡ Sync Schedule</button>
           <button data-action="logs" class="rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-muted">📋 View Logs</button>
           <button data-action="save" disabled class="ml-auto rounded-xl bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white disabled:opacity-40">Save Settings</button>
@@ -441,9 +450,16 @@ const accountName = connection.display_name || 'Account';
           </div>
         </div>
 
-        <footer class="flex flex-wrap gap-2 border-t border-border pt-3 mt-auto">
+        <footer class="flex flex-wrap items-center gap-2 border-t border-border pt-3 mt-auto">
           <button data-action="ping" class="rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-muted">Test Ping</button>
-          <button data-action="run"  class="rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary/90">Run Now</button>
+          <RunNowButton
+            endpoint="/api/analytics/trigger-sync"
+            payload={{ connection_id: connectionId, channel: "top_pins" }}
+            label="Run Now"
+            forceLabel="⚡ Force Run"
+            size="sm"
+            variant="primary"
+          />
           <button data-action="sync" class="rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-muted">⚡ Sync Schedule</button>
           <button data-action="logs" class="rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-muted">📋 View Logs</button>
           <button data-action="save" disabled class="ml-auto rounded-xl bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white disabled:opacity-40">Save Settings</button>
