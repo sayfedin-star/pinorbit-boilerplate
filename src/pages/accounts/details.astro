@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import SectionHeader from '../../components/ui/SectionHeader.astro';
 import KPIStatCard from '../../components/ui/KPIStatCard.astro';
 import RunNowButton from '../../components/cron/RunNowButton.astro';
+import CronProviderSelector from '../../components/cron/CronProviderSelector.astro';
 ---
 
 <Layout title="Manage Account Details" description="Detailed operational, scheduling, and activity control center for Pinterest account.">
@@ -244,6 +245,15 @@ import RunNowButton from '../../components/cron/RunNowButton.astro';
         <button type="button" id="btn-ping-tokens" class="text-xs text-primary hover:underline font-medium">Test Connection</button>
       </div>
     </div>
+  </div>
+
+  <!-- Cron Engine Provider Selection -->
+  <div class="mb-6">
+    <CronProviderSelector
+      workspaceId={Astro.locals.activeWorkspaceId || ''}
+      project="scheduling"
+      currentProvider="fastcron"
+    />
   </div>
 
   <!-- Section: Posting Schedules & Automation -->

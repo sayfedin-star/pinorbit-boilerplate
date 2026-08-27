@@ -5,6 +5,7 @@ import FastCronOptionsCard from '../../components/analytics/FastCronOptionsCard.
 import ConnectionHealthBanner from '../../components/analytics/ConnectionHealthBanner.astro';
 import RunNowButton from '../../components/cron/RunNowButton.astro';
 import CronProviderSelector from '../../components/cron/CronProviderSelector.astro';
+import AddNewScheduleModal from '../../components/cron/AddNewScheduleModal.astro';
 
 import { dbClients } from '../../server/db/clients';
 import { assertWorkspaceAccess } from '../../server/auth/workspace-guard';
@@ -288,6 +289,13 @@ const accountName = connection.display_name || 'Account';
   <section id="panel-pipe" role="tabpanel" aria-labelledby="tab-pipe" hidden class="space-y-6">
     <!-- C2.1: Health Banner -->
     <ConnectionHealthBanner />
+
+    <!-- Cron Engine Provider Authority -->
+    <CronProviderSelector
+      workspaceId={workspaceId}
+      project="analytics"
+      currentProvider="fastcron"
+    />
 
     <!-- C2.2: Pipeline Cards -->
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
@@ -1069,6 +1077,9 @@ const accountName = connection.display_name || 'Account';
       </div>
     </div>
   </section>
+
+  <!-- Automation Schedule Builder Modal -->
+  <AddNewScheduleModal modalId="analytics-schedule-modal" pipeline="analytics" />
 </Layout>
 
 <script src="../../scripts/tabs.ts"></script>

@@ -1,6 +1,7 @@
 ---
 // src/components/pinarchive/PinArchiveCronCard.astro
 import RunNowButton from '../cron/RunNowButton.astro';
+import CronProviderSelector from '../cron/CronProviderSelector.astro';
 ---
 
 <div class="space-y-6" id="pinarchive-fastcron-container">
@@ -48,6 +49,13 @@ import RunNowButton from '../cron/RunNowButton.astro';
       />
     </div>
   </div>
+
+  <!-- ═══ Cron Engine Provider Authority ═══ -->
+  <CronProviderSelector
+    workspaceId={Astro.locals.activeWorkspaceId || ''}
+    project="pinarchive"
+    currentProvider="fastcron"
+  />
 
   <!-- ═══ BLOCK A: Workspace Token Registry ═══ -->
   <div class="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-xs space-y-4">
