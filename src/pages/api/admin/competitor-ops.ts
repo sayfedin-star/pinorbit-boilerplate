@@ -48,12 +48,30 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (auth.error) return auth.error;
 
   const { workspaceId, competitorsClient } = auth.ok!;
+  const url = new URL(request.url);
+  const jobId = url.searchParams.get('job_id');
 
   try {
-    // 1. Pipeline Settings
+    // 1. If job_id is requested, return single job status for real-time polling
+    if (jobId) {
+      const { data: job, error: jobErr } = await competitorsClient
+        .from('competitor_ingestion_jobs')
+        .select('id, workspace_id, competitor_id, status, items_processed, error_message, started_at, completed_at, created_at')
+        .eq('id', jobId)
+        .eq('workspace_id', workspaceId)
+        .maybeSingle();
+
+      if (jobErr || !job) {
+        return jsonResponse({ success: false, error: 'Job not found' }, 404);
+      }
+
+      return jsonResponse({ success: true, job }, 200);
+    }
+
+    // 2. Full Ops State: Pipeline Settings, Competitors, and Recent Jobs
     const { data: pipelineSettings } = await competitorsClient
       .from('competitor_pipeline_settings')
-      .select('workspace_id, is_enabled, dry_run, max_retries, updated_at')
+      .select('workspace_id, is_enabled, dry_run, max_retries, updated_at, cron_expression, fastcron_job_id, cron_provider, schedule_status, timezone')
       .eq('workspace_id', workspaceId)
       .maybeSingle();
 
@@ -63,9 +81,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
       dry_run: false,
       max_retries: 3,
       updated_at: null,
+      cron_provider: 'fastcron',
+      schedule_status: 'pending',
     };
 
-    // 2. Competitors with settings
     const { data: competitors, error: compErr } = await competitorsClient
       .from('competitors')
       .select('id, username, full_name, avatar_url, is_active, last_checked_at, profile_reach, profile_views, follower_count, pin_count, competitor_settings(is_active, update_frequency_hours, last_manual_update)')
@@ -74,7 +93,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     if (compErr) throw compErr;
 
-    // 3. Recent 15 ingestion jobs
     const { data: jobs, error: jobsErr } = await competitorsClient
       .from('competitor_ingestion_jobs')
       .select('id, workspace_id, competitor_id, status, items_processed, error_message, started_at, completed_at, created_at')
@@ -120,19 +138,24 @@ export const PUT: APIRoute = async ({ request, locals }) => {
   const maxRetries = Number.isInteger(body.max_retries) ? Math.max(1, Math.min(10, body.max_retries)) : 3;
 
   try {
+    const updatePayload: Record<string, any> = {
+      workspace_id: workspaceId,
+      is_enabled: isEnabled,
+      dry_run: dryRun,
+      max_retries: maxRetries,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (body.cron_provider !== undefined) updatePayload.cron_provider = body.cron_provider;
+    if (body.cron_expression !== undefined) updatePayload.cron_expression = body.cron_expression;
+    if (body.timezone !== undefined) updatePayload.timezone = body.timezone;
+    if (body.schedule_status !== undefined) updatePayload.schedule_status = body.schedule_status;
+    if (body.fastcron_job_id !== undefined) updatePayload.fastcron_job_id = body.fastcron_job_id;
+
     const { data, error } = await competitorsClient
       .from('competitor_pipeline_settings')
-      .upsert(
-        {
-          workspace_id: workspaceId,
-          is_enabled: isEnabled,
-          dry_run: dryRun,
-          max_retries: maxRetries,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'workspace_id' }
-      )
-      .select('workspace_id, is_enabled, dry_run, max_retries, updated_at')
+      .upsert(updatePayload, { onConflict: 'workspace_id' })
+      .select('*')
       .single();
 
     if (error) throw error;
@@ -165,7 +188,6 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    // Verify competitor belongs to caller's workspace
     const { data: comp, error: compErr } = await competitorsClient
       .from('competitors')
       .select('id')
@@ -177,7 +199,6 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
       return jsonResponse({ success: false, error: 'Competitor not found in active workspace' }, 404);
     }
 
-    // 1. If is_active is provided, update competitors table
     if (is_active !== undefined) {
       await competitorsClient
         .from('competitors')
@@ -186,7 +207,6 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
         .eq('workspace_id', workspaceId);
     }
 
-    // 2. Fetch existing settings or default
     const { data: existing } = await competitorsClient
       .from('competitor_settings')
       .select('id, competitor_id, is_active, update_frequency_hours')
@@ -231,56 +251,121 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const text = await request.text();
     if (text) body = JSON.parse(text);
   } catch {
-    // Empty body is valid for full update
+    // Empty body defaults to full workspace update
   }
 
   const auth = await authenticateAdmin(request, locals, body.workspace_id);
   if (auth.error) return auth.error;
 
   const { workspaceId, competitorsClient, runtimeEnv } = auth.ok!;
-  const competitorId = body.competitor_id || null;
-  const username = body.username || null;
+
+  // 1. Resolve Target Scope & Competitor IDs
+  const scope = body.scope || (body.competitor_id || (Array.isArray(body.ids) && body.ids.length > 0) ? 'selected' : 'all');
+  let selectedIds: string[] = [];
+
+  if (Array.isArray(body.ids) && body.ids.length > 0) {
+    selectedIds = body.ids.filter((id: string) => UUID_REGEX.test(id));
+  } else if (body.competitor_id && UUID_REGEX.test(body.competitor_id)) {
+    selectedIds = [body.competitor_id];
+  } else if (Array.isArray(body.competitor_ids) && body.competitor_ids.length > 0) {
+    selectedIds = body.competitor_ids.filter((id: string) => UUID_REGEX.test(id));
+  }
+
+  const targetScope = scope === 'selected' && selectedIds.length > 0 ? 'Selected' : 'All Active';
+  const forceRun = Boolean(body.force === true || body.force === 'true');
+  const dryRun = Boolean(body.dry_run === true || body.dry_run === 'true');
+  const targetUsername = typeof body.username === 'string' ? body.username.trim() : (typeof body.target_username === 'string' ? body.target_username.trim() : '');
 
   try {
-    if (competitorId) {
-      if (!UUID_REGEX.test(competitorId)) {
-        return jsonResponse({ success: false, error: 'Invalid competitor_id (UUID) format' }, 400);
-      }
-      const { data: comp, error: compErr } = await competitorsClient
-        .from('competitors')
-        .select('id')
-        .eq('id', competitorId)
-        .eq('workspace_id', workspaceId)
-        .maybeSingle();
-
-      if (compErr || !comp) {
-        return jsonResponse({ success: false, error: 'Competitor not found in active workspace' }, 404);
-      }
-    }
-
-    // 1. Insert job with queued status
+    // 2. Insert Ingestion Job record with 'running' status (not queued)
     const { data: job, error: jobErr } = await competitorsClient
       .from('competitor_ingestion_jobs')
       .insert({
         workspace_id: workspaceId,
-        competitor_id: competitorId,
-        status: 'queued',
+        competitor_id: selectedIds.length === 1 ? selectedIds[0] : null,
+        status: 'running',
         items_processed: 0,
+        started_at: new Date().toISOString(),
       })
       .select('id, workspace_id, competitor_id, status, created_at')
       .single();
 
-    if (jobErr) throw jobErr;
+    if (jobErr || !job) throw jobErr || new Error('Failed to create ingestion job record');
 
-    // Queue-only: the 5-minute poller job in GitHub Actions adopts queued jobs.
-    return jsonResponse(
-      {
-        success: true,
-        job_id: job.id,
-        queued: true,
-        note: 'Poller will pick this up within 5 minutes.',
+    // 3. Dispatch to GitHub Actions workflow directly
+    const githubRepo =
+      (runtimeEnv.GITHUB_REPO as string) ||
+      (typeof process !== 'undefined' ? process.env.GITHUB_REPO : '') ||
+      'sayfedin-star/PinOrbit-v2';
+
+    const dispatchToken =
+      (runtimeEnv.GITHUB_DISPATCH_TOKEN as string) ||
+      (runtimeEnv.GH_REFRESH_TOKEN as string) ||
+      (typeof process !== 'undefined' ? process.env.GITHUB_DISPATCH_TOKEN || process.env.GH_REFRESH_TOKEN : '') ||
+      '';
+
+    if (!dispatchToken || !dispatchToken.trim()) {
+      // If dispatch token is missing, fail job in DB and return error
+      await competitorsClient
+        .from('competitor_ingestion_jobs')
+        .update({ status: 'failed', error_message: 'GitHub dispatch token not configured on server', completed_at: new Date().toISOString() })
+        .eq('id', job.id);
+
+      return jsonResponse({ success: false, error: 'GitHub dispatch token not configured on server' }, 503);
+    }
+
+    const dispatchEndpoint = `https://api.github.com/repos/${githubRepo}/actions/workflows/update-competitors.yml/dispatches`;
+
+    const ghRes = await fetch(dispatchEndpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${dispatchToken.trim()}`,
+        Accept: 'application/vnd.github.v3+json',
+        'User-Agent': 'PinOrbit-v2',
+        'Content-Type': 'application/json',
       },
-      202
+      body: JSON.stringify({
+        ref: 'main',
+        inputs: {
+          workspace_id: workspaceId,
+          target_scope: targetScope,
+          competitor_ids: selectedIds.join(','),
+          target_username: targetUsername,
+          dry_run: dryRun ? 'true' : '',
+          force_run: forceRun ? 'true' : '',
+        },
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (ghRes.status === 204 || (ghRes.status >= 200 && ghRes.status < 300)) {
+      return jsonResponse(
+        {
+          success: true,
+          dispatched: true,
+          job_id: job.id,
+          scope,
+          target_scope: targetScope,
+          count: selectedIds.length > 0 ? selectedIds.length : 'all',
+          force: forceRun,
+        },
+        202
+      );
+    }
+
+    // GitHub upstream returned error
+    await competitorsClient
+      .from('competitor_ingestion_jobs')
+      .update({
+        status: 'failed',
+        error_message: `GitHub dispatch upstream returned HTTP ${ghRes.status}`,
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', job.id);
+
+    return jsonResponse(
+      { success: false, error: `GitHub dispatch upstream returned HTTP ${ghRes.status}` },
+      502
     );
   } catch (err: any) {
     return jsonResponse({ success: false, error: err.message || 'Failed to dispatch competitor update' }, 500);

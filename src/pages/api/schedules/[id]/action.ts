@@ -65,7 +65,8 @@ export const POST: APIRoute = async ({ request, params, locals }) => {
       return new Response(JSON.stringify({ success: true }), { status: 200 });
     }
     if (action === 'run') {
-      if (schedule.fastcron_job_id) {
+      const force = body.force === true || body.force === 'true';
+      if (schedule.fastcron_job_id && !force) {
         try {
           const token = await resolveScheduleToken(schedule, runtimeEnv);
           if (token) {
@@ -79,7 +80,7 @@ export const POST: APIRoute = async ({ request, params, locals }) => {
       const base = (typeof process !== 'undefined' && process.env.DISPATCH_BASE_URL)
         ? process.env.DISPATCH_BASE_URL.replace(/\/$/, '')
         : 'https://pinorbit-v2.o-i.workers.dev';
-      const dispatchUrl = `${base}/api/internal/pinterest/dispatch-due-pin?schedule_id=${encodeURIComponent(schedule.id)}&dispatch_token=${encodeURIComponent(schedule.dispatch_token)}`;
+      const dispatchUrl = `${base}/api/internal/pinterest/dispatch-due-pin?schedule_id=${encodeURIComponent(schedule.id)}&dispatch_token=${encodeURIComponent(schedule.dispatch_token)}${force ? '&force=true' : ''}`;
       const res = await fetch(dispatchUrl, {
         method: 'GET',
         signal: AbortSignal.timeout(15000),
@@ -91,7 +92,7 @@ export const POST: APIRoute = async ({ request, params, locals }) => {
       } catch {
         detail = text.slice(0, 300);
       }
-      return new Response(JSON.stringify({ success: res.ok, via: 'direct', status: res.status, detail }), {
+      return new Response(JSON.stringify({ success: res.ok, via: 'direct', force, status: res.status, detail }), {
         status: res.ok ? 200 : res.status || 500,
         headers: { 'Content-Type': 'application/json' },
       });

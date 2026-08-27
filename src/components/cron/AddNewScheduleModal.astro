@@ -1,0 +1,327 @@
+---
+export interface Props {
+  modalId?: string;
+  title?: string;
+  defaultTime?: string;
+  defaultTimezone?: string;
+  submitEndpoint?: string;
+  pipeline?: 'publishing' | 'competitors' | 'analytics' | 'pinarchive';
+}
+
+const {
+  modalId = 'add-schedule-modal',
+  title = 'Configure Automation Schedule',
+  defaultTime = '04:00',
+  defaultTimezone = 'UTC',
+  submitEndpoint = '',
+  pipeline = 'publishing',
+} = Astro.props;
+
+const timezones = [
+  'UTC',
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Asia/Tokyo',
+  'Asia/Singapore',
+  'Asia/Dubai',
+  'Australia/Sydney',
+];
+---
+
+<div
+  id={modalId}
+  class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 transition-all duration-200"
+>
+  <div class="bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <!-- Header -->
+    <div class="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/50">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-sm font-semibold text-zinc-100">{title}</h3>
+          <p class="text-[11px] text-zinc-400">Portable cron schedule generator (Cloudflare & external compatible)</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="close-modal-btn text-zinc-400 hover:text-zinc-200 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
+      >
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Tab Selector -->
+    <div class="px-6 pt-4 pb-2 border-b border-zinc-800/80 flex items-center gap-2 text-xs font-medium">
+      <button
+        type="button"
+        data-tab="simple"
+        class="sched-tab-btn px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-semibold shadow-sm transition-all"
+      >
+        Simple Builder
+      </button>
+      <button
+        type="button"
+        data-tab="presets"
+        class="sched-tab-btn px-3 py-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition-all"
+      >
+        Common Presets
+      </button>
+      <button
+        type="button"
+        data-tab="raw"
+        class="sched-tab-btn px-3 py-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition-all"
+      >
+        Raw Cron (5-Part)
+      </button>
+    </div>
+
+    <!-- Form Content -->
+    <form id={`${modalId}-form`} class="p-6 space-y-4 text-xs">
+      <input type="hidden" name="pipeline" value={pipeline} />
+      <input type="hidden" name="cron_expression" id={`${modalId}-cron-output`} value={`0 4 * * *`} />
+
+      <!-- Simple Builder Tab -->
+      <div id={`${modalId}-tab-simple`} class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block font-medium text-zinc-300 mb-1">Execution Time (HH:MM)</label>
+            <input
+              type="time"
+              id={`${modalId}-time-input`}
+              value={defaultTime}
+              class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-200 focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+          <div>
+            <label class="block font-medium text-zinc-300 mb-1">Timezone</label>
+            <select
+              id={`${modalId}-tz-select`}
+              name="timezone"
+              class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-200 focus:ring-1 focus:ring-indigo-500"
+            >
+              {timezones.map((tz) => (
+                <option value={tz} selected={tz === defaultTimezone}>{tz}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-medium text-zinc-300 mb-2">Active Days</label>
+          <div class="grid grid-cols-7 gap-1.5">
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => {
+              const dayNum = (idx + 1) % 7; // 1=Mon...6=Sat, 0=Sun
+              return (
+                <label class="flex flex-col items-center justify-center p-2 rounded-lg border border-zinc-800 bg-zinc-950/60 cursor-pointer select-none hover:border-zinc-700 has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-950/40">
+                  <input
+                    type="checkbox"
+                    class="sched-day-check sr-only"
+                    value={dayNum}
+                    checked
+                  />
+                  <span class="text-[11px] font-medium text-zinc-300">{day}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <!-- Presets Tab -->
+      <div id={`${modalId}-tab-presets`} class="space-y-3 hidden">
+        <label class="block font-medium text-zinc-300">Choose a Pre-Engineered Cadence</label>
+        <div class="grid grid-cols-1 gap-2">
+          {[
+            { label: 'Daily at 04:00 UTC', expr: '0 4 * * *', desc: 'Standard non-peak morning synchronization.' },
+            { label: 'Twice Daily (04:00 & 16:00 UTC)', expr: '0 4,16 * * *', desc: 'Balanced 12-hour refresh cycle.' },
+            { label: 'Every 6 Hours', expr: '0 */6 * * *', desc: 'High-frequency cadence for fast-moving accounts.' },
+            { label: 'Weekdays Only (Mon-Fri 04:00 UTC)', expr: '0 4 * * 1-5', desc: 'Business days intelligence sync.' },
+            { label: 'Weekly on Sundays (02:00 UTC)', expr: '0 2 * * 0', desc: 'Deep audit and full historical rollups.' },
+          ].map((p) => (
+            <button
+              type="button"
+              data-preset-expr={p.expr}
+              class="sched-preset-btn p-3 rounded-lg border border-zinc-800 bg-zinc-950/50 hover:bg-zinc-800/80 hover:border-zinc-700 text-left transition-all flex items-center justify-between group"
+            >
+              <div>
+                <span class="font-semibold text-zinc-200 group-hover:text-indigo-400">{p.label}</span>
+                <p class="text-[11px] text-zinc-400 mt-0.5">{p.desc}</p>
+              </div>
+              <code class="px-2 py-0.5 bg-zinc-900 border border-zinc-800 rounded text-[11px] text-zinc-300 font-mono">
+                {p.expr}
+              </code>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <!-- Raw Cron Tab -->
+      <div id={`${modalId}-tab-raw`} class="space-y-3 hidden">
+        <div>
+          <label class="block font-medium text-zinc-300 mb-1">Standard 5-Part Cron Expression</label>
+          <input
+            type="text"
+            id={`${modalId}-raw-input`}
+            value="0 4 * * *"
+            placeholder="min hour dom mon dow (e.g. */15 * * * *)"
+            class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-200 font-mono focus:ring-1 focus:ring-indigo-500"
+          />
+          <p class="text-[11px] text-zinc-400 mt-1">
+            Format: <code class="text-zinc-300">minute hour day-of-month month day-of-week</code>
+          </p>
+        </div>
+      </div>
+
+      <!-- Live Generated Expression Display -->
+      <div class="p-3 bg-zinc-950/80 border border-zinc-800 rounded-lg flex items-center justify-between">
+        <div>
+          <span class="text-[11px] text-zinc-400 font-medium">Computed Cron Expression:</span>
+          <div class="font-mono text-xs text-indigo-400 font-bold mt-0.5" id={`${modalId}-expr-preview`}>
+            0 4 * * *
+          </div>
+        </div>
+        <div class="text-right text-[11px] text-zinc-500">
+          Evaluated in UTC
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="pt-4 border-t border-zinc-800 flex items-center justify-end gap-2.5">
+        <button
+          type="button"
+          class="close-modal-btn px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg font-medium transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-semibold shadow-sm transition-colors flex items-center gap-1.5"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Save Schedule</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script define:vars={{ modalId, submitEndpoint }}>
+  function initScheduleModal() {
+    const modal = document.getElementById(modalId);
+    if (!modal || modal.dataset.init) return;
+    modal.dataset.init = 'true';
+
+    const tabs = modal.querySelectorAll('.sched-tab-btn');
+    const simpleTab = document.getElementById(`${modalId}-tab-simple`);
+    const presetsTab = document.getElementById(`${modalId}-tab-presets`);
+    const rawTab = document.getElementById(`${modalId}-tab-raw`);
+
+    const timeInput = document.getElementById(`${modalId}-time-input`);
+    const dayChecks = modal.querySelectorAll('.sched-day-check');
+    const rawInput = document.getElementById(`${modalId}-raw-input`);
+    const cronOutput = document.getElementById(`${modalId}-cron-output`);
+    const exprPreview = document.getElementById(`${modalId}-expr-preview`);
+    const form = document.getElementById(`${modalId}-form`);
+
+    let currentTab = 'simple';
+
+    function updateFromSimple() {
+      const timeVal = timeInput?.value || '04:00';
+      const [h, m] = timeVal.split(':').map(Number);
+      const checkedDays = Array.from(dayChecks)
+        .filter((c) => c.checked)
+        .map((c) => c.value);
+
+      let dowStr = '*';
+      if (checkedDays.length > 0 && checkedDays.length < 7) {
+        dowStr = checkedDays.join(',');
+      }
+
+      const expr = `${m || 0} ${h || 0} * * ${dowStr}`;
+      setExpression(expr);
+    }
+
+    function setExpression(expr) {
+      if (cronOutput) cronOutput.value = expr;
+      if (exprPreview) exprPreview.textContent = expr;
+      if (rawInput && currentTab !== 'raw') rawInput.value = expr;
+    }
+
+    // Tab switcher
+    tabs.forEach((tabBtn) => {
+      tabBtn.addEventListener('click', () => {
+        const tab = tabBtn.dataset.tab;
+        currentTab = tab;
+
+        tabs.forEach((t) => {
+          t.classList.remove('bg-indigo-600', 'text-white', 'font-semibold');
+          t.classList.add('text-zinc-400');
+        });
+        tabBtn.classList.add('bg-indigo-600', 'text-white', 'font-semibold');
+        tabBtn.classList.remove('text-zinc-400');
+
+        simpleTab?.classList.toggle('hidden', tab !== 'simple');
+        presetsTab?.classList.toggle('hidden', tab !== 'presets');
+        rawTab?.classList.toggle('hidden', tab !== 'raw');
+
+        if (tab === 'simple') updateFromSimple();
+      });
+    });
+
+    // Inputs listener
+    timeInput?.addEventListener('input', updateFromSimple);
+    dayChecks.forEach((c) => c.addEventListener('change', updateFromSimple));
+    rawInput?.addEventListener('input', () => {
+      setExpression(rawInput.value.trim());
+    });
+
+    // Presets listener
+    modal.querySelectorAll('.sched-preset-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const expr = btn.dataset.presetExpr;
+        if (expr) {
+          setExpression(expr);
+          // Highlight selection
+          modal.querySelectorAll('.sched-preset-btn').forEach((b) => b.classList.remove('border-indigo-500', 'bg-indigo-950/30'));
+          btn.classList.add('border-indigo-500', 'bg-indigo-950/30');
+        }
+      });
+    });
+
+    // Close buttons
+    modal.querySelectorAll('.close-modal-btn').forEach((btn) => {
+      btn.addEventListener('click', () => modal.classList.add('hidden'));
+    });
+
+    // Form submit
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const expr = cronOutput?.value || '0 4 * * *';
+      const tz = modal.querySelector('select[name="timezone"]')?.value || 'UTC';
+
+      window.dispatchEvent(
+        new CustomEvent('cron:schedule-selected', {
+          detail: { expression: expr, timezone: tz },
+        })
+      );
+
+      modal.classList.add('hidden');
+    });
+  }
+
+  initScheduleModal();
+  document.addEventListener('astro:page-load', initScheduleModal);
+</script>

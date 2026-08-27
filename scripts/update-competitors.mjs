@@ -99,12 +99,12 @@ async function pinterestFetch(url, username, cookiePlain, maxRetries = 3) {
   }
 }
 
-// ── Resource URLs (same as old script) ──
+// ── Resource URLs ──
 const resourceUrl = (username, resource, options) =>
   `https://www.pinterest.com/resource/${resource}/get/?source_url=%2F${username}%2F&data=${encodeURIComponent(JSON.stringify({ options, context: {} }))}&_=${Date.now()}`;
 
 // ── Main: per-workspace processing ──
-async function processWorkspace(db, wsId, kek) {
+async function processWorkspace(db, wsId, kek, options = {}) {
   const now = new Date().toISOString();
   const cookie = await getVaultCookie(db, wsId, kek);
   if (!cookie) {
@@ -112,16 +112,35 @@ async function processWorkspace(db, wsId, kek) {
   }
   console.log(`🍪 [${wsId.slice(0, 8)}] using vault cookie ${cookie.id.slice(0, 8)}`);
 
-  const { data: comps, error } = await db.from('competitors').select('id, username').eq('workspace_id', wsId).eq('is_active', true);
-  if (error || !comps) return { ok: false, error: error?.message || 'fetch failed' };
+  let query = db.from('competitors').select('id, username').eq('workspace_id', wsId);
+  
+  if (!options.forceRun) {
+    query = query.eq('is_active', true);
+  }
+
+  const { data: allComps, error } = await query;
+  if (error || !allComps) return { ok: false, error: error?.message || 'fetch failed' };
+
+  let comps = allComps;
+
+  // Filter by competitor_ids if provided (scope = 'selected')
+  if (options.competitorIds && options.competitorIds.length > 0) {
+    const idSet = new Set(options.competitorIds);
+    comps = comps.filter(c => idSet.has(c.id));
+  } else if (options.targetUsername && options.targetUsername.trim()) {
+    const targetU = options.targetUsername.trim().toLowerCase();
+    comps = comps.filter(c => c.username.toLowerCase() === targetU);
+  }
+
   if (comps.length === 0) return { ok: true, processed: 0, errors: [] };
 
-  const errors = []; let processed = 0;
+  const errors = [];
+  let processed = 0;
 
   for (const comp of comps) {
     const username = comp.username.trim();
     console.log(`\n--------------------------------------------------`);
-    console.log(`🔍 Processing Competitor: @${username}`);
+    console.log(`🔍 Processing Competitor (${processed + 1}/${comps.length}): @${username}`);
 
     try {
       // ── STEP 1: Profile (with self-heal on 401/403) ──
@@ -149,13 +168,15 @@ async function processWorkspace(db, wsId, kek) {
           const domainVerified = !!userData.domain_verified;
           const lastPinAt = userData.last_pin_save_time ? new Date(userData.last_pin_save_time).toISOString() : null;
 
-          await db.from('competitors').update({
-            full_name: fullName, profile_reach: profileReach, profile_views: profileViews,
-            follower_count: followers, pin_count: pins, website_url: websiteUrl,
-            domain_verified: domainVerified, last_pin_at: lastPinAt, last_checked_at: now,
-          }).eq('id', comp.id);
-          await db.from('competitor_snapshots').insert({ competitor_id: comp.id, profile_reach: profileReach, profile_views: profileViews, follower_count: followers, pin_count: pins, recorded_at: now });
-          await db.from('competitor_daily_snapshots').upsert({ competitor_id: comp.id, snapshot_date: now.slice(0, 10), profile_reach: profileReach, profile_views: profileViews, follower_count: followers, pin_count: pins }, { onConflict: 'competitor_id,snapshot_date' });
+          if (!options.dryRun) {
+            await db.from('competitors').update({
+              full_name: fullName, profile_reach: profileReach, profile_views: profileViews,
+              follower_count: followers, pin_count: pins, website_url: websiteUrl,
+              domain_verified: domainVerified, last_pin_at: lastPinAt, last_checked_at: now,
+            }).eq('id', comp.id);
+            await db.from('competitor_snapshots').insert({ competitor_id: comp.id, profile_reach: profileReach, profile_views: profileViews, follower_count: followers, pin_count: pins, recorded_at: now });
+            await db.from('competitor_daily_snapshots').upsert({ competitor_id: comp.id, snapshot_date: now.slice(0, 10), profile_reach: profileReach, profile_views: profileViews, follower_count: followers, pin_count: pins }, { onConflict: 'competitor_id,snapshot_date' });
+          }
           console.log(`✅ Profile Updated -> Reach: ${profileReach.toLocaleString()}, Views: ${profileViews.toLocaleString()}, Followers: ${followers.toLocaleString()}, Pins: ${pins.toLocaleString()}`);
         } else {
           console.warn(`⚠️ Invalid UserResource data structure for @${username}.`);
@@ -193,7 +214,7 @@ async function processWorkspace(db, wsId, kek) {
           break;
         }
       }
-      if (allBoards.length > 0) {
+      if (allBoards.length > 0 && !options.dryRun) {
         const boardsToUpsert = allBoards.map(b => {
           const boardUrl = b.url ? (b.url.startsWith('http') ? b.url : `https://www.pinterest.com${b.url}`) : `https://www.pinterest.com/${username}/`;
           const realCreatedAt = b.created_at ? new Date(b.created_at).toISOString() : now;
@@ -208,11 +229,19 @@ async function processWorkspace(db, wsId, kek) {
         const { error: boardError } = await db.from('competitor_boards').upsert(boardsToUpsert, { onConflict: 'competitor_id, board_id' });
         if (boardError) console.warn(`⚠️ Boards Upsert Warning for @${username}:`, boardError.message);
         else console.log(`📋 Ingested ALL ${boardsToUpsert.length} Board(s) across ${pageCount} page(s) with REAL creation dates for @${username}.`);
-      } else {
+      } else if (!allBoards.length) {
         console.log(`ℹ️ No public boards found for @${username}.`);
       }
 
       processed++;
+
+      // Real-time telemetry update to competitor_ingestion_jobs table for live UI polling
+      if (options.jobId) {
+        await db.from('competitor_ingestion_jobs').update({
+          items_processed: processed,
+          error_message: errors.length ? errors.join(' | ').slice(0, 2000) : null,
+        }).eq('id', options.jobId);
+      }
     } catch (err) {
       console.error(`❌ Error processing @${username}:`, err.message);
       errors.push(`@${username}: ${err.message}`);
@@ -236,41 +265,72 @@ async function main() {
   const DRY_RUN = process.env.DRY_RUN === 'true' || pipe?.dry_run === true;
   if (DRY_RUN) console.log('⚠️ DRY_RUN mode — no writes will be performed.');
 
-  // Mode A: adopt queued job (poller / dashboard button)
-  if (process.env.POLL_QUEUED === 'true' && !process.env.JOB_ID) {
-    const { data: q } = await db.from('competitor_ingestion_jobs').select('id, competitor_id, workspace_id').eq('status', 'queued').order('created_at', { ascending: true }).limit(1);
-    if (!q || q.length === 0) { console.log('🕐 No queued jobs.'); process.exit(0); }
-    const job = q[0];
-    await db.from('competitor_ingestion_jobs').update({ status: 'running', started_at: new Date().toISOString() }).eq('id', job.id);
-    const r = await processWorkspace(db, job.workspace_id, kek);
-    await db.from('competitor_ingestion_jobs').update({
-      status: !r.ok || (r.processed === 0) ? 'failed' : 'completed',
-      items_processed: DRY_RUN ? 0 : r.processed,
-      error_message: r.ok ? (r.errors.length ? r.errors.join(' | ').slice(0, 2000) : null) : r.error,
-      completed_at: new Date().toISOString(),
-    }).eq('id', job.id);
-    process.exit(!r.ok ? 1 : 0);
+  // Parse Scope & Inputs
+  const targetScope = process.env.TARGET_SCOPE || 'All Active';
+  const targetUsername = process.env.TARGET_USERNAME || '';
+  const rawCompIds = process.env.COMPETITOR_IDS || '';
+  const competitorIds = rawCompIds ? rawCompIds.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const forceRun = Boolean(process.env.FORCE_RUN === 'true');
+  const targetWsId = process.env.WORKSPACE_ID || null;
+  const inputJobId = process.env.JOB_ID || null;
+
+  let workspaces = [];
+  if (targetWsId) {
+    workspaces = [targetWsId];
+  } else {
+    const { data: wsRows } = await db.from('competitors').select('workspace_id').eq('is_active', true);
+    workspaces = [...new Set((wsRows || []).map(r => r.workspace_id))];
   }
 
-  // Mode B: daily / manual full run across all active workspaces
-  const { data: wsRows } = await db.from('competitors').select('workspace_id').eq('is_active', true);
-  const workspaces = [...new Set((wsRows || []).map(r => r.workspace_id))];
-  console.log(`🚀 Full run: ${workspaces.length} workspace(s) | DRY_RUN=${DRY_RUN}`);
+  console.log(`🚀 Execution Scope: ${targetScope} | Workspaces: ${workspaces.length} | Competitors Filter: ${competitorIds.length ? competitorIds.length : 'All'} | DRY_RUN=${DRY_RUN} | FORCE=${forceRun}`);
 
-  let anyFatal = false; let grandProcessed = 0;
+  let anyFatal = false;
+  let grandProcessed = 0;
+
   for (const wsId of workspaces) {
-    const { data: job } = await db.from('competitor_ingestion_jobs').insert({ workspace_id: wsId, status: 'running', started_at: new Date().toISOString() }).select('id').single();
-    const r = await processWorkspace(db, wsId, kek);
-    if (job) await db.from('competitor_ingestion_jobs').update({
-      status: !r.ok || (r.processed === 0) ? 'failed' : 'completed',
-      items_processed: DRY_RUN ? 0 : r.processed,
-      error_message: r.ok ? (r.errors.length ? r.errors.join(' | ').slice(0, 2000) : null) : r.error,
-      completed_at: new Date().toISOString(),
-    }).eq('id', job.id);
-    if (!r.ok) { anyFatal = true; console.error(`❌ ws ${wsId}: ${r.error}`); }
+    let jobId = inputJobId;
+
+    if (!jobId) {
+      const { data: job } = await db.from('competitor_ingestion_jobs').insert({
+        workspace_id: wsId,
+        competitor_id: competitorIds.length === 1 ? competitorIds[0] : null,
+        status: 'running',
+        items_processed: 0,
+        started_at: new Date().toISOString(),
+      }).select('id').single();
+      if (job) jobId = job.id;
+    } else {
+      await db.from('competitor_ingestion_jobs').update({
+        status: 'running',
+        started_at: new Date().toISOString(),
+      }).eq('id', jobId);
+    }
+
+    const r = await processWorkspace(db, wsId, kek, {
+      targetUsername,
+      competitorIds,
+      jobId,
+      forceRun,
+      dryRun: DRY_RUN,
+    });
+
+    if (jobId) {
+      await db.from('competitor_ingestion_jobs').update({
+        status: !r.ok || (r.processed === 0 && !DRY_RUN && competitorIds.length > 0) ? 'failed' : 'completed',
+        items_processed: DRY_RUN ? 0 : r.processed,
+        error_message: r.ok ? (r.errors.length ? r.errors.join(' | ').slice(0, 2000) : null) : r.error,
+        completed_at: new Date().toISOString(),
+      }).eq('id', jobId);
+    }
+
+    if (!r.ok) {
+      anyFatal = true;
+      console.error(`❌ ws ${wsId}: ${r.error}`);
+    }
     grandProcessed += r.processed || 0;
   }
-  console.log(`\n🎉 All competitor metrics and boards updated successfully! (${grandProcessed} profile(s) across ${workspaces.length} workspace(s))`);
+
+  console.log(`\n🎉 Competitor sync complete! (${grandProcessed} profile(s) across ${workspaces.length} workspace(s))`);
   process.exit(anyFatal && grandProcessed === 0 ? 1 : 0);
 }
 

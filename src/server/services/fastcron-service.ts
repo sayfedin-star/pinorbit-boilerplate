@@ -1,6 +1,6 @@
 import { analyticsDb } from '../db/analytics';
 import { getServerEnv } from '../db/clients';
-import { decryptToken, resolveTokenKek } from '../lib/token-crypto';
+import { decryptToken } from '../lib/token-crypto';
 import { getEffectiveSecret } from './webhook-secrets';
 import type {
   ScheduleSyncResponse,
@@ -27,69 +27,18 @@ export const SORT_MODES = [
   'PIN_CLICK',
 ];
 
+import { fastcronCall as libFastcronCall } from '../lib/fastcron-client';
+
 export const fastcronService = {
   /**
-   * Dispatches a request to FastCron API.
-   * Strategy:
-   * 1. Primary: POST JSON body.
-   * 2. Fallback: On 404/405, fallback to GET query-string.
-   * 3. Surface errors verbatim.
+   * Dispatches a request to FastCron API via shared client.
    */
   async fastcronCall(
     action: string,
     params: Record<string, any>,
     token: string
   ): Promise<{ success: boolean; data?: any; error?: string }> {
-    const url = `${FASTCRON_BASE}/${action}`;
-    const payload = { token, ...params };
-
-    try {
-      let res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(8000),
-      });
-
-      if (res.status === 404 || res.status === 405) {
-        const searchParams = new URLSearchParams();
-        for (const [key, value] of Object.entries(payload)) {
-          if (value !== undefined && value !== null) {
-            searchParams.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
-          }
-        }
-        res = await fetch(`${url}?${searchParams.toString()}`, {
-          method: 'GET',
-          signal: AbortSignal.timeout(8000),
-        });
-      }
-
-      const data = await res.json().catch(() => ({}));
-
-      if (
-        data.status === 'OK' ||
-        data.status === 'success' ||
-        data.id ||
-        data?.data?.id ||
-        Array.isArray(data) ||
-        Array.isArray(data?.data)
-      ) {
-        return { success: true, data };
-      }
-
-      const errorMsg =
-        data.message ||
-        data.error ||
-        data.err_message ||
-        (typeof data === 'string' && data.length > 0 ? data : `FastCron returned HTTP ${res.status}`);
-
-      return { success: false, data, error: errorMsg };
-    } catch (err: any) {
-      return {
-        success: false,
-        error: err.message || 'FastCron network request failed',
-      };
-    }
+    return libFastcronCall(action, params, token);
   },
 
   /**
@@ -1035,36 +984,20 @@ async function resolveWebhookUrlForSchedule(schedulingClient: SupabaseClient, sc
   throw new Error('No active webhook URL found for account');
 }
 
+import { resolveToken } from '../lib/token-resolver';
+
 const getSchedulingAdminClient = (env: Record<string, any>) => (dbClients as any)[['get', 'Scheduling', 'Admin'].join('')](env);
 
 export async function resolveScheduleToken(schedule: any, runtimeEnv: Record<string, any>): Promise<string> {
-  const env = getServerEnv(runtimeEnv);
-  const kek = await resolveTokenKek(runtimeEnv);
-  const schedulingClient = getSchedulingAdminClient(runtimeEnv);
-
-  if (schedule?.fastcron_token_id && kek) {
-    const { data: tokRow } = await schedulingClient.from('fastcron_tokens').select('token_encrypted').eq('id', schedule.fastcron_token_id).maybeSingle();
-    if (tokRow?.token_encrypted) {
-      const dec = await decryptToken(tokRow.token_encrypted, kek);
-      if (dec && dec.trim().length >= 16) return dec.trim();
-    }
-  }
-
-  if (schedule?.fastcron_token_encrypted && kek) {
-    const dec = await decryptToken(schedule.fastcron_token_encrypted, kek);
-    if (dec && dec.trim().length >= 16) return dec.trim();
-  }
-
-  if (schedule?.workspace_id && kek) {
-    const { data: defRow } = await schedulingClient.from('fastcron_tokens').select('token_encrypted').eq('workspace_id', schedule.workspace_id).eq('is_default', true).maybeSingle();
-    if (defRow?.token_encrypted) {
-      const dec = await decryptToken(defRow.token_encrypted, kek);
-      if (dec && dec.trim().length >= 16) return dec.trim();
-    }
-  }
-
-  if (env.FASTCRON_API_TOKEN && env.FASTCRON_API_TOKEN.trim().length >= 16) return env.FASTCRON_API_TOKEN.trim();
-  throw new Error('FastCron API token not configured');
+  const result = await resolveToken(
+    {
+      workspaceId: schedule?.workspace_id,
+      tokenId: schedule?.fastcron_token_id,
+    },
+    'scheduling',
+    runtimeEnv
+  );
+  return result.token;
 }
 
 export const resolveTokenForSchedule = resolveScheduleToken;

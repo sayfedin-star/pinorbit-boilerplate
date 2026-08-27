@@ -542,14 +542,52 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     }
   });
 
+  let activePollingInterval: any = null;
+
+  function pollJobStatus(jobId: string) {
+    if (activePollingInterval) clearInterval(activePollingInterval);
+
+    const startTime = Date.now();
+    activePollingInterval = setInterval(async () => {
+      try {
+        const res = await fetchAPI(`/api/admin/competitor-ops?job_id=${jobId}`);
+        if (res.job) {
+          const { status, items_processed = 0, error_message } = res.job;
+          if (status === 'completed') {
+            clearInterval(activePollingInterval);
+            activePollingInterval = null;
+            toast(`✅ Scraping complete! ${items_processed} profile(s) updated`, 'success');
+            loadAllState();
+          } else if (status === 'failed') {
+            clearInterval(activePollingInterval);
+            activePollingInterval = null;
+            toast(`❌ Scraping failed: ${error_message || 'Workflow error'}`, 'error');
+            loadAllState();
+          }
+        }
+        if (Date.now() - startTime > 300000) {
+          clearInterval(activePollingInterval);
+          activePollingInterval = null;
+        }
+      } catch {
+        // network retry
+      }
+    }, 2000);
+  }
+
   // 3. Run Full Update Now
   $('btn-run-full-update').addEventListener('click', async () => {
     try {
       const res = await fetchAPI('/api/admin/competitor-ops', {
         method: 'POST',
-        body: JSON.stringify({}),
+        body: JSON.stringify({ scope: 'all' }),
       });
-      toast(`Queued full update (job ${res.job_id?.slice(0, 8)}) — runs within 5 min`, 'success');
+      if (res.job_id) {
+        toast(`🚀 Workflow dispatched (#${res.job_id.slice(0, 8)}) — scraping in progress...`, 'success');
+        pollJobStatus(res.job_id);
+      } else {
+        toast('Full update dispatched', 'success');
+      }
       loadAllState();
     } catch (err: any) {
       toast(`Dispatch failed: ${err.message}`, 'error');

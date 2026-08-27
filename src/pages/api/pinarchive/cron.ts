@@ -73,6 +73,9 @@ export function validateCronExpression(expr?: string | null): { valid: boolean; 
   return { valid: true, cron: parts.slice(0, 5).join(' ') };
 }
 
+import { fastcronCall as sharedFastcronCall } from '../../../server/lib/fastcron-client';
+import { listWorkspaceTokens, resolveToken } from '../../../server/lib/token-resolver';
+
 /**
  * Low-level FastCron API dispatch with fallback and timeout.
  */
@@ -81,56 +84,7 @@ export async function fastcronCall(
   params: Record<string, any>,
   token: string
 ): Promise<{ success: boolean; data?: any; error?: string }> {
-  const url = `${FASTCRON_BASE}/${action}`;
-  const payload = { token, ...params };
-
-  try {
-    let res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(8000),
-    });
-
-    if (res.status === 404 || res.status === 405) {
-      const searchParams = new URLSearchParams();
-      for (const [key, value] of Object.entries(payload)) {
-        if (value !== undefined && value !== null) {
-          searchParams.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
-        }
-      }
-      res = await fetch(`${url}?${searchParams.toString()}`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(8000),
-      });
-    }
-
-    const data = await res.json().catch(() => ({}));
-
-    if (
-      data.status === 'OK' ||
-      data.status === 'success' ||
-      data.id ||
-      data?.data?.id ||
-      Array.isArray(data) ||
-      Array.isArray(data?.data)
-    ) {
-      return { success: true, data };
-    }
-
-    const errorMsg =
-      data.message ||
-      data.error ||
-      data.err_message ||
-      (typeof data === 'string' && data.length > 0 ? data : `FastCron returned HTTP ${res.status}`);
-
-    return { success: false, data, error: errorMsg };
-  } catch (err: any) {
-    return {
-      success: false,
-      error: err.message || 'FastCron network request failed',
-    };
-  }
+  return sharedFastcronCall(action, params, token);
 }
 
 export interface ResolvedFastCronToken {
@@ -143,67 +97,23 @@ export interface ResolvedFastCronToken {
 }
 
 /**
- * Resolves all available FastCron tokens for a workspace (from P1 fastcron_tokens + env fallback).
+ * Resolves all available FastCron tokens for a workspace from PinArchive-P4 isolated table.
  */
 export async function getWorkspaceFastCronTokens(
   workspaceId: string,
   runtimeEnv: Record<string, any>
 ): Promise<ResolvedFastCronToken[]> {
-  const tokenList: ResolvedFastCronToken[] = [];
-  const tokenStrings = new Set<string>();
-
-  try {
-    const schedulingClient = dbClients.getSchedulingAdmin(runtimeEnv);
-    const kek = await resolveTokenKek(runtimeEnv);
-
-    const { data: dbRows } = await schedulingClient
-      .from('fastcron_tokens')
-      .select('id, name, token_masked, token_encrypted, is_default')
-      .eq('workspace_id', workspaceId)
-      .order('is_default', { ascending: false });
-
-    if (Array.isArray(dbRows)) {
-      for (const row of dbRows) {
-        let plain: string | null = null;
-        if (row.token_encrypted && kek) {
-          plain = await decryptToken(row.token_encrypted, kek);
-        }
-        if (plain && plain.trim().length > 0) {
-          tokenStrings.add(plain.trim());
-          tokenList.push({
-            id: row.id,
-            name: row.name || 'Workspace Token',
-            masked_token: row.token_masked || maskSecret(plain),
-            is_default: Boolean(row.is_default),
-            source: 'workspace_registry',
-            token: plain.trim(),
-          });
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('[PinArchive FastCron] Failed to load workspace registry tokens:', err);
-  }
-
-  // Fallback / default token resolution via resolveScheduleToken helper
-  try {
-    const defaultResolved = await resolveScheduleToken({ workspace_id: workspaceId }, runtimeEnv);
-    if (defaultResolved && !tokenStrings.has(defaultResolved)) {
-      tokenList.unshift({
-        id: null,
-        name: 'Workspace Default',
-        masked_token: defaultResolved.length > 8 ? defaultResolved.slice(0, 8) + '...' : '********',
-        is_default: tokenList.length === 0,
-        source: 'workspace_registry',
-        token: defaultResolved,
-      });
-      tokenStrings.add(defaultResolved);
-    }
-  } catch {
-    // fail-lazy
-  }
-
-  return tokenList;
+  const summaries = await listWorkspaceTokens(workspaceId, 'pinarchive', runtimeEnv, true);
+  return summaries
+    .filter((s): s is typeof s & { token: string } => Boolean(s.token))
+    .map((s) => ({
+      id: s.id,
+      name: s.name,
+      masked_token: s.masked_token,
+      is_default: s.is_default,
+      source: s.source,
+      token: s.token,
+    }));
 }
 
 /**
@@ -214,39 +124,23 @@ export async function resolveTargetToken(
   workspaceId: string,
   runtimeEnv: Record<string, any>
 ): Promise<ResolvedFastCronToken | null> {
-  if (tokenId) {
-    const allTokens = await getWorkspaceFastCronTokens(workspaceId, runtimeEnv);
-    const matched = allTokens.find((t) => t.id === tokenId);
-    if (matched) return matched;
-  }
-
-  let tokenStr: string | null = null;
   try {
-    tokenStr = await resolveScheduleToken(
-      { workspace_id: workspaceId, fastcron_token_id: tokenId || undefined },
+    const res = await resolveToken(
+      { workspaceId, tokenId: tokenId || undefined },
+      'pinarchive',
       runtimeEnv
     );
-  } catch {
-    tokenStr = null;
-  }
-
-  if (tokenStr) {
-    const allTokens = await getWorkspaceFastCronTokens(workspaceId, runtimeEnv);
-    const matched = allTokens.find((t) => t.token === tokenStr);
-    if (matched) return matched;
-
     return {
-      id: tokenId || null,
-      name: tokenId ? 'Custom Token' : 'Workspace Default',
-      masked_token: tokenStr.length > 8 ? tokenStr.slice(0, 8) + '...' : '********',
+      id: res.tokenId || null,
+      name: res.name || 'Workspace Token',
+      masked_token: res.maskedToken || ('••••' + res.token.slice(-4)),
       is_default: true,
-      source: 'workspace_registry',
-      token: tokenStr,
+      source: res.source === 'env' ? 'env' : 'workspace_registry',
+      token: res.token,
     };
+  } catch {
+    return null;
   }
-
-  const allTokens = await getWorkspaceFastCronTokens(workspaceId, runtimeEnv);
-  return allTokens.find((t) => t.is_default) || allTokens[0] || null;
 }
 
 /**
@@ -261,14 +155,15 @@ export async function getPinArchiveTokenInfo(
   token_name: string | null;
   masked_token: string | null;
 }> {
-  let token: string | null = null;
   try {
-    token = await resolveScheduleToken({ workspace_id: workspaceId }, runtimeEnv);
+    const res = await resolveToken({ workspaceId }, 'pinarchive', runtimeEnv);
+    return {
+      token: res.token,
+      token_source: res.source === 'env' ? 'env' : 'workspace_registry',
+      token_name: res.name || 'Workspace Default',
+      masked_token: res.maskedToken || ('••••' + res.token.slice(-4)),
+    };
   } catch {
-    token = null;
-  }
-
-  if (!token) {
     return {
       token: null,
       token_source: null,
@@ -276,14 +171,6 @@ export async function getPinArchiveTokenInfo(
       masked_token: null,
     };
   }
-
-  const masked = token.length > 8 ? token.slice(0, 8) + '...' : '********';
-  return {
-    token,
-    token_source: 'workspace_registry',
-    token_name: 'Workspace Default',
-    masked_token: masked,
-  };
 }
 
 /**

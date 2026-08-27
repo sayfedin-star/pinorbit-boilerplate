@@ -1201,8 +1201,47 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
     }
   });
 
+  let activePollingInterval: any = null;
+
+  function pollJobStatus(jobId: string, totalCount: number | 'all') {
+    if (activePollingInterval) clearInterval(activePollingInterval);
+
+    const startTime = Date.now();
+    activePollingInterval = setInterval(async () => {
+      try {
+        const workspaceId = getActiveWorkspaceId();
+        const res = await apiJSON(`/api/admin/competitor-ops?job_id=${jobId}&workspace_id=${workspaceId}`);
+        if (res.job) {
+          const { status, items_processed = 0, error_message } = res.job;
+          const countStr = totalCount === 'all' ? `${items_processed}` : `${items_processed}/${totalCount}`;
+          toast(`⚡ Scraping in progress (${countStr} profiles processed)...`, 'info');
+
+          if (status === 'completed') {
+            clearInterval(activePollingInterval);
+            activePollingInterval = null;
+            toast(`✅ Competitor update complete! (${items_processed} profiles refreshed)`, 'success');
+            await loadWorkspaceData();
+          } else if (status === 'failed') {
+            clearInterval(activePollingInterval);
+            activePollingInterval = null;
+            toast(`❌ Competitor scraping failed: ${error_message || 'Workflow error'}`, 'error');
+            await loadWorkspaceData();
+          }
+        }
+
+        // Timeout safety: stop polling after 5 minutes
+        if (Date.now() - startTime > 300000) {
+          clearInterval(activePollingInterval);
+          activePollingInterval = null;
+        }
+      } catch {
+        // fail-lazy during transient network polling
+      }
+    }, 2000);
+  }
+
   // ─── Run Full / Targeted Update ──────────────────────────────────────────
-  async function executeCompetitorUpdate(targetIds?: string[]) {
+  async function executeCompetitorUpdate(targetIds?: string[], force: boolean = false) {
     const ids = targetIds ?? (selectedIds.size > 0 ? Array.from(selectedIds) : []);
     const runBtn = $('run-full-update-btn') as HTMLButtonElement;
     const runIcon = $('run-full-update-icon');
@@ -1216,30 +1255,31 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
 
     try {
       const workspaceId = getActiveWorkspaceId();
+      const payload: Record<string, any> = {
+        workspace_id: workspaceId,
+        force,
+      };
 
       if (ids.length > 0) {
-        const jobIds: string[] = [];
-        for (const competitorId of ids) {
-          const res = await apiJSON('/api/admin/competitor-ops', {
-            method: 'POST',
-            body: JSON.stringify({ workspace_id: workspaceId, competitor_id: competitorId }),
-          });
-          if (res.job_id) {
-            jobIds.push(res.job_id.slice(0, 8));
-          }
-        }
-        if (jobIds.length === 1) {
-          toast(`Queued (job #${jobIds[0]}) — poller adopts on next cycle`, 'success');
-        } else if (jobIds.length > 1) {
-          toast(`Queued (jobs #${jobIds.join(', #')}) — poller adopts on next cycle`, 'success');
-        }
+        payload.scope = 'selected';
+        payload.ids = ids;
       } else {
-        const res = await apiJSON('/api/admin/competitor-ops', {
-          method: 'POST',
-          body: JSON.stringify({ workspace_id: workspaceId }),
-        });
-        const shortJobId = res.job_id ? res.job_id.slice(0, 8) : '';
-        toast(`Queued (job #${shortJobId || res.job_id}) — poller adopts on next cycle`, 'success');
+        payload.scope = 'all';
+      }
+
+      const res = await apiJSON('/api/admin/competitor-ops', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      if (res.job_id) {
+        const shortJobId = res.job_id.slice(0, 8);
+        const count = ids.length > 0 ? ids.length : 'all';
+        toast(`🚀 Workflow dispatched (#${shortJobId}) — scraping profiles on background runner...`, 'success');
+        pollJobStatus(res.job_id, count);
+      } else {
+        toast('Update dispatched successfully', 'success');
+        await loadWorkspaceData();
       }
     } catch (err: any) {
       toast(`Failed to dispatch update: ${err.message || 'Server error'}`, 'error');

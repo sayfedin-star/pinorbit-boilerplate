@@ -1,6 +1,6 @@
 ---
 // src/components/pinarchive/PinArchiveCronCard.astro
-// Carbon-copy of Scheduling FastCron Architecture & UX for PinArchive (Blocks A–D)
+import RunNowButton from '../cron/RunNowButton.astro';
 ---
 
 <div class="space-y-6" id="pinarchive-fastcron-container">
@@ -36,15 +36,16 @@
         <span>Sync Missing</span>
       </button>
 
-      <button
-        id="pa-btn-run-now"
-        type="button"
-        class="inline-flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary px-3.5 py-2 text-xs font-bold shadow-2xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-        title="Dispatches GitHub refresh workflow immediately with force=true"
-      >
-        <svg id="pa-run-now-icon" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        <span id="pa-run-now-text">Run Now</span>
-      </button>
+      <RunNowButton
+        endpoint="/api/pinarchive/cron"
+        payload={{ action: 'run_now' }}
+        label="Run Now"
+        forceLabel="⚡ Force Run"
+        size="sm"
+        variant="primary"
+        buttonId="pa-run-now-btn-unified"
+        scope="pinarchive"
+      />
     </div>
   </div>
 
