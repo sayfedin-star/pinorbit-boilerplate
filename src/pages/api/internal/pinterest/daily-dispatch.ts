@@ -2,7 +2,7 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { dbClients, isKnownDefaultIngestSecret, isProductionEnv } from '../../../../server/db/clients';
-import { getEffectiveSecret } from '../../../../server/services/webhook-secrets';
+import { getEffectiveSecret, verifyIngestSecret } from '../../../../server/services/webhook-secrets';
 import { SORT_MODES } from '../../../../server/services/fastcron-service';
 import { timingSafeEqual } from '../../../../server/lib/timing-safe';
 
@@ -161,8 +161,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({ success: false, error: 'Service unavailable: ingest secret not configured on server.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
   }
 
-  // 6. Timing-safe authentication
-  if (!expectedSecret || !(await timingSafeEqual(providedSecret, expectedSecret))) {
+  // 6. Timing-safe authentication across all candidates
+  const verification = await verifyIngestSecret(providedSecret, connection.workspace_id, runtimeEnv);
+  if (!verification.valid) {
     return new Response(
       JSON.stringify({
         success: false,

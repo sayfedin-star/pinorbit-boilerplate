@@ -2,7 +2,7 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { dbClients, isKnownDefaultIngestSecret, isProductionEnv } from '../../../../server/db/clients';
-import { getEffectiveSecret } from '../../../../server/services/webhook-secrets';
+import { getEffectiveSecret, verifyIngestSecret } from '../../../../server/services/webhook-secrets';
 import { timingSafeEqual } from '../../../../server/lib/timing-safe';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -79,7 +79,7 @@ async function handlePinArchiveDispatch(
     }
   }
 
-  // 2. Authenticate via getEffectiveSecret + timingSafeEqual
+  // 2. Authenticate via verifyIngestSecret (candidate-set verification)
   try {
     const eff = await getEffectiveSecret(workspaceId, runtimeEnv);
     if (isProductionEnv(runtimeEnv) && eff.source === 'env' && isKnownDefaultIngestSecret(eff.value)) {
@@ -97,9 +97,19 @@ async function handlePinArchiveDispatch(
       url.searchParams.get('secret') ||
       url.searchParams.get('ingest_secret');
 
-    if (!providedSecret || !eff.value || !(await timingSafeEqual(providedSecret, eff.value))) {
+    // Candidate-set verification across all valid sources (workspace, workspace:prev, global, global:prev, env)
+    const verification = await verifyIngestSecret(providedSecret, workspaceId, runtimeEnv);
+
+    if (!verification.valid) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Unauthorized: missing or invalid x-ingest-secret header.' }),
+        JSON.stringify({
+          success: false,
+          error: 'Unauthorized: missing or invalid x-ingest-secret header.',
+          debug: {
+            header_present: Boolean(providedSecret),
+            secret_length: providedSecret?.length || 0,
+          },
+        }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );
     }

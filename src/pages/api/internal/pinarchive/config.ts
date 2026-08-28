@@ -2,7 +2,7 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { dbClients, isKnownDefaultIngestSecret, isProductionEnv } from '../../../../server/db/clients';
-import { getEffectiveSecret } from '../../../../server/services/webhook-secrets';
+import { getEffectiveSecret, verifyIngestSecret } from '../../../../server/services/webhook-secrets';
 import { timingSafeEqual } from '../../../../server/lib/timing-safe';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -33,7 +33,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     );
   }
 
-  // 1. Auth First
+  // 1. Auth First (Candidate-set verification)
   const eff = await getEffectiveSecret(workspaceId, runtimeEnv);
   if (isProductionEnv(runtimeEnv) && eff.source === 'env' && isKnownDefaultIngestSecret(eff.value)) {
     return new Response(
@@ -43,7 +43,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   const providedSecret = request.headers.get('x-ingest-secret');
-  if (!providedSecret || !eff.value || !(await timingSafeEqual(providedSecret, eff.value))) {
+  const verification = await verifyIngestSecret(providedSecret, workspaceId, runtimeEnv);
+  if (!verification.valid) {
     return new Response(
       JSON.stringify({ success: false, error: 'Unauthorized: missing or invalid x-ingest-secret header.' }),
       { status: 401, headers: { 'Content-Type': 'application/json' } }

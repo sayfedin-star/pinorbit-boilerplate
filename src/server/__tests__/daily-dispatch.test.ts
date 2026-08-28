@@ -15,6 +15,9 @@ vi.mock('../db/clients', async () => {
 
 vi.mock('../services/webhook-secrets', () => ({
   getEffectiveSecret: vi.fn(),
+  verifyIngestSecret: vi.fn(async (provided: string) => {
+    return { valid: provided === 'test_ingest_secret_998877', matchedSource: 'global' };
+  }),
 }));
 
 describe('Daily Dispatch Endpoint Test Suite (F1, X4, X5, X6)', () => {

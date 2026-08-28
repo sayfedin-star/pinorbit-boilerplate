@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   getEffectiveSecret,
+  getSecretCandidates,
+  verifyIngestSecret,
   ensureGlobalSecret,
   regenerate,
   removeWorkspaceOverride,
@@ -134,5 +136,53 @@ describe('Cloudflare KV Webhook Secrets Service Suite (V19)', () => {
     expect(status2.hasOverride).toBe(true);
     expect(status2.source).toBe('workspace');
     expect(status2.secret).toBe('override_secret_456');
+  });
+
+  describe('Candidate-set verification (TIER 1)', () => {
+    it('getSecretCandidates returns all valid candidates in order', async () => {
+      mockKvStore.set(wsKey(wsId), 'ws_secret_1');
+      mockKvStore.set(`${wsKey(wsId)}:prev`, 'ws_secret_prev');
+      mockKvStore.set(GLOBAL_KEY, 'global_secret_1');
+      mockKvStore.set(`${GLOBAL_KEY}:prev`, 'global_secret_prev');
+
+      const candidates = await getSecretCandidates(wsId, mockRuntimeEnv);
+      expect(candidates).toEqual([
+        { value: 'ws_secret_1', source: 'workspace' },
+        { value: 'ws_secret_prev', source: 'workspace:prev' },
+        { value: 'global_secret_1', source: 'global' },
+        { value: 'global_secret_prev', source: 'global:prev' },
+        { value: 'env_fallback_secret_123', source: 'env' },
+      ]);
+    });
+
+    it('verifyIngestSecret validates against any candidate timing-safely', async () => {
+      mockKvStore.set(wsKey(wsId), 'ws_secret_active');
+      mockKvStore.set(GLOBAL_KEY, 'global_secret_active');
+
+      // Validates workspace secret
+      const v1 = await verifyIngestSecret('ws_secret_active', wsId, mockRuntimeEnv);
+      expect(v1.valid).toBe(true);
+      expect(v1.matchedSource).toBe('workspace');
+
+      // Validates global secret even if workspace override exists
+      const v2 = await verifyIngestSecret('global_secret_active', wsId, mockRuntimeEnv);
+      expect(v2.valid).toBe(true);
+      expect(v2.matchedSource).toBe('global');
+
+      // Validates env fallback secret
+      const v3 = await verifyIngestSecret('env_fallback_secret_123', wsId, mockRuntimeEnv);
+      expect(v3.valid).toBe(true);
+      expect(v3.matchedSource).toBe('env');
+
+      // Rejects invalid secret
+      const v4 = await verifyIngestSecret('completely_wrong_secret', wsId, mockRuntimeEnv);
+      expect(v4.valid).toBe(false);
+
+      // Rejects empty / null / whitespace secret
+      const v5 = await verifyIngestSecret('', wsId, mockRuntimeEnv);
+      expect(v5.valid).toBe(false);
+      const v6 = await verifyIngestSecret(null as any, wsId, mockRuntimeEnv);
+      expect(v6.valid).toBe(false);
+    });
   });
 });

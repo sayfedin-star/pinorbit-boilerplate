@@ -1,4 +1,5 @@
 import { getServerEnv } from '../db/clients';
+import { timingSafeEqual } from '../lib/timing-safe';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -19,6 +20,85 @@ export interface IngestSecretStatus {
   secret: string;
   source: 'workspace' | 'global' | 'env';
   hasOverride: boolean;
+}
+
+export interface SecretCandidate {
+  value: string;
+  source: 'workspace' | 'workspace:prev' | 'global' | 'global:prev' | 'env';
+}
+
+/**
+ * Returns ALL valid secret candidates for verification.
+ * Used by dispatch endpoints to accept any currently or previously-issued secret.
+ */
+export async function getSecretCandidates(
+  wsId: string,
+  runtimeEnv: Record<string, any>
+): Promise<SecretCandidate[]> {
+  const candidates: SecretCandidate[] = [];
+
+  // Try to read from KV (Cloudflare Workers binding or fallback to global environment)
+  let kv =
+    runtimeEnv?.INGEST_SECRETS_KV ||
+    (typeof globalThis !== 'undefined'
+      ? (globalThis as any)?.INGEST_SECRETS_KV || (globalThis as any)?.env?.INGEST_SECRETS_KV
+      : undefined);
+
+  if (kv && wsId && UUID_REGEX.test(wsId)) {
+    // 1. Workspace override (current)
+    const ws = await kv.get(wsKey(wsId));
+    if (ws) candidates.push({ value: ws, source: 'workspace' });
+
+    // 2. Workspace override (grace period - 300s)
+    const wsPrev = await kv.get(`${wsKey(wsId)}:prev`);
+    if (wsPrev) candidates.push({ value: wsPrev, source: 'workspace:prev' });
+
+    // 3. Global secret (current)
+    const g = await kv.get(GLOBAL_KEY);
+    if (g) candidates.push({ value: g, source: 'global' });
+
+    // 4. Global secret (grace period - 300s)
+    const gPrev = await kv.get(`${GLOBAL_KEY}:prev`);
+    if (gPrev) candidates.push({ value: gPrev, source: 'global:prev' });
+  } else if (kv) {
+    // If wsId is missing or invalid UUID but KV is present, still allow global candidates
+    const g = await kv.get(GLOBAL_KEY);
+    if (g) candidates.push({ value: g, source: 'global' });
+    const gPrev = await kv.get(`${GLOBAL_KEY}:prev`);
+    if (gPrev) candidates.push({ value: gPrev, source: 'global:prev' });
+  }
+
+  // 5. Environment fallback
+  const serverConfig = getServerEnv(runtimeEnv);
+  if (serverConfig.INGEST_SECRET_KEY) {
+    candidates.push({ value: serverConfig.INGEST_SECRET_KEY, source: 'env' });
+  }
+
+  return candidates;
+}
+
+/**
+ * Verifies provided secret against ALL valid candidates.
+ * Returns true if provided secret matches any candidate (timing-safe).
+ */
+export async function verifyIngestSecret(
+  providedSecret: string | null | undefined,
+  wsId: string,
+  runtimeEnv: Record<string, any>
+): Promise<{ valid: boolean; matchedSource?: SecretCandidate['source'] }> {
+  if (!providedSecret || typeof providedSecret !== 'string' || !providedSecret.trim()) {
+    return { valid: false };
+  }
+
+  const candidates = await getSecretCandidates(wsId, runtimeEnv);
+
+  for (const candidate of candidates) {
+    if (candidate.value && (await timingSafeEqual(providedSecret.trim(), candidate.value.trim()))) {
+      return { valid: true, matchedSource: candidate.source };
+    }
+  }
+
+  return { valid: false };
 }
 
 /**
