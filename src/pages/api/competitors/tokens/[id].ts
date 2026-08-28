@@ -34,8 +34,7 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 
   try {
     await assertWorkspaceAccess(client, workspaceId, user.id, 'admin');
-    const envWithClient = { ...runtimeEnv, supabaseClient: client };
-    const result = await deleteWorkspaceToken(workspaceId, id, 'competitors', envWithClient);
+    const result = await deleteWorkspaceToken(workspaceId, id, 'competitors', runtimeEnv);
     if (!result.success) {
       return new Response(JSON.stringify({ error: result.error || 'Failed to delete token' }), {
         status: 500,

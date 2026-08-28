@@ -66,6 +66,7 @@ describe('Competitors FastCron Token Vault API Suite', () => {
         activeWorkspaceId: mockWorkspaceId,
         runtimeEnv: {
           TOKEN_KEK: 'test_token_kek_secret_key_12345678',
+          competitorsClient: mockSupabase,
         },
       },
     } as any);
@@ -118,7 +119,7 @@ describe('Competitors FastCron Token Vault API Suite', () => {
         activeWorkspaceId: mockWorkspaceId,
         runtimeEnv: {
           TOKEN_KEK: 'test_token_kek_secret_key_12345678',
-          supabaseClient: mockSupabase,
+          competitorsClient: mockSupabase,
         },
       },
     } as any);
@@ -161,7 +162,7 @@ describe('Competitors FastCron Token Vault API Suite', () => {
         activeWorkspaceId: mockWorkspaceId,
         runtimeEnv: {
           TOKEN_KEK: 'test_token_kek_secret_key_12345678',
-          supabaseClient: mockSupabase,
+          competitorsClient: mockSupabase,
         },
       },
     } as any);

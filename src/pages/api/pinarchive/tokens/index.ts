@@ -25,8 +25,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
   try {
     await assertWorkspaceAccess(client, workspaceId, user.id, 'member');
-    const envWithClient = { ...runtimeEnv, supabaseClient: client };
-    const tokens = await listWorkspaceTokens(workspaceId, 'pinarchive', envWithClient, false);
+    const tokens = await listWorkspaceTokens(workspaceId, 'pinarchive', runtimeEnv, false);
     return new Response(JSON.stringify(tokens || []), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -88,12 +87,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     await assertWorkspaceAccess(client, workspaceId, user.id, 'admin');
-    const envWithClient = { ...runtimeEnv, supabaseClient: client };
     const result = await saveWorkspaceToken(
       workspaceId,
       'pinarchive',
       { name, token: rawToken, is_default: isDefault },
-      envWithClient
+      runtimeEnv
     );
 
     if (!result.success) {

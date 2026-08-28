@@ -41,32 +41,25 @@ function getClientAndTable(
     pinarchive: 'pinarchive_fastcron_tokens',
   };
 
-  if (runtimeEnv?.supabaseClient) {
-    return {
-      client: runtimeEnv.supabaseClient,
-      table: tableMap[project] || 'fastcron_tokens',
-    };
-  }
-
   switch (project) {
     case 'scheduling':
       return {
-        client: dbClients.getSchedulingAdmin(runtimeEnv),
+        client: runtimeEnv?.schedulingClient || runtimeEnv?.supabaseClient || dbClients.getSchedulingAdmin(runtimeEnv),
         table: 'fastcron_tokens',
       };
     case 'analytics':
       return {
-        client: dbClients.getAnalyticsAdmin(runtimeEnv),
+        client: runtimeEnv?.analyticsClient || dbClients.getAnalyticsAdmin(runtimeEnv),
         table: 'analytics_fastcron_tokens',
       };
     case 'competitors':
       return {
-        client: dbClients.getCompetitorsAdmin(runtimeEnv),
+        client: runtimeEnv?.competitorsClient || dbClients.getCompetitorsAdmin(runtimeEnv),
         table: 'competitor_fastcron_tokens',
       };
     case 'pinarchive':
       return {
-        client: dbClients.getPinArchive(runtimeEnv),
+        client: runtimeEnv?.pinarchiveClient || dbClients.getPinArchive(runtimeEnv),
         table: 'pinarchive_fastcron_tokens',
       };
     default:
