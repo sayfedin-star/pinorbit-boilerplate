@@ -108,8 +108,11 @@ vi.mock('../../server/services/webhook-secrets', () => ({
   })),
 }));
 
-vi.mock('../../server/lib/fastcron-client', () => ({
-  fastcronCall: vi.fn(async (action: string, params: any) => {
+vi.mock('../../server/lib/fastcron-client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../server/lib/fastcron-client')>();
+  return {
+    ...actual,
+    fastcronCall: vi.fn(async (action: string, params: any) => {
     if (action === 'cron_add') {
       return { success: true, data: { id: 888123, name: params.name, expression: params.expression } };
     }
@@ -130,7 +133,8 @@ vi.mock('../../server/lib/fastcron-client', () => ({
     }
     return { success: true, data: {} };
   }),
-}));
+};
+});
 
 vi.mock('../../server/lib/token-resolver', () => ({
   listWorkspaceTokens: vi.fn(async () => [

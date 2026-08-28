@@ -85,7 +85,7 @@ export function validateCronExpression(expr?: string | null): { valid: boolean; 
   return { valid: true, cron: parts.slice(0, 5).join(' ') };
 }
 
-import { fastcronCall as sharedFastcronCall } from '../../../server/lib/fastcron-client';
+import { fastcronCall as sharedFastcronCall, isFastCronJobPaused } from '../../../server/lib/fastcron-client';
 import { listWorkspaceTokens, resolveToken } from '../../../server/lib/token-resolver';
 
 /**
@@ -418,12 +418,7 @@ export const GET: APIRoute = async ({ locals }) => {
         }
 
         const postData = extractPostData(job) || {};
-        const isPaused =
-          job.status === 'disabled' ||
-          job.status === 'paused' ||
-          job.status === 0 ||
-          job.status === '0' ||
-          job.paused === true;
+        const isPaused = isFastCronJobPaused(job);
 
         const nextRunRaw = cronNext[0] || job.cron_next || job.next_run_at || job.nextRun;
         const lastLog = cronLogs[0] || null;
@@ -631,7 +626,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
               postData: postDataStr,
               post_data: postDataStr,
-              status: (job.status === 'disabled' || job.paused) ? 'disabled' : 'enabled',
+              status: isFastCronJobPaused(job) ? 'disabled' : 'enabled',
             };
             const editRes = await fastcronCall('cron_edit', repairParams, token);
             if (editRes.success) repairedCount++;

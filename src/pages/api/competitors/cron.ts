@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../server/auth/workspace-guard';
 import { dbClients } from '../../../server/db/clients';
 import { getEffectiveSecret } from '../../../server/services/webhook-secrets';
-import { fastcronCall } from '../../../server/lib/fastcron-client';
+import { fastcronCall, isFastCronJobPaused } from '../../../server/lib/fastcron-client';
 import { listWorkspaceTokens, resolveToken } from '../../../server/lib/token-resolver';
 
 export const getDispatchEndpointUrl = (
@@ -232,12 +232,7 @@ export const GET: APIRoute = async ({ locals }) => {
         } catch {}
 
         const postData = extractPostData(job) || {};
-        const isPaused =
-          job.status === 'disabled' ||
-          job.status === 'paused' ||
-          job.paused === true ||
-          job.paused === 1 ||
-          job.paused === '1';
+        const isPaused = isFastCronJobPaused(job);
 
         return {
           id: Number(job.id),
@@ -377,7 +372,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
               postData: repairPostData,
               post_data: repairPostData,
-              status: (job.status === 'disabled' || job.paused) ? 'disabled' : 'enabled',
+              status: isFastCronJobPaused(job) ? 'disabled' : 'enabled',
             };
             const editRes = await fastcronCall('cron_edit', repairParams, token);
             if (editRes.success) repairedCount++;
@@ -392,7 +387,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             fastcron_job_id: String(firstJob.id),
             cron_expression: firstJob.expression || '0 2 * * *',
             cron_provider: 'fastcron',
-            schedule_status: firstJob.status === 'disabled' || firstJob.paused ? 'paused' : 'active',
+            schedule_status: isFastCronJobPaused(firstJob) ? 'paused' : 'active',
             updated_at: new Date().toISOString(),
           }, { onConflict: 'workspace_id' });
 

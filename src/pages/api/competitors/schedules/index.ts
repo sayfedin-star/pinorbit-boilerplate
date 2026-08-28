@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../../server/auth/workspace-guard';
 import { dbClients } from '../../../../server/db/clients';
 import { getEffectiveSecret } from '../../../../server/services/webhook-secrets';
-import { fastcronCall } from '../../../../server/lib/fastcron-client';
+import { fastcronCall, isFastCronJobPaused } from '../../../../server/lib/fastcron-client';
 import { listWorkspaceTokens, resolveToken } from '../../../../server/lib/token-resolver';
 import { isMatchingCompetitorJob } from '../cron';
 
@@ -122,7 +122,7 @@ export const GET: APIRoute = async ({ locals }) => {
                     timezone: rJob.timezone || 'UTC',
                     fastcron_token_id: defaultToken.id || null,
                     fastcron_job_id: rJobIdStr,
-                    status: (rJob.status === 'disabled' || rJob.paused) ? 'paused' : 'active',
+                    status: isFastCronJobPaused(rJob) ? 'paused' : 'active',
                   })
                   .select('*')
                   .single();
@@ -184,10 +184,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
         const isPaused =
           sched.status === 'paused' ||
-          liveJob?.status === 'disabled' ||
-          liveJob?.status === 'paused' ||
-          liveJob?.paused === true ||
-          liveJob?.paused === 1;
+          (liveJob ? isFastCronJobPaused(liveJob) : false);
 
         return {
           id: sched.id,

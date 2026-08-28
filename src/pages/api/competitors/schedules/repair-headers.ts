@@ -4,7 +4,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../../server/auth/workspace-guard';
 import { getEffectiveSecret } from '../../../../server/services/webhook-secrets';
-import { fastcronCall } from '../../../../server/lib/fastcron-client';
+import { fastcronCall, isFastCronJobPaused } from '../../../../server/lib/fastcron-client';
 import { listWorkspaceTokens } from '../../../../server/lib/token-resolver';
 import { getDispatchEndpointUrl } from './index';
 import { isMatchingCompetitorJob } from '../cron';
@@ -85,7 +85,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
           http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
           postData: repairPostData,
           post_data: repairPostData,
-          status: (job.status === 'disabled' || job.paused) ? 'disabled' : 'enabled',
+          status: isFastCronJobPaused(job) ? 'disabled' : 'enabled',
         };
 
         const editRes = await fastcronCall('cron_edit', repairParams, tokenItem.token);

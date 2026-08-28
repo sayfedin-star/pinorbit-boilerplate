@@ -1,4 +1,4 @@
-import { fastcronCall } from '../../lib/fastcron-client';
+import { fastcronCall, isFastCronJobPaused } from '../../lib/fastcron-client';
 import type {
   CronProvider,
   CreateJobParams,
@@ -173,12 +173,7 @@ export class FastCronProvider implements CronProvider {
           : [];
 
     const jobs: CronJob[] = list.map((j) => {
-      const isPaused =
-        j.status === 'disabled' ||
-        j.status === 'paused' ||
-        j.status === 0 ||
-        j.status === '0' ||
-        j.paused === true;
+      const isPaused = isFastCronJobPaused(j);
 
       return {
         id: String(j.id),
@@ -215,12 +210,7 @@ export class FastCronProvider implements CronProvider {
       return { success: false, error: 'Job not found', raw: res.data };
     }
 
-    const isPaused =
-      j.status === 'disabled' ||
-      j.status === 'paused' ||
-      j.status === 0 ||
-      j.status === '0' ||
-      j.paused === true;
+    const isPaused = isFastCronJobPaused(j);
 
     const job: CronJob = {
       id: String(j.id),

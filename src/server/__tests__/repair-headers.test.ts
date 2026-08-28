@@ -37,9 +37,13 @@ vi.mock('../../server/lib/token-resolver', () => ({
   }),
 }));
 
-vi.mock('../../server/lib/fastcron-client', () => ({
-  fastcronCall: vi.fn(),
-}));
+vi.mock('../../server/lib/fastcron-client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../server/lib/fastcron-client')>();
+  return {
+    ...actual,
+    fastcronCall: vi.fn(),
+  };
+});
 
 describe('FastCron Job Headers Repair Endpoints Suite (P2 & P4)', () => {
   let capturedFastCronCalls: Array<{ action: string; params: any; token: string }>;

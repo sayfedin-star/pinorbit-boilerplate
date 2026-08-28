@@ -9,6 +9,7 @@ import {
   humanCron,
   humanCronTitle,
 } from '../services/cron-provider';
+import { isFastCronJobPaused } from '../lib/fastcron-client';
 import { cronExpressionToCronJobOrgSchedule } from '../services/cron-provider/cronjoborg';
 import { resolveToken, listWorkspaceTokens, saveWorkspaceToken, deleteWorkspaceToken } from '../lib/token-resolver';
 import { dbClients } from '../db/clients';
@@ -307,6 +308,38 @@ describe('Cron Provider Abstraction Suite', () => {
 
       const title = humanCronTitle('0 2 * * *', 'America/New_York');
       expect(title).toBe('Daily at 02:00 America/New_York');
+    });
+  });
+
+  describe('isFastCronJobPaused Status Mapping', () => {
+    it('correctly maps FastCron active states (status: 0, "0", "enabled", "active", "UP", "OK") to paused: false', () => {
+      expect(isFastCronJobPaused({ status: 0 })).toBe(false);
+      expect(isFastCronJobPaused({ status: '0' })).toBe(false);
+      expect(isFastCronJobPaused({ status: 'enabled' })).toBe(false);
+      expect(isFastCronJobPaused({ status: 'active' })).toBe(false);
+      expect(isFastCronJobPaused({ status: 'UP' })).toBe(false);
+      expect(isFastCronJobPaused({ status: 'OK' })).toBe(false);
+      expect(isFastCronJobPaused({ paused: false })).toBe(false);
+      expect(isFastCronJobPaused({ paused: 0 })).toBe(false);
+      expect(isFastCronJobPaused({ paused: '0' })).toBe(false);
+      expect(isFastCronJobPaused({ enabled: true })).toBe(false);
+    });
+
+    it('correctly maps FastCron disabled states (status: 1, "1", "disabled", "paused") to paused: true', () => {
+      expect(isFastCronJobPaused({ status: 1 })).toBe(true);
+      expect(isFastCronJobPaused({ status: '1' })).toBe(true);
+      expect(isFastCronJobPaused({ status: 'disabled' })).toBe(true);
+      expect(isFastCronJobPaused({ status: 'paused' })).toBe(true);
+      expect(isFastCronJobPaused({ paused: true })).toBe(true);
+      expect(isFastCronJobPaused({ paused: 1 })).toBe(true);
+      expect(isFastCronJobPaused({ paused: '1' })).toBe(true);
+      expect(isFastCronJobPaused({ enabled: false })).toBe(true);
+    });
+
+    it('handles null/undefined gracefully', () => {
+      expect(isFastCronJobPaused(null)).toBe(false);
+      expect(isFastCronJobPaused(undefined)).toBe(false);
+      expect(isFastCronJobPaused({})).toBe(false);
     });
   });
 });

@@ -76,8 +76,11 @@ vi.mock('../../server/lib/token-crypto', () => ({
   decryptToken: vi.fn().mockResolvedValue('fc_mock_decrypted_token_12345678'),
 }));
 
-vi.mock('../../server/lib/fastcron-client', () => ({
-  fastcronCall: vi.fn(async (action: string, params: any) => {
+vi.mock('../../server/lib/fastcron-client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../server/lib/fastcron-client')>();
+  return {
+    ...actual,
+    fastcronCall: vi.fn(async (action: string, params: any) => {
     if (action === 'cron_list') {
       return {
         success: true,
@@ -125,7 +128,8 @@ vi.mock('../../server/lib/fastcron-client', () => ({
     }
     return { success: true, data: {} };
   }),
-}));
+};
+});
 
 describe('Competitors FastCron Control Plane API Suite', () => {
   beforeEach(() => {
