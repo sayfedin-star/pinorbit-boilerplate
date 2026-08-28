@@ -107,21 +107,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Best-effort auto-create default schedule (0 2 * * *) on first token if no job exists yet
     try {
       const compAdmin = dbClients.getCompetitorsAdmin(runtimeEnv);
-      const { data: settings } = await compAdmin
-        .from('competitor_pipeline_settings')
-        .select('fastcron_job_id')
-        .eq('workspace_id', workspaceId)
-        .maybeSingle();
+      const { data: existingSchedules } = await compAdmin
+        .from('competitor_schedules')
+        .select('id, fastcron_job_id')
+        .eq('workspace_id', workspaceId);
 
-      if (!settings?.fastcron_job_id) {
+      if (!existingSchedules || existingSchedules.length === 0) {
         const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
         if (effSecret?.value) {
-          const dispatchUrl = (runtimeEnv?.COMPETITORS_DISPATCH_URL as string) || 'https://pinorbit-v2.o-i.workers.dev/api/internal/competitors/dispatch';
+          const dispatchUrl =
+            (runtimeEnv?.COMPETITORS_DISPATCH_URL as string) ||
+            'https://pinorbit-v2.o-i.workers.dev/api/internal/competitors/dispatch';
+
           const defaultParams = {
             name: `PinOrbit competitors — Default Daily — ${workspaceId.slice(0, 8)}`,
             url: dispatchUrl,
             expression: '0 2 * * *',
             timezone: 'UTC',
+            http_method: 'POST',
             http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
             post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: 'Default Daily' }),
             status: 'enabled',
@@ -129,16 +132,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const addRes = await fastcronCall('cron_add', defaultParams, rawToken);
           const newJobId = String(addRes.data?.id || addRes.data?.data?.id || '');
           if (newJobId) {
-            await compAdmin
-              .from('competitor_pipeline_settings')
-              .upsert({
-                workspace_id: workspaceId,
-                fastcron_job_id: newJobId,
-                cron_expression: '0 2 * * *',
-                cron_provider: 'fastcron',
-                schedule_status: 'active',
-                updated_at: new Date().toISOString(),
-              }, { onConflict: 'workspace_id' });
+            await compAdmin.from('competitor_schedules').insert({
+              workspace_id: workspaceId,
+              label: 'Default Daily',
+              cron_expression: '0 2 * * *',
+              timezone: 'UTC',
+              fastcron_token_id: result.id || null,
+              fastcron_job_id: newJobId,
+              status: 'active',
+            });
           }
         }
       }

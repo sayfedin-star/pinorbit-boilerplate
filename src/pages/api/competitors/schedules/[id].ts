@@ -38,13 +38,14 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
     const compAdmin = dbClients.getCompetitorsAdmin(runtimeEnv);
 
-    // 1. Fetch current schedule
-    const { data: schedule, error: fetchErr } = await compAdmin
-      .from('competitor_schedules')
-      .select('*')
-      .eq('id', id)
-      .eq('workspace_id', workspaceId)
-      .single();
+    // 1. Fetch current schedule (support UUID or numeric fastcron_job_id)
+    let query = compAdmin.from('competitor_schedules').select('*').eq('workspace_id', workspaceId);
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      query = query.eq('id', id);
+    } else {
+      query = query.eq('fastcron_job_id', id);
+    }
+    const { data: schedule, error: fetchErr } = await query.maybeSingle();
 
     if (fetchErr || !schedule) {
       return new Response(JSON.stringify({ success: false, error: 'Schedule not found' }), {
@@ -155,45 +156,41 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
     const compAdmin = dbClients.getCompetitorsAdmin(runtimeEnv);
 
-    // 1. Find schedule
-    const { data: schedule, error: fetchErr } = await compAdmin
-      .from('competitor_schedules')
-      .select('*')
-      .eq('id', id)
-      .eq('workspace_id', workspaceId)
-      .single();
-
-    if (fetchErr || !schedule) {
-      return new Response(JSON.stringify({ success: false, error: 'Schedule not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    // 1. Find schedule (support UUID or numeric fastcron_job_id)
+    let query = compAdmin.from('competitor_schedules').select('*').eq('workspace_id', workspaceId);
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      query = query.eq('id', id);
+    } else {
+      query = query.eq('fastcron_job_id', id);
     }
+    const { data: schedule } = await query.maybeSingle();
+
+    const targetJobId = schedule?.fastcron_job_id || (!isNaN(Number(id)) ? id : null);
 
     // 2. Best-effort FastCron delete
-    if (schedule.fastcron_job_id) {
+    if (targetJobId) {
       try {
         const targetTokenObj = await resolveToken(
-          { workspaceId, tokenId: schedule.fastcron_token_id },
+          { workspaceId, tokenId: schedule?.fastcron_token_id },
           'competitors',
           runtimeEnv
         );
         if (targetTokenObj?.token) {
-          await fastcronCall('cron_delete', { id: Number(schedule.fastcron_job_id) }, targetTokenObj.token);
+          await fastcronCall('cron_delete', { id: Number(targetJobId) }, targetTokenObj.token);
         }
       } catch (delErr) {
         console.warn(`[Competitors Schedule DELETE] Remote FastCron delete warning:`, delErr);
       }
     }
 
-    // 3. Delete from DB
-    const { error: dbDelErr } = await compAdmin
-      .from('competitor_schedules')
-      .delete()
-      .eq('id', id)
-      .eq('workspace_id', workspaceId);
-
-    if (dbDelErr) throw dbDelErr;
+    // 3. Delete from DB if row exists
+    if (schedule?.id) {
+      await compAdmin
+        .from('competitor_schedules')
+        .delete()
+        .eq('id', schedule.id)
+        .eq('workspace_id', workspaceId);
+    }
 
     return new Response(
       JSON.stringify({ success: true, message: 'Schedule deleted successfully.' }),

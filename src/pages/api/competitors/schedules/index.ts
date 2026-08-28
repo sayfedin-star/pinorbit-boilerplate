@@ -6,6 +6,7 @@ import { dbClients } from '../../../../server/db/clients';
 import { getEffectiveSecret } from '../../../../server/services/webhook-secrets';
 import { fastcronCall } from '../../../../server/lib/fastcron-client';
 import { listWorkspaceTokens, resolveToken } from '../../../../server/lib/token-resolver';
+import { isMatchingCompetitorJob } from '../cron';
 
 export const getDispatchEndpointUrl = (runtimeEnv?: Record<string, any>): string => {
   return (
@@ -42,7 +43,7 @@ export function validateCronExpression(expr?: string | null): { valid: boolean; 
   return { valid: true, cron: parts.slice(0, 5).join(' ') };
 }
 
-// ── GET: List Competitor Multi-Schedules ──────────────────────────────────────
+// ── GET: List Competitor Multi-Schedules & Discover Remote FastCron Jobs ─────
 export const GET: APIRoute = async ({ locals }) => {
   const user = locals.user;
   const schedulingClient = locals.supabase;
@@ -59,15 +60,17 @@ export const GET: APIRoute = async ({ locals }) => {
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'member');
     const compAdmin = dbClients.getCompetitorsAdmin(runtimeEnv);
+    const dispatchUrl = getDispatchEndpointUrl(runtimeEnv);
 
     // 1. Fetch persistent schedules from P2
-    const { data: dbSchedules, error: schedErr } = await compAdmin
+    let { data: dbSchedules, error: schedErr } = await compAdmin
       .from('competitor_schedules')
       .select('*')
       .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false });
 
     if (schedErr) throw schedErr;
+    dbSchedules = dbSchedules || [];
 
     // 2. Fetch available tokens
     const tokens = await listWorkspaceTokens(workspaceId, 'competitors', runtimeEnv, true);
@@ -77,7 +80,57 @@ export const GET: APIRoute = async ({ locals }) => {
     }
     const defaultToken = tokens.find((t) => t.is_default) || tokens[0] || null;
 
-    // 3. Enrich each schedule with FastCron live telemetry if job_id exists
+    // 3. FastCron Discovery: Discover any remote FastCron jobs for this workspace
+    const knownJobIds = new Set<string>(dbSchedules.map((s: any) => String(s.fastcron_job_id || '')));
+    const discoveredRemoteJobs: any[] = [];
+
+    if (defaultToken?.token) {
+      try {
+        const listRes = await fastcronCall('cron_list', { keyword: 'PinOrbit' }, defaultToken.token);
+        const rawJobs = Array.isArray(listRes.data)
+          ? listRes.data
+          : Array.isArray(listRes.data?.data)
+            ? listRes.data.data
+            : Array.isArray(listRes.data?.jobs)
+              ? listRes.data.jobs
+              : [];
+
+        for (const rJob of rawJobs) {
+          if (isMatchingCompetitorJob(rJob, workspaceId, dispatchUrl)) {
+            const rJobIdStr = String(rJob.id);
+            if (!knownJobIds.has(rJobIdStr)) {
+              // Remote orphan/duplicate job discovered in FastCron! Auto-adopt into competitor_schedules
+              try {
+                const { data: adoptedRow } = await compAdmin
+                  .from('competitor_schedules')
+                  .insert({
+                    workspace_id: workspaceId,
+                    label: rJob.name?.replace(/^PinOrbit\s*competitors\s*—\s*/i, '').replace(/\s*—\s*[a-f0-9-]+$/i, '') || 'Default Daily',
+                    cron_expression: rJob.expression || rJob.cron_expression || '0 2 * * *',
+                    timezone: rJob.timezone || 'UTC',
+                    fastcron_token_id: defaultToken.id || null,
+                    fastcron_job_id: rJobIdStr,
+                    status: (rJob.status === 'disabled' || rJob.paused) ? 'paused' : 'active',
+                  })
+                  .select('*')
+                  .single();
+
+                if (adoptedRow) {
+                  dbSchedules.push(adoptedRow);
+                  knownJobIds.add(rJobIdStr);
+                }
+              } catch (adoptErr) {
+                console.warn('[Competitors Discovery] Failed to adopt FastCron job #' + rJobIdStr, adoptErr);
+              }
+            }
+          }
+        }
+      } catch (discErr) {
+        console.warn('[Competitors Discovery] Remote FastCron list failed:', discErr);
+      }
+    }
+
+    // 4. Enrich each schedule with FastCron live telemetry if job_id exists
     const enrichedSchedules = await Promise.all(
       (dbSchedules || []).map(async (sched: any) => {
         let cronNext: any[] = [];

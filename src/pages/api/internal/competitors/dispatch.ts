@@ -5,54 +5,48 @@ import { dbClients, isKnownDefaultIngestSecret, isProductionEnv } from '../../..
 import { getEffectiveSecret } from '../../../../server/services/webhook-secrets';
 import { timingSafeEqual } from '../../../../server/lib/timing-safe';
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Server-Only Internal Competitors Dispatch Endpoint.
  *
- * Triggered by FastCron / cron-job.org (or platform ops) to dispatch
+ * Triggered by FastCron / cron-job.org (or platform ops) via GET or POST to dispatch
  * GitHub Actions update-competitors workflow.
  *
  * Security & RLS:
- * - Public self-auth via x-ingest-secret (workspace -> global -> env cascade).
+ * - Public self-auth via x-ingest-secret (workspace -> global -> env cascade) or ?secret= param.
  * - Strictly scoped to workspace_id.
  * - Verifies workspace existence in Project 1.
  * - Returns JSON 202 on success, or 400, 401, 403, 422, 502, 503.
  */
-export const POST: APIRoute = async ({ request, locals }) => {
+async function handleCompetitorsDispatch(
+  request: Request,
+  payload: Record<string, any>,
+  locals: any
+): Promise<Response> {
   const runtimeEnv =
     (locals as { runtime?: { env?: Record<string, any> }; runtimeEnv?: Record<string, any> })?.runtime?.env ||
     (locals as { runtimeEnv?: Record<string, any> })?.runtimeEnv ||
     (typeof process !== 'undefined' ? process.env : {}) ||
     {};
 
-  // 1. Parse JSON body
-  let payload: any;
-  try {
-    const text = await request.text();
-    if (!text || text.trim().length === 0) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Empty request payload.' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-    payload = JSON.parse(text);
-  } catch {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Malformed JSON payload.' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
+  const url = new URL(request.url);
 
-  // 2. Validate workspace_id
-  if (!payload || !payload.workspace_id || typeof payload.workspace_id !== 'string' || payload.workspace_id.trim() === '') {
+  // 1. Extract workspace_id (from payload or URL searchParams)
+  const rawWorkspaceId =
+    payload.workspace_id ||
+    url.searchParams.get('workspace_id') ||
+    url.searchParams.get('ws') ||
+    '';
+
+  if (!rawWorkspaceId || typeof rawWorkspaceId !== 'string' || rawWorkspaceId.trim() === '') {
     return new Response(
-      JSON.stringify({ success: false, error: 'Validation Error: workspace_id is required in payload.' }),
+      JSON.stringify({ success: false, error: 'Validation Error: workspace_id is required.' }),
       { status: 422, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  const workspaceId = payload.workspace_id.trim();
+  const workspaceId = rawWorkspaceId.trim();
   if (!UUID_REGEX.test(workspaceId)) {
     return new Response(
       JSON.stringify({ success: false, error: 'Validation Error: valid workspace_id UUID is required.' }),
@@ -60,7 +54,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
   }
 
-  // 3. Authenticate via getEffectiveSecret + timingSafeEqual
+  // 2. Authenticate via getEffectiveSecret + timingSafeEqual
   try {
     const eff = await getEffectiveSecret(workspaceId, runtimeEnv);
     if (isProductionEnv(runtimeEnv) && eff.source === 'env' && isKnownDefaultIngestSecret(eff.value)) {
@@ -72,7 +66,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const providedSecret =
       request.headers.get('x-ingest-secret') ||
-      (typeof payload.ingest_secret === 'string' ? payload.ingest_secret : null);
+      request.headers.get('x-dispatch-secret') ||
+      (typeof payload.ingest_secret === 'string' ? payload.ingest_secret : null) ||
+      (typeof payload.secret === 'string' ? payload.secret : null) ||
+      url.searchParams.get('secret') ||
+      url.searchParams.get('ingest_secret');
 
     if (!providedSecret || !eff.value || !(await timingSafeEqual(providedSecret, eff.value))) {
       return new Response(
@@ -87,7 +85,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
   }
 
-  // 4. Verify workspace existence in Project 1
+  // 3. Verify workspace existence in Project 1
   try {
     const admin = dbClients.getSchedulingAdmin(runtimeEnv);
     const { data: ws, error: wsErr } = await admin
@@ -109,7 +107,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
   }
 
-  // 5. Forward to GitHub Actions workflow_dispatch
+  // 4. Forward to GitHub Actions workflow_dispatch
   const githubRepo =
     (runtimeEnv.GITHUB_REPO as string) ||
     (typeof process !== 'undefined' ? process.env.GITHUB_REPO : '') ||
@@ -130,13 +128,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const dispatchUrl = `https://api.github.com/repos/${githubRepo}/actions/workflows/update-competitors.yml/dispatches`;
 
-  const forceValue = payload.force === 'true' || payload.force === true ? 'true' : '';
-  const dryRunValue = payload.dry_run === 'true' || payload.dry_run === true ? 'true' : '';
-  const targetScope = payload.target_scope || (payload.competitor_ids ? 'Selected' : 'All Active');
-  const competitorIds = Array.isArray(payload.competitor_ids)
-    ? payload.competitor_ids.join(',')
-    : (typeof payload.competitor_ids === 'string' ? payload.competitor_ids : '');
-  const targetUsername = typeof payload.target_username === 'string' ? payload.target_username : '';
+  const forceValue =
+    payload.force === 'true' || payload.force === true || url.searchParams.get('force') === 'true'
+      ? 'true'
+      : '';
+  const dryRunValue =
+    payload.dry_run === 'true' || payload.dry_run === true || url.searchParams.get('dry_run') === 'true'
+      ? 'true'
+      : '';
+  const targetScope =
+    payload.target_scope ||
+    url.searchParams.get('target_scope') ||
+    (payload.competitor_ids || url.searchParams.get('competitor_ids') ? 'Selected' : 'All Active');
+
+  const rawCompIds = payload.competitor_ids || url.searchParams.get('competitor_ids');
+  const competitorIds = Array.isArray(rawCompIds)
+    ? rawCompIds.join(',')
+    : (typeof rawCompIds === 'string' ? rawCompIds : '');
+  const targetUsername =
+    typeof payload.target_username === 'string'
+      ? payload.target_username
+      : url.searchParams.get('target_username') || '';
 
   try {
     const ghRes = await fetch(dispatchUrl, {
@@ -194,4 +206,46 @@ export const POST: APIRoute = async ({ request, locals }) => {
       { status: 502, headers: { 'Content-Type': 'application/json' } }
     );
   }
+}
+
+// ── GET & POST Handlers ───────────────────────────────────────────────────────
+export const GET: APIRoute = async ({ request, locals }) => {
+  return handleCompetitorsDispatch(request, {}, locals);
+};
+
+export const POST: APIRoute = async ({ request, locals }) => {
+  const url = new URL(request.url);
+  const hasQueryParams = Boolean(url.searchParams.get('workspace_id') || url.searchParams.get('ws'));
+
+  let text = '';
+  try {
+    text = await request.text();
+  } catch {
+    text = '';
+  }
+
+  if (!text || text.trim().length === 0) {
+    if (!hasQueryParams) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Empty request payload.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
+  let payload: Record<string, any> = {};
+  if (text && text.trim().length > 0) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      if (!hasQueryParams) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Malformed JSON payload.' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+  }
+
+  return handleCompetitorsDispatch(request, payload, locals);
 };
