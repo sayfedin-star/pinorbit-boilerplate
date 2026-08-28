@@ -2,7 +2,9 @@
 import Layout from '../layouts/Layout.astro';
 import SectionHeader from '../components/ui/SectionHeader.astro';
 import SectionTabs from '../components/ui/SectionTabs.astro';
+import CronProviderSelector from '../components/cron/CronProviderSelector.astro';
 import { getActiveWorkspaceId, getWorkspaces } from '../lib/workspaces';
+import { listWorkspaceTokens } from '../server/lib/token-resolver';
 
 const settingsTabs = [
   { label: 'Workspace', href: '/settings' },
@@ -45,6 +47,18 @@ if (supabase && currentWorkspace) {
     console.warn('Error fetching workspace memberships:', err);
     members = [];
     currentRole = 'member';
+  }
+}
+
+// Fetch global cron provider and tokens for current workspace
+const runtimeEnv = (Astro.locals as any)?.runtime?.env || (Astro.locals as any)?.runtimeEnv;
+let currentProvider = (currentWorkspace as any)?.cron_provider || 'fastcron';
+let workspaceTokens: any[] = [];
+if (currentWorkspace?.id) {
+  try {
+    workspaceTokens = await listWorkspaceTokens(currentWorkspace.id, 'scheduling', runtimeEnv);
+  } catch (err) {
+    console.warn('Error fetching workspace tokens:', err);
   }
 }
 
@@ -215,6 +229,14 @@ function formatLastRunP3(result: any) {
         </div>
       </div>
     </div>
+
+    <!-- Card 1.5: Cron Engine Provider (Workspace Global) -->
+    <CronProviderSelector
+      workspaceId={currentWorkspace?.id || ''}
+      currentProvider={currentProvider}
+      project="scheduling"
+      tokens={workspaceTokens}
+    />
 
     <!-- Card 2: Retention & Lifecycle Control -->
     <div class="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-6" id="retention-settings-card">

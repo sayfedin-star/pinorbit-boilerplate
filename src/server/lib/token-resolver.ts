@@ -1,5 +1,6 @@
 import { dbClients, getServerEnv } from '../db/clients';
 import { decryptToken, encryptToken, resolveTokenKek } from './token-crypto';
+import { getGlobalCronProvider } from '../services/cron-provider';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type ProjectName = 'scheduling' | 'analytics' | 'competitors' | 'pinarchive';
@@ -87,8 +88,13 @@ export async function resolveToken(
   project: ProjectName,
   runtimeEnv?: Record<string, any>
 ): Promise<ResolvedTokenResult> {
-  const { workspaceId, tokenId, provider = 'fastcron' } = options;
+  const { workspaceId, tokenId } = options;
+  const provider = options.provider || (workspaceId ? await getGlobalCronProvider(workspaceId, runtimeEnv) : 'fastcron');
+  const isCronJobOrg = provider === 'cronjoborg' || provider === 'cron-job.org';
   const env = getServerEnv(runtimeEnv);
+  const envToken = isCronJobOrg
+    ? (runtimeEnv?.CRONJOB_API_KEY || (typeof process !== 'undefined' ? process.env.CRONJOB_API_KEY || process.env.CRON_JOB_ORG_API_KEY : ''))
+    : (runtimeEnv?.FASTCRON_API_TOKEN || env.FASTCRON_API_TOKEN || (typeof process !== 'undefined' ? process.env.FASTCRON_API_TOKEN : ''));
   const kek = await resolveTokenKek(runtimeEnv || {});
   const { client, table } = getClientAndTable(project, runtimeEnv);
 
@@ -171,11 +177,6 @@ export async function resolveToken(
   }
 
   // 4. Environment fallback
-  const isCronJobOrg = provider === 'cronjoborg' || provider === 'cron-job.org';
-  const envToken = isCronJobOrg
-    ? (runtimeEnv?.CRONJOB_API_KEY || (typeof process !== 'undefined' ? process.env.CRONJOB_API_KEY || process.env.CRON_JOB_ORG_API_KEY : ''))
-    : (runtimeEnv?.FASTCRON_API_TOKEN || env.FASTCRON_API_TOKEN || (typeof process !== 'undefined' ? process.env.FASTCRON_API_TOKEN : ''));
-
   if (envToken && typeof envToken === 'string' && envToken.trim().length >= 8) {
     return {
       token: envToken.trim(),

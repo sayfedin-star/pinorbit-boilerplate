@@ -4,7 +4,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
 import FastCronOptionsCard from '../../components/analytics/FastCronOptionsCard.astro';
 import ConnectionHealthBanner from '../../components/analytics/ConnectionHealthBanner.astro';
 import RunNowButton from '../../components/cron/RunNowButton.astro';
-import CronProviderSelector from '../../components/cron/CronProviderSelector.astro';
+import ProviderBadge from '../../components/cron/ProviderBadge.astro';
 import AddNewScheduleModal from '../../components/cron/AddNewScheduleModal.astro';
 
 import { dbClients } from '../../server/db/clients';
@@ -290,12 +290,8 @@ const accountName = connection.display_name || 'Account';
     <!-- C2.1: Health Banner -->
     <ConnectionHealthBanner />
 
-    <!-- Cron Engine Provider Authority -->
-    <CronProviderSelector
-      workspaceId={workspaceId}
-      project="analytics"
-      currentProvider="fastcron"
-    />
+    <!-- Cron Engine Provider Badge -->
+    <ProviderBadge workspaceId={workspaceId} />
 
     <!-- C2.2: Pipeline Cards -->
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">

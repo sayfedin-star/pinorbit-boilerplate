@@ -1,7 +1,6 @@
 ---
-// src/components/pinarchive/PinArchiveCronCard.astro
 import RunNowButton from '../cron/RunNowButton.astro';
-import CronProviderSelector from '../cron/CronProviderSelector.astro';
+import ProviderBadge from '../cron/ProviderBadge.astro';
 ---
 
 <div class="space-y-6" id="pinarchive-fastcron-container">
@@ -50,12 +49,8 @@ import CronProviderSelector from '../cron/CronProviderSelector.astro';
     </div>
   </div>
 
-  <!-- ═══ Cron Engine Provider Authority ═══ -->
-  <CronProviderSelector
-    workspaceId={Astro.locals.activeWorkspaceId || ''}
-    project="pinarchive"
-    currentProvider="fastcron"
-  />
+  <!-- ═══ Cron Engine Provider Badge ═══ -->
+  <ProviderBadge workspaceId={Astro.locals.activeWorkspaceId || ''} />
 
   <!-- ═══ BLOCK A: Workspace Token Registry ═══ -->
   <div class="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-xs space-y-4">
@@ -66,7 +61,7 @@ import CronProviderSelector from '../cron/CronProviderSelector.astro';
         </div>
         <div>
           <h3 class="text-sm font-bold text-foreground">FastCron API Tokens</h3>
-          <p class="text-xs text-muted-foreground">Workspace token registry & connection authority</p>
+          <p class="text-xs text-muted-foreground">Workspace token registry — Provider is global (Settings &gt; Workspace), tokens are per-project</p>
         </div>
       </div>
       <div class="flex items-center gap-2">

@@ -97,4 +97,54 @@ describe('Cron Provider Abstraction Suite', () => {
 
     fetchSpy.mockRestore();
   });
+
+  it('getGlobalCronProvider resolves workspaces.cron_provider from Project 1 DB', async () => {
+    const { getGlobalCronProvider } = await import('../services/cron-provider');
+
+    // Mock DB client returning cronjoborg
+    const mockAdmin = {
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { cron_provider: 'cronjoborg' },
+              error: null,
+            }),
+          }),
+        }),
+      }),
+    };
+
+    const spy = vi.spyOn(dbClients, 'getSchedulingAdmin').mockReturnValue(mockAdmin as any);
+
+    const provider = await getGlobalCronProvider('ws-test-123');
+    expect(provider).toBe('cronjoborg');
+    expect(mockAdmin.from).toHaveBeenCalledWith('workspaces');
+
+    spy.mockRestore();
+  });
+
+  it('getGlobalCronProvider falls back to fastcron on error or missing workspace', async () => {
+    const { getGlobalCronProvider } = await import('../services/cron-provider');
+    const p1 = await getGlobalCronProvider(null);
+    expect(p1).toBe('fastcron');
+
+    const mockAdminErr = {
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: null,
+              error: new Error('DB error'),
+            }),
+          }),
+        }),
+      }),
+    };
+
+    const spy = vi.spyOn(dbClients, 'getSchedulingAdmin').mockReturnValue(mockAdminErr as any);
+    const p2 = await getGlobalCronProvider('ws-missing');
+    expect(p2).toBe('fastcron');
+    spy.mockRestore();
+  });
 });
