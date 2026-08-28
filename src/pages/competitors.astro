@@ -4,10 +4,30 @@ import SectionHeader from '../components/ui/SectionHeader.astro';
 import RunNowButton from '../components/cron/RunNowButton.astro';
 import ProviderBadge from '../components/cron/ProviderBadge.astro';
 import { humanCron, humanCronTitle } from '../lib/cron-helper';
+import { dbClients } from '../server/db/clients';
 
-const cronExpr = '0 2 * * *';
-const cronDescription = humanCron(cronExpr);
-const cronTitle = humanCronTitle(cronExpr);
+const workspaceId = Astro.locals.activeWorkspaceId || '';
+const runtimeEnv = (Astro.locals as any)?.runtime?.env || (Astro.locals as any)?.runtimeEnv;
+
+let competitor_pipeline_settings: { cron_expression?: string | null } | null = null;
+if (workspaceId) {
+  try {
+    const compClient = dbClients.getCompetitors(runtimeEnv);
+    const { data } = await compClient
+      .from('competitor_pipeline_settings')
+      .select('cron_expression')
+      .eq('workspace_id', workspaceId)
+      .maybeSingle();
+    competitor_pipeline_settings = data;
+  } catch (e) {
+    console.warn('[competitors] Error fetching pipeline settings:', e);
+  }
+}
+
+const rawExpr = competitor_pipeline_settings?.cron_expression || null;
+const cronExpr = rawExpr || '—';
+const cronTitle = rawExpr ? humanCronTitle(rawExpr) : 'No schedule yet';
+const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure Schedule';
 ---
 
 <Layout title="Competitor Intelligence" description="Track competitor Pinterest growth, reach, views, followers, and board creation strategy over time.">
@@ -69,9 +89,9 @@ const cronTitle = humanCronTitle(cronExpr);
             id="comp-cron-badge"
             class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border cursor-help"
             title={cronTitle}
-            data-tooltip={cronDescription}
+            data-tooltip={cronDesc}
           >
-            {cronExpr}
+            {rawExpr ? cronExpr : 'No schedule — Configure Schedule →'}
           </span>
         </div>
         <p class="text-xs text-muted-foreground mt-0.5">

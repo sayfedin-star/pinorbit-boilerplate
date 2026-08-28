@@ -126,29 +126,43 @@ export const POST: APIRoute = async ({ request, locals }) => {
     setCronProviderCache(workspaceId, provider);
 
     // Optional sync to downstream project pipeline settings for backward compatibility
+    const warnings: string[] = [];
+
     try {
       const compClient = dbClients.getCompetitorsAdmin(runtimeEnv);
-      await compClient
+      const { error: p2Err } = await compClient
         .from('competitor_pipeline_settings')
         .update({ cron_provider: provider, updated_at: new Date().toISOString() })
         .eq('workspace_id', workspaceId);
-    } catch {}
+      if (p2Err) throw p2Err;
+    } catch (e: any) {
+      console.warn('[cron-provider sync] P2 failed:', e?.message);
+      warnings.push(`P2: ${e?.message || 'Competitors sync failed'}`);
+    }
 
     try {
       const analyticsClient = dbClients.getAnalyticsAdmin(runtimeEnv);
-      await analyticsClient
+      const { error: p3Err } = await analyticsClient
         .from('workspace_analytics_settings')
         .update({ cron_provider: provider, updated_at: new Date().toISOString() })
         .eq('workspace_id', workspaceId);
-    } catch {}
+      if (p3Err) throw p3Err;
+    } catch (e: any) {
+      console.warn('[cron-provider sync] P3 failed:', e?.message);
+      warnings.push(`P3: ${e?.message || 'Analytics sync failed'}`);
+    }
 
     try {
       const paClient = dbClients.getPinArchive(runtimeEnv);
-      await paClient
+      const { error: p4Err } = await paClient
         .from('pa_workspace_settings')
         .update({ cron_provider: provider, updated_at: new Date().toISOString() })
         .eq('workspace_id', workspaceId);
-    } catch {}
+      if (p4Err) throw p4Err;
+    } catch (e: any) {
+      console.warn('[cron-provider sync] P4 failed:', e?.message);
+      warnings.push(`P4: ${e?.message || 'PinArchive sync failed'}`);
+    }
 
     return new Response(
       JSON.stringify({
@@ -157,6 +171,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         provider: updated.cron_provider,
         has_custom_key: Boolean(updated.cron_provider_api_key_encrypted),
         message: `Workspace cron provider set to ${provider === 'cronjoborg' ? 'cron-job.org' : 'FastCron'}`,
+        warnings,
       }),
       {
         status: 200,

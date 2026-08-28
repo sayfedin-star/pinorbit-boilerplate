@@ -206,7 +206,8 @@ const isCronJobOrg = currentProvider?.toLowerCase() === 'cronjoborg' || currentP
           <button
             type="button"
             id="save-key-modal-btn"
-            class="px-3.5 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+            disabled
+            class="px-3.5 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
           >
             <span id="save-key-btn-label">Save API Key</span>
           </button>
@@ -291,7 +292,11 @@ const isCronJobOrg = currentProvider?.toLowerCase() === 'cronjoborg' || currentP
 
           updateButtonUI(targetProvider);
           const name = targetProvider === 'cronjoborg' ? 'cron-job.org' : 'FastCron';
-          showToast(`Cron provider switched to ${name} for this workspace.`);
+          if (data.warnings && data.warnings.length > 0) {
+            showToast(`Cron provider switched to ${name}, but downstream sync had warnings: ${data.warnings.join(', ')}`);
+          } else {
+            showToast(`Cron provider switched to ${name} for this workspace.`);
+          }
 
           window.dispatchEvent(
             new CustomEvent('cron:provider-changed', {
@@ -323,6 +328,7 @@ const isCronJobOrg = currentProvider?.toLowerCase() === 'cronjoborg' || currentP
         keyInput.value = '';
         keyInput.type = 'password';
       }
+      if (saveBtn) saveBtn.disabled = true;
       if (errorEl) errorEl.classList.add('hidden');
       modal.classList.remove('hidden');
       setTimeout(() => keyInput?.focus(), 50);
@@ -332,8 +338,17 @@ const isCronJobOrg = currentProvider?.toLowerCase() === 'cronjoborg' || currentP
       if (!modal) return;
       modal.classList.add('hidden');
       if (keyInput) keyInput.value = '';
+      if (saveBtn) saveBtn.disabled = true;
       if (errorEl) errorEl.classList.add('hidden');
     }
+
+    keyInput?.addEventListener('input', () => {
+      const val = keyInput.value.trim();
+      if (saveBtn) saveBtn.disabled = val.length < 8;
+      if (val.length >= 8 && errorEl) {
+        errorEl.classList.add('hidden');
+      }
+    });
 
     addTokenBtn?.addEventListener('click', openModal);
     closeBtn?.addEventListener('click', closeModal);
@@ -358,11 +373,14 @@ const isCronJobOrg = currentProvider?.toLowerCase() === 'cronjoborg' || currentP
       const tokenVal = keyInput?.value?.trim() || '';
       if (tokenVal.length < 8) {
         if (errorEl) errorEl.classList.remove('hidden');
+        if (saveBtn) saveBtn.disabled = true;
         keyInput?.focus();
         return;
       }
 
       if (errorEl) errorEl.classList.add('hidden');
+
+      const current = (container.querySelector('[data-provider].bg-indigo-600') as HTMLElement)?.dataset.provider || 'fastcron';
 
       try {
         if (saveBtn) saveBtn.disabled = true;
@@ -373,6 +391,7 @@ const isCronJobOrg = currentProvider?.toLowerCase() === 'cronjoborg' || currentP
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             workspace_id: workspaceId,
+            provider: current,
             api_key: tokenVal,
           }),
         });
@@ -383,11 +402,23 @@ const isCronJobOrg = currentProvider?.toLowerCase() === 'cronjoborg' || currentP
         }
 
         closeModal();
-        showToast('Workspace provider API key updated and encrypted successfully.');
+        if (data.warnings && data.warnings.length > 0) {
+          showToast(`Provider API key updated with downstream warnings: ${data.warnings.join(', ')}`, true);
+        } else {
+          showToast('Workspace provider API key updated and encrypted successfully.');
+        }
+
+        window.dispatchEvent(
+          new CustomEvent('cron:provider-changed', {
+            detail: { provider: current, workspaceId },
+          })
+        );
       } catch (err: any) {
         showToast(err.message || 'Failed to save API key', true);
       } finally {
-        if (saveBtn) saveBtn.disabled = false;
+        if (saveBtn) {
+          saveBtn.disabled = (keyInput?.value?.trim().length || 0) < 8;
+        }
         if (saveBtnLabel) saveBtnLabel.textContent = 'Save API Key';
       }
     });

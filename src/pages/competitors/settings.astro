@@ -4,10 +4,30 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
 import ProviderBadge from '../../components/cron/ProviderBadge.astro';
 import AddNewScheduleModal from '../../components/cron/AddNewScheduleModal.astro';
 import { humanCron, humanCronTitle } from '../../lib/cron-helper';
+import { dbClients } from '../../server/db/clients';
 
-const cronExpr = '0 2 * * *';
-const cronDescription = humanCron(cronExpr);
-const cronTitle = humanCronTitle(cronExpr);
+const workspaceId = Astro.locals.activeWorkspaceId || '';
+const runtimeEnv = (Astro.locals as any)?.runtime?.env || (Astro.locals as any)?.runtimeEnv;
+
+let competitor_pipeline_settings: { cron_expression?: string | null } | null = null;
+if (workspaceId) {
+  try {
+    const compClient = dbClients.getCompetitors(runtimeEnv);
+    const { data } = await compClient
+      .from('competitor_pipeline_settings')
+      .select('cron_expression')
+      .eq('workspace_id', workspaceId)
+      .maybeSingle();
+    competitor_pipeline_settings = data;
+  } catch (e) {
+    console.warn('[competitors/settings] Error fetching pipeline settings:', e);
+  }
+}
+
+const rawExpr = competitor_pipeline_settings?.cron_expression || null;
+const cronExpr = rawExpr || '—';
+const cronTitle = rawExpr ? humanCronTitle(rawExpr) : 'No schedule yet';
+const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure Schedule';
 ---
 
 <Layout title="Competitor Intelligence Settings" description="Closed-loop control plane for Pinterest competitor ingestion, credential vault, pipeline schedules, and live job auditing.">
@@ -63,9 +83,9 @@ const cronTitle = humanCronTitle(cronExpr);
           id="comp-cron-badge"
           class="text-[10px] font-mono px-2.5 py-1 rounded-full bg-muted text-muted-foreground border border-border cursor-help"
           title={cronTitle}
-          data-tooltip={cronDescription}
+          data-tooltip={cronDesc}
         >
-          {cronExpr} ({cronTitle})
+          {rawExpr ? `${cronExpr} (${cronTitle})` : 'No schedule — Configure Schedule →'}
         </span>
         <ProviderBadge workspaceId={Astro.locals.activeWorkspaceId || ''} />
       </div>
@@ -391,6 +411,8 @@ const cronTitle = humanCronTitle(cronExpr);
 </Layout>
 
 <script>
+  import { humanCron, humanCronTitle } from '../../lib/cron-helper';
+
   // ─── Helpers & Utilities ───────────────────────────────────────────────────
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
   const escHtml = (s: any) => String(s ?? '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m] as string));
@@ -464,6 +486,7 @@ const cronTitle = humanCronTitle(cronExpr);
     const isEnabled = Boolean(settings?.is_enabled ?? true);
     const dryRun = Boolean(settings?.dry_run ?? false);
     const maxRetries = settings?.max_retries ?? 3;
+    const expr = settings?.cron_expression || null;
 
     ( $('pipe-is-enabled') as HTMLInputElement ).checked = isEnabled;
     ( $('pipe-dry-run') as HTMLInputElement ).checked = dryRun;
@@ -485,6 +508,19 @@ const cronTitle = humanCronTitle(cronExpr);
     } else {
       dryBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground';
       dryBadge.textContent = 'Off';
+    }
+
+    const cronBadge = $('comp-cron-badge');
+    if (cronBadge) {
+      if (expr) {
+        cronBadge.textContent = `${expr} (${humanCronTitle(expr)})`;
+        cronBadge.title = humanCronTitle(expr);
+        cronBadge.setAttribute('data-tooltip', humanCron(expr));
+      } else {
+        cronBadge.textContent = 'No schedule — Configure Schedule →';
+        cronBadge.title = 'No schedule yet';
+        cronBadge.setAttribute('data-tooltip', 'Create a schedule via Configure Schedule');
+      }
     }
   }
 

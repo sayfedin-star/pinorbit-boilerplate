@@ -99,6 +99,17 @@ describe('Workspace Cron Provider API Suite (/api/workspace/cron-provider)', () 
 
     vi.spyOn(dbClients, 'getSchedulingAdmin').mockReturnValue(mockAdmin as any);
 
+    const mockDownstream = {
+      from: vi.fn().mockReturnValue({
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ error: null }),
+        }),
+      }),
+    };
+    vi.spyOn(dbClients, 'getCompetitorsAdmin').mockReturnValue(mockDownstream as any);
+    vi.spyOn(dbClients, 'getAnalyticsAdmin').mockReturnValue(mockDownstream as any);
+    vi.spyOn(dbClients, 'getPinArchive').mockReturnValue(mockDownstream as any);
+
     const req = new Request('http://localhost/api/workspace/cron-provider', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -124,5 +135,75 @@ describe('Workspace Cron Provider API Suite (/api/workspace/cron-provider)', () 
     expect(json.provider).toBe('cronjoborg');
     expect(updatePayload.cron_provider).toBe('cronjoborg');
     expect(updatePayload.cron_provider_api_key_encrypted).toBe('v1:mock_iv:mock_ct');
+    expect(json.warnings).toEqual([]);
+  });
+
+  it('POST captures and surfaces downstream sync errors in warnings array without failing', async () => {
+    vi.spyOn(workspaceGuard, 'assertWorkspaceAccess').mockResolvedValue({
+      workspaceId: 'ws-123',
+      role: 'admin',
+      isOwner: true,
+      isAdmin: true,
+    });
+
+    const mockAdmin = {
+      from: vi.fn().mockReturnValue({
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'ws-123',
+                  cron_provider: 'fastcron',
+                  cron_provider_api_key_encrypted: null,
+                },
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      }),
+    };
+
+    vi.spyOn(dbClients, 'getSchedulingAdmin').mockReturnValue(mockAdmin as any);
+
+    // Mock P2 failure
+    vi.spyOn(dbClients, 'getCompetitorsAdmin').mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({
+            error: new Error('P2 connection refused'),
+          }),
+        }),
+      }),
+    } as any);
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const req = new Request('http://localhost/api/workspace/cron-provider', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workspace_id: 'ws-123',
+        provider: 'fastcron',
+      }),
+    });
+
+    const res = await POST({
+      request: req,
+      locals: {
+        user: { id: 'user-1' },
+        supabase: {} as any,
+        activeWorkspaceId: 'ws-123',
+      },
+    } as any);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.success).toBe(true);
+    expect(json.warnings).toBeDefined();
+    expect(json.warnings.length).toBeGreaterThan(0);
+    expect(json.warnings[0]).toContain('P2:');
+    expect(warnSpy).toHaveBeenCalled();
   });
 });

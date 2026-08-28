@@ -35,6 +35,9 @@ const providerLabel = isCronJobOrg ? 'cron-job.org' : 'FastCron';
 
 <script>
   function initProviderBadges() {
+    if ((window as any).__providerBadgeInit) return;
+    (window as any).__providerBadgeInit = true;
+
     window.addEventListener('cron:provider-changed', ((e: CustomEvent<{ provider?: string; workspaceId?: string }>) => {
       const targetProvider = e.detail?.provider;
       if (!targetProvider) return;
