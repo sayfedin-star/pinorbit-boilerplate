@@ -3,7 +3,6 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { dbClients, isKnownDefaultIngestSecret, isProductionEnv } from '../../../../server/db/clients';
 import { getEffectiveSecret, verifyIngestSecret } from '../../../../server/services/webhook-secrets';
-import { timingSafeEqual } from '../../../../server/lib/timing-safe';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

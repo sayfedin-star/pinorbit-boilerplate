@@ -348,6 +348,36 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       const matchedJobs = existingList.filter((j) => isMatchingCompetitorJob(j, workspaceId, dispatchUrl));
       if (matchedJobs.length > 0) {
+        let repairedCount = 0;
+        for (const job of matchedJobs) {
+          const jobId = Number(job.id);
+          if (jobId) {
+            const jobLabel =
+              job.name?.replace(/^PinOrbit\s*competitors\s*—\s*/i, '').replace(/\s*—\s*[a-f0-9-]+$/i, '') || 'Default Daily';
+            const repairPostData = JSON.stringify({
+              workspace_id: workspaceId,
+              pipeline: 'competitors',
+              label: jobLabel,
+            });
+            const repairParams = {
+              id: jobId,
+              name: `PinOrbit competitors — ${jobLabel} — ${workspaceId.slice(0, 8)}`,
+              url: getDispatchEndpointUrl(runtimeEnv, workspaceId),
+              expression: job.expression || job.cron_expression || '0 2 * * *',
+              timezone: job.timezone || 'UTC',
+              httpMethod: 'POST',
+              http_method: 'POST',
+              httpHeaders: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
+              http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
+              postData: repairPostData,
+              post_data: repairPostData,
+              status: (job.status === 'disabled' || job.paused) ? 'disabled' : 'enabled',
+            };
+            const editRes = await fastcronCall('cron_edit', repairParams, token);
+            if (editRes.success) repairedCount++;
+          }
+        }
+
         const firstJob = matchedJobs[0];
         await compAdmin
           .from('competitor_pipeline_settings')
@@ -361,7 +391,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }, { onConflict: 'workspace_id' });
 
         return new Response(
-          JSON.stringify({ success: true, message: 'FastCron jobs already present for this workspace.', count: matchedJobs.length, job: firstJob }),
+          JSON.stringify({
+            success: true,
+            message: `Verified and repaired ${repairedCount} existing FastCron job(s) for this workspace.`,
+            count: matchedJobs.length,
+            repaired: repairedCount,
+            job: firstJob,
+          }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
         );
       }

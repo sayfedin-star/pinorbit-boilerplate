@@ -101,9 +101,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const newLabel = `${sched.label || 'Schedule'} (copy)`;
           const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
           const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
+          if (!effSecret || !effSecret.value || effSecret.value.trim() === '') {
+            failedCount++;
+            results.push({ id: sched.id, action, success: false, error: 'Ingest secret not configured for workspace.' });
+            continue;
+          }
 
           let newJobId: string | null = null;
-          if (targetTokenObj?.token && effSecret?.value) {
+          if (targetTokenObj?.token) {
             const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: newLabel });
             const cloneParams = {
               name: `PinOrbit competitors — ${newLabel} — ${workspaceId.slice(0, 8)}`,

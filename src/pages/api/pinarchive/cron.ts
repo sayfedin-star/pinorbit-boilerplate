@@ -602,8 +602,44 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       const matchedJobs = existingList.filter((j) => isMatchingPinArchiveJob(j, workspaceId, dispatchUrl));
       if (matchedJobs.length > 0) {
+        let repairedCount = 0;
+        for (const job of matchedJobs) {
+          const jobId = Number(job.id);
+          if (jobId) {
+            const jobLabel =
+              job.name?.replace(/^PinOrbit\s*pinarchive\s*—\s*/i, '').replace(/\s*—\s*[a-f0-9-]+$/i, '') || 'Default Daily';
+            const postDataStr = JSON.stringify({
+              workspace_id: workspaceId,
+              pipeline: 'pinarchive',
+              label: jobLabel,
+            });
+            const repairParams = {
+              id: jobId,
+              name: `PinOrbit pinarchive — ${jobLabel} — ${workspaceId.slice(0, 8)}`,
+              url: getDispatchEndpointUrl(runtimeEnv, workspaceId),
+              expression: job.expression || job.cron_expression || '0 3 * * *',
+              timezone: job.timezone || 'UTC',
+              httpMethod: 'POST',
+              http_method: 'POST',
+              httpHeaders: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
+              http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
+              postData: postDataStr,
+              post_data: postDataStr,
+              status: (job.status === 'disabled' || job.paused) ? 'disabled' : 'enabled',
+            };
+            const editRes = await fastcronCall('cron_edit', repairParams, token);
+            if (editRes.success) repairedCount++;
+          }
+        }
+
         return new Response(
-          JSON.stringify({ success: true, message: 'FastCron jobs already present for this workspace.', count: matchedJobs.length }),
+          JSON.stringify({
+            success: true,
+            message: `Verified and repaired ${repairedCount} existing FastCron job(s) for this workspace.`,
+            count: matchedJobs.length,
+            repaired: repairedCount,
+            jobs: matchedJobs,
+          }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
         );
       }

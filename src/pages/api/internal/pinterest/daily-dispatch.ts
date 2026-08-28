@@ -4,7 +4,6 @@ import type { APIRoute } from 'astro';
 import { dbClients, isKnownDefaultIngestSecret, isProductionEnv } from '../../../../server/db/clients';
 import { getEffectiveSecret, verifyIngestSecret } from '../../../../server/services/webhook-secrets';
 import { SORT_MODES } from '../../../../server/services/fastcron-service';
-import { timingSafeEqual } from '../../../../server/lib/timing-safe';
 
 /**
  * Server-Only Internal Daily Dispatch Endpoint (F1, X4, X5, X6).

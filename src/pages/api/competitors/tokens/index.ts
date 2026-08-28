@@ -6,6 +6,7 @@ import { listWorkspaceTokens, saveWorkspaceToken } from '../../../../server/lib/
 import { dbClients } from '../../../../server/db/clients';
 import { getEffectiveSecret } from '../../../../server/services/webhook-secrets';
 import { fastcronCall } from '../../../../server/lib/fastcron-client';
+import { getDispatchEndpointUrl } from '../schedules/index';
 
 export const GET: APIRoute = async ({ locals }) => {
   const user = locals.user;
@@ -115,18 +116,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (!existingSchedules || existingSchedules.length === 0) {
         const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
         if (effSecret?.value) {
-          const dispatchUrl =
-            (runtimeEnv?.COMPETITORS_DISPATCH_URL as string) ||
-            'https://pinorbit-v2.o-i.workers.dev/api/internal/competitors/dispatch';
+          const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
+          const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: 'Default Daily' });
 
           const defaultParams = {
             name: `PinOrbit competitors — Default Daily — ${workspaceId.slice(0, 8)}`,
             url: dispatchUrl,
             expression: '0 2 * * *',
             timezone: 'UTC',
+            httpMethod: 'POST',
             http_method: 'POST',
+            httpHeaders: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
             http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
-            post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: 'Default Daily' }),
+            postData: postDataStr,
+            post_data: postDataStr,
             status: 'enabled',
           };
           const addRes = await fastcronCall('cron_add', defaultParams, rawToken);

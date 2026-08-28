@@ -67,7 +67,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return json({ success: false, error: `Invalid username format: ${u}` }, 400);
       }
     }
-    validatedUsernames = Array.from(new Set(parsed)).slice(0, 50);
+    validatedUsernames = Array.from(new Set<string>(parsed)).slice(0, 50);
   }
 
   let username: string | undefined;

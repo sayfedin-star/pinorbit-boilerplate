@@ -91,8 +91,15 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       );
 
       if (targetTokenObj?.token) {
-        const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
         const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
+        if (!effSecret || !effSecret.value || effSecret.value.trim() === '') {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Ingest secret not configured for workspace.' }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
         const isEnabled = updatePayload.status ? updatePayload.status === 'active' : schedule.status === 'active';
         const postDataStr = JSON.stringify({
           workspace_id: workspaceId,
@@ -108,14 +115,20 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
           timezone: updatePayload.timezone || schedule.timezone || 'UTC',
           httpMethod: 'POST',
           http_method: 'POST',
-          httpHeaders: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret?.value?.trim() || ''}`,
-          http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret?.value?.trim() || ''}`,
+          httpHeaders: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
+          http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
           postData: postDataStr,
           post_data: postDataStr,
           status: isEnabled ? 'enabled' : 'disabled',
         };
 
-        await fastcronCall('cron_edit', fastcronParams, targetTokenObj.token);
+        const editRes = await fastcronCall('cron_edit', fastcronParams, targetTokenObj.token);
+        if (!editRes.success) {
+          return new Response(
+            JSON.stringify({ success: false, error: editRes.error || 'Failed to update schedule in FastCron.' }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
       }
     }
 

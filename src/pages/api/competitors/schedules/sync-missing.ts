@@ -25,26 +25,7 @@ export const POST: APIRoute = async ({ locals }) => {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
     const compAdmin = dbClients.getCompetitorsAdmin(runtimeEnv);
 
-    // Check if any schedules already exist
-    const { data: existing, error: fetchErr } = await compAdmin
-      .from('competitor_schedules')
-      .select('id, fastcron_job_id, cron_expression')
-      .eq('workspace_id', workspaceId);
-
-    if (fetchErr) throw fetchErr;
-
-    if (existing && existing.length > 0) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: 'Schedules already configured for this workspace.',
-          count: existing.length,
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
+    // 1. Resolve Effective Ingest Secret First
     const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
     if (!effSecret || !effSecret.value || effSecret.value.trim() === '') {
       return new Response(
@@ -53,6 +34,7 @@ export const POST: APIRoute = async ({ locals }) => {
       );
     }
 
+    // 2. Resolve Target Token
     const targetTokenObj = await resolveToken(
       { workspaceId },
       'competitors',
@@ -65,6 +47,59 @@ export const POST: APIRoute = async ({ locals }) => {
       );
     }
 
+    const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
+
+    // 3. Check if any schedules already exist in DB
+    const { data: existing, error: fetchErr } = await compAdmin
+      .from('competitor_schedules')
+      .select('id, label, fastcron_job_id, cron_expression, timezone, status, fastcron_token_id')
+      .eq('workspace_id', workspaceId);
+
+    if (fetchErr) throw fetchErr;
+
+    if (existing && existing.length > 0) {
+      let repairedCount = 0;
+      for (const sched of existing) {
+        if (sched.fastcron_job_id) {
+          const schedTokenObj = await resolveToken(
+            { workspaceId, tokenId: sched.fastcron_token_id || undefined },
+            'competitors',
+            runtimeEnv
+          );
+          const apiToken = schedTokenObj?.token || targetTokenObj.token;
+          const schedLabel = sched.label || 'Default Daily';
+          const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: schedLabel });
+          const repairParams = {
+            id: Number(sched.fastcron_job_id),
+            name: `PinOrbit competitors — ${schedLabel} — ${workspaceId.slice(0, 8)}`,
+            url: dispatchUrl,
+            expression: sched.cron_expression || '0 2 * * *',
+            timezone: sched.timezone || 'UTC',
+            httpMethod: 'POST',
+            http_method: 'POST',
+            httpHeaders: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
+            http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
+            postData: postDataStr,
+            post_data: postDataStr,
+            status: sched.status === 'paused' ? 'disabled' : 'enabled',
+          };
+          const editRes = await fastcronCall('cron_edit', repairParams, apiToken);
+          if (editRes.success) repairedCount++;
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Verified and repaired ${repairedCount} FastCron job(s) for this workspace.`,
+          count: existing.length,
+          repaired: repairedCount,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 4. If 0 schedules exist, create default daily schedule
     const label = 'Default Daily';
     const cronExpression = '0 2 * * *';
     const timezone = 'UTC';
@@ -115,6 +150,8 @@ export const POST: APIRoute = async ({ locals }) => {
         success: true,
         message: 'Default daily schedule created (02:00 UTC).',
         schedule: newRow,
+        count: 1,
+        repaired: 1,
       }),
       { status: 201, headers: { 'Content-Type': 'application/json' } }
     );

@@ -3,7 +3,6 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { dbClients, isKnownDefaultIngestSecret, isProductionEnv } from '../../../../server/db/clients';
 import { getEffectiveSecret, verifyIngestSecret } from '../../../../server/services/webhook-secrets';
-import { timingSafeEqual } from '../../../../server/lib/timing-safe';
 
 /**
  * Server-Only Internal PinArchive Ingest Endpoint.
