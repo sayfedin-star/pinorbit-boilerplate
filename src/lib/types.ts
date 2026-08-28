@@ -6,6 +6,8 @@ export interface Workspace {
   slug?: string | null;
   created_at: string;
   updated_at: string;
+  cron_provider?: 'fastcron' | 'cronjoborg' | string;
+  cron_provider_api_key_encrypted?: string | null;
 }
 
 export interface WorkspaceMembership {

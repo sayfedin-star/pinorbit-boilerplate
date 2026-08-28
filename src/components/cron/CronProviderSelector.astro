@@ -4,16 +4,17 @@ import type { WorkspaceTokenSummary } from '../../server/lib/token-resolver';
 export interface Props {
   currentProvider?: string;
   workspaceId: string;
-  project: 'scheduling' | 'analytics' | 'competitors' | 'pinarchive';
+  project?: 'scheduling' | 'analytics' | 'competitors' | 'pinarchive';
   tokens?: WorkspaceTokenSummary[];
   selectedTokenId?: string | null;
   class?: string;
+  pipeline?: string;
 }
 
 const {
   currentProvider = 'fastcron',
   workspaceId,
-  project,
+  project = 'scheduling',
   tokens = [],
   selectedTokenId = null,
   class: className = '',
@@ -23,24 +24,24 @@ const isFastCron = !currentProvider || currentProvider.toLowerCase() === 'fastcr
 const isCronJobOrg = currentProvider?.toLowerCase() === 'cronjoborg' || currentProvider?.toLowerCase() === 'cron-job.org';
 ---
 
-<div class={`bg-zinc-900/90 border border-zinc-800 rounded-xl p-4 space-y-4 ${className}`} data-provider-container>
+<div class={`bg-zinc-900/90 border border-zinc-800 rounded-xl p-4 sm:p-5 space-y-4 ${className}`} data-provider-container data-workspace-id={workspaceId}>
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
     <div>
       <h3 class="text-sm font-semibold text-zinc-100 flex items-center gap-2">
         <svg class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        Cron Engine Provider
+        Cron Engine Provider (Workspace Global)
       </h3>
-      <p class="text-xs text-zinc-400 mt-0.5">Select your automated scheduling infrastructure.</p>
+      <p class="text-xs text-zinc-400 mt-0.5">Select your automated scheduling infrastructure for all projects.</p>
     </div>
 
     <!-- Provider Tabs Selector -->
-    <div class="inline-flex p-1 bg-zinc-950/80 border border-zinc-800/80 rounded-lg text-xs font-medium">
+    <div class="inline-flex p-1 bg-zinc-950/80 border border-zinc-800/80 rounded-lg text-xs font-medium" id="global-provider-tabs">
       <button
         type="button"
         data-provider="fastcron"
-        class={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${
+        class={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
           isFastCron
             ? 'bg-indigo-600 text-white shadow-sm font-semibold'
             : 'text-zinc-400 hover:text-zinc-200'
@@ -52,7 +53,7 @@ const isCronJobOrg = currentProvider?.toLowerCase() === 'cronjoborg' || currentP
       <button
         type="button"
         data-provider="cronjoborg"
-        class={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${
+        class={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
           isCronJobOrg
             ? 'bg-indigo-600 text-white shadow-sm font-semibold'
             : 'text-zinc-400 hover:text-zinc-200'
@@ -70,6 +71,7 @@ const isCronJobOrg = currentProvider?.toLowerCase() === 'cronjoborg' || currentP
       <label class="text-xs font-medium text-zinc-300 flex items-center justify-between">
         <span>Active Provider API Key / Token</span>
         <a
+          id="cron-docs-link"
           href={isCronJobOrg ? 'https://docs.cron-job.org/rest-api.html' : 'https://www.fastcron.com/help'}
           target="_blank"
           rel="noopener noreferrer"
@@ -101,7 +103,7 @@ const isCronJobOrg = currentProvider?.toLowerCase() === 'cronjoborg' || currentP
         <button
           type="button"
           id="add-token-modal-btn"
-          class="shrink-0 px-2.5 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 rounded-lg transition-colors flex items-center gap-1"
+          class="shrink-0 px-2.5 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
           title="Add New Token to Workspace Vault"
         >
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -126,4 +128,127 @@ const isCronJobOrg = currentProvider?.toLowerCase() === 'cronjoborg' || currentP
       </p>
     </div>
   </div>
+  
+  <div id="provider-change-toast" class="hidden rounded-lg p-2.5 text-xs font-semibold"></div>
 </div>
+
+<script>
+  function initCronProviderSelector() {
+    const container = document.querySelector('[data-provider-container]') as HTMLElement | null;
+    if (!container || container.dataset.initialized === 'true') return;
+    container.dataset.initialized = 'true';
+
+    const workspaceId = container.dataset.workspaceId;
+    const docsLink = document.getElementById('cron-docs-link') as HTMLAnchorElement | null;
+    const toast = document.getElementById('provider-change-toast');
+    const buttons = container.querySelectorAll<HTMLButtonElement>('[data-provider]');
+
+    function showToast(msg: string, isError = false) {
+      if (!toast) return;
+      toast.className = `rounded-lg p-2.5 text-xs font-semibold ${
+        isError
+          ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+          : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+      }`;
+      toast.textContent = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast?.classList.add('hidden'), 4000);
+    }
+
+    function updateButtonUI(activeProvider: string) {
+      const p = activeProvider.toLowerCase();
+      const isCronJobOrg = p === 'cronjoborg' || p === 'cron-job.org';
+      
+      buttons.forEach((btn) => {
+        const bType = btn.getAttribute('data-provider');
+        const isActive = (bType === 'fastcron' && !isCronJobOrg) || (bType === 'cronjoborg' && isCronJobOrg);
+        
+        btn.className = `px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+          isActive
+            ? 'bg-indigo-600 text-white shadow-sm font-semibold'
+            : 'text-zinc-400 hover:text-zinc-200'
+        }`;
+        
+        const dot = btn.querySelector('span');
+        if (dot) {
+          dot.className = `w-2 h-2 rounded-full ${isActive ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`;
+        }
+      });
+
+      if (docsLink) {
+        if (isCronJobOrg) {
+          docsLink.href = 'https://docs.cron-job.org/rest-api.html';
+        } else {
+          docsLink.href = 'https://www.fastcron.com/help';
+        }
+      }
+    }
+
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const targetProvider = btn.getAttribute('data-provider');
+        if (!targetProvider) return;
+
+        try {
+          btn.disabled = true;
+          const res = await fetch('/api/workspace/cron-provider', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workspace_id: workspaceId,
+              provider: targetProvider,
+            }),
+          });
+
+          const data = await res.json();
+          if (!res.ok || data.success === false) {
+            throw new Error(data.error || 'Failed to update cron provider');
+          }
+
+          updateButtonUI(targetProvider);
+          const name = targetProvider === 'cronjoborg' ? 'cron-job.org' : 'FastCron';
+          showToast(`Cron provider switched to ${name} for this workspace.`);
+
+          window.dispatchEvent(
+            new CustomEvent('cron:provider-changed', {
+              detail: { provider: targetProvider, workspaceId },
+            })
+          );
+        } catch (err: any) {
+          showToast(err.message || 'Failed to update provider', true);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+
+    const addTokenBtn = document.getElementById('add-token-modal-btn');
+    if (addTokenBtn) {
+      addTokenBtn.addEventListener('click', () => {
+        const tokenVal = prompt('Enter provider API Key or Token for workspace:');
+        if (!tokenVal || tokenVal.trim().length < 8) return;
+        
+        fetch('/api/workspace/cron-provider', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspace_id: workspaceId,
+            api_key: tokenVal.trim(),
+          }),
+        })
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.success) {
+              showToast('Workspace provider API key updated and encrypted successfully.');
+            } else {
+              showToast(d.error || 'Failed to save API key', true);
+            }
+          })
+          .catch((e) => showToast(e.message, true));
+      });
+    }
+  }
+
+  initCronProviderSelector();
+  document.addEventListener('astro:page-load', initCronProviderSelector);
+</script>
