@@ -167,21 +167,49 @@ describe('ui-helpers test suite', () => {
       expect(humanCron('11 15 * * *', 'UTC')).toContain('1/day, 7/week');
     });
 
-    it('derives next trigger date accurately via getNextCronDate', async () => {
+    it('derives next trigger date accurately via getNextCronDate across all 5-part cron syntax', async () => {
       const { getNextCronDate } = await import('../cron-helper');
-      const base = new Date('2026-08-28T12:00:00.000Z');
-      const nextDate = getNextCronDate('11 15 * * *', 'UTC', base);
-      expect(nextDate).not.toBeNull();
-      expect(nextDate?.getUTCHours()).toBe(15);
-      expect(nextDate?.getUTCMinutes()).toBe(11);
-      expect(nextDate?.getUTCDate()).toBe(28);
+      
+      // 1. 11 15 * * * (same day before trigger)
+      const base1 = new Date('2026-08-28T12:00:00.000Z');
+      const next1 = getNextCronDate('11 15 * * *', 'UTC', base1);
+      expect(next1).not.toBeNull();
+      expect(next1?.getUTCHours()).toBe(15);
+      expect(next1?.getUTCMinutes()).toBe(11);
+      expect(next1?.getUTCDate()).toBe(28);
 
-      const pastBase = new Date('2026-08-28T16:00:00.000Z');
-      const nextDayDate = getNextCronDate('11 15 * * *', 'UTC', pastBase);
-      expect(nextDayDate).not.toBeNull();
-      expect(nextDayDate?.getUTCDate()).toBe(29);
-      expect(nextDayDate?.getUTCHours()).toBe(15);
-      expect(nextDayDate?.getUTCMinutes()).toBe(11);
+      // 2. 14 15 * * * (same day after trigger -> next day)
+      const base2 = new Date('2026-08-28T16:00:00.000Z');
+      const next2 = getNextCronDate('14 15 * * *', 'UTC', base2);
+      expect(next2).not.toBeNull();
+      expect(next2?.getUTCDate()).toBe(29);
+      expect(next2?.getUTCHours()).toBe(15);
+      expect(next2?.getUTCMinutes()).toBe(14);
+
+      // 3. */15 * * * * (every 15 mins)
+      const base3 = new Date('2026-08-28T12:03:00.000Z');
+      const next3 = getNextCronDate('*/15 * * * *', 'UTC', base3);
+      expect(next3).not.toBeNull();
+      expect(next3?.getUTCMinutes()).toBe(15);
+
+      // 4. 0 3 1 * * (1st of next month at 03:00)
+      const base4 = new Date('2026-08-28T12:00:00.000Z');
+      const next4 = getNextCronDate('0 3 1 * *', 'UTC', base4);
+      expect(next4).not.toBeNull();
+      expect(next4?.getUTCMonth()).toBe(8); // Sept (0-indexed 8)
+      expect(next4?.getUTCDate()).toBe(1);
+      expect(next4?.getUTCHours()).toBe(3);
+      expect(next4?.getUTCMinutes()).toBe(0);
+
+      // 5. 0 3 * * 1 (Monday at 03:00)
+      // Aug 28, 2026 is Friday -> next Monday is Aug 31
+      const base5 = new Date('2026-08-28T12:00:00.000Z');
+      const next5 = getNextCronDate('0 3 * * 1', 'UTC', base5);
+      expect(next5).not.toBeNull();
+      expect(next5?.getUTCDate()).toBe(31);
+      expect(next5?.getUTCDay()).toBe(1); // Monday
+      expect(next5?.getUTCHours()).toBe(3);
+      expect(next5?.getUTCMinutes()).toBe(0);
     });
   });
 });

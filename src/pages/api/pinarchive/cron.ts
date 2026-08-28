@@ -475,6 +475,25 @@ export const GET: APIRoute = async ({ locals }) => {
       })
     );
 
+    // Sync active schedule metadata into pa_workspace_settings (non-blocking)
+    const activeJob = enrichedJobs.find(j => !j.paused) || enrichedJobs[0];
+    if (activeJob) {
+      try {
+        const pinArchive = dbClients.getPinArchive(runtimeEnv);
+        await pinArchive
+          .from('pa_workspace_settings')
+          .upsert({
+            workspace_id: workspaceId,
+            cron_expression: activeJob.expression,
+            fastcron_job_id: String(activeJob.id),
+            schedule_status: activeJob.paused ? 'paused' : 'enabled',
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'workspace_id' });
+      } catch (err: any) {
+        console.warn(`[PinArchive FastCron] Could not sync pa_workspace_settings for ${workspaceId}:`, err?.message || err);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

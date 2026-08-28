@@ -4,6 +4,7 @@ import { assertWorkspaceAccess } from '../../../server/auth/workspace-guard';
 import { dbClients } from '../../../server/db/clients';
 import { errorStatus } from '../../../server/lib/http-error';
 import { getNextCronDate } from '../../../lib/cron-helper';
+import { resolveScheduleToken } from '../../../server/services/fastcron-service';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -103,14 +104,46 @@ export const GET: APIRoute = async ({ request, locals }) => {
         .eq('workspace_id', ws)
         .maybeSingle();
 
-      if (wsSettings?.cron_expression && wsSettings.schedule_status !== 'paused' && wsSettings.schedule_status !== 'disabled') {
-        const nextDate = getNextCronDate(wsSettings.cron_expression, 'UTC');
+      let cronExpr = wsSettings?.cron_expression;
+      let isPaused = wsSettings?.schedule_status === 'paused' || wsSettings?.schedule_status === 'disabled';
+
+      // Fallback: If pa_workspace_settings has no cron_expression yet, query live FastCron tokens
+      if (!cronExpr) {
+        try {
+          const runtimeEnv = (locals as any)?.runtime?.env || (locals as any)?.runtimeEnv || process.env || {};
+          const schedulingAdmin = dbClients.getSchedulingAdmin(runtimeEnv);
+          const tokenRes = await resolveScheduleToken(schedulingAdmin, ws, 'pinarchive', runtimeEnv);
+          if (tokenRes?.token) {
+            const { fastcronCall } = await import('../../../server/lib/fastcron-client');
+            const listRes = await fastcronCall('cron_list', { keyword: 'PinOrbit' }, tokenRes.token);
+            const list = Array.isArray(listRes.data) ? listRes.data : Array.isArray(listRes.data?.data) ? listRes.data.data : [];
+            const matchingJob = list.find((j: any) => String(j.url || '').includes(ws) || String(j.name || '').includes(ws.slice(0, 8)));
+            if (matchingJob) {
+              cronExpr = matchingJob.expression || matchingJob.cron_expression;
+              isPaused = matchingJob.status === 'paused' || matchingJob.status === 'disabled' || matchingJob.paused;
+              // Persist to pa_workspace_settings for future calls
+              await db.from('pa_workspace_settings').upsert({
+                workspace_id: ws,
+                cron_expression: cronExpr,
+                fastcron_job_id: String(matchingJob.id),
+                schedule_status: isPaused ? 'paused' : 'enabled',
+                updated_at: new Date().toISOString(),
+              }, { onConflict: 'workspace_id' });
+            }
+          }
+        } catch (tokErr: any) {
+          console.warn(`[PinArchive Overview] Fallback token resolve failed for workspace ${ws}:`, tokErr?.message || tokErr);
+        }
+      }
+
+      if (cronExpr && !isPaused) {
+        const nextDate = getNextCronDate(cronExpr, 'UTC');
         if (nextDate) {
           activeNextRunIso = nextDate.toISOString();
         }
       }
-    } catch (err) {
-      console.warn('Could not derive workspace schedule next run:', err);
+    } catch (err: any) {
+      console.warn(`[PinArchive Overview] Could not derive schedule next run for workspace ${ws}:`, err?.message || err);
     }
 
     // Attach to each account:
