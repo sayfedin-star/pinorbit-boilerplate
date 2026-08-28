@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { fmtAuditTimestamp, fmtDuration } from '../format-audit';
 
 describe('fmtAuditTimestamp & fmtDuration Suite', () => {
@@ -52,6 +52,15 @@ describe('fmtAuditTimestamp & fmtDuration Suite', () => {
       const badRes = fmtAuditTimestamp('invalid-date-string');
       expect(badRes.isValid).toBe(false);
       expect(badRes.line1).toBe('—');
+    });
+
+    it('renders one_line_tz mode with explicit timezone badge', () => {
+      const iso = '2026-08-28T04:54:40.000Z';
+      const res = fmtAuditTimestamp(iso, { timezone: 'UTC', mode: 'one_line_tz' });
+      expect(res.isValid).toBe(true);
+      expect(res.full).toContain('UTC');
+      expect(res.html).toContain('(UTC)');
+      expect(res.html).not.toContain('<div class="flex flex-col');
     });
   });
 

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shared audit timestamp and duration formatters for PinOrbit (P1-P4).
  * Pure, client-safe, fail-lazy (never throws, returns fallback strings on bad inputs).
  */
@@ -12,9 +12,32 @@ export interface AuditTimestampResult {
   isValid: boolean;
 }
 
+export type AuditTimestampMode = 'two_line' | 'one_line_tz';
+
 export interface AuditTimestampOptions {
   timezone?: string | null;
   locale?: string;
+  mode?: AuditTimestampMode;
+}
+
+export const AUDIT_TS_PREF_KEY = 'pinorbit_audit_ts_mode';
+
+export function getStoredAuditTsMode(): AuditTimestampMode {
+  if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+    try {
+      const stored = window.localStorage.getItem(AUDIT_TS_PREF_KEY);
+      if (stored === 'one_line_tz' || stored === 'two_line') return stored;
+    } catch {}
+  }
+  return 'two_line';
+}
+
+export function setStoredAuditTsMode(mode: AuditTimestampMode): void {
+  if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+    try {
+      window.localStorage.setItem(AUDIT_TS_PREF_KEY, mode);
+    } catch {}
+  }
 }
 
 /**
@@ -31,9 +54,9 @@ function esc(str: string | null | undefined): string {
 }
 
 /**
- * Format audit timestamp into two lines:
- * Line 1: Local / Workspace timezone date + time (e.g. "Aug 28, 4:54:40 AM")
- * Line 2: UTC date + time (e.g. "Aug 28, 03:54:40 UTC" or "03:54:40 UTC") + relative (e.g. "12m ago")
+ * Format audit timestamp into two lines (default) or one line with explicit timezone:
+ * Line 1: Local / Workspace timezone date + time (e.g. "Aug 28, 4:54:40 PM")
+ * Line 2: UTC date + time (e.g. "Aug 28, 03:54:40 UTC") + relative (e.g. "12m ago")
  */
 export function fmtAuditTimestamp(
   iso: string | number | Date | null | undefined,
@@ -138,13 +161,23 @@ export function fmtAuditTimestamp(
       else relative = `in ${Math.floor(absSec / 86400)}d`;
     }
 
-    const full = `${line1} (${line2utc}${relative ? ` • ${relative}` : ''})`;
+    const activeMode = opts?.mode || getStoredAuditTsMode();
+    const tzSuffix = tz || 'UTC';
+    const oneLineFull = `${line1} ${tzSuffix}${relative ? ` (${relative})` : ''}`;
+    const full = activeMode === 'one_line_tz' ? oneLineFull : `${line1} (${line2utc}${relative ? ` • ${relative}` : ''})`;
 
     const safeLine1 = esc(line1);
     const safeLine2Utc = esc(line2utc);
     const safeRelative = esc(relative);
+    const safeTz = esc(tzSuffix);
 
-    const html = `<div class="flex flex-col text-left">
+    const html = activeMode === 'one_line_tz'
+      ? `<span class="inline-flex items-center gap-1.5 font-medium text-foreground text-xs leading-tight whitespace-nowrap">
+  <span>${safeLine1}</span>
+  <span class="text-[10px] text-muted-foreground font-mono">(${safeTz})</span>
+  ${safeRelative ? `<span class="text-[10px] text-muted-foreground/80 font-sans">• ${safeRelative}</span>` : ''}
+</span>`
+      : `<div class="flex flex-col text-left">
   <span class="font-medium text-foreground text-xs leading-tight">${safeLine1}</span>
   <span class="text-[10px] text-muted-foreground font-mono leading-tight flex items-center gap-1 mt-0.5 whitespace-nowrap">
     <span>${safeLine2Utc}</span>
