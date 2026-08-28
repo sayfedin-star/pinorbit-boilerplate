@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../server/auth/workspace-guard';
 import { dbClients } from '../../../server/db/clients';
 import { encryptToken, resolveTokenKek } from '../../../server/lib/token-crypto';
+import { setCronProviderCache } from '../../../server/services/cron-provider';
 
 export const GET: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
@@ -120,6 +121,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .single();
 
     if (updateErr) throw updateErr;
+
+    // Keep in-memory cache synchronized immediately
+    setCronProviderCache(workspaceId, provider);
 
     // Optional sync to downstream project pipeline settings for backward compatibility
     try {

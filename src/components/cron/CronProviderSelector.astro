@@ -130,6 +130,90 @@ const isCronJobOrg = currentProvider?.toLowerCase() === 'cronjoborg' || currentP
   </div>
   
   <div id="provider-change-toast" class="hidden rounded-lg p-2.5 text-xs font-semibold"></div>
+
+  <!-- Modal for Adding Provider API Key / Token -->
+  <div
+    id="add-provider-key-modal"
+    class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 transition-all duration-200"
+    aria-modal="true"
+    role="dialog"
+  >
+    <div class="bg-zinc-900 border border-zinc-750 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <!-- Modal Header -->
+      <div class="px-5 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/50">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-zinc-100">Set Provider API Key</h3>
+            <p class="text-[11px] text-zinc-400">Encrypted with AES-GCM at rest</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          id="close-key-modal-btn"
+          class="text-zinc-400 hover:text-zinc-200 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+          title="Close"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 space-y-4">
+        <div>
+          <label for="provider-api-key-input" class="block text-xs font-medium text-zinc-300 mb-1.5">
+            Provider API Key or Token
+          </label>
+          <div class="relative">
+            <input
+              type="password"
+              id="provider-api-key-input"
+              placeholder="••••••••••••••••"
+              class="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 text-xs rounded-lg px-3 py-2.5 font-mono focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 pr-10"
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              id="toggle-key-visibility-btn"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 text-xs p-1"
+              title="Show / Hide Key"
+            >
+              👁
+            </button>
+          </div>
+          <p class="text-[11px] text-zinc-400 mt-1.5">
+            Must be at least 8 characters. Stored securely in workspace vault.
+          </p>
+          <p id="key-validation-error" class="hidden text-[11px] text-rose-400 font-medium mt-1">
+            API key must be at least 8 characters.
+          </p>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800/80">
+          <button
+            type="button"
+            id="cancel-key-modal-btn"
+            class="px-3 py-1.5 text-xs text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800 border border-zinc-700 rounded-lg transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            id="save-key-modal-btn"
+            class="px-3.5 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+          >
+            <span id="save-key-btn-label">Save API Key</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -222,33 +306,94 @@ const isCronJobOrg = currentProvider?.toLowerCase() === 'cronjoborg' || currentP
       });
     });
 
+    // ─── Modal Management for Provider API Key ───
+    const modal = document.getElementById('add-provider-key-modal');
     const addTokenBtn = document.getElementById('add-token-modal-btn');
-    if (addTokenBtn) {
-      addTokenBtn.addEventListener('click', () => {
-        const tokenVal = prompt('Enter provider API Key or Token for workspace:');
-        if (!tokenVal || tokenVal.trim().length < 8) return;
-        
-        fetch('/api/workspace/cron-provider', {
+    const closeBtn = document.getElementById('close-key-modal-btn');
+    const cancelBtn = document.getElementById('cancel-key-modal-btn');
+    const saveBtn = document.getElementById('save-key-modal-btn') as HTMLButtonElement | null;
+    const saveBtnLabel = document.getElementById('save-key-btn-label');
+    const keyInput = document.getElementById('provider-api-key-input') as HTMLInputElement | null;
+    const errorEl = document.getElementById('key-validation-error');
+    const toggleVisBtn = document.getElementById('toggle-key-visibility-btn');
+
+    function openModal() {
+      if (!modal) return;
+      if (keyInput) {
+        keyInput.value = '';
+        keyInput.type = 'password';
+      }
+      if (errorEl) errorEl.classList.add('hidden');
+      modal.classList.remove('hidden');
+      setTimeout(() => keyInput?.focus(), 50);
+    }
+
+    function closeModal() {
+      if (!modal) return;
+      modal.classList.add('hidden');
+      if (keyInput) keyInput.value = '';
+      if (errorEl) errorEl.classList.add('hidden');
+    }
+
+    addTokenBtn?.addEventListener('click', openModal);
+    closeBtn?.addEventListener('click', closeModal);
+    cancelBtn?.addEventListener('click', closeModal);
+
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+        closeModal();
+      }
+    });
+
+    toggleVisBtn?.addEventListener('click', () => {
+      if (!keyInput) return;
+      keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
+    });
+
+    saveBtn?.addEventListener('click', async () => {
+      const tokenVal = keyInput?.value?.trim() || '';
+      if (tokenVal.length < 8) {
+        if (errorEl) errorEl.classList.remove('hidden');
+        keyInput?.focus();
+        return;
+      }
+
+      if (errorEl) errorEl.classList.add('hidden');
+
+      try {
+        if (saveBtn) saveBtn.disabled = true;
+        if (saveBtnLabel) saveBtnLabel.textContent = 'Saving...';
+
+        const res = await fetch('/api/workspace/cron-provider', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             workspace_id: workspaceId,
-            api_key: tokenVal.trim(),
+            api_key: tokenVal,
           }),
-        })
-          .then((r) => r.json())
-          .then((d) => {
-            if (d.success) {
-              showToast('Workspace provider API key updated and encrypted successfully.');
-            } else {
-              showToast(d.error || 'Failed to save API key', true);
-            }
-          })
-          .catch((e) => showToast(e.message, true));
-      });
-    }
+        });
+
+        const data = await res.json();
+        if (!res.ok || data.success === false) {
+          throw new Error(data.error || 'Failed to save API key');
+        }
+
+        closeModal();
+        showToast('Workspace provider API key updated and encrypted successfully.');
+      } catch (err: any) {
+        showToast(err.message || 'Failed to save API key', true);
+      } finally {
+        if (saveBtn) saveBtn.disabled = false;
+        if (saveBtnLabel) saveBtnLabel.textContent = 'Save API Key';
+      }
+    });
   }
 
   initCronProviderSelector();
   document.addEventListener('astro:page-load', initCronProviderSelector);
 </script>
+

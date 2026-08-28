@@ -3,6 +3,11 @@ import Layout from '../layouts/Layout.astro';
 import SectionHeader from '../components/ui/SectionHeader.astro';
 import RunNowButton from '../components/cron/RunNowButton.astro';
 import ProviderBadge from '../components/cron/ProviderBadge.astro';
+import { humanCron, humanCronTitle } from '../lib/cron-helper';
+
+const cronExpr = '0 2 * * *';
+const cronDescription = humanCron(cronExpr);
+const cronTitle = humanCronTitle(cronExpr);
 ---
 
 <Layout title="Competitor Intelligence" description="Track competitor Pinterest growth, reach, views, followers, and board creation strategy over time.">
@@ -60,8 +65,13 @@ import ProviderBadge from '../components/cron/ProviderBadge.astro';
           <span id="comp-pipeline-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
             Active
           </span>
-          <span id="comp-cron-badge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">
-            0 2 * * *
+          <span
+            id="comp-cron-badge"
+            class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border cursor-help"
+            title={cronTitle}
+            data-tooltip={cronDescription}
+          >
+            {cronExpr}
           </span>
         </div>
         <p class="text-xs text-muted-foreground mt-0.5">
@@ -69,6 +79,7 @@ import ProviderBadge from '../components/cron/ProviderBadge.astro';
         </p>
       </div>
     </div>
+
 
     <div class="flex flex-wrap items-center gap-2 self-start md:self-auto">
       <ProviderBadge workspaceId={Astro.locals.activeWorkspaceId || ''} />
