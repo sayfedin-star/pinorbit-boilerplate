@@ -644,11 +644,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
       }
 
-      const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
+      const targetDispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
       const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label: 'Default Daily' });
       const defaultParams = {
         name: `PinOrbit pinarchive — Default Daily — ${workspaceId.slice(0, 8)}`,
-        url: dispatchUrl,
+        url: targetDispatchUrl,
         expression: '0 3 * * *',
         timezone: 'UTC',
         httpMethod: 'POST',
