@@ -91,3 +91,61 @@ export function humanCronTitle(expression: string, timezone: string = 'UTC'): st
   if (expr === '0 0 * * *') return `Daily at 00:00 ${timezone}`;
   return humanCron(expression, timezone, { breakdown: false });
 }
+
+/**
+ * Calculates the next Date when a 5-part cron expression will trigger after `fromDate`.
+ * Scans up to 14 days ahead minute-by-minute with timezone support. Fail-lazy.
+ */
+export function getNextCronDate(
+  cronExpr: string,
+  tzStr: string = 'UTC',
+  fromDate: Date = new Date()
+): Date | null {
+  try {
+    const parts = (cronExpr || '').trim().split(/\s+/);
+    if (parts.length < 5) return null;
+    const [mPart, hPart, , , dowPart] = parts;
+    const scanTime = new Date(fromDate.getTime() + 60000);
+
+    const matchNum = (val: number, rule: string): boolean => {
+      if (rule === '*') return true;
+      if (rule.startsWith('*/')) {
+        const step = Number(rule.slice(2));
+        return step > 0 && val % step === 0;
+      }
+      return rule.split(',').some(p => Number(p) === val);
+    };
+
+    // Scan up to 14 days (20160 minutes)
+    for (let offset = 0; offset < 14 * 24 * 60; offset++) {
+      const testDate = new Date(scanTime.getTime() + offset * 60000);
+      let m = testDate.getUTCMinutes();
+      let h = testDate.getUTCHours();
+      let dow = testDate.getUTCDay();
+
+      try {
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: tzStr,
+          minute: 'numeric',
+          hour: 'numeric',
+          weekday: 'short',
+          hour12: false,
+        });
+        const partsTz = formatter.formatToParts(testDate);
+        m = Number(partsTz.find(p => p.type === 'minute')?.value ?? m);
+        h = Number(partsTz.find(p => p.type === 'hour')?.value ?? h);
+        const dayStr = partsTz.find(p => p.type === 'weekday')?.value ?? '';
+        const dowMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+        if (dayStr in dowMap) dow = dowMap[dayStr];
+      } catch {}
+
+      if (matchNum(m, mPart) && matchNum(h, hPart) && matchNum(dow, dowPart)) {
+        return new Date(testDate.getTime() - (testDate.getTime() % 60000));
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+

@@ -186,6 +186,16 @@ async function handlePinArchiveDispatch(
     });
 
     if (ghRes.status === 204 || (ghRes.status >= 200 && ghRes.status < 300)) {
+      try {
+        const pinArchive = dbClients.getPinArchive(runtimeEnv);
+        await pinArchive
+          .from('pa_workspace_settings')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('workspace_id', workspaceId);
+      } catch (dbErr) {
+        console.warn('[PinArchive Dispatch] Non-blocking DB touch failed:', dbErr);
+      }
+
       return new Response(
         JSON.stringify({
           success: true,

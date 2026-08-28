@@ -6,6 +6,7 @@ import { dbClients, getServerEnv } from '../../../server/db/clients';
 import { getEffectiveSecret, maskSecret } from '../../../server/services/webhook-secrets';
 import { resolveScheduleToken } from '../../../server/services/fastcron-service';
 import { resolveTokenKek, decryptToken } from '../../../server/lib/token-crypto';
+import { getNextCronDate } from '../../../lib/cron-helper';
 
 export const FASTCRON_BASE = 'https://www.fastcron.com/api/v1';
 
@@ -385,6 +386,25 @@ export const GET: APIRoute = async ({ locals }) => {
       }
     }
 
+    // Query latest completed run in workspace as fallback for last_run
+    let latestDbRunStartedAt: string | null = null;
+    try {
+      const pinArchive = dbClients.getPinArchive(runtimeEnv);
+      const { data: latestRun } = await pinArchive
+        .from('pa_runs')
+        .select('started_at')
+        .eq('workspace_id', workspaceId)
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestRun?.started_at) {
+        latestDbRunStartedAt = latestRun.started_at;
+      }
+    } catch (e) {
+      console.warn('[PinArchive FastCron] Could not query latest pa_runs:', e);
+    }
+
     // Enrich each discovered job with cron_next and cron_logs (last 10) in parallel
     const jobEntries = Array.from(liveJobsMap.values());
     const enrichedJobs = await Promise.all(
@@ -420,9 +440,10 @@ export const GET: APIRoute = async ({ locals }) => {
         const postData = extractPostData(job) || {};
         const isPaused = isFastCronJobPaused(job);
 
-        const nextRunRaw = cronNext[0] || job.cron_next || job.next_run_at || job.nextRun;
+        const computedNextDate = getNextCronDate(job.expression || '0 3 * * *', job.timezone || 'UTC');
+        const nextRunRaw = cronNext[0] || job.cron_next || job.next_run_at || job.nextRun || (computedNextDate ? computedNextDate.getTime() : null);
         const lastLog = cronLogs[0] || null;
-        const lastRunRaw = lastLog?.date || lastLog?.created_at || job.last_run_at || job.lastRun;
+        const lastRunRaw = lastLog?.date || lastLog?.created_at || job.last_run_at || job.lastRun || latestDbRunStartedAt;
 
         let label = postData.label;
         if (!label && job.name && job.name.includes(' — ')) {

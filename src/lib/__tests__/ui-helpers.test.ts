@@ -166,5 +166,22 @@ describe('ui-helpers test suite', () => {
       expect(humanCron('11 15 * * *', 'UTC')).toContain('Daily at 15:11 UTC');
       expect(humanCron('11 15 * * *', 'UTC')).toContain('1/day, 7/week');
     });
+
+    it('derives next trigger date accurately via getNextCronDate', async () => {
+      const { getNextCronDate } = await import('../cron-helper');
+      const base = new Date('2026-08-28T12:00:00.000Z');
+      const nextDate = getNextCronDate('11 15 * * *', 'UTC', base);
+      expect(nextDate).not.toBeNull();
+      expect(nextDate?.getUTCHours()).toBe(15);
+      expect(nextDate?.getUTCMinutes()).toBe(11);
+      expect(nextDate?.getUTCDate()).toBe(28);
+
+      const pastBase = new Date('2026-08-28T16:00:00.000Z');
+      const nextDayDate = getNextCronDate('11 15 * * *', 'UTC', pastBase);
+      expect(nextDayDate).not.toBeNull();
+      expect(nextDayDate?.getUTCDate()).toBe(29);
+      expect(nextDayDate?.getUTCHours()).toBe(15);
+      expect(nextDayDate?.getUTCMinutes()).toBe(11);
+    });
   });
 });

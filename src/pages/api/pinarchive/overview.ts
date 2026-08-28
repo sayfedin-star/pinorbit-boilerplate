@@ -3,6 +3,7 @@ import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../server/auth/workspace-guard';
 import { dbClients } from '../../../server/db/clients';
 import { errorStatus } from '../../../server/lib/http-error';
+import { getNextCronDate } from '../../../lib/cron-helper';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -93,9 +94,29 @@ export const GET: APIRoute = async ({ request, locals }) => {
     } catch (err) {
       console.warn('Could not query pa_runs refresh delta:', err);
     }
+    // Derive active schedule next run for single source of truth
+    let activeNextRunIso: string | null = null;
+    try {
+      const { data: wsSettings } = await db
+        .from('pa_workspace_settings')
+        .select('cron_expression, schedule_status')
+        .eq('workspace_id', ws)
+        .maybeSingle();
+
+      if (wsSettings?.cron_expression && wsSettings.schedule_status !== 'paused' && wsSettings.schedule_status !== 'disabled') {
+        const nextDate = getNextCronDate(wsSettings.cron_expression, 'UTC');
+        if (nextDate) {
+          activeNextRunIso = nextDate.toISOString();
+        }
+      }
+    } catch (err) {
+      console.warn('Could not derive workspace schedule next run:', err);
+    }
+
     // Attach to each account:
     accounts = accounts.map((a: any) => ({
       ...a,
+      next_run_at: activeNextRunIso || a.next_run_at || null,
       changed_last_refresh: changedMap.get(a.id) ?? 0,
       checked_last_refresh: Number(a.db_pins_count ?? 0), // total pins for account = checked
     }));
