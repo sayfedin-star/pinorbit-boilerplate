@@ -91,9 +91,14 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       );
 
       if (targetTokenObj?.token) {
-        const dispatchUrl = getDispatchEndpointUrl(runtimeEnv);
+        const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
         const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
         const isEnabled = updatePayload.status ? updatePayload.status === 'active' : schedule.status === 'active';
+        const postDataStr = JSON.stringify({
+          workspace_id: workspaceId,
+          pipeline: 'competitors',
+          label: updatePayload.label || schedule.label || 'Schedule',
+        });
 
         const fastcronParams: Record<string, any> = {
           id: Number(schedule.fastcron_job_id),
@@ -101,13 +106,12 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
           url: dispatchUrl,
           expression: updatePayload.cron_expression || schedule.cron_expression,
           timezone: updatePayload.timezone || schedule.timezone || 'UTC',
+          httpMethod: 'POST',
           http_method: 'POST',
+          httpHeaders: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret?.value?.trim() || ''}`,
           http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret?.value?.trim() || ''}`,
-          post_data: JSON.stringify({
-            workspace_id: workspaceId,
-            pipeline: 'competitors',
-            label: updatePayload.label || schedule.label || 'Schedule',
-          }),
+          postData: postDataStr,
+          post_data: postDataStr,
           status: isEnabled ? 'enabled' : 'disabled',
         };
 

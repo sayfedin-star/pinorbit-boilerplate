@@ -5,7 +5,7 @@ import { dbClients, isKnownDefaultIngestSecret, isProductionEnv } from '../../..
 import { getEffectiveSecret } from '../../../../server/services/webhook-secrets';
 import { timingSafeEqual } from '../../../../server/lib/timing-safe';
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Server-Only Internal Competitors Dispatch Endpoint.
@@ -15,7 +15,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  *
  * Security & RLS:
  * - Public self-auth via x-ingest-secret (workspace -> global -> env cascade) or ?secret= param.
- * - Strictly scoped to workspace_id.
+ * - Strictly scoped to workspace_id (full UUID or 8-char prefix resolved via DB).
  * - Verifies workspace existence in Project 1.
  * - Returns JSON 202 on success, or 400, 401, 403, 422, 502, 503.
  */
@@ -32,12 +32,17 @@ async function handleCompetitorsDispatch(
 
   const url = new URL(request.url);
 
-  // 1. Extract workspace_id (from payload or URL searchParams)
-  const rawWorkspaceId =
+  // 1. Extract workspace_id (from payload or URL searchParams or name pattern)
+  let rawWorkspaceId =
     payload.workspace_id ||
     url.searchParams.get('workspace_id') ||
     url.searchParams.get('ws') ||
     '';
+
+  if (!rawWorkspaceId && typeof payload.name === 'string') {
+    const match = payload.name.match(/[a-f0-9]{8}(?:-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})?/i);
+    if (match) rawWorkspaceId = match[0];
+  }
 
   if (!rawWorkspaceId || typeof rawWorkspaceId !== 'string' || rawWorkspaceId.trim() === '') {
     return new Response(
@@ -46,12 +51,33 @@ async function handleCompetitorsDispatch(
     );
   }
 
-  const workspaceId = rawWorkspaceId.trim();
+  let workspaceId = rawWorkspaceId.trim();
+
+  // If workspaceId is not a full UUID (e.g. 8-char prefix), resolve it from Project 1 DB
   if (!UUID_REGEX.test(workspaceId)) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Validation Error: valid workspace_id UUID is required.' }),
-      { status: 422, headers: { 'Content-Type': 'application/json' } }
-    );
+    try {
+      const admin = dbClients.getSchedulingAdmin(runtimeEnv);
+      const { data: wsMatch } = await admin
+        .from('workspaces')
+        .select('id')
+        .ilike('id', `${workspaceId}%`)
+        .limit(1)
+        .maybeSingle();
+
+      if (wsMatch?.id) {
+        workspaceId = wsMatch.id;
+      } else {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Validation Error: valid workspace_id UUID is required.' }),
+          { status: 422, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Validation Error: valid workspace_id UUID is required.' }),
+        { status: 422, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
   }
 
   // 2. Authenticate via getEffectiveSecret + timingSafeEqual

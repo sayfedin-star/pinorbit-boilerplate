@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ locals }) => {
       );
     }
 
-    const dispatchUrl = getDispatchEndpointUrl(runtimeEnv);
+    const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
     const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
     if (!effSecret || !effSecret.value || effSecret.value.trim() === '') {
       return new Response(
@@ -68,15 +68,19 @@ export const POST: APIRoute = async ({ locals }) => {
     const label = 'Default Daily';
     const cronExpression = '0 2 * * *';
     const timezone = 'UTC';
+    const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label });
 
     const defaultParams = {
       name: `PinOrbit competitors — ${label} — ${workspaceId.slice(0, 8)}`,
       url: dispatchUrl,
       expression: cronExpression,
       timezone,
+      httpMethod: 'POST',
       http_method: 'POST',
+      httpHeaders: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
       http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
-      post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label }),
+      postData: postDataStr,
+      post_data: postDataStr,
       status: 'enabled',
     };
 

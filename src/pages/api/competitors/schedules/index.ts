@@ -8,12 +8,18 @@ import { fastcronCall } from '../../../../server/lib/fastcron-client';
 import { listWorkspaceTokens, resolveToken } from '../../../../server/lib/token-resolver';
 import { isMatchingCompetitorJob } from '../cron';
 
-export const getDispatchEndpointUrl = (runtimeEnv?: Record<string, any>): string => {
-  return (
+export const getDispatchEndpointUrl = (runtimeEnv?: Record<string, any>, workspaceId?: string): string => {
+  const base =
     (runtimeEnv?.COMPETITORS_DISPATCH_URL as string) ||
     (typeof process !== 'undefined' ? process.env.COMPETITORS_DISPATCH_URL : '') ||
-    'https://pinorbit-v2.o-i.workers.dev/api/internal/competitors/dispatch'
-  );
+    'https://pinorbit-v2.o-i.workers.dev/api/internal/competitors/dispatch';
+
+  if (workspaceId) {
+    const url = new URL(base);
+    url.searchParams.set('workspace_id', workspaceId);
+    return url.toString();
+  }
+  return base;
 };
 
 export const toMs = (v: any): number | null => {
@@ -266,7 +272,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
 
-    const dispatchUrl = getDispatchEndpointUrl(runtimeEnv);
+    const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
     const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
     if (!effSecret || !effSecret.value || effSecret.value.trim() === '') {
       return new Response(
@@ -287,15 +293,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    // Call FastCron cron_add with explicit http_method: 'POST'
+    // Call FastCron cron_add with explicit http_method / httpMethod: 'POST'
+    const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label });
     const fastcronParams = {
       name: `PinOrbit competitors — ${label} — ${workspaceId.slice(0, 8)}`,
       url: dispatchUrl,
       expression: cronExpression,
       timezone,
+      httpMethod: 'POST',
       http_method: 'POST',
+      httpHeaders: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
       http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
-      post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label }),
+      postData: postDataStr,
+      post_data: postDataStr,
       status: enabled ? 'enabled' : 'disabled',
     };
 

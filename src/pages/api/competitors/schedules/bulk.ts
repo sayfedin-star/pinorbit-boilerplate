@@ -99,19 +99,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
           results.push({ id: sched.id, action, success: true });
         } else if (action === 'clone') {
           const newLabel = `${sched.label || 'Schedule'} (copy)`;
-          const dispatchUrl = getDispatchEndpointUrl(runtimeEnv);
+          const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
           const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
 
           let newJobId: string | null = null;
           if (targetTokenObj?.token && effSecret?.value) {
+            const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: newLabel });
             const cloneParams = {
               name: `PinOrbit competitors — ${newLabel} — ${workspaceId.slice(0, 8)}`,
               url: dispatchUrl,
               expression: sched.cron_expression,
               timezone: sched.timezone || 'UTC',
+              httpMethod: 'POST',
               http_method: 'POST',
+              httpHeaders: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
               http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
-              post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: newLabel }),
+              postData: postDataStr,
+              post_data: postDataStr,
               status: sched.status === 'active' ? 'enabled' : 'disabled',
             };
             const addRes = await fastcronCall('cron_add', cloneParams, targetTokenObj.token);

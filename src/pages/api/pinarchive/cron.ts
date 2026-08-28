@@ -9,12 +9,18 @@ import { resolveTokenKek, decryptToken } from '../../../server/lib/token-crypto'
 
 export const FASTCRON_BASE = 'https://www.fastcron.com/api/v1';
 
-export const getDispatchEndpointUrl = (runtimeEnv?: Record<string, any>): string => {
-  return (
+export const getDispatchEndpointUrl = (runtimeEnv?: Record<string, any>, workspaceId?: string): string => {
+  const base =
     (runtimeEnv?.PINARCHIVE_DISPATCH_URL as string) ||
     (typeof process !== 'undefined' ? process.env.PINARCHIVE_DISPATCH_URL : '') ||
-    'https://pinorbit-v2.o-i.workers.dev/api/internal/pinarchive/dispatch'
-  );
+    'https://pinorbit-v2.o-i.workers.dev/api/internal/pinarchive/dispatch';
+
+  if (workspaceId) {
+    const url = new URL(base);
+    url.searchParams.set('workspace_id', workspaceId);
+    return url.toString();
+  }
+  return base;
 };
 
 /**
@@ -602,14 +608,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
       }
 
+      const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
+      const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label: 'Default Daily' });
       const defaultParams = {
         name: `PinOrbit pinarchive — Default Daily — ${workspaceId.slice(0, 8)}`,
         url: dispatchUrl,
         expression: '0 3 * * *',
         timezone: 'UTC',
+        httpMethod: 'POST',
         http_method: 'POST',
+        httpHeaders: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
         http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
-        post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label: 'Default Daily' }),
+        postData: postDataStr,
+        post_data: postDataStr,
         status: 'enabled',
       };
 
@@ -684,14 +695,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       const postData = extractPostData(existingJob) || {};
       const clonedLabel = `${postData.label || 'Schedule'} (copy)`;
+      const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label: clonedLabel });
       const cloneParams = {
         name: `PinOrbit pinarchive — ${clonedLabel} — ${workspaceId.slice(0, 8)}`,
-        url: dispatchUrl,
+        url: getDispatchEndpointUrl(runtimeEnv, workspaceId),
         expression: existingJob.expression || '0 3 * * *',
         timezone: existingJob.timezone || 'UTC',
+        httpMethod: 'POST',
         http_method: 'POST',
+        httpHeaders: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
         http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
-        post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label: clonedLabel }),
+        postData: postDataStr,
+        post_data: postDataStr,
         status: 'enabled',
       };
 
@@ -753,16 +768,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const label = body.label && typeof body.label === 'string' && body.label.trim().length > 0 ? body.label.trim() : 'Schedule';
       const timezone = body.timezone && typeof body.timezone === 'string' && body.timezone.trim().length > 0 ? body.timezone.trim() : 'UTC';
       const isEnabled = body.enabled !== false;
+      const editPostDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label });
 
       const editParams = {
         id: jobId,
         name: `PinOrbit pinarchive — ${label} — ${workspaceId.slice(0, 8)}`,
-        url: dispatchUrl,
+        url: getDispatchEndpointUrl(runtimeEnv, workspaceId),
         expression: cronExpression,
         timezone,
+        httpMethod: 'POST',
         http_method: 'POST',
+        httpHeaders: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
         http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
-        post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label }),
+        postData: editPostDataStr,
+        post_data: editPostDataStr,
         status: isEnabled ? 'enabled' : 'disabled',
       };
 
@@ -814,15 +833,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const label = body.label && typeof body.label === 'string' && body.label.trim().length > 0 ? body.label.trim() : 'Daily Refresh';
     const timezone = body.timezone && typeof body.timezone === 'string' && body.timezone.trim().length > 0 ? body.timezone.trim() : 'UTC';
     const isEnabled = body.enabled !== false;
+    const createPostDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label });
 
     const addParams = {
       name: `PinOrbit pinarchive — ${label} — ${workspaceId.slice(0, 8)}`,
-      url: dispatchUrl,
+      url: getDispatchEndpointUrl(runtimeEnv, workspaceId),
       expression: cronExpression,
       timezone,
+      httpMethod: 'POST',
       http_method: 'POST',
+      httpHeaders: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
       http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
-      post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label }),
+      postData: createPostDataStr,
+      post_data: createPostDataStr,
       status: isEnabled ? 'enabled' : 'disabled',
     };
 
