@@ -818,9 +818,68 @@ import ProviderBadge from '../cron/ProviderBadge.astro';
     document.getElementById('pa-btn-close-sched-modal')?.addEventListener('click', () => schedModal?.close());
     document.getElementById('pa-btn-cancel-sched-modal')?.addEventListener('click', () => schedModal?.close());
 
-    document.getElementById('pa-btn-add-token')?.addEventListener('click', () => tokenModal?.showModal());
+    document.getElementById('pa-btn-add-token')?.addEventListener('click', () => {
+      const form = document.getElementById('pa-token-form') as HTMLFormElement | null;
+      if (form) form.reset();
+      const defCheckbox = document.getElementById('pa-f-token-default') as HTMLInputElement | null;
+      if (defCheckbox) defCheckbox.checked = true;
+      tokenModal?.showModal();
+    });
     document.getElementById('pa-btn-close-token-modal')?.addEventListener('click', () => tokenModal?.close());
     document.getElementById('pa-btn-cancel-token-modal')?.addEventListener('click', () => tokenModal?.close());
+
+    // Token Form Submission
+    document.getElementById('pa-token-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = (document.getElementById('pa-f-token-name') as HTMLInputElement)?.value.trim();
+      const token = (document.getElementById('pa-f-token-value') as HTMLInputElement)?.value.trim();
+      const is_default = (document.getElementById('pa-f-token-default') as HTMLInputElement)?.checked || false;
+
+      if (!name || token.length < 8) {
+        alert('Token name and key (at least 8 characters) are required.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/pinarchive/tokens', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, token, is_default }),
+        });
+        const json = await res.json();
+        if (json.success) {
+          tokenModal?.close();
+          const form = document.getElementById('pa-token-form') as HTMLFormElement | null;
+          if (form) form.reset();
+          await loadData();
+        } else {
+          alert('Save failed: ' + (json.error || 'Unknown error'));
+        }
+      } catch (err: any) {
+        alert('Network error: ' + err.message);
+      }
+    });
+
+    // Token Delete Action (delegated)
+    document.getElementById('pa-tokens-table-rows')?.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+      const delBtn = target.closest('[data-del-token]') as HTMLElement | null;
+      if (delBtn) {
+        const id = delBtn.getAttribute('data-del-token');
+        if (!id || !confirm('Are you sure you want to delete this API token from the vault?')) return;
+        try {
+          const res = await fetch(`/api/pinarchive/tokens/${id}`, { method: 'DELETE' });
+          const json = await res.json();
+          if (json.success) {
+            await loadData();
+          } else {
+            alert('Failed to delete token: ' + (json.error || 'Unknown error'));
+          }
+        } catch (err: any) {
+          alert('Network error: ' + err.message);
+        }
+      }
+    });
 
     document.getElementById('pa-btn-close-logs-modal')?.addEventListener('click', () => logsModal?.close());
 
@@ -829,8 +888,17 @@ import ProviderBadge from '../cron/ProviderBadge.astro';
     document.getElementById('pa-btn-ping-tokens')?.addEventListener('click', async () => {
       const statusEl = document.getElementById('pa-fc-connection-status');
       if (statusEl) statusEl.textContent = 'Testing connection...';
-      await loadData();
-      if (statusEl) statusEl.textContent = '✓ FastCron Connection OK';
+      try {
+        const res = await fetch('/api/pinarchive/tokens');
+        if (res.ok) {
+          await loadData();
+          if (statusEl) statusEl.textContent = '✓ FastCron Connection OK';
+        } else {
+          if (statusEl) statusEl.textContent = '⚠ Connection error';
+        }
+      } catch {
+        if (statusEl) statusEl.textContent = '⚠ Connection error';
+      }
     });
 
     document.getElementById('pa-btn-sync-missing')?.addEventListener('click', async () => {
