@@ -1161,5 +1161,9 @@ import ProviderBadge from '../cron/ProviderBadge.astro';
       selectedJobIds.clear();
       await loadData();
     });
+
+    window.addEventListener('pinorbit_audit_ts_mode_changed', () => {
+      renderJobs();
+    });
   });
 </script>

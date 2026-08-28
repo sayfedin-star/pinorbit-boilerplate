@@ -1716,6 +1716,12 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     }
   });
 
+  // Listen for audit timestamp display preference changes
+  window.addEventListener('pinorbit_audit_ts_mode_changed', () => {
+    renderSchedules();
+    renderJobs(cachedJobs);
+  });
+
   // Initial load
   loadAllState();
 </script>

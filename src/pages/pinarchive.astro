@@ -1439,6 +1439,11 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     if (saveSettingsBtn) {
       saveSettingsBtn.addEventListener('click', saveSettings);
     }
+
+    // Listen for audit timestamp display preference changes
+    window.addEventListener('pinorbit_audit_ts_mode_changed', () => {
+      filterAndRenderAccounts();
+    });
   }
 
   if (document.readyState === 'loading') {

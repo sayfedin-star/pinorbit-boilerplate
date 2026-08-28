@@ -106,6 +106,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
       let cronExpr = wsSettings?.cron_expression;
       let isPaused = wsSettings?.schedule_status === 'paused' || wsSettings?.schedule_status === 'disabled';
+      let jobTimezone = 'UTC';
 
       // Fallback: If pa_workspace_settings has no cron_expression yet, query live FastCron tokens
       if (!cronExpr) {
@@ -117,10 +118,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
             const { fastcronCall } = await import('../../../server/lib/fastcron-client');
             const listRes = await fastcronCall('cron_list', { keyword: 'PinOrbit' }, tokenRes.token);
             const list = Array.isArray(listRes.data) ? listRes.data : Array.isArray(listRes.data?.data) ? listRes.data.data : [];
-            const matchingJob = list.find((j: any) => String(j.url || '').includes(ws) || String(j.name || '').includes(ws.slice(0, 8)));
+            const matchingJob = list.find((j: any) => {
+              const isMatch = String(j.url || '').includes(ws) || String(j.name || '').includes(ws.slice(0, 8));
+              const isActive = j.status !== 'paused' && j.status !== 'disabled' && !j.paused;
+              return isMatch && isActive;
+            }) || list.find((j: any) => String(j.url || '').includes(ws) || String(j.name || '').includes(ws.slice(0, 8)));
+
             if (matchingJob) {
               cronExpr = matchingJob.expression || matchingJob.cron_expression;
               isPaused = matchingJob.status === 'paused' || matchingJob.status === 'disabled' || matchingJob.paused;
+              jobTimezone = matchingJob.timezone || matchingJob.tz || 'UTC';
               // Persist to pa_workspace_settings for future calls
               await db.from('pa_workspace_settings').upsert({
                 workspace_id: ws,
@@ -137,7 +144,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
 
       if (cronExpr && !isPaused) {
-        const nextDate = getNextCronDate(cronExpr, 'UTC');
+        const nextDate = getNextCronDate(cronExpr, jobTimezone);
         if (nextDate) {
           activeNextRunIso = nextDate.toISOString();
         }
