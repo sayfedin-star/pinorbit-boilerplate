@@ -45,7 +45,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   try {
     const accRes = await db
       .from('pa_accounts')
-      .select('id, username, status, pins_count, follower_count, last_run_at, sheet_id, interval_days, next_run_at, ingest_enabled')
+      .select('id, username, status, pins_count, follower_count, last_run_at, sheet_id, next_run_at, ingest_enabled')
       .eq('workspace_id', ws)
       .limit(100);
 

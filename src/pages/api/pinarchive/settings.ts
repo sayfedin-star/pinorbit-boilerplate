@@ -16,7 +16,6 @@ const json = (o: any, s = 200) =>
 const DEFAULT_SETTINGS = {
   ingest_enabled: true,
   paused_account_policy: 'reject' as const,
-  default_interval_days: 3,
   max_batch_pins: 500,
   pin_filter_min_saves: 0,
   pin_filter_min_repins: 0,
@@ -29,7 +28,6 @@ const ALLOWED_PATCH_KEYS = new Set([
   'workspace_id',
   'ingest_enabled',
   'paused_account_policy',
-  'default_interval_days',
   'max_batch_pins',
   'pin_filter_min_saves',
   'pin_filter_min_repins',
@@ -88,7 +86,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
       workspace_id: settings.workspace_id,
       ingest_enabled: settings.ingest_enabled ?? DEFAULT_SETTINGS.ingest_enabled,
       paused_account_policy: settings.paused_account_policy ?? DEFAULT_SETTINGS.paused_account_policy,
-      default_interval_days: settings.default_interval_days ?? DEFAULT_SETTINGS.default_interval_days,
       max_batch_pins: settings.max_batch_pins ?? DEFAULT_SETTINGS.max_batch_pins,
       pin_filter_min_saves: settings.pin_filter_min_saves ?? DEFAULT_SETTINGS.pin_filter_min_saves,
       pin_filter_min_repins: settings.pin_filter_min_repins ?? DEFAULT_SETTINGS.pin_filter_min_repins,
@@ -128,6 +125,11 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
     return json({ success: false, error: 'Invalid workspace identifier format.' }, 400);
   }
 
+  // Ignore deprecated default_interval_days if sent by older clients
+  if ('default_interval_days' in body) {
+    delete body.default_interval_days;
+  }
+
   // Reject unknown keys
   for (const key of Object.keys(body)) {
     if (!ALLOWED_PATCH_KEYS.has(key)) {
@@ -147,14 +149,6 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
     body.paused_account_policy !== 'accept'
   ) {
     return json({ success: false, error: "paused_account_policy must be 'reject' or 'accept'." }, 422);
-  }
-
-  // Validate default_interval_days
-  if (body.default_interval_days !== undefined) {
-    const d = Number(body.default_interval_days);
-    if (!Number.isInteger(d) || d < 1 || d > 30) {
-      return json({ success: false, error: 'default_interval_days must be an integer between 1 and 30.' }, 422);
-    }
   }
 
   // Validate max_batch_pins
@@ -232,10 +226,6 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
         body.paused_account_policy !== undefined
           ? body.paused_account_policy
           : (existing?.paused_account_policy ?? DEFAULT_SETTINGS.paused_account_policy),
-      default_interval_days:
-        body.default_interval_days !== undefined
-          ? Number(body.default_interval_days)
-          : (existing?.default_interval_days ?? DEFAULT_SETTINGS.default_interval_days),
       max_batch_pins:
         body.max_batch_pins !== undefined
           ? Number(body.max_batch_pins)
@@ -278,7 +268,6 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
       workspace_id: saved.workspace_id,
       ingest_enabled: saved.ingest_enabled,
       paused_account_policy: saved.paused_account_policy,
-      default_interval_days: saved.default_interval_days,
       max_batch_pins: saved.max_batch_pins,
       pin_filter_min_saves: saved.pin_filter_min_saves,
       pin_filter_min_repins: saved.pin_filter_min_repins,

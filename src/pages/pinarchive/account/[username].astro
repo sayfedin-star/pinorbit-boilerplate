@@ -127,26 +127,6 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
 
       <div class="flex flex-wrap items-center gap-4">
         <!-- Interval Editor -->
-        <div class="flex items-center gap-2 bg-muted/30 rounded-xl px-3 py-1.5 border border-border/60">
-          <label for="account-interval-input" class="text-xs font-semibold text-muted-foreground">Interval:</label>
-          <input
-            id="account-interval-input"
-            type="number"
-            min="1"
-            max="30"
-            value={account.interval_days || 3}
-            class="w-12 rounded-lg border border-border bg-background px-1.5 py-0.5 text-xs font-bold text-foreground text-center focus:outline-none"
-          />
-          <span class="text-xs text-muted-foreground">days</span>
-          <button
-            id="account-interval-apply-btn"
-            type="button"
-            class="rounded-lg bg-primary text-primary-foreground px-2 py-0.5 text-[11px] font-bold hover:bg-primary/90 transition-colors cursor-pointer"
-          >
-            Apply
-          </button>
-        </div>
-
         <!-- Accept GAS Data Toggle -->
         <div class="flex items-center gap-3 bg-muted/30 rounded-xl px-3.5 py-2 border border-border/60">
           <span class="text-xs font-semibold text-foreground">Accept GAS Data:</span>
@@ -168,7 +148,7 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
     </div>
 
     <!-- Metrics Grid -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="bg-background rounded-xl border border-border p-3.5">
         <span class="text-[11px] font-medium text-muted-foreground uppercase block">Followers</span>
         <span class="text-lg font-bold text-foreground mt-1 block">{(account.follower_count || 0).toLocaleString('en-US')}</span>
@@ -180,11 +160,6 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
       </div>
 
       <div class="bg-background rounded-xl border border-border p-3.5">
-        <span class="text-[11px] font-medium text-muted-foreground uppercase block">Interval</span>
-        <span class="text-lg font-bold text-foreground mt-1 block" id="account-interval-metric">{account.interval_days || 3} days</span>
-      </div>
-
-      <div class="bg-background rounded-xl border border-border p-3.5">
         <span class="text-[11px] font-medium text-muted-foreground uppercase block">Last Run</span>
         <span class="text-xs font-bold text-foreground mt-1 block truncate" title={account.last_run_at ? new Date(account.last_run_at).toLocaleString() : 'Never'}>
           {account.last_run_at ? new Date(account.last_run_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Never'}
@@ -193,12 +168,10 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
 
       <div class="bg-background rounded-xl border border-border p-3.5">
         <span class="text-[11px] font-medium text-muted-foreground uppercase block">Next Run</span>
-        <span class="text-xs font-bold text-foreground mt-1 block truncate" title={account.next_run_at ? new Date(account.next_run_at).toLocaleString() : (account.last_run_at ? new Date(new Date(account.last_run_at).getTime() + Number(account.interval_days || 3) * 86400000).toLocaleString() + ' (est.)' : 'Pending')}>
+        <span class="text-xs font-bold text-foreground mt-1 block truncate" title={account.next_run_at ? new Date(account.next_run_at).toLocaleString() : 'Pending'}>
           {account.next_run_at
             ? new Date(account.next_run_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-            : account.last_run_at
-              ? `${new Date(new Date(account.last_run_at).getTime() + Number(account.interval_days || 3) * 86400000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} (est.)`
-              : 'Pending'}
+            : 'Pending'}
         </span>
       </div>
     </div>
@@ -1184,40 +1157,6 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
           toast(err?.message || 'Network error updating account status', 'error');
         } finally {
           statusBtn.disabled = false;
-        }
-      });
-    }
-
-    // Apply Interval
-    const applyIntervalBtn = document.getElementById('account-interval-apply-btn') as HTMLButtonElement | null;
-    const intervalInput = document.getElementById('account-interval-input') as HTMLInputElement | null;
-    if (applyIntervalBtn && intervalInput) {
-      applyIntervalBtn.addEventListener('click', async () => {
-        const days = parseInt(intervalInput.value, 10);
-        if (isNaN(days) || days < 1 || days > 30) {
-          alert('Interval must be between 1 and 30 days.');
-          return;
-        }
-
-        applyIntervalBtn.disabled = true;
-        try {
-          const res = await fetch('/api/pinarchive/accounts-gas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'set_interval', usernames: [username], days }),
-          });
-          const json = await res.json();
-          if (json.success && json.results?.[0]?.ok) {
-            const metricEl = document.getElementById('account-interval-metric');
-            if (metricEl) metricEl.textContent = `${days} days`;
-            toast(`Sync interval for @${username} updated to ${days} days.`, 'success');
-          } else {
-            toast(json.error || 'Failed to update interval in GAS', 'error');
-          }
-        } catch (err: any) {
-          toast(err?.message || 'Network error updating interval', 'error');
-        } finally {
-          applyIntervalBtn.disabled = false;
         }
       });
     }

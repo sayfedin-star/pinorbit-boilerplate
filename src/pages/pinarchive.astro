@@ -189,8 +189,8 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
 
     <!-- Collapsible Body -->
     <div id="settings-panel-body" class="hidden space-y-4 p-5 bg-card">
-      <!-- Tier 1: Gates & Defaults (5-col grid) -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+      <!-- Tier 1: Gates & Defaults (4-col grid) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         <!-- Master Ingest Switch -->
         <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
           <div class="flex items-center justify-between">
@@ -216,22 +216,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
             <option value="reject">Reject Ingest (Disabled)</option>
             <option value="accept">Allow Ingest Silently</option>
           </select>
-        </div>
-
-        <!-- Default Sync Interval -->
-        <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
-          <label for="setting-default-interval" class="text-xs font-bold text-foreground">Default Sync Interval</label>
-          <div class="mt-2 flex items-center gap-1.5">
-            <input
-              id="setting-default-interval"
-              type="number"
-              min="1"
-              max="30"
-              value="3"
-              class="w-full rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:outline-none"
-            />
-            <span class="text-xs font-semibold text-muted-foreground">days</span>
-          </div>
         </div>
 
         <!-- Max Batch Pins -->
@@ -415,25 +399,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           <span>▶ Resume</span>
         </button>
 
-        <div class="flex items-center gap-1 bg-background border border-border rounded-xl px-2 py-1 shadow-xs">
-          <label for="gas-bulk-interval-input" class="text-[11px] font-semibold text-muted-foreground">Int:</label>
-          <input
-            id="gas-bulk-interval-input"
-            type="number"
-            min="1"
-            max="30"
-            value="3"
-            class="w-10 rounded border border-border bg-background px-1 py-0.5 text-xs font-bold text-foreground text-center focus:outline-none"
-          />
-          <button
-            id="gas-bulk-interval-btn"
-            type="button"
-            class="rounded bg-primary text-primary-foreground px-2 py-0.5 text-[11px] font-bold hover:bg-primary/90 transition-colors cursor-pointer"
-          >
-            Apply
-          </button>
-        </div>
-
         <button
           id="delete-selected-accounts-btn"
           type="button"
@@ -468,7 +433,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
             <th class="py-3 px-4 font-semibold">Followers</th>
             <th class="py-3 px-4 font-semibold">Pins Total</th>
             <th class="py-3 px-4 font-semibold">Δ Changed</th>
-            <th class="py-3 px-4 font-semibold">Interval</th>
             <th class="py-3 px-4 font-semibold">Last / Next Run</th>
             <th class="py-3 px-4 font-semibold text-center">Accept GAS</th>
             <th class="py-3 px-4 text-right font-semibold">Actions</th>
@@ -476,7 +440,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         </thead>
         <tbody id="accounts-table-body" class="divide-y divide-border/60">
           <tr>
-            <td colspan="9" class="p-8 text-center text-xs text-muted-foreground animate-pulse">Loading tracked accounts…</td>
+            <td colspan="8" class="p-8 text-center text-xs text-muted-foreground animate-pulse">Loading tracked accounts…</td>
           </tr>
         </tbody>
       </table>
@@ -700,7 +664,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       const metaText = document.getElementById('refresh-meta-text');
       if (metaText && accounts.length > 0) {
         const firstAcc = accounts[0];
-        metaText.textContent = `Last refreshed ${timeAgo(firstAcc.last_run_at)} · next cycle ~${firstAcc.interval_days || 3}d`;
+        metaText.textContent = `Last refreshed ${timeAgo(firstAcc.last_run_at)}`;
       }
 
       // Render Accounts Table with Checkboxes & Search Filter
@@ -726,7 +690,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       const ingestCb = document.getElementById('setting-ingest-enabled') as HTMLInputElement | null;
       const ingestLabel = document.getElementById('setting-ingest-label');
       const policySel = document.getElementById('setting-paused-policy') as HTMLSelectElement | null;
-      const intervalInp = document.getElementById('setting-default-interval') as HTMLInputElement | null;
       const maxBatchInp = document.getElementById('setting-max-batch') as HTMLInputElement | null;
       const minSavesInp = document.getElementById('setting-min-saves') as HTMLInputElement | null;
       const minRepinsInp = document.getElementById('setting-min-repins') as HTMLInputElement | null;
@@ -751,7 +714,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         }
       }
       if (policySel) policySel.value = json.paused_account_policy || 'reject';
-      if (intervalInp) intervalInp.value = String(json.default_interval_days || 3);
       if (maxBatchInp) maxBatchInp.value = String(json.max_batch_pins || 500);
       if (minSavesInp) minSavesInp.value = String(json.pin_filter_min_saves ?? 0);
       if (minRepinsInp) minRepinsInp.value = String(json.pin_filter_min_repins ?? 0);
@@ -797,7 +759,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     const saveBtn = document.getElementById('save-ingest-settings-btn') as HTMLButtonElement | null;
     const roleBadge = document.getElementById('settings-role-badge');
     const inputs = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
-      '#setting-ingest-enabled, #setting-paused-policy, #setting-default-interval, #setting-max-batch, #setting-refresh-max-pins, #setting-min-saves, #setting-min-repins, #setting-rising-age, #setting-rising-saves'
+      '#setting-ingest-enabled, #setting-paused-policy, #setting-max-batch, #setting-refresh-max-pins, #setting-min-saves, #setting-min-repins, #setting-rising-age, #setting-rising-saves'
     );
     inputs.forEach((el) => {
       el.disabled = true;
@@ -812,7 +774,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
   async function saveSettings() {
     const ingestCb = document.getElementById('setting-ingest-enabled') as HTMLInputElement | null;
     const policySel = document.getElementById('setting-paused-policy') as HTMLSelectElement | null;
-    const intervalInp = document.getElementById('setting-default-interval') as HTMLInputElement | null;
     const maxBatchInp = document.getElementById('setting-max-batch') as HTMLInputElement | null;
     const refreshMaxPinsInp = document.getElementById('setting-refresh-max-pins') as HTMLInputElement | null;
     const minSavesInp = document.getElementById('setting-min-saves') as HTMLInputElement | null;
@@ -823,7 +784,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     const saveBtn = document.getElementById('save-ingest-settings-btn') as HTMLButtonElement | null;
     const summaryBadge = document.getElementById('settings-summary-badge');
 
-    if (!ingestCb || !policySel || !intervalInp || !maxBatchInp || !minSavesInp || !minRepinsInp || !risingAgeInp || !risingSavesInp) return;
+    if (!ingestCb || !policySel || !maxBatchInp || !minSavesInp || !minRepinsInp || !risingAgeInp || !risingSavesInp) return;
 
     if (saveBtn) saveBtn.disabled = true;
     if (statusMsg) {
@@ -838,7 +799,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         body: JSON.stringify({
           ingest_enabled: ingestCb.checked,
           paused_account_policy: policySel.value,
-          default_interval_days: parseInt(intervalInp.value, 10) || 3,
           max_batch_pins: parseInt(maxBatchInp.value, 10) || 500,
           refresh_max_pins: parseInt(refreshMaxPinsInp?.value || '0', 10) || 0,
           pin_filter_min_saves: parseInt(minSavesInp.value, 10) || 0,
@@ -934,7 +894,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     if (accounts.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="9" class="p-8 text-center text-xs text-muted-foreground bg-muted/10">
+          <td colspan="8" class="p-8 text-center text-xs text-muted-foreground bg-muted/10">
             ${rawAccounts.length === 0 ? 'No Pinterest accounts tracked in archive yet.' : 'No accounts matching search query.'}
           </td>
         </tr>
@@ -949,10 +909,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         const { bg: avatarBg, initial } = getAvatarStyle(acc.username || '');
         const lastRunStr = acc.last_run_at ? fmtDateTime(acc.last_run_at) : '—';
         const lastRunFull = acc.last_run_at ? new Date(acc.last_run_at).toLocaleString() : 'Never';
-        const nextEst = acc.last_run_at && acc.interval_days
-          ? new Date(new Date(acc.last_run_at).getTime() + Number(acc.interval_days) * 86400000).toLocaleString() + ' (est.)'
-          : 'Pending';
-        const nextRunStr = acc.next_run_at ? fmtDateTime(acc.next_run_at) : (acc.last_run_at ? `${fmtDate(new Date(new Date(acc.last_run_at).getTime() + Number(acc.interval_days || 3) * 86400000).toISOString())} (est.)` : 'Pending');
+        const nextRunStr = acc.next_run_at ? fmtDateTime(acc.next_run_at) : 'Pending';
         const changed = Number(acc.changed_last_refresh ?? 0);
         const total = Number(acc.checked_last_refresh ?? (acc.db_pins_count !== undefined ? acc.db_pins_count : (acc.pins_count ?? 0)));
 
@@ -1002,16 +959,11 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
               <span class="font-bold ${changed>0?'text-emerald-500':'text-muted-foreground'}">${changed}/${total}</span>
             </td>
             <td class="py-3 px-4 text-muted-foreground">
-              <span class="inline-flex items-center rounded-md bg-muted/60 px-2 py-0.5 text-[11px] font-medium text-foreground">
-                ${escapeHtml(String(acc.interval_days || 3))}d cycle
-              </span>
-            </td>
-            <td class="py-3 px-4 text-muted-foreground">
               <div class="text-foreground font-semibold text-xs" title="Last run: ${lastRunFull}">
                 ${lastRunStr}
               </div>
               <span class="text-[10px] ${changed>0?'text-emerald-500':'text-muted-foreground'}">+${changed} today</span>
-              <div class="text-[10px] text-muted-foreground/80 mt-0.5" title="Next run: ${acc.next_run_at ? new Date(acc.next_run_at).toLocaleString() : nextEst}">
+              <div class="text-[10px] text-muted-foreground/80 mt-0.5">
                 Next: ${nextRunStr}
               </div>
             </td>
@@ -1398,41 +1350,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           toast(err?.message || 'Network error resuming accounts', 'error');
         } finally {
           resumeBtn.disabled = false;
-        }
-      });
-    }
-
-    // Bulk Interval
-    const intervalBtn = document.getElementById('gas-bulk-interval-btn') as HTMLButtonElement | null;
-    const intervalInput = document.getElementById('gas-bulk-interval-input') as HTMLInputElement | null;
-    if (intervalBtn && intervalInput) {
-      intervalBtn.addEventListener('click', async () => {
-        const usernames = getSelectedUsernames();
-        if (usernames.length === 0) return;
-        const days = parseInt(intervalInput.value, 10);
-        if (isNaN(days) || days < 1 || days > 30) {
-          alert('Interval must be between 1 and 30 days.');
-          return;
-        }
-
-        intervalBtn.disabled = true;
-        try {
-          const res = await fetch('/api/pinarchive/accounts-gas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'set_interval', usernames, days }),
-          });
-          const json = await res.json();
-          if (json.success) {
-            toast(`Set interval to ${days} days for ${usernames.length} account(s).`, 'success');
-            await loadOverview();
-          } else {
-            toast(json.error || 'Failed to update interval', 'error');
-          }
-        } catch (err: any) {
-          toast(err?.message || 'Network error setting interval', 'error');
-        } finally {
-          intervalBtn.disabled = false;
         }
       });
     }

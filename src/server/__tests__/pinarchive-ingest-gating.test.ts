@@ -351,7 +351,7 @@ describe('PinArchive Ingest Gating & Safety Guardrails Suite', () => {
     expect(processedPinsCount).toBe(3);
   });
 
-  it('GATING 5: assigns workspace default_interval_days on newly created account when omitted in payload', async () => {
+  it('GATING 5: creates new account without requiring default_interval_days assignment', async () => {
     let upsertedAccountPayload: any = null;
 
     mockPinArchiveClient.from.mockImplementation((table: string) => {
@@ -363,7 +363,6 @@ describe('PinArchive Ingest Gating & Safety Guardrails Suite', () => {
                 data: {
                   workspace_id: mockWsId,
                   ingest_enabled: true,
-                  default_interval_days: 7,
                 },
                 error: null,
               }),
@@ -423,7 +422,7 @@ describe('PinArchive Ingest Gating & Safety Guardrails Suite', () => {
 
     const res = await ingestHandler({ request: req, locals: { runtime: { env: mockRuntimeEnv } } } as any);
     expect(res.status).toBe(200);
-    expect(upsertedAccountPayload.interval_days).toBe(7);
+    expect(upsertedAccountPayload.interval_days).toBeUndefined();
   });
 
   it('GATING 6: stamps archived_at with fetchedAt on brand-new pin, and PRESERVES existing archived_at on re-push', async () => {
