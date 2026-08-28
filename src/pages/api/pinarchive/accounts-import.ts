@@ -25,7 +25,7 @@ function json(data: any, status = 200) {
  *
  * Hard Rules:
  * - Tenant isolated via assertWorkspaceAccess(supabase, workspaceId, user.id, 'admin').
- * - R1: Never overwrites existing account rows (status, interval_days, ingest_enabled).
+ * - R1: Never overwrites existing account rows (status, ingest_enabled).
  * - Caps: <= 50 accounts per batch.
  * - dispatch defers to FEATURE_DISPATCH_NOW; executes GAS 'run' per account.
  */
@@ -86,19 +86,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const pinArchive = dbClients.getPinArchive(runtimeEnv);
 
-    // 1. Fetch workspace settings for default interval
+    // 1. Fetch workspace settings
     const { data: wsSettings } = await pinArchive
       .from('pa_workspace_settings')
-      .select('default_interval_days, ingest_enabled')
+      .select('ingest_enabled')
       .eq('workspace_id', workspaceId)
       .maybeSingle();
-
-    const defaultInterval = wsSettings?.default_interval_days || 3;
 
     // 2. Query existing accounts to honor R1 (no overwrite)
     const normalizedAccounts = rawAccounts.map((a: any) => ({
       username: String(a.username || '').trim().replace(/^@/, '').toLowerCase(),
-      interval_days: typeof a.interval_days === 'number' ? a.interval_days : undefined,
       user_id: a.user_id ? String(a.user_id).trim() : undefined,
     })).filter(a => Boolean(a.username));
 
@@ -106,7 +103,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const { data: existingRows } = await pinArchive
       .from('pa_accounts')
-      .select('id, username, status, ingest_enabled, interval_days')
+      .select('id, username, status, ingest_enabled')
       .eq('workspace_id', workspaceId)
       .in('username', usernames);
 
@@ -126,14 +123,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const existing = existingMap.get(acc.username);
 
       if (existing) {
-        // R1: Already exists in PinArchive -> Never overwrite existing status/interval/ingest_enabled
+        // R1: Already exists in PinArchive -> Never overwrite existing status/ingest_enabled
         skippedCount++;
         const itemResult: Record<string, any> = {
           id: existing.id,
           username: acc.username,
           status: 'already_archived',
           ingest_enabled: existing.ingest_enabled,
-          interval_days: existing.interval_days,
         };
 
         if (dispatchActive) {
@@ -153,11 +149,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // New Account -> Insert row into Project 4 pa_accounts
-      const intervalDays =
-        typeof acc.interval_days === 'number' && acc.interval_days >= 1 && acc.interval_days <= 30
-          ? acc.interval_days
-          : defaultInterval;
-
       const { data: newRow, error: insErr } = await pinArchive
         .from('pa_accounts')
         .upsert(
@@ -166,7 +157,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
             username: acc.username,
             status: 'active',
             ingest_enabled: true,
-            interval_days: intervalDays,
           },
           { onConflict: 'workspace_id,username', ignoreDuplicates: true }
         )
@@ -188,7 +178,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const gasAddRes = await gasCall(runtimeEnv, workspaceId, 'add_account', {
         username: acc.username,
         workspace_id: workspaceId,
-        interval_days: intervalDays,
         user_id: acc.user_id || '',
       });
 
@@ -196,7 +185,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         id: newRow.id,
         username: acc.username,
         status: 'imported',
-        interval_days: intervalDays,
         gas_bridge: gasAddRes.ok ? 'synced' : 'failed',
       };
 

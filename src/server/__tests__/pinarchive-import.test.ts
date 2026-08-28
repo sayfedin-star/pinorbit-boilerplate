@@ -272,7 +272,7 @@ describe('PinArchive Competitor Import & Bridge Test Suite', () => {
       expect(json.error).toContain('max 5');
     });
 
-    it('R1 IMMUTABILITY: preserves existing account row without overwriting status, interval_days, or ingest_enabled', async () => {
+    it('R1 IMMUTABILITY: preserves existing account row without overwriting status or ingest_enabled', async () => {
       let upsertCalls = 0;
 
       mockPinArchiveClient.from.mockImplementation((table: string) => {
@@ -281,7 +281,7 @@ describe('PinArchive Competitor Import & Bridge Test Suite', () => {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnValue({
                 maybeSingle: vi.fn().mockResolvedValue({
-                  data: { workspace_id: mockWsId, default_interval_days: 7 },
+                  data: { workspace_id: mockWsId, ingest_enabled: true },
                   error: null,
                 }),
               }),
@@ -299,7 +299,6 @@ describe('PinArchive Competitor Import & Bridge Test Suite', () => {
                       username: 'paused_user',
                       status: 'paused',
                       ingest_enabled: false,
-                      interval_days: 14,
                     },
                   ],
                   error: null,
@@ -336,11 +335,10 @@ describe('PinArchive Competitor Import & Bridge Test Suite', () => {
       expect(json.skipped).toBe(1);
       expect(json.results[0].status).toBe('already_archived');
       expect(json.results[0].ingest_enabled).toBe(false);
-      expect(json.results[0].interval_days).toBe(14);
       expect(upsertCalls).toBe(0); // Zero writes
     });
 
-    it('NEW ACCOUNT: inserts row with default interval and triggers GAS add_account bridge', async () => {
+    it('NEW ACCOUNT: inserts row and triggers GAS add_account bridge', async () => {
       let insertedRowData: any = null;
 
       mockPinArchiveClient.from.mockImplementation((table: string) => {
@@ -349,7 +347,7 @@ describe('PinArchive Competitor Import & Bridge Test Suite', () => {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnValue({
                 maybeSingle: vi.fn().mockResolvedValue({
-                  data: { workspace_id: mockWsId, default_interval_days: 5 },
+                  data: { workspace_id: mockWsId, ingest_enabled: true },
                   error: null,
                 }),
               }),
@@ -397,7 +395,7 @@ describe('PinArchive Competitor Import & Bridge Test Suite', () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       expect(json.imported).toBe(1);
-      expect(insertedRowData.interval_days).toBe(5);
+      expect(insertedRowData.interval_days).toBeUndefined();
       expect(insertedRowData.status).toBe('active');
       expect(insertedRowData.ingest_enabled).toBe(true);
 
@@ -408,7 +406,6 @@ describe('PinArchive Competitor Import & Bridge Test Suite', () => {
         expect.objectContaining({
           username: 'fresh_creator',
           workspace_id: mockWsId,
-          interval_days: 5,
         })
       );
     });

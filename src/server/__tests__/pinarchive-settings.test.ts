@@ -78,7 +78,6 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(json.workspace_id).toBe(mockWsId);
       expect(json.ingest_enabled).toBe(true);
       expect(json.paused_account_policy).toBe('reject');
-      expect(json.default_interval_days).toBe(3);
       expect(json.max_batch_pins).toBe(500);
       expect(json.pin_filter_min_saves).toBe(0);
       expect(json.pin_filter_min_repins).toBe(0);
@@ -97,7 +96,6 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
                 workspace_id: mockWsId,
                 ingest_enabled: false,
                 paused_account_policy: 'accept',
-                default_interval_days: 7,
                 max_batch_pins: 1200,
                 pin_filter_min_saves: 500,
                 pin_filter_min_repins: 100,
@@ -122,7 +120,6 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(json.success).toBe(true);
       expect(json.ingest_enabled).toBe(false);
       expect(json.paused_account_policy).toBe('accept');
-      expect(json.default_interval_days).toBe(7);
       expect(json.max_batch_pins).toBe(1200);
       expect(json.pin_filter_min_saves).toBe(500);
       expect(json.pin_filter_min_repins).toBe(100);
@@ -187,7 +184,7 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(json.error).toContain('Unknown setting key: pin_filter_max_age_days');
     });
 
-    it('validates ranges and enums (paused_account_policy, default_interval_days, max_batch_pins, pin_filter_*)', async () => {
+    it('validates ranges and enums (paused_account_policy, max_batch_pins, pin_filter_*) and ignores deprecated default_interval_days', async () => {
       // Invalid policy
       const req1 = new Request('http://localhost:4321/api/pinarchive/settings', {
         method: 'PATCH',
@@ -199,30 +196,6 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
         locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
       } as any);
       expect(res1.status).toBe(422);
-
-      // Invalid interval < 1
-      const req2 = new Request('http://localhost:4321/api/pinarchive/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspace_id: mockWsId, default_interval_days: 0 }),
-      });
-      const res2 = await patchSettingsHandler({
-        request: req2,
-        locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
-      } as any);
-      expect(res2.status).toBe(422);
-
-      // Invalid interval > 30
-      const req3 = new Request('http://localhost:4321/api/pinarchive/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspace_id: mockWsId, default_interval_days: 35 }),
-      });
-      const res3 = await patchSettingsHandler({
-        request: req3,
-        locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
-      } as any);
-      expect(res3.status).toBe(422);
 
       // Invalid max batch > 5000
       const req4 = new Request('http://localhost:4321/api/pinarchive/settings', {
@@ -333,13 +306,13 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(json.success).toBe(true);
       expect(json.ingest_enabled).toBe(false);
       expect(json.paused_account_policy).toBe('accept');
-      expect(json.default_interval_days).toBe(5);
       expect(json.max_batch_pins).toBe(1000);
       expect(json.pin_filter_min_saves).toBe(250);
       expect(json.pin_filter_min_repins).toBe(50);
       expect(json.pin_filter_rising_age_days).toBe(10);
       expect(json.pin_filter_rising_saves).toBe(30);
       expect(savedPayload.workspace_id).toBe(mockWsId);
+      expect(savedPayload.default_interval_days).toBeUndefined();
       expect(savedPayload.pin_filter_rising_age_days).toBe(10);
       expect(savedPayload.pin_filter_rising_saves).toBe(30);
     });

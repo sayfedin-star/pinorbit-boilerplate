@@ -116,17 +116,17 @@ import CronProviderSelector from '../cron/CronProviderSelector.astro';
     </div>
   </div>
 
-  <!-- ═══ BLOCK D: Cadence & Eligibility Pacing Analyzer Banner ═══ -->
+  <!-- ═══ BLOCK D: Cadence & Automation Schedule Banner ═══ -->
   <div id="pa-sched-pace-box" class="p-4 rounded-2xl border border-primary/25 bg-primary/5 space-y-1.5 shadow-2xs">
     <div class="flex flex-wrap items-center justify-between text-xs gap-2">
       <span class="font-bold text-primary flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-        <span>Cadence & Eligibility Gate Analyzer</span>
+        <span>FastCron Automation Cadence</span>
       </span>
       <span id="pa-sched-pace-val" class="font-bold text-foreground">Calculating cadence...</span>
     </div>
     <p id="pa-sched-pace-desc" class="text-[11px] text-muted-foreground">
-      Cron fires ~0 times/week; PinArchive eligibility gate controls effective pin updates based on account interval settings.
+      FastCron controls refresh cadence — every schedule run refreshes all active accounts.
     </p>
   </div>
 
@@ -790,7 +790,7 @@ import CronProviderSelector from '../cron/CronProviderSelector.astro';
     }
 
     paceVal.textContent = `${activeCount} Active Schedule(s) · ~${totalWeeklyRuns} Runs/Week`;
-    paceDesc.textContent = `FastCron triggers ~${totalWeeklyRuns} dispatch checks/week. PinArchive's eligibility gate ensures individual accounts only refresh when their interval threshold has elapsed.`;
+    paceDesc.textContent = 'FastCron controls refresh cadence — every schedule run refreshes all active accounts.';
   }
 
   // ═══ Event Handlers ═══

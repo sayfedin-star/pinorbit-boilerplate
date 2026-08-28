@@ -117,7 +117,6 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
 
     const ingestEnabled = wsSettings?.ingest_enabled ?? true;
     const pausedAccountPolicy = wsSettings?.paused_account_policy ?? 'reject';
-    const defaultIntervalDays = wsSettings?.default_interval_days ?? 3;
     const maxBatchPins = wsSettings?.max_batch_pins ?? 500;
 
     // Gating 2: Workspace disabled -> 409
@@ -153,7 +152,7 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
     // Gating 3: Fetch current pa_accounts row before upsert
     const { data: existingAccount } = await pinArchive
       .from('pa_accounts')
-      .select('id, status, ingest_enabled, interval_days')
+      .select('id, status, ingest_enabled')
       .eq('workspace_id', workspaceId)
       .eq('username', username)
       .maybeSingle();
@@ -203,13 +202,6 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
     if (typeof payload.follower_count === 'number') accountData.follower_count = payload.follower_count;
     if (typeof account_meta.follower_count === 'number') accountData.follower_count = account_meta.follower_count;
     if (account_meta.sheet_id) accountData.sheet_id = account_meta.sheet_id;
-
-    if (typeof account_meta.interval_days === 'number') {
-      accountData.interval_days = account_meta.interval_days;
-    } else if (!existingAccount) {
-      // Apply workspace default_interval_days on new accounts
-      accountData.interval_days = defaultIntervalDays;
-    }
 
     if (account_meta.status) accountData.status = account_meta.status;
     if (account_meta.backfill_status) accountData.backfill_status = account_meta.backfill_status;
