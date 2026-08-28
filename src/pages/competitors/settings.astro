@@ -3,6 +3,11 @@ import Layout from '../../layouts/Layout.astro';
 import SectionHeader from '../../components/ui/SectionHeader.astro';
 import ProviderBadge from '../../components/cron/ProviderBadge.astro';
 import AddNewScheduleModal from '../../components/cron/AddNewScheduleModal.astro';
+import { humanCron, humanCronTitle } from '../../lib/cron-helper';
+
+const cronExpr = '0 2 * * *';
+const cronDescription = humanCron(cronExpr);
+const cronTitle = humanCronTitle(cronExpr);
 ---
 
 <Layout title="Competitor Intelligence Settings" description="Closed-loop control plane for Pinterest competitor ingestion, credential vault, pipeline schedules, and live job auditing.">
@@ -52,10 +57,19 @@ import AddNewScheduleModal from '../../components/cron/AddNewScheduleModal.astro
         </div>
       </div>
 
-      <!-- Cron Engine Provider Badge -->
-      <div>
+      <!-- Cron Engine Provider & Pipeline Badge -->
+      <div class="flex flex-wrap items-center gap-2.5">
+        <span
+          id="comp-cron-badge"
+          class="text-[10px] font-mono px-2.5 py-1 rounded-full bg-muted text-muted-foreground border border-border cursor-help"
+          title={cronTitle}
+          data-tooltip={cronDescription}
+        >
+          {cronExpr} ({cronTitle})
+        </span>
         <ProviderBadge workspaceId={Astro.locals.activeWorkspaceId || ''} />
       </div>
+
 
       <!-- FastCron API Tokens Table Card -->
       <div class="rounded-xl border border-border/80 bg-background/50 p-4 space-y-3">

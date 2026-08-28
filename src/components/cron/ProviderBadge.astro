@@ -22,7 +22,7 @@ const providerLabel = isCronJobOrg ? 'cron-job.org' : 'FastCron';
 <div class={`inline-flex items-center gap-2 rounded-xl border border-border bg-card/80 px-3 py-1.5 text-xs text-muted-foreground shadow-2xs ${className}`} data-provider-badge data-workspace-id={workspaceId}>
   <span class="font-medium text-foreground flex items-center gap-1.5">
     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-    Provider: <strong class="font-semibold text-foreground">{providerLabel}</strong>
+    Provider: <strong class="font-semibold text-foreground" data-provider-label>{providerLabel}</strong>
   </span>
   <span class="text-border">·</span>
   <a
@@ -32,3 +32,29 @@ const providerLabel = isCronJobOrg ? 'cron-job.org' : 'FastCron';
     <span>managed in Settings &gt; Workspace &rarr;</span>
   </a>
 </div>
+
+<script>
+  function initProviderBadges() {
+    window.addEventListener('cron:provider-changed', ((e: CustomEvent<{ provider?: string; workspaceId?: string }>) => {
+      const targetProvider = e.detail?.provider;
+      if (!targetProvider) return;
+      const targetWorkspaceId = e.detail?.workspaceId;
+
+      const badges = document.querySelectorAll<HTMLElement>('[data-provider-badge]');
+      badges.forEach((badge) => {
+        const badgeWorkspaceId = badge.dataset.workspaceId;
+        if (!badgeWorkspaceId || !targetWorkspaceId || badgeWorkspaceId === targetWorkspaceId) {
+          const labelEl = badge.querySelector<HTMLElement>('[data-provider-label]');
+          if (labelEl) {
+            const isCjo = targetProvider.toLowerCase() === 'cronjoborg' || targetProvider.toLowerCase() === 'cron-job.org';
+            labelEl.textContent = isCjo ? 'cron-job.org' : 'FastCron';
+          }
+        }
+      });
+    }) as EventListener);
+  }
+
+  initProviderBadges();
+  document.addEventListener('astro:page-load', initProviderBadges);
+</script>
+

@@ -1,10 +1,24 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getCronProvider, CronJobOrgProvider, FastCronProvider } from '../services/cron-provider';
+import {
+  getCronProvider,
+  CronJobOrgProvider,
+  FastCronProvider,
+  clearCronProviderCache,
+  setCronProviderCache,
+  getGlobalCronProvider,
+  humanCron,
+  humanCronTitle,
+} from '../services/cron-provider';
 import { cronExpressionToCronJobOrgSchedule } from '../services/cron-provider/cronjoborg';
 import { resolveToken, listWorkspaceTokens, saveWorkspaceToken, deleteWorkspaceToken } from '../lib/token-resolver';
 import { dbClients } from '../db/clients';
 
 describe('Cron Provider Abstraction Suite', () => {
+  beforeEach(() => {
+    clearCronProviderCache();
+    vi.restoreAllMocks();
+  });
+
   it('Factory returns FastCronProvider or CronJobOrgProvider based on string', () => {
     const fastcron = getCronProvider('fastcron', 'test_key');
     expect(fastcron.providerName).toBe('fastcron');
@@ -99,8 +113,6 @@ describe('Cron Provider Abstraction Suite', () => {
   });
 
   it('getGlobalCronProvider resolves workspaces.cron_provider from Project 1 DB', async () => {
-    const { getGlobalCronProvider } = await import('../services/cron-provider');
-
     // Mock DB client returning cronjoborg
     const mockAdmin = {
       from: vi.fn().mockReturnValue({
@@ -125,7 +137,6 @@ describe('Cron Provider Abstraction Suite', () => {
   });
 
   it('getGlobalCronProvider falls back to fastcron on error or missing workspace', async () => {
-    const { getGlobalCronProvider } = await import('../services/cron-provider');
     const p1 = await getGlobalCronProvider(null);
     expect(p1).toBe('fastcron');
 
@@ -147,4 +158,156 @@ describe('Cron Provider Abstraction Suite', () => {
     expect(p2).toBe('fastcron');
     spy.mockRestore();
   });
+
+  it('getGlobalCronProvider caches provider for 60s — 10 consecutive calls execute exactly 1 DB query', async () => {
+    const mockSelect = vi.fn().mockResolvedValue({
+      data: { cron_provider: 'cronjoborg' },
+      error: null,
+    });
+
+    const mockAdmin = {
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: mockSelect,
+          }),
+        }),
+      }),
+    };
+
+    const spy = vi.spyOn(dbClients, 'getSchedulingAdmin').mockReturnValue(mockAdmin as any);
+
+    // Call 10 times consecutively
+    for (let i = 0; i < 10; i++) {
+      const res = await getGlobalCronProvider('ws-cached-10x');
+      expect(res).toBe('cronjoborg');
+    }
+
+    // Exactly 1 DB query
+    expect(mockAdmin.from).toHaveBeenCalledTimes(1);
+    expect(mockSelect).toHaveBeenCalledTimes(1);
+
+    spy.mockRestore();
+  });
+
+  it('resolveToken called 10 times executes exactly 1 DB query for workspace provider check', async () => {
+    const mockAdmin = {
+      from: vi.fn((table: string) => {
+        if (table === 'workspaces') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: { cron_provider: 'fastcron' },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: null,
+                  error: null,
+                }),
+              }),
+            }),
+          }),
+        };
+      }),
+    };
+
+    const spy = vi.spyOn(dbClients, 'getSchedulingAdmin').mockReturnValue(mockAdmin as any);
+
+    for (let i = 0; i < 10; i++) {
+      const res = await resolveToken(
+        { workspaceId: 'ws-token-10x' },
+        'scheduling',
+        { FASTCRON_API_TOKEN: 'fastcron_test_token_12345' }
+      );
+      expect(res.token).toBe('fastcron_test_token_12345');
+      expect(res.source).toBe('env');
+    }
+
+    // Workspaces table was queried exactly 1 time due to 60s cache
+    const workspaceCalls = mockAdmin.from.mock.calls.filter((c: any) => c[0] === 'workspaces');
+    expect(workspaceCalls.length).toBe(1);
+
+    spy.mockRestore();
+  });
+
+  it('clearCronProviderCache and setCronProviderCache manage cache correctly', async () => {
+    setCronProviderCache('ws-custom-set', 'cronjoborg');
+
+    const mockAdmin = {
+      from: vi.fn(),
+    };
+    const spy = vi.spyOn(dbClients, 'getSchedulingAdmin').mockReturnValue(mockAdmin as any);
+
+    // Should return from cache without touching DB
+    const res1 = await getGlobalCronProvider('ws-custom-set');
+    expect(res1).toBe('cronjoborg');
+    expect(mockAdmin.from).not.toHaveBeenCalled();
+
+    // Invalidate
+    clearCronProviderCache('ws-custom-set');
+
+    mockAdmin.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { cron_provider: 'fastcron' },
+            error: null,
+          }),
+        }),
+      }),
+    });
+
+    const res2 = await getGlobalCronProvider('ws-custom-set');
+    expect(res2).toBe('fastcron');
+    expect(mockAdmin.from).toHaveBeenCalledTimes(1);
+
+    spy.mockRestore();
+  });
+
+  describe('humanCron Formatter Suite', () => {
+    it('humanizes 0 2 * * * with full breakdown', () => {
+      const desc = humanCron('0 2 * * *');
+      expect(desc).toBe('Daily at 02:00 UTC — 1/day, 7/week, ~30/month');
+
+      const title = humanCronTitle('0 2 * * *');
+      expect(title).toBe('Daily at 02:00 UTC');
+    });
+
+    it('humanizes 0 4 * * * and 0 0 * * *', () => {
+      expect(humanCron('0 4 * * *')).toBe('Daily at 04:00 UTC — 1/day, 7/week, ~30/month');
+      expect(humanCronTitle('0 4 * * *')).toBe('Daily at 04:00 UTC');
+
+      expect(humanCron('0 0 * * *')).toBe('Daily at 00:00 UTC — 1/day, 7/week, ~30/month');
+      expect(humanCronTitle('0 0 * * *')).toBe('Daily at 00:00 UTC');
+    });
+
+    it('humanizes minute interval expressions (e.g. */15 * * * *)', () => {
+      const desc = humanCron('*/15 * * * *');
+      expect(desc).toBe('Every 15 minutes — 96/day, 672/week, ~2880/month');
+      expect(humanCronTitle('*/15 * * * *')).toBe('Every 15 minutes');
+    });
+
+    it('humanizes specific days of week (e.g. 0 4 * * 1,3,5)', () => {
+      const desc = humanCron('0 4 * * 1,3,5');
+      expect(desc).toBe('At 04:00 UTC on [1,3,5] — 3/week, ~12/month');
+    });
+
+    it('supports custom timezones in humanCron', () => {
+      const desc = humanCron('0 2 * * *', 'America/New_York');
+      expect(desc).toBe('Daily at 02:00 America/New_York — 1/day, 7/week, ~30/month');
+
+      const title = humanCronTitle('0 2 * * *', 'America/New_York');
+      expect(title).toBe('Daily at 02:00 America/New_York');
+    });
+  });
 });
+
