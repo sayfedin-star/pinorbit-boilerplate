@@ -1373,7 +1373,12 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
 
     if (!btnAccounts || !btnAutomation || !viewAccounts || !viewAutomation) return;
 
-    function activateTab(tab: 'accounts' | 'automation') {
+    // Clean up any legacy localStorage key that might have trapped users
+    try {
+      localStorage.removeItem('pa_active_tab');
+    } catch (_) {}
+
+    function activateTab(tab: 'accounts' | 'automation', updateUrl = true) {
       if (tab === 'automation') {
         viewAccounts?.classList.add('hidden');
         viewAutomation?.classList.remove('hidden');
@@ -1384,8 +1389,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         btnAccounts?.classList.remove('bg-primary', 'text-primary-foreground', 'shadow-xs');
         btnAccounts?.classList.add('text-muted-foreground', 'hover:bg-muted/60');
 
-        localStorage.setItem('pa_active_tab', 'automation');
-        if (window.location.hash !== '#automation') {
+        if (updateUrl && window.location.hash !== '#automation') {
           history.replaceState(null, '', '#automation');
         }
       } else {
@@ -1398,21 +1402,27 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         btnAutomation?.classList.remove('bg-primary', 'text-primary-foreground', 'shadow-xs');
         btnAutomation?.classList.add('text-muted-foreground', 'hover:bg-muted/60');
 
-        localStorage.setItem('pa_active_tab', 'accounts');
-        if (window.location.hash === '#automation') {
-          history.replaceState(null, '', window.location.pathname);
+        if (updateUrl && window.location.hash) {
+          history.replaceState(null, '', window.location.pathname + window.location.search);
         }
       }
     }
 
-    btnAccounts.addEventListener('click', () => activateTab('accounts'));
-    btnAutomation.addEventListener('click', () => activateTab('automation'));
+    btnAccounts.addEventListener('click', () => activateTab('accounts', true));
+    btnAutomation.addEventListener('click', () => activateTab('automation', true));
 
-    const initialTab =
-      window.location.hash === '#automation' || localStorage.getItem('pa_active_tab') === 'automation'
-        ? 'automation'
-        : 'accounts';
-    activateTab(initialTab);
+    window.addEventListener('hashchange', () => {
+      const isAutomation = window.location.hash === '#automation' || window.location.hash === '#pipeline';
+      activateTab(isAutomation ? 'automation' : 'accounts', false);
+    });
+
+    // Default to 'accounts' unless the URL explicitly contains '#automation' or '#pipeline'
+    const isAutomationInitial = window.location.hash === '#automation' || window.location.hash === '#pipeline';
+    if (isAutomationInitial) {
+      activateTab('automation', false);
+    } else {
+      activateTab('accounts', false);
+    }
   }
 
   function init() {
