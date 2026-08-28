@@ -460,6 +460,7 @@ import ProviderBadge from '../cron/ProviderBadge.astro';
 
 <script>
   import { fmtAuditTimestamp } from '../../lib/format-audit';
+  import { humanCron, humanCronTitle } from '../../lib/cron-helper';
 
   // ═══ CLIENT ENGINE: Carbon-Copy FastCron Automation ═══
   const toMs = (v: any): number | null => {
@@ -493,16 +494,8 @@ import ProviderBadge from '../cron/ProviderBadge.astro';
     return `0 ${hStr} * * ${dStr}`;
   }
 
-  function buildHumanReadableSummary(cronExpr: string): string {
-    const parts = cronExpr.trim().split(/\s+/);
-    if (parts.length < 5) return 'Invalid cron expression format';
-    const [mPart, hPart, , , dowPart] = parts;
-    const dayNames: Record<number, string> = { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat' };
-
-    let mText = mPart === '*' ? 'every minute' : `at :${mPart.padStart(2, '0')}`;
-    let hText = hPart === '*' ? 'every hour' : `hour ${hPart}`;
-    let dText = dowPart === '*' ? 'every day' : `on ${dowPart.split(',').map(d => dayNames[Number(d)] || d).join(', ')}`;
-    return `At ${mText} ${hText} ${dText}`;
+  function buildHumanReadableSummary(cronExpr: string, tz: string = 'UTC'): string {
+    return humanCron(cronExpr, tz);
   }
 
   function calculateNextExecution(cronExpr: string, tzStr = 'UTC'): string {
@@ -732,8 +725,8 @@ import ProviderBadge from '../cron/ProviderBadge.astro';
             <div class="text-[10px] font-mono text-muted-foreground mt-0.5">#${job.id}</div>
           </td>
           <td class="p-2.5">
-            <span class="font-mono font-semibold text-foreground">${job.expression}</span>
-            <div class="text-[10px] text-muted-foreground">${buildHumanReadableSummary(job.expression)}</div>
+            <div class="font-mono font-semibold text-primary text-[11px]">${job.expression}</div>
+            <div class="text-[10px] text-muted-foreground">${humanCronTitle(job.expression, job.timezone || 'UTC')} (${job.timezone || 'UTC'})</div>
           </td>
           <td class="p-2.5">
             ${nextRunHtml}

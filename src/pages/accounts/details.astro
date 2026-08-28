@@ -1030,7 +1030,7 @@ import ProviderBadge from '../../components/cron/ProviderBadge.astro';
     toggleAccountActive,
     rescheduleAccountPendingPins,
   } from '../../lib/supabase';
-  import { renderStatusBadge, formatDate, formatTime, renderEmptyStateHTML, escapeHtml, fmtAuditTimestamp } from '../../lib/ui-helpers';
+  import { renderStatusBadge, formatDate, formatTime, renderEmptyStateHTML, escapeHtml, fmtAuditTimestamp, humanCronTitle, humanCron } from '../../lib/ui-helpers';
   import type { Account, AccountPinStats, Pin, Log, AccountWebhook, Board } from '../../lib/types';
 
   let currentAccount: Account | null = null;
@@ -3088,43 +3088,8 @@ import ProviderBadge from '../../components/cron/ProviderBadge.astro';
     updateVisualCronPreview();
   }
 
-  function buildHumanReadableSummary(cronExpr: string): string {
-    const parts = cronExpr.trim().split(/\s+/);
-    if (parts.length < 5) return 'Invalid cron expression format (must have 5 fields)';
-
-    const [mPart, hPart, , , dowPart] = parts;
-    const dayNames: Record<number, string> = { 0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday', 7: 'Sunday' };
-
-    let mText = '';
-    if (mPart === '*') mText = 'every minute';
-    else if (mPart.startsWith('*/')) mText = `every ${mPart.slice(2)} minutes`;
-    else {
-      const mins = mPart.split(',');
-      if (mins.length === 1) mText = `at minute ${mins[0]}`;
-      else if (mins.length <= 3) mText = `at minute ${mins.slice(0, -1).join(', ')} and ${mins[mins.length - 1]}`;
-      else mText = `at minutes ${mins.slice(0, 3).join(', ')}... (+${mins.length - 3} more)`;
-    }
-
-    let hText = '';
-    if (hPart === '*') hText = 'every hour';
-    else if (hPart.startsWith('*/')) hText = `every ${hPart.slice(2)} hours`;
-    else if (hPart.includes('-')) hText = `past hour ${hPart}`;
-    else {
-      const hrs = hPart.split(',');
-      if (hrs.length <= 3) hText = `past hour ${hrs.join(', ')}`;
-      else hText = `past hour ${hrs.slice(0, 3).join(', ')}... (+${hrs.length - 3} more)`;
-    }
-
-    let dText = '';
-    if (dowPart === '*') dText = 'every day';
-    else if (dowPart === '1-5') dText = 'on Monday through Friday';
-    else if (dowPart === '6,0' || dowPart === '0,6') dText = 'on weekends';
-    else {
-      const dows = dowPart.split(',').map(d => dayNames[Number(d)] || d);
-      dText = `on ${dows.join(', ')}`;
-    }
-
-    return `At ${mText} ${hText} ${dText}`;
+  function buildHumanReadableSummary(cronExpr: string, tzStr = 'UTC'): string {
+    return humanCron(cronExpr, tzStr);
   }
 
   function calculateNextExecution(cronExpr: string, tzStr = 'UTC'): string {
@@ -3380,7 +3345,8 @@ import ProviderBadge from '../../components/cron/ProviderBadge.astro';
             '</td>' +
             '<td class="p-2.5">' +
               (s.cron_expression
-                ? '<div class="font-mono text-[11px] font-semibold text-primary">' + escapeHtml(s.cron_expression) + '</div>'
+                ? '<div class="font-mono text-[11px] font-semibold text-primary">' + escapeHtml(s.cron_expression) + '</div>' +
+                  '<div class="text-[10px] text-muted-foreground">' + escapeHtml(humanCronTitle(s.cron_expression, s.timezone || tz)) + ' (' + escapeHtml(s.timezone || tz) + ')</div>'
                 : '<div class="font-semibold text-foreground">' + escapeHtml(String(s.window_start).slice(0,5)) + '–' + escapeHtml(String(s.window_end).slice(0,5)) + ' <span class="text-[10px] text-muted-foreground font-normal">(' + escapeHtml(s.timezone) + ')</span></div>' +
                   '<div class="text-[11px] text-muted-foreground">' + s.interval_minutes + 'm ±' + s.random_delay_minutes + 'm • ' + escapeHtml((s.active_days || []).join(', ')) + '</div>'
               ) +
