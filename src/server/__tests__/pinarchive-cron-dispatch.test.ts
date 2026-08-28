@@ -278,7 +278,7 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite (v3 Delta)', () =>
       expect(json.configured).toBe(true);
       expect(json.token_source).toBe('workspace_registry');
       expect(json.token_name).toBe('Workspace Default');
-      expect(json.masked_token).toBe('fastcron...');
+      expect(json.masked_token).toBe('••••5678');
       expect(json.job.id).toBe(202);
       expect(json.job.cron_next.length).toBe(2);
       expect(json.job.cron_logs.length).toBe(1);

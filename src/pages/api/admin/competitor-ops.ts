@@ -5,6 +5,9 @@ import { assertWorkspaceAccess } from '../../../server/auth/workspace-guard';
 import { dbClients } from '../../../server/db/clients';
 import { errorStatus } from '../../../server/lib/http-error';
 import { isCompetitorKekActive } from '../../../server/lib/competitor-kek';
+import { resolveToken } from '../../../server/lib/token-resolver';
+import { getEffectiveSecret } from '../../../server/services/webhook-secrets';
+import { fastcronCall } from '../../../server/lib/fastcron-client';
 
 function getRuntimeEnv(locals: any): Record<string, any> {
   return locals?.runtime?.env || locals?.runtimeEnv || {};
@@ -151,6 +154,48 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     if (body.timezone !== undefined) updatePayload.timezone = body.timezone;
     if (body.schedule_status !== undefined) updatePayload.schedule_status = body.schedule_status;
     if (body.fastcron_job_id !== undefined) updatePayload.fastcron_job_id = body.fastcron_job_id;
+
+    // Sync FastCron job if cron_expression is set
+    if (body.cron_expression && body.cron_provider !== 'github_actions') {
+      try {
+        const targetToken = await resolveToken({ workspaceId }, 'competitors', runtimeEnv);
+        if (targetToken?.token) {
+          const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
+          if (effSecret?.value) {
+            const dispatchUrl = (runtimeEnv?.COMPETITORS_DISPATCH_URL as string) || 'https://pinorbit-v2.o-i.workers.dev/api/internal/competitors/dispatch';
+            const fastcronParams = {
+              name: `PinOrbit competitors — Schedule — ${workspaceId.slice(0, 8)}`,
+              url: dispatchUrl,
+              expression: body.cron_expression,
+              timezone: body.timezone || updatePayload.timezone || 'UTC',
+              http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
+              post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: 'Schedule' }),
+              status: isEnabled ? 'enabled' : 'disabled',
+            };
+
+            const { data: existingSettings } = await competitorsClient
+              .from('competitor_pipeline_settings')
+              .select('fastcron_job_id')
+              .eq('workspace_id', workspaceId)
+              .maybeSingle();
+
+            const existingJobId = updatePayload.fastcron_job_id || existingSettings?.fastcron_job_id;
+            if (existingJobId) {
+              await fastcronCall('cron_edit', { id: Number(existingJobId), ...fastcronParams }, targetToken.token);
+            } else {
+              const addRes = await fastcronCall('cron_add', fastcronParams, targetToken.token);
+              const newId = String(addRes.data?.id || addRes.data?.data?.id || '');
+              if (newId) {
+                updatePayload.fastcron_job_id = newId;
+                updatePayload.schedule_status = 'active';
+              }
+            }
+          }
+        }
+      } catch (cronErr) {
+        console.warn('[Competitor Ops PUT] FastCron sync error:', cronErr);
+      }
+    }
 
     const { data, error } = await competitorsClient
       .from('competitor_pipeline_settings')

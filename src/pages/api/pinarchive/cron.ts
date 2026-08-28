@@ -192,13 +192,22 @@ export function extractPostData(job: any): any | null {
  */
 export function isMatchingPinArchiveJob(job: any, workspaceId: string, dispatchEndpointUrl: string): boolean {
   const postData = extractPostData(job);
-  const urlMatches = typeof job.url === 'string' && (job.url === dispatchEndpointUrl || job.url.includes('/api/internal/pinarchive/dispatch'));
+  const urlMatches = typeof job.url === 'string' && (
+    job.url === dispatchEndpointUrl ||
+    job.url.includes('/api/internal/pinarchive/dispatch') ||
+    job.url.includes('/pinarchive/dispatch')
+  );
 
-  if (postData && postData.pipeline === 'pinarchive' && postData.workspace_id === workspaceId) {
+  if (postData && postData.pipeline === 'pinarchive' && (!postData.workspace_id || postData.workspace_id === workspaceId)) {
     return true;
   }
 
-  if (urlMatches && job.name && job.name.includes('PinOrbit pinarchive') && job.name.includes(workspaceId.slice(0, 8))) {
+  if (urlMatches && (
+    !job.name ||
+    job.name.toLowerCase().includes('pinarchive') ||
+    job.name.toLowerCase().includes('pinorbit') ||
+    (workspaceId && job.name.includes(workspaceId.slice(0, 8)))
+  )) {
     return true;
   }
 

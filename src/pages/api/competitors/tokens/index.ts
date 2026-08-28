@@ -3,6 +3,9 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../../server/auth/workspace-guard';
 import { listWorkspaceTokens, saveWorkspaceToken } from '../../../../server/lib/token-resolver';
+import { dbClients } from '../../../../server/db/clients';
+import { getEffectiveSecret } from '../../../../server/services/webhook-secrets';
+import { fastcronCall } from '../../../../server/lib/fastcron-client';
 
 export const GET: APIRoute = async ({ locals }) => {
   const user = locals.user;
@@ -99,6 +102,48 @@ export const POST: APIRoute = async ({ request, locals }) => {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
+    }
+
+    // Best-effort auto-create default schedule (0 2 * * *) on first token if no job exists yet
+    try {
+      const compAdmin = dbClients.getCompetitorsAdmin(runtimeEnv);
+      const { data: settings } = await compAdmin
+        .from('competitor_pipeline_settings')
+        .select('fastcron_job_id')
+        .eq('workspace_id', workspaceId)
+        .maybeSingle();
+
+      if (!settings?.fastcron_job_id) {
+        const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
+        if (effSecret?.value) {
+          const dispatchUrl = (runtimeEnv?.COMPETITORS_DISPATCH_URL as string) || 'https://pinorbit-v2.o-i.workers.dev/api/internal/competitors/dispatch';
+          const defaultParams = {
+            name: `PinOrbit competitors — Default Daily — ${workspaceId.slice(0, 8)}`,
+            url: dispatchUrl,
+            expression: '0 2 * * *',
+            timezone: 'UTC',
+            http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
+            post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: 'Default Daily' }),
+            status: 'enabled',
+          };
+          const addRes = await fastcronCall('cron_add', defaultParams, rawToken);
+          const newJobId = String(addRes.data?.id || addRes.data?.data?.id || '');
+          if (newJobId) {
+            await compAdmin
+              .from('competitor_pipeline_settings')
+              .upsert({
+                workspace_id: workspaceId,
+                fastcron_job_id: newJobId,
+                cron_expression: '0 2 * * *',
+                cron_provider: 'fastcron',
+                schedule_status: 'active',
+                updated_at: new Date().toISOString(),
+              }, { onConflict: 'workspace_id' });
+          }
+        }
+      }
+    } catch (autoErr) {
+      console.warn('[Competitors Token] Auto schedule creation skipped/failed:', autoErr);
     }
 
     return new Response(JSON.stringify({ success: true, id: result.id }), {

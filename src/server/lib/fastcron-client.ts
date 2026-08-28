@@ -42,7 +42,20 @@ export async function fastcronCall(
       });
     }
 
-    const data = await res.json().catch(() => ({}));
+    let data: any = {};
+    const contentType = res.headers?.get ? (res.headers.get('content-type') || '') : '';
+    if (contentType.includes('text/html')) {
+      const rawText = typeof res.text === 'function' ? await res.text().catch(() => '') : '';
+      console.error(`[FastCron Client] Non-JSON HTML response (HTTP ${res.status}):`, rawText.slice(0, 400));
+      data = { message: `FastCron HTTP ${res.status}: ${rawText.slice(0, 200).replace(/\s+/g, ' ').trim()}` };
+    } else {
+      try {
+        data = await res.json();
+      } catch {
+        const rawText = typeof res.text === 'function' ? await res.text().catch(() => '') : '';
+        data = rawText ? { message: `FastCron HTTP ${res.status}: ${rawText.slice(0, 200).replace(/\s+/g, ' ').trim()}` } : {};
+      }
+    }
 
     if (
       data.status === 'OK' ||
