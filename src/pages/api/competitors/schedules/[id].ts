@@ -99,7 +99,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
           );
         }
 
-        const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
+        const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim());
         const isEnabled = updatePayload.status ? updatePayload.status === 'active' : schedule.status === 'active';
         const postDataStr = JSON.stringify({
           workspace_id: workspaceId,

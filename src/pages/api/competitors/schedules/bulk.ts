@@ -99,13 +99,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
           results.push({ id: sched.id, action, success: true });
         } else if (action === 'clone') {
           const newLabel = `${sched.label || 'Schedule'} (copy)`;
-          const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
           const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
           if (!effSecret || !effSecret.value || effSecret.value.trim() === '') {
             failedCount++;
             results.push({ id: sched.id, action, success: false, error: 'Ingest secret not configured for workspace.' });
             continue;
           }
+          const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim());
 
           let newJobId: string | null = null;
           if (targetTokenObj?.token) {

@@ -41,7 +41,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
       );
     }
 
-    const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
+    const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim());
     let totalMatched = 0;
     let repairedCount = 0;
     const repairedJobs: any[] = [];

@@ -7,18 +7,24 @@ import { getEffectiveSecret } from '../../../server/services/webhook-secrets';
 import { fastcronCall } from '../../../server/lib/fastcron-client';
 import { listWorkspaceTokens, resolveToken } from '../../../server/lib/token-resolver';
 
-export const getDispatchEndpointUrl = (runtimeEnv?: Record<string, any>, workspaceId?: string): string => {
+export const getDispatchEndpointUrl = (
+  runtimeEnv?: Record<string, any>,
+  workspaceId?: string,
+  secret?: string
+): string => {
   const base =
     (runtimeEnv?.COMPETITORS_DISPATCH_URL as string) ||
     (typeof process !== 'undefined' ? process.env.COMPETITORS_DISPATCH_URL : '') ||
     'https://pinorbit-v2.o-i.workers.dev/api/internal/competitors/dispatch';
 
+  const url = new URL(base);
   if (workspaceId) {
-    const url = new URL(base);
     url.searchParams.set('workspace_id', workspaceId);
-    return url.toString();
   }
-  return base;
+  if (secret) {
+    url.searchParams.set('secret', secret);
+  }
+  return url.toString();
 };
 
 export const toMs = (v: any): number | null => {
@@ -362,7 +368,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             const repairParams = {
               id: jobId,
               name: `PinOrbit competitors — ${jobLabel} — ${workspaceId.slice(0, 8)}`,
-              url: getDispatchEndpointUrl(runtimeEnv, workspaceId),
+              url: getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim()),
               expression: job.expression || job.cron_expression || '0 2 * * *',
               timezone: job.timezone || 'UTC',
               httpMethod: 'POST',
@@ -405,7 +411,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const defaultPostDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: 'Default Daily' });
       const defaultParams = {
         name: `PinOrbit competitors — Default Daily — ${workspaceId.slice(0, 8)}`,
-        url: getDispatchEndpointUrl(runtimeEnv, workspaceId),
+        url: getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim()),
         expression: '0 2 * * *',
         timezone: 'UTC',
         httpMethod: 'POST',
@@ -496,7 +502,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const fastcronParams = {
       name: `PinOrbit competitors — ${label} — ${workspaceId.slice(0, 8)}`,
-      url: getDispatchEndpointUrl(runtimeEnv, workspaceId),
+      url: getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim()),
       expression: cronExpression,
       timezone,
       httpMethod: 'POST',

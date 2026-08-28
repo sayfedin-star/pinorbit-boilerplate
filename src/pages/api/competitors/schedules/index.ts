@@ -8,18 +8,24 @@ import { fastcronCall } from '../../../../server/lib/fastcron-client';
 import { listWorkspaceTokens, resolveToken } from '../../../../server/lib/token-resolver';
 import { isMatchingCompetitorJob } from '../cron';
 
-export const getDispatchEndpointUrl = (runtimeEnv?: Record<string, any>, workspaceId?: string): string => {
+export const getDispatchEndpointUrl = (
+  runtimeEnv?: Record<string, any>,
+  workspaceId?: string,
+  secret?: string
+): string => {
   const base =
     (runtimeEnv?.COMPETITORS_DISPATCH_URL as string) ||
     (typeof process !== 'undefined' ? process.env.COMPETITORS_DISPATCH_URL : '') ||
     'https://pinorbit-v2.o-i.workers.dev/api/internal/competitors/dispatch';
 
+  const url = new URL(base);
   if (workspaceId) {
-    const url = new URL(base);
     url.searchParams.set('workspace_id', workspaceId);
-    return url.toString();
   }
-  return base;
+  if (secret) {
+    url.searchParams.set('secret', secret);
+  }
+  return url.toString();
 };
 
 export const toMs = (v: any): number | null => {
@@ -272,7 +278,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
 
-    const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
     const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
     if (!effSecret || !effSecret.value || effSecret.value.trim() === '') {
       return new Response(
@@ -280,6 +285,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
+    const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim());
 
     const targetTokenObj = await resolveToken(
       { workspaceId, tokenId: tokenId || undefined },

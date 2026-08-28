@@ -116,7 +116,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (!existingSchedules || existingSchedules.length === 0) {
         const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
         if (effSecret?.value) {
-          const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
+          const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim());
           const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: 'Default Daily' });
 
           const defaultParams = {

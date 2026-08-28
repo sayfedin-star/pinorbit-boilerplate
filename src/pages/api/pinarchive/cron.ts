@@ -9,18 +9,24 @@ import { resolveTokenKek, decryptToken } from '../../../server/lib/token-crypto'
 
 export const FASTCRON_BASE = 'https://www.fastcron.com/api/v1';
 
-export const getDispatchEndpointUrl = (runtimeEnv?: Record<string, any>, workspaceId?: string): string => {
+export const getDispatchEndpointUrl = (
+  runtimeEnv?: Record<string, any>,
+  workspaceId?: string,
+  secret?: string
+): string => {
   const base =
     (runtimeEnv?.PINARCHIVE_DISPATCH_URL as string) ||
     (typeof process !== 'undefined' ? process.env.PINARCHIVE_DISPATCH_URL : '') ||
     'https://pinorbit-v2.o-i.workers.dev/api/internal/pinarchive/dispatch';
 
+  const url = new URL(base);
   if (workspaceId) {
-    const url = new URL(base);
     url.searchParams.set('workspace_id', workspaceId);
-    return url.toString();
   }
-  return base;
+  if (secret) {
+    url.searchParams.set('secret', secret);
+  }
+  return url.toString();
 };
 
 /**
@@ -616,7 +622,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             const repairParams = {
               id: jobId,
               name: `PinOrbit pinarchive — ${jobLabel} — ${workspaceId.slice(0, 8)}`,
-              url: getDispatchEndpointUrl(runtimeEnv, workspaceId),
+              url: getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim()),
               expression: job.expression || job.cron_expression || '0 3 * * *',
               timezone: job.timezone || 'UTC',
               httpMethod: 'POST',
@@ -644,7 +650,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
       }
 
-      const targetDispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
+      const targetDispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim());
       const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label: 'Default Daily' });
       const defaultParams = {
         name: `PinOrbit pinarchive — Default Daily — ${workspaceId.slice(0, 8)}`,
@@ -734,7 +740,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label: clonedLabel });
       const cloneParams = {
         name: `PinOrbit pinarchive — ${clonedLabel} — ${workspaceId.slice(0, 8)}`,
-        url: getDispatchEndpointUrl(runtimeEnv, workspaceId),
+        url: getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim()),
         expression: existingJob.expression || '0 3 * * *',
         timezone: existingJob.timezone || 'UTC',
         httpMethod: 'POST',
@@ -809,7 +815,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const editParams = {
         id: jobId,
         name: `PinOrbit pinarchive — ${label} — ${workspaceId.slice(0, 8)}`,
-        url: getDispatchEndpointUrl(runtimeEnv, workspaceId),
+        url: getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim()),
         expression: cronExpression,
         timezone,
         httpMethod: 'POST',
@@ -873,7 +879,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const addParams = {
       name: `PinOrbit pinarchive — ${label} — ${workspaceId.slice(0, 8)}`,
-      url: getDispatchEndpointUrl(runtimeEnv, workspaceId),
+      url: getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim()),
       expression: cronExpression,
       timezone,
       httpMethod: 'POST',

@@ -47,7 +47,7 @@ export const POST: APIRoute = async ({ locals }) => {
       );
     }
 
-    const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId);
+    const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim());
 
     // 3. Check if any schedules already exist in DB
     const { data: existing, error: fetchErr } = await compAdmin
