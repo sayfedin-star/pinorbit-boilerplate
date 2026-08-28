@@ -117,7 +117,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
         if (effSecret?.value) {
           const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim());
-          const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: 'Default Daily' });
+          const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: 'Default Daily', trigger: 'cron' });
 
           const defaultParams = {
             name: `PinOrbit competitors — Default Daily — ${workspaceId.slice(0, 8)}`,

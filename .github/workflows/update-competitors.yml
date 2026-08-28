@@ -30,11 +30,16 @@ on:
         type: boolean
         required: false
         default: false
-      run_trigger:
+      trigger:
         description: 'Trigger origin (cron, manual, run_now, full)'
         type: string
         required: false
-        default: 'full'
+        default: ''
+      run_trigger:
+        description: 'Trigger origin legacy alias'
+        type: string
+        required: false
+        default: ''
 
 jobs:
   sync:
@@ -49,7 +54,8 @@ jobs:
       TARGET_USERNAME: ${{ github.event.inputs.target_username || '' }}
       DRY_RUN: ${{ (github.event.inputs.dry_run == true || github.event.inputs.dry_run == 'true') && 'true' || '' }}
       FORCE_RUN: ${{ (github.event.inputs.force_run == true || github.event.inputs.force_run == 'true') && 'true' || '' }}
-      RUN_TRIGGER: ${{ github.event.inputs.run_trigger || (github.event_name == 'schedule' && 'cron' || 'full') }}
+      RUN_TRIGGER: ${{ github.event.inputs.trigger || github.event.inputs.run_trigger || '' }}
+      EVENT_NAME: ${{ github.event_name }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

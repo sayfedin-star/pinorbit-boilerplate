@@ -68,7 +68,7 @@ export const POST: APIRoute = async ({ locals }) => {
           );
           const apiToken = schedTokenObj?.token || targetTokenObj.token;
           const schedLabel = sched.label || 'Default Daily';
-          const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: schedLabel });
+          const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: schedLabel, trigger: 'cron' });
           const repairParams = {
             id: Number(sched.fastcron_job_id),
             name: `PinOrbit competitors — ${schedLabel} — ${workspaceId.slice(0, 8)}`,
@@ -103,7 +103,7 @@ export const POST: APIRoute = async ({ locals }) => {
     const label = 'Default Daily';
     const cronExpression = '0 2 * * *';
     const timezone = 'UTC';
-    const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label });
+    const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label, trigger: 'cron' });
 
     const defaultParams = {
       name: `PinOrbit competitors — ${label} — ${workspaceId.slice(0, 8)}`,

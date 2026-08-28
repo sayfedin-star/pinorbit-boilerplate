@@ -227,4 +227,39 @@ describe('Competitors FastCron Control Plane API Suite', () => {
     expect(json.success).toBe(true);
     expect(json.message).toContain('deleted');
   });
+
+  it('POST /api/competitors/cron creates job with trigger="cron" in postData', async () => {
+    const { fastcronCall } = await import('../../server/lib/fastcron-client');
+    const res = await competitorCronApi.POST({
+      request: new Request('https://example.com/api/competitors/cron', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          label: 'Test Schedule',
+          cron_expression: '0 3 * * *',
+          timezone: 'UTC',
+        }),
+      }),
+      locals: {
+        user: { id: mockUserId },
+        supabase: mockSupabase,
+        activeWorkspaceId: mockWorkspaceId,
+        runtimeEnv: {
+          TOKEN_KEK: 'test_token_kek_secret_key_12345678',
+          competitorsClient: mockTokenAdmin,
+        },
+      },
+    } as any);
+
+    expect(res.status).toBe(200);
+    expect(fastcronCall).toHaveBeenCalledWith(
+      'cron_add',
+      expect.objectContaining({
+        postData: expect.stringContaining('"trigger":"cron"'),
+        post_data: expect.stringContaining('"trigger":"cron"'),
+      }),
+      expect.any(String)
+    );
+  });
 });

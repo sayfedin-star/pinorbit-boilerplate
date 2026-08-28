@@ -71,6 +71,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
           workspace_id: workspaceId,
           pipeline: 'competitors',
           label: jobLabel,
+          trigger: 'cron',
         });
 
         const repairParams = {

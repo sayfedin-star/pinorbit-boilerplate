@@ -297,7 +297,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Call FastCron cron_add with explicit http_method / httpMethod: 'POST'
-    const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label });
+    const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label, trigger: 'cron' });
     const fastcronParams = {
       name: `PinOrbit competitors — ${label} — ${workspaceId.slice(0, 8)}`,
       url: dispatchUrl,

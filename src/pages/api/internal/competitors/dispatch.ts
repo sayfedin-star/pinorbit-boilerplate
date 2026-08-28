@@ -185,6 +185,10 @@ async function handleCompetitorsDispatch(
       ? payload.target_username
       : url.searchParams.get('target_username') || '';
 
+  const validTriggers = ['cron', 'manual', 'run_now', 'full'];
+  const rawTrigger = typeof payload.trigger === 'string' ? payload.trigger.trim().toLowerCase() : (url.searchParams.get('trigger')?.trim().toLowerCase() || 'cron');
+  const resolvedTrigger = validTriggers.includes(rawTrigger) ? rawTrigger : 'cron';
+
   try {
     const ghRes = await fetch(dispatchUrl, {
       method: 'POST',
@@ -203,7 +207,8 @@ async function handleCompetitorsDispatch(
           target_username: targetUsername,
           dry_run: dryRunValue,
           force_run: forceValue,
-          run_trigger: payload.trigger || url.searchParams.get('trigger') || 'cron',
+          trigger: resolvedTrigger,
+          run_trigger: resolvedTrigger,
         },
       }),
       signal: AbortSignal.timeout(8000),
@@ -217,6 +222,7 @@ async function handleCompetitorsDispatch(
           workspace_id: workspaceId,
           target_scope: targetScope,
           competitor_ids: competitorIds || undefined,
+          trigger: resolvedTrigger,
           force: forceValue === 'true',
         }),
         { status: 202, headers: { 'Content-Type': 'application/json' } }

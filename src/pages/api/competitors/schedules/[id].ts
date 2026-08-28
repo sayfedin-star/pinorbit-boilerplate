@@ -105,6 +105,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
           workspace_id: workspaceId,
           pipeline: 'competitors',
           label: updatePayload.label || schedule.label || 'Schedule',
+          trigger: 'cron',
         });
 
         const fastcronParams: Record<string, any> = {

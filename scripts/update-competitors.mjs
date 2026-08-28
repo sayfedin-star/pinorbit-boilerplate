@@ -291,7 +291,7 @@ async function main() {
     let jobId = inputJobId;
 
     if (!jobId) {
-      const runTrigger = process.env.RUN_TRIGGER || (process.env.GITHUB_EVENT_NAME === 'schedule' ? 'cron' : 'full');
+      const runTrigger = process.env.RUN_TRIGGER || (process.env.EVENT_NAME === 'schedule' ? 'cron' : 'manual');
       const { data: job } = await db.from('competitor_ingestion_jobs').insert({
         workspace_id: wsId,
         competitor_id: competitorIds.length === 1 ? competitorIds[0] : null,

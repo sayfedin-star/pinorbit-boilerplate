@@ -237,6 +237,16 @@ describe('Competitor Schedules RESTful API Test Suite', () => {
     expect(data.schedule).toBeDefined();
     expect(data.schedule.cron_expression).toBe('30 4 * * *');
     expect(data.schedule.fastcron_job_id).toBe('888123');
+
+    const { fastcronCall } = await import('../../server/lib/fastcron-client');
+    expect(fastcronCall).toHaveBeenCalledWith(
+      'cron_add',
+      expect.objectContaining({
+        postData: expect.stringContaining('"trigger":"cron"'),
+        post_data: expect.stringContaining('"trigger":"cron"'),
+      }),
+      expect.any(String)
+    );
   });
 
   it('PATCH /api/competitors/schedules/:id updates label and cron expression', async () => {

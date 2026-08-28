@@ -109,7 +109,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           let newJobId: string | null = null;
           if (targetTokenObj?.token) {
-            const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: newLabel });
+            const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: newLabel, trigger: 'cron' });
             const cloneParams = {
               name: `PinOrbit competitors — ${newLabel} — ${workspaceId.slice(0, 8)}`,
               url: dispatchUrl,

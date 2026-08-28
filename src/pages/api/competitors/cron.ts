@@ -359,6 +359,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               workspace_id: workspaceId,
               pipeline: 'competitors',
               label: jobLabel,
+              trigger: 'cron',
             });
             const repairParams = {
               id: jobId,
@@ -403,7 +404,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
       }
 
-      const defaultPostDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: 'Default Daily' });
+      const defaultPostDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: 'Default Daily', trigger: 'cron' });
       const defaultParams = {
         name: `PinOrbit competitors — Default Daily — ${workspaceId.slice(0, 8)}`,
         url: getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim()),
@@ -493,7 +494,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const cronExpression = cronValidation.cron!;
     const timezone = body?.timezone || 'UTC';
     const enabled = body?.enabled !== false;
-    const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label });
+    const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label, trigger: 'cron' });
 
     const fastcronParams = {
       name: `PinOrbit competitors — ${label} — ${workspaceId.slice(0, 8)}`,
