@@ -168,6 +168,10 @@ import ProviderBadge from '../cron/ProviderBadge.astro';
               </button>
             </div>
             <div class="py-1">
+              <button type="button" id="pa-batch-act-run" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-primary font-semibold cursor-pointer">
+                <svg class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>Run Selected Now</span>
+              </button>
               <button type="button" id="pa-batch-act-enable" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-emerald-600 dark:text-emerald-400 cursor-pointer">
                 <svg class="h-3.5 w-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
                 <span>Resume / Enable Selected</span>
@@ -178,6 +182,10 @@ import ProviderBadge from '../cron/ProviderBadge.astro';
               </button>
             </div>
             <div class="py-1">
+              <button type="button" id="pa-batch-act-export" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-muted-foreground hover:text-foreground cursor-pointer">
+                <svg class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Export Selected (JSON)</span>
+              </button>
               <button type="button" id="pa-batch-act-delete" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-rose-500 font-semibold cursor-pointer">
                 <svg class="h-3.5 w-3.5 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 <span>Delete Selected</span>
@@ -1098,6 +1106,19 @@ import ProviderBadge from '../cron/ProviderBadge.astro';
     });
 
     // Batch Actions
+    document.getElementById('pa-batch-act-run')?.addEventListener('click', async () => {
+      if (selectedJobIds.size === 0) return;
+      for (const id of selectedJobIds) {
+        await fetch('/api/pinarchive/cron', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'run_now', job_id: id }),
+        });
+      }
+      alert(`Triggered manual execution for ${selectedJobIds.size} schedules.`);
+      await loadData();
+    });
+
     document.getElementById('pa-batch-act-enable')?.addEventListener('click', async () => {
       for (const id of selectedJobIds) {
         await fetch('/api/pinarchive/cron', {
@@ -1120,6 +1141,18 @@ import ProviderBadge from '../cron/ProviderBadge.astro';
       }
       selectedJobIds.clear();
       await loadData();
+    });
+
+    document.getElementById('pa-batch-act-export')?.addEventListener('click', () => {
+      if (selectedJobIds.size === 0) return;
+      const exported = loadedJobs.filter(j => selectedJobIds.has(j.id));
+      const blob = new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pinarchive-schedules-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
     });
 
     document.getElementById('pa-batch-act-delete')?.addEventListener('click', async () => {

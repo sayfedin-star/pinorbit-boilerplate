@@ -2,7 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import SectionHeader from '../../components/ui/SectionHeader.astro';
 import ProviderBadge from '../../components/cron/ProviderBadge.astro';
-import AddNewScheduleModal from '../../components/cron/AddNewScheduleModal.astro';
+import RunNowButton from '../../components/cron/RunNowButton.astro';
 import { humanCron, humanCronTitle } from '../../lib/cron-helper';
 import { dbClients } from '../../server/db/clients';
 
@@ -56,90 +56,242 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
 
   <div class="space-y-8">
     <!-- ═══ SECTION 0: Automation Schedules & Cron Provider ═══ -->
-    <div class="rounded-xl border border-border bg-card p-6 shadow-sm space-y-6">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5">
-        <div>
-          <h2 class="text-base font-bold text-foreground flex items-center gap-2">
-            <span>⚡</span>
-            <span>Automation Schedules & Cron Provider</span>
-          </h2>
-          <p class="text-xs text-muted-foreground mt-0.5">Stateless multi-job scheduler for Competitor profile scraping, board change detection, and metrics refresh.</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <button
-            id="btn-open-schedule-modal"
-            type="button"
-            class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary/90 transition-all cursor-pointer"
-          >
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <span>Configure Schedule</span>
-          </button>
-        </div>
-      </div>
+    <div class="space-y-6">
 
-      <!-- Cron Engine Provider & Pipeline Badge -->
-      <div class="flex flex-wrap items-center gap-2.5">
-        <span
-          id="comp-cron-badge"
-          class="text-[10px] font-mono px-2.5 py-1 rounded-full bg-muted text-muted-foreground border border-border cursor-help"
-          title={cronTitle}
-          data-tooltip={cronDesc}
-        >
-          {rawExpr ? `${cronExpr} (${cronTitle})` : 'No schedule — Configure Schedule →'}
-        </span>
-        <ProviderBadge workspaceId={Astro.locals.activeWorkspaceId || ''} />
-      </div>
+      <!-- Side-by-Side Cards: Schedules (65%) & FastCron Tokens (35%) -->
+      <div class="flex flex-col lg:flex-row gap-6">
 
+        <!-- Left: FastCron API Tokens (35%) -->
+        <div class="lg:w-[35%] rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between border-b border-border/80 pb-3 gap-2">
+              <div class="flex items-center gap-2">
+                <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div>
+                  <h3 class="text-xs font-bold text-foreground">FastCron API Tokens</h3>
+                  <p class="text-[10px] text-muted-foreground">Workspace token registry</p>
+                </div>
+              </div>
+              <button
+                id="btn-add-token"
+                type="button"
+                class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer"
+              >
+                + Add Token
+              </button>
+            </div>
 
-      <!-- FastCron API Tokens Table Card -->
-      <div class="rounded-xl border border-border/80 bg-background/50 p-4 space-y-3">
-        <div class="flex flex-wrap items-center justify-between border-b border-border/80 pb-2.5 gap-2">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-foreground">FastCron API Tokens</span>
-            <span class="text-[10px] font-semibold text-muted-foreground px-2 py-0.5 rounded-full bg-muted">Workspace token registry — Provider is global (Settings &gt; Workspace), tokens are per-project</span>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs">
+                <thead>
+                  <tr class="text-left border-b border-border text-muted-foreground text-[10px] font-bold">
+                    <th class="p-2">NAME</th>
+                    <th class="p-2">KEY</th>
+                    <th class="p-2">STATUS</th>
+                    <th class="p-2 text-right">ACTION</th>
+                  </tr>
+                </thead>
+                <tbody id="tokens-table-rows">
+                  <tr>
+                    <td colspan="4" class="p-4 text-center text-muted-foreground">Loading tokens...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div class="flex items-center gap-2">
+
+          <div class="pt-3 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
+            <div class="flex items-center gap-1.5">
+              <span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
+              <span id="token-status-msg" class="text-emerald-500 font-medium text-[10px]">✓ Connection healthy</span>
+            </div>
             <button
               id="btn-ping-tokens"
               type="button"
-              class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground font-semibold px-2 py-1 rounded-lg border border-border bg-card hover:bg-muted transition-all cursor-pointer"
+              class="text-[10px] font-semibold text-muted-foreground hover:text-foreground underline cursor-pointer"
             >
-              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-              <span>Test Connection</span>
-            </button>
-            <button
-              id="btn-add-token"
-              type="button"
-              class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer"
-            >
-              + Add Token
+              Test Connection
             </button>
           </div>
         </div>
 
+        <!-- Right: Global Cron Provider Badge & Quick Overview (65%) -->
+        <div class="lg:w-[65%] rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between border-b border-border/80 pb-3">
+              <div class="flex items-center gap-2">
+                <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </div>
+                <div>
+                  <h3 class="text-xs font-bold text-foreground">Global Cron Engine & Orchestration</h3>
+                  <p class="text-[10px] text-muted-foreground">Provider is set in Settings &gt; Workspace, tokens are isolated per project</p>
+                </div>
+              </div>
+              <ProviderBadge workspaceId={workspaceId} />
+            </div>
+
+            <p class="text-xs text-muted-foreground leading-relaxed">
+              PinOrbit triggers background scraping workers using stateless cron dispatches. Each schedule emits an authenticated payload to the internal ingestion endpoint (<code class="text-[11px] text-primary font-mono">/api/internal/competitors/dispatch</code>) with an encrypted webhook secret token.
+            </p>
+          </div>
+
+          <div class="pt-3 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span class="flex items-center gap-1.5 text-[10px]">
+              <span class="inline-block h-2 w-2 rounded-full bg-primary"></span>
+              Encrypted AES-GCM vault security active
+            </span>
+            <a href="/settings" class="text-[10px] font-semibold text-primary hover:underline">Settings &gt; Workspace →</a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ═══ Multi-Schedule Table & Controls (P1/P4 Parity) ═══ -->
+      <div class="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm">
+        
+        <!-- Header Controls -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-4">
+          <div class="flex items-center gap-3">
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-pink-500/10 text-pink-500 border border-pink-500/20 shadow-2xs">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-sm font-bold text-foreground">Posting Schedules &amp; Automation</h2>
+                <span id="comp-cron-global-badge" class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground">Active Multi-Schedule</span>
+              </div>
+              <p class="text-xs text-muted-foreground mt-0.5">Manage multi-schedule competitor scraping, profile metrics refresh, and change detection</p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Run Now Button -->
+            <RunNowButton
+              endpoint="/api/internal/competitors/dispatch"
+              payload={{ workspace_id: workspaceId, pipeline: "competitors" }}
+              label="Run Now"
+              forceLabel="⚡ Force Run"
+              scope="competitors"
+            />
+
+            <!-- New Schedule Button -->
+            <button
+              id="btn-add-competitor-schedule"
+              type="button"
+              class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-2xs hover:bg-primary/90 transition-all cursor-pointer"
+            >
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>+ New Schedule</span>
+            </button>
+
+            <!-- Batch Actions Dropdown -->
+            <div class="relative inline-block text-left" id="comp-batch-dropdown-container">
+              <button
+                id="btn-comp-batch"
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs cursor-pointer"
+              >
+                <svg class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <span>Batch</span>
+                <span id="comp-batch-sel-count" class="hidden rounded-full bg-primary/20 text-primary px-1.5 py-0.2 text-[10px] font-bold">0</span>
+                <svg class="h-3 w-3 text-muted-foreground ml-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+
+              <div id="comp-sched-batch-menu" class="hidden absolute right-0 mt-1 w-56 rounded-2xl border border-border bg-card shadow-xl z-50 py-1 text-xs divide-y divide-border/80">
+                <div class="py-1">
+                  <button type="button" id="comp-batch-act-select-all" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-foreground cursor-pointer">
+                    <svg class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    <span>Select all</span>
+                  </button>
+                </div>
+                <div class="py-1">
+                  <button type="button" id="comp-batch-act-run" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-primary font-semibold cursor-pointer">
+                    <svg class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <span>Run Selected Now</span>
+                  </button>
+                  <button type="button" id="comp-batch-act-enable" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-emerald-600 dark:text-emerald-400 cursor-pointer">
+                    <svg class="h-3.5 w-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>Resume / Enable Selected</span>
+                  </button>
+                  <button type="button" id="comp-batch-act-disable" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-amber-600 dark:text-amber-400 cursor-pointer">
+                    <svg class="h-3.5 w-3.5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    <span>Pause / Disable Selected</span>
+                  </button>
+                </div>
+                <div class="py-1">
+                  <button type="button" id="comp-batch-act-export" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-muted-foreground hover:text-foreground cursor-pointer">
+                    <svg class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Export Selected (JSON)</span>
+                  </button>
+                  <button type="button" id="comp-batch-act-delete" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-rose-500 font-semibold cursor-pointer">
+                    <svg class="h-3.5 w-3.5 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    <span>Delete Selected</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sync Missing Button -->
+            <button
+              id="btn-comp-sync-missing"
+              type="button"
+              class="inline-flex items-center gap-1 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs cursor-pointer"
+            >
+              <span>Sync Missing</span>
+            </button>
+
+            <!-- Refresh Button -->
+            <button
+              id="btn-comp-refresh-schedules"
+              type="button"
+              class="inline-flex items-center gap-1 rounded-xl border border-border bg-background p-2 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs cursor-pointer"
+              title="Refresh schedule telemetry"
+            >
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Cadence Analyzer Banner -->
+        <div id="comp-sched-pace-box" class="rounded-xl border border-border/80 bg-background/50 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-2">
+            <span class="text-primary font-bold">⚡ Automation Cadence:</span>
+            <span id="comp-sched-pace-val" class="font-semibold text-foreground">Calculating cadence...</span>
+          </div>
+          <div class="text-[11px] text-muted-foreground" id="comp-sched-pace-desc">
+            FastCron controls ingestion schedules independently across configured timezones.
+          </div>
+        </div>
+
+        <!-- Multi-Schedule Table -->
         <div class="overflow-x-auto">
-          <table class="w-full text-xs">
+          <table class="w-full text-xs text-left" id="competitor-schedules-table">
             <thead>
-              <tr class="text-left border-b border-border text-muted-foreground">
-                <th class="p-2.5 font-semibold">TOKEN NAME</th>
-                <th class="p-2.5 font-semibold">MASKED KEY</th>
-                <th class="p-2.5 font-semibold">SOURCE</th>
-                <th class="p-2.5 font-semibold">STATUS</th>
-                <th class="p-2.5 font-semibold text-right">ACTIONS</th>
+              <tr class="border-b border-border bg-muted/30 text-muted-foreground text-[10px] font-bold">
+                <th class="p-3 w-8">
+                  <input type="checkbox" id="comp-sched-select-all" class="h-3.5 w-3.5 rounded border-border text-primary cursor-pointer" />
+                </th>
+                <th class="p-3">SCHEDULE &amp; STATUS</th>
+                <th class="p-3">SCHEDULE &amp; CADENCE</th>
+                <th class="p-3">NEXT RUN</th>
+                <th class="p-3">LAST RUN</th>
+                <th class="p-3">FASTCRON TOKEN</th>
+                <th class="p-3 text-right">ACTIONS</th>
               </tr>
             </thead>
-            <tbody id="tokens-table-rows">
+            <tbody id="competitor-schedules-rows" class="divide-y divide-border/60">
               <tr>
-                <td colspan="5" class="p-4 text-center text-muted-foreground">Loading FastCron token registry...</td>
+                <td colspan="7" class="p-6 text-center text-muted-foreground">Loading competitor automation schedules...</td>
               </tr>
             </tbody>
           </table>
         </div>
-        <div class="pt-2 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
-          <span>Tokens are encrypted with AES-GCM at rest using workspace KEK</span>
-          <span id="token-status-msg" class="text-emerald-500 font-medium">✓ Vault healthy</span>
-        </div>
+
       </div>
+
     </div>
 
     <!-- ═══ SECTION 1: Pipeline Settings ═══ -->
@@ -403,8 +555,129 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     </div>
   </div>
 
-  <!-- ═══ MODAL: Automation Schedule Builder ═══ -->
-  <AddNewScheduleModal modalId="competitors-schedule-modal" pipeline="competitors" />
+  <!-- ═══ MODAL: Custom Multi-Tab Schedule Builder ═══ -->
+  <dialog id="comp-schedule-modal" class="rounded-2xl border border-border bg-card text-foreground shadow-2xl p-0 w-full max-w-[620px] backdrop:bg-black/70">
+    <div class="p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-border pb-3">
+        <div class="flex items-center gap-2">
+          <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div>
+            <h3 id="comp-schedule-modal-title" class="text-sm font-bold text-foreground">Configure Competitor Schedule</h3>
+            <p class="text-[10px] text-muted-foreground">Automated Pinterest scraper orchestration</p>
+          </div>
+        </div>
+        <button type="button" onclick="document.getElementById('comp-schedule-modal').close()" class="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground">✕</button>
+      </div>
+
+      <form id="comp-schedule-form" class="space-y-4 text-xs">
+        <input type="hidden" id="comp-f-sched-id" value="" />
+
+        <div>
+          <label for="comp-f-sched-label" class="block font-semibold text-foreground mb-1">Schedule Label</label>
+          <input type="text" id="comp-f-sched-label" placeholder="e.g. Daily Morning Refresh" class="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground font-semibold focus:border-primary focus:outline-none" required />
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex border-b border-border gap-2">
+          <button type="button" id="comp-tab-btn-simple" class="px-3 py-1.5 font-bold border-b-2 border-primary text-primary transition-all">Simple Time</button>
+          <button type="button" id="comp-tab-btn-raw" class="px-3 py-1.5 font-semibold text-muted-foreground hover:text-foreground transition-all">Raw Cron (5-Part)</button>
+        </div>
+
+        <!-- Simple Tab -->
+        <div id="comp-tab-pane-simple" class="space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="comp-f-sched-time" class="block font-semibold text-foreground mb-1">Daily Trigger Time (HH:MM)</label>
+              <input type="time" id="comp-f-sched-time" value="02:00" class="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground font-mono focus:border-primary focus:outline-none" />
+            </div>
+            <div>
+              <label for="comp-f-sched-tz" class="block font-semibold text-foreground mb-1">Timezone</label>
+              <select id="comp-f-sched-tz" class="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground font-semibold focus:border-primary focus:outline-none">
+                <option value="UTC" selected>UTC (Universal Coordinated Time)</option>
+                <option value="America/New_York">America/New_York (EST/EDT)</option>
+                <option value="America/Chicago">America/Chicago (CST/CDT)</option>
+                <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
+                <option value="Europe/London">Europe/London (GMT/BST)</option>
+                <option value="Europe/Paris">Europe/Paris (CET/CEST)</option>
+                <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                <option value="Australia/Sydney">Australia/Sydney (AEST)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Raw Tab -->
+        <div id="comp-tab-pane-raw" class="space-y-3 hidden">
+          <div>
+            <label for="comp-f-raw-cron" class="block font-semibold text-foreground mb-1">Standard 5-Part Cron Expression</label>
+            <input type="text" id="comp-f-raw-cron" placeholder="0 2 * * *" class="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground font-mono focus:border-primary focus:outline-none" />
+            <p class="text-[10px] text-muted-foreground mt-1">Format: min hour dom mon dow (e.g. 0 2 * * * for Daily at 02:00)</p>
+          </div>
+        </div>
+
+        <!-- Token Select -->
+        <div>
+          <label for="comp-f-sched-token" class="block font-semibold text-foreground mb-1">FastCron Token</label>
+          <select id="comp-f-sched-token" class="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground font-semibold focus:border-primary focus:outline-none">
+            <option value="">Default (Workspace / Environment)</option>
+          </select>
+        </div>
+
+        <!-- Preview Box -->
+        <div class="rounded-xl border border-border/80 bg-background/50 p-3 space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-foreground">Expression Preview:</span>
+            <span id="comp-sched-summary-preview" class="font-mono font-bold text-primary">0 2 * * * (Daily at 02:00 UTC)</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="comp-f-sched-enabled" class="h-4 w-4 rounded border-border text-primary cursor-pointer" checked />
+          <label for="comp-f-sched-enabled" class="text-xs font-semibold text-foreground cursor-pointer">Enable Schedule Immediately</label>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-border">
+          <button type="button" onclick="document.getElementById('comp-schedule-modal').close()" class="rounded-xl border border-border bg-background px-4 py-2 font-semibold text-foreground hover:bg-muted transition-all cursor-pointer">Cancel</button>
+          <button type="submit" class="rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer">Save Schedule</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- ═══ MODAL: Execution Logs Modal ═══ -->
+  <dialog id="comp-logs-modal" class="rounded-2xl border border-border bg-card text-foreground shadow-2xl p-0 w-full max-w-[640px] backdrop:bg-black/70">
+    <div class="p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-border pb-3">
+        <div>
+          <h3 class="text-sm font-bold text-foreground">FastCron Execution Logs</h3>
+          <p id="comp-logs-job-subtitle" class="text-[10px] text-muted-foreground font-mono">Recent telemetry</p>
+        </div>
+        <button type="button" onclick="document.getElementById('comp-logs-modal').close()" class="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground">✕</button>
+      </div>
+
+      <div class="overflow-x-auto max-h-80">
+        <table class="w-full text-xs text-left">
+          <thead>
+            <tr class="border-b border-border text-muted-foreground text-[10px] font-bold">
+              <th class="p-2">DATE (UTC)</th>
+              <th class="p-2">STATUS</th>
+              <th class="p-2">HTTP CODE</th>
+              <th class="p-2 text-right">DURATION</th>
+            </tr>
+          </thead>
+          <tbody id="comp-logs-table-rows" class="divide-y divide-border/60">
+            <tr><td colspan="4" class="p-4 text-center text-muted-foreground">Loading logs...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-border">
+        <button type="button" onclick="document.getElementById('comp-logs-modal').close()" class="rounded-xl border border-border bg-background px-4 py-1.5 font-semibold text-foreground hover:bg-muted transition-all text-xs">Close</button>
+      </div>
+    </div>
+  </dialog>
 
   <!-- Toast Notification Anchor -->
   <div id="toast-root" aria-live="polite" class="fixed bottom-4 right-4 z-[70] flex flex-col gap-2 w-80 max-w-[calc(100vw-2rem)]"></div>
@@ -448,49 +721,540 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
       el.style.opacity = '0';
       el.style.transition = 'opacity .3s';
       setTimeout(() => el.remove(), 300);
-    }, 4500);
+    }, 4000);
   }
 
-  // ─── Modals ───────────────────────────────────────────────────────────────
-  function showModal(el: HTMLElement) {
-    el.classList.remove('hidden');
-    el.classList.add('flex');
-    el.querySelector<HTMLElement>('input, textarea, button[data-close]')?.focus();
+  async function fetchAPI(url: string, opts: RequestInit = {}) {
+    const res = await fetch(url, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(json.error || `HTTP ${res.status}`);
+    }
+    return json;
   }
-  function hideModal(el: HTMLElement) {
-    el.classList.add('hidden');
-    el.classList.remove('flex');
+
+  function showModal(modal: HTMLElement) {
+    modal?.classList.remove('hidden');
+    modal?.classList.add('flex');
   }
-  document.querySelectorAll('.overlay-root').forEach(root => {
-    root.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => hideModal(root as HTMLElement)));
+
+  function hideModal(modal: HTMLElement) {
+    modal?.classList.add('hidden');
+    modal?.classList.remove('flex');
+  }
+
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (target.hasAttribute('data-close')) {
+      const modal = target.closest('.overlay-root') as HTMLElement;
+      if (modal) hideModal(modal);
+    }
   });
 
-  // ─── API Layer ────────────────────────────────────────────────────────────
-  async function fetchAPI(url: string, options: RequestInit = {}) {
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options.headers || {}),
-      },
-    });
-    const data = await res.json().catch(() => ({ success: false, error: 'Malformed JSON response' }));
-    if (!res.ok && res.status !== 202) {
-      throw new Error(data.error || `HTTP ${res.status}`);
+  // ─── Multi-Schedule State ──────────────────────────────────────────────────
+  let loadedSchedules: any[] = [];
+  let loadedTokens: any[] = [];
+  let selectedScheduleIds = new Set<string>();
+  let currentBuilderTab: 'simple' | 'raw' = 'simple';
+
+  function setBuilderTab(tab: 'simple' | 'raw') {
+    currentBuilderTab = tab;
+    const simpleBtn = $('comp-tab-btn-simple');
+    const rawBtn = $('comp-tab-btn-raw');
+    const simplePane = $('comp-tab-pane-simple');
+    const rawPane = $('comp-tab-pane-raw');
+
+    if (tab === 'simple') {
+      simpleBtn?.classList.add('border-b-2', 'border-primary', 'text-primary', 'font-bold');
+      simpleBtn?.classList.remove('text-muted-foreground');
+      rawBtn?.classList.remove('border-b-2', 'border-primary', 'text-primary', 'font-bold');
+      rawBtn?.classList.add('text-muted-foreground');
+      simplePane?.classList.remove('hidden');
+      rawPane?.classList.add('hidden');
+    } else {
+      rawBtn?.classList.add('border-b-2', 'border-primary', 'text-primary', 'font-bold');
+      rawBtn?.classList.remove('text-muted-foreground');
+      simpleBtn?.classList.remove('border-b-2', 'border-primary', 'text-primary', 'font-bold');
+      simpleBtn?.classList.add('text-muted-foreground');
+      rawPane?.classList.remove('hidden');
+      simplePane?.classList.add('hidden');
     }
-    return data;
+    updateSchedulePreview();
   }
 
-  // ─── Renderers ────────────────────────────────────────────────────────────
-  function renderPipelineSettings(settings: any) {
-    const isEnabled = Boolean(settings?.is_enabled ?? true);
-    const dryRun = Boolean(settings?.dry_run ?? false);
+  function updateSchedulePreview() {
+    const previewEl = $('comp-sched-summary-preview');
+    if (!previewEl) return;
+
+    if (currentBuilderTab === 'simple') {
+      const time = ( $('comp-f-sched-time') as HTMLInputElement )?.value || '02:00';
+      const tz = ( $('comp-f-sched-tz') as HTMLSelectElement )?.value || 'UTC';
+      const [hStr, mStr] = time.split(':');
+      const h = parseInt(hStr || '2', 10);
+      const m = parseInt(mStr || '0', 10);
+      const expr = `${m} ${h} * * *`;
+      previewEl.textContent = `${expr} (${humanCronTitle(expr)} ${tz})`;
+    } else {
+      const raw = ( $('comp-f-raw-cron') as HTMLInputElement )?.value?.trim() || '0 2 * * *';
+      previewEl.textContent = `${raw} (${humanCronTitle(raw)})`;
+    }
+  }
+
+  $('comp-tab-btn-simple')?.addEventListener('click', () => setBuilderTab('simple'));
+  $('comp-tab-btn-raw')?.addEventListener('click', () => setBuilderTab('raw'));
+  $('comp-f-sched-time')?.addEventListener('input', updateSchedulePreview);
+  $('comp-f-sched-tz')?.addEventListener('change', updateSchedulePreview);
+  $('comp-f-raw-cron')?.addEventListener('input', updateSchedulePreview);
+
+  // ─── Render Schedules Table ───────────────────────────────────────────────
+  function renderSchedules() {
+    const tbody = $('competitor-schedules-rows');
+    if (!tbody) return;
+
+    if (loadedSchedules.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-muted-foreground">
+        <div class="flex flex-col items-center justify-center gap-2">
+          <span class="text-2xl">📅</span>
+          <span class="font-bold text-xs">No competitor automation schedules configured</span>
+          <span class="text-[11px] text-muted-foreground">Click "+ New Schedule" or "Sync Missing" to create automated daily scraping.</span>
+        </div>
+      </td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = loadedSchedules.map((s: any) => {
+      const isSelected = selectedScheduleIds.has(s.id);
+      const isPaused = s.status === 'paused' || s.paused;
+      const statusPill = isPaused
+        ? `<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">⏸ Paused</span>`
+        : `<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">● Active</span>`;
+
+      const nextRunStr = s.next_run ? new Date(s.next_run).toLocaleString() : '—';
+      const lastRunStr = s.last_run ? timeAgo(new Date(s.last_run).toISOString()) : 'Never';
+      const httpBadge = s.last_http_code
+        ? `<span class="rounded px-1 text-[9px] font-bold ${s.last_http_code === 202 || s.last_http_code === 200 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}">HTTP ${s.last_http_code}</span>`
+        : '';
+
+      return `<tr class="hover:bg-muted/30 transition-colors border-b border-border/60 ${isSelected ? 'bg-primary/5' : ''}">
+        <td class="p-3 w-8">
+          <input type="checkbox" data-sched-select="${s.id}" ${isSelected ? 'checked' : ''} class="h-3.5 w-3.5 rounded border-border text-primary cursor-pointer" />
+        </td>
+        <td class="p-3">
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-foreground">${escHtml(s.label || 'Schedule')}</span>
+            ${statusPill}
+          </div>
+          <div class="text-[10px] text-muted-foreground font-mono mt-0.5">#${s.fastcron_job_id || s.id.slice(0, 8)}</div>
+        </td>
+        <td class="p-3">
+          <div class="font-mono font-semibold text-primary text-[11px]">${escHtml(s.expression)}</div>
+          <div class="text-[10px] text-muted-foreground">${escHtml(humanCronTitle(s.expression))} (${escHtml(s.timezone)})</div>
+        </td>
+        <td class="p-3 font-mono text-[11px] text-muted-foreground">${escHtml(nextRunStr)}</td>
+        <td class="p-3">
+          <div class="text-[11px] text-foreground font-medium">${escHtml(lastRunStr)}</div>
+          <div class="mt-0.5">${httpBadge}</div>
+        </td>
+        <td class="p-3">
+          <div class="font-semibold text-foreground text-[11px]">${escHtml(s.token_name)}</div>
+          <div class="text-[10px] text-muted-foreground font-mono">${escHtml(s.masked_token)}</div>
+        </td>
+        <td class="p-3 text-right">
+          <div class="flex items-center justify-end gap-1.5">
+            <button data-act-run="${s.id}" class="rounded-lg p-1.5 text-primary hover:bg-primary/10 transition-all" title="Run Now">
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+            <button data-act-pause="${s.id}" data-paused="${isPaused}" class="rounded-lg p-1.5 ${isPaused ? 'text-emerald-500 hover:bg-emerald-500/10' : 'text-amber-500 hover:bg-amber-500/10'} transition-all" title="${isPaused ? 'Resume' : 'Pause'}">
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                ${isPaused ? '<polygon points="5 3 19 12 5 21 5 3"/>' : '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>'}
+              </svg>
+            </button>
+            <button data-act-clone="${s.id}" class="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all" title="Clone Schedule">
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+            <button data-act-logs="${s.id}" class="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all" title="Execution Logs">
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </button>
+            <button data-act-edit="${s.id}" class="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all" title="Edit Schedule">
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button data-act-delete="${s.id}" class="rounded-lg p-1.5 text-rose-500 hover:bg-rose-500/10 transition-all" title="Delete Schedule">
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function updateCadenceBanner() {
+    const paceVal = $('comp-sched-pace-val');
+    const paceDesc = $('comp-sched-pace-desc');
+    const globalBadge = $('comp-cron-global-badge');
+    if (!paceVal) return;
+
+    const activeCount = loadedSchedules.filter((s) => s.status === 'active' && !s.paused).length;
+    const totalWeeklyRuns = activeCount * 7; // assuming daily averages
+
+    paceVal.textContent = `${activeCount} Active Schedule${activeCount === 1 ? '' : 's'} · ~${totalWeeklyRuns} Runs / Week`;
+    if (paceDesc) {
+      paceDesc.textContent = activeCount > 0
+        ? `Schedules synchronized with FastCron (${loadedTokens.length} token${loadedTokens.length === 1 ? '' : 's'} in vault).`
+        : 'No active schedules running. Add a schedule to enable automated background scraping.';
+    }
+
+    if (globalBadge) {
+      globalBadge.className = activeCount > 0
+        ? 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+        : 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground';
+      globalBadge.textContent = activeCount > 0 ? `${activeCount} Active` : 'No Active Schedules';
+    }
+  }
+
+  async function loadSchedules() {
+    try {
+      const res = await fetchAPI('/api/competitors/schedules');
+      loadedSchedules = res.schedules || [];
+      renderSchedules();
+      updateCadenceBanner();
+    } catch (err: any) {
+      const tbody = $('competitor-schedules-rows');
+      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-rose-500">Failed to load schedules: ${escHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  async function loadTokens() {
+    const tbody = $('tokens-table-rows');
+    const schedTokenSelect = $('comp-f-sched-token') as HTMLSelectElement;
+    try {
+      const res = await fetchAPI('/api/competitors/tokens');
+      loadedTokens = Array.isArray(res) ? res : [];
+      if (!tbody) return;
+
+      if (loadedTokens.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-muted-foreground text-[11px]">No FastCron tokens registered. Click "+ Add Token" above.</td></tr>`;
+      } else {
+        tbody.innerHTML = loadedTokens.map((t: any) => {
+          const isDefault = Boolean(t.is_default);
+          const defaultBadge = isDefault
+            ? `<span class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[9px] font-bold bg-emerald-500/10 text-emerald-500">Default</span>`
+            : `<span class="text-muted-foreground text-[9px]">Active</span>`;
+          const delBtn = t.source === 'env'
+            ? `<span class="text-[9px] text-muted-foreground">Server</span>`
+            : `<button data-token-id="${t.id}" class="token-del text-rose-500 hover:text-rose-400 font-semibold text-[10px] cursor-pointer">Delete</button>`;
+
+          return `<tr class="hover:bg-muted/30 transition-colors border-b border-border/60">
+            <td class="p-2 font-semibold text-foreground text-[11px]">${escHtml(t.name)}</td>
+            <td class="p-2 font-mono text-muted-foreground text-[10px]">${escHtml(t.masked_token)}</td>
+            <td class="p-2">${defaultBadge}</td>
+            <td class="p-2 text-right">${delBtn}</td>
+          </tr>`;
+        }).join('');
+      }
+
+      if (schedTokenSelect) {
+        schedTokenSelect.innerHTML = `<option value="">Default (Workspace / Environment)</option>` +
+          loadedTokens.map((t: any) => `<option value="${t.id || ''}">${escHtml(t.name)} (${escHtml(t.masked_token)}) ${t.is_default ? '★ Default' : ''}</option>`).join('');
+      }
+    } catch (err: any) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-rose-500 text-[11px]">Failed to load tokens</td></tr>`;
+    }
+  }
+
+  // ─── Table Delegated Actions ──────────────────────────────────────────────
+  $('competitor-schedules-rows')?.addEventListener('click', async (e) => {
+    const target = e.target as HTMLElement;
+    const runId = target.closest('[data-act-run]')?.getAttribute('data-act-run');
+    const pauseId = target.closest('[data-act-pause]')?.getAttribute('data-act-pause');
+    const isPaused = target.closest('[data-act-pause]')?.getAttribute('data-paused') === 'true';
+    const cloneId = target.closest('[data-act-clone]')?.getAttribute('data-act-clone');
+    const logsId = target.closest('[data-act-logs]')?.getAttribute('data-act-logs');
+    const editId = target.closest('[data-act-edit]')?.getAttribute('data-act-edit');
+    const delId = target.closest('[data-act-delete]')?.getAttribute('data-act-delete');
+
+    if (runId) {
+      try {
+        await fetchAPI('/api/competitors/schedules/bulk', {
+          method: 'POST',
+          body: JSON.stringify({ action: 'run', ids: [runId] }),
+        });
+        toast('Manual execution triggered', 'success');
+        await loadSchedules();
+      } catch (err: any) {
+        toast(`Run failed: ${err.message}`, 'error');
+      }
+    } else if (pauseId) {
+      try {
+        await fetchAPI(`/api/competitors/schedules/${pauseId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: isPaused ? 'active' : 'paused' }),
+        });
+        toast(isPaused ? 'Schedule resumed' : 'Schedule paused', 'info');
+        await loadSchedules();
+      } catch (err: any) {
+        toast(`Failed: ${err.message}`, 'error');
+      }
+    } else if (cloneId) {
+      try {
+        await fetchAPI('/api/competitors/schedules/bulk', {
+          method: 'POST',
+          body: JSON.stringify({ action: 'clone', ids: [cloneId] }),
+        });
+        toast('Schedule cloned', 'success');
+        await loadSchedules();
+      } catch (err: any) {
+        toast(`Clone failed: ${err.message}`, 'error');
+      }
+    } else if (logsId) {
+      const sched = loadedSchedules.find((s) => s.id === logsId);
+      if (sched) {
+        const titleEl = $('comp-logs-job-subtitle');
+        const tbody = $('comp-logs-table-rows');
+        if (titleEl) titleEl.textContent = `${sched.label || 'Schedule'} (#${sched.fastcron_job_id || sched.id.slice(0, 8)})`;
+        if (tbody) {
+          const logs: any[] = sched.cron_logs || [];
+          tbody.innerHTML = logs.length === 0
+            ? `<tr><td colspan="4" class="p-4 text-center text-muted-foreground">No recent execution logs found.</td></tr>`
+            : logs.map((l: any) => `<tr class="border-b border-border/60">
+                <td class="p-2 font-mono">${escHtml(l.date || '—')}</td>
+                <td class="p-2 font-bold ${l.status === 'OK' || l.status === 'success' ? 'text-emerald-500' : 'text-amber-500'}">${escHtml(l.status || 'OK')}</td>
+                <td class="p-2">${l.http_status_code ? `<span class="rounded px-1 py-0.2 text-[9px] font-bold ${l.http_status_code === 202 || l.http_status_code === 200 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}">HTTP ${l.http_status_code}</span>` : '—'}</td>
+                <td class="p-2 text-right font-mono text-muted-foreground">${l.duration ? l.duration + 's' : '—'}</td>
+              </tr>`).join('');
+        }
+        ( $('comp-logs-modal') as HTMLDialogElement )?.showModal();
+      }
+    } else if (editId) {
+      const sched = loadedSchedules.find((s) => s.id === editId);
+      if (sched) {
+        ( $('comp-f-sched-id') as HTMLInputElement ).value = sched.id;
+        ( $('comp-f-sched-label') as HTMLInputElement ).value = sched.label || '';
+        ( $('comp-f-sched-tz') as HTMLSelectElement ).value = sched.timezone || 'UTC';
+        ( $('comp-f-sched-token') as HTMLSelectElement ).value = sched.fastcron_token_id || '';
+        ( $('comp-f-sched-enabled') as HTMLInputElement ).checked = sched.status === 'active';
+        ( $('comp-f-raw-cron') as HTMLInputElement ).value = sched.expression || '0 2 * * *';
+        ( $('comp-schedule-modal-title') as HTMLElement ).textContent = `Edit Schedule (${sched.label || sched.id.slice(0, 8)})`;
+        setBuilderTab('raw');
+        ( $('comp-schedule-modal') as HTMLDialogElement )?.showModal();
+      }
+    } else if (delId) {
+      if (!confirm('Are you sure you want to delete this competitor schedule?')) return;
+      try {
+        await fetchAPI(`/api/competitors/schedules/${delId}`, { method: 'DELETE' });
+        toast('Schedule deleted', 'info');
+        await loadSchedules();
+      } catch (err: any) {
+        toast(`Delete failed: ${err.message}`, 'error');
+      }
+    }
+  });
+
+  // ─── Checkbox Selections & Batch Actions ──────────────────────────────────
+  $('comp-sched-select-all')?.addEventListener('change', (e) => {
+    const checked = (e.target as HTMLInputElement).checked;
+    selectedScheduleIds.clear();
+    if (checked) {
+      loadedSchedules.forEach((s) => selectedScheduleIds.add(s.id));
+    }
+    renderSchedules();
+    updateBatchCount();
+  });
+
+  $('competitor-schedules-rows')?.addEventListener('change', (e) => {
+    const target = e.target as HTMLInputElement;
+    const schedId = target.getAttribute('data-sched-select');
+    if (schedId) {
+      if (target.checked) selectedScheduleIds.add(schedId);
+      else selectedScheduleIds.delete(schedId);
+      updateBatchCount();
+    }
+  });
+
+  function updateBatchCount() {
+    const cnt = $('comp-batch-sel-count');
+    if (cnt) {
+      cnt.textContent = String(selectedScheduleIds.size);
+      cnt.classList.toggle('hidden', selectedScheduleIds.size === 0);
+    }
+  }
+
+  // Batch menu toggle
+  const batchBtn = $('btn-comp-batch');
+  const batchMenu = $('comp-sched-batch-menu');
+  batchBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    batchMenu?.classList.toggle('hidden');
+  });
+  document.addEventListener('click', () => batchMenu?.classList.add('hidden'));
+
+  $('comp-batch-act-select-all')?.addEventListener('click', () => {
+    loadedSchedules.forEach((s) => selectedScheduleIds.add(s.id));
+    renderSchedules();
+    updateBatchCount();
+  });
+
+  $('comp-batch-act-run')?.addEventListener('click', async () => {
+    if (selectedScheduleIds.size === 0) return;
+    try {
+      await fetchAPI('/api/competitors/schedules/bulk', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'run', ids: Array.from(selectedScheduleIds) }),
+      });
+      toast(`Triggered run for ${selectedScheduleIds.size} schedules`, 'success');
+      await loadSchedules();
+    } catch (err: any) {
+      toast(`Batch run failed: ${err.message}`, 'error');
+    }
+  });
+
+  $('comp-batch-act-enable')?.addEventListener('click', async () => {
+    if (selectedScheduleIds.size === 0) return;
+    try {
+      await fetchAPI('/api/competitors/schedules/bulk', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'resume', ids: Array.from(selectedScheduleIds) }),
+      });
+      toast(`Resumed ${selectedScheduleIds.size} schedules`, 'success');
+      selectedScheduleIds.clear();
+      updateBatchCount();
+      await loadSchedules();
+    } catch (err: any) {
+      toast(`Batch resume failed: ${err.message}`, 'error');
+    }
+  });
+
+  $('comp-batch-act-disable')?.addEventListener('click', async () => {
+    if (selectedScheduleIds.size === 0) return;
+    try {
+      await fetchAPI('/api/competitors/schedules/bulk', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'pause', ids: Array.from(selectedScheduleIds) }),
+      });
+      toast(`Paused ${selectedScheduleIds.size} schedules`, 'info');
+      selectedScheduleIds.clear();
+      updateBatchCount();
+      await loadSchedules();
+    } catch (err: any) {
+      toast(`Batch pause failed: ${err.message}`, 'error');
+    }
+  });
+
+  $('comp-batch-act-export')?.addEventListener('click', () => {
+    if (selectedScheduleIds.size === 0) return;
+    const exported = loadedSchedules.filter((s) => selectedScheduleIds.has(s.id));
+    const blob = new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `competitor-schedules-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  $('comp-batch-act-delete')?.addEventListener('click', async () => {
+    if (selectedScheduleIds.size === 0) return;
+    if (!confirm(`Delete ${selectedScheduleIds.size} selected competitor schedules?`)) return;
+    try {
+      await fetchAPI('/api/competitors/schedules/bulk', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'delete', ids: Array.from(selectedScheduleIds) }),
+      });
+      toast(`Deleted ${selectedScheduleIds.size} schedules`, 'info');
+      selectedScheduleIds.clear();
+      updateBatchCount();
+      await loadSchedules();
+    } catch (err: any) {
+      toast(`Batch delete failed: ${err.message}`, 'error');
+    }
+  });
+
+  // ─── Modal Schedule Form Submit ───────────────────────────────────────────
+  $('btn-add-competitor-schedule')?.addEventListener('click', () => {
+    ( $('comp-f-sched-id') as HTMLInputElement ).value = '';
+    ( $('comp-f-sched-label') as HTMLInputElement ).value = 'Daily Competitor Ingestion';
+    ( $('comp-f-sched-time') as HTMLInputElement ).value = '02:00';
+    ( $('comp-f-sched-tz') as HTMLSelectElement ).value = 'UTC';
+    ( $('comp-f-sched-enabled') as HTMLInputElement ).checked = true;
+    ( $('comp-schedule-modal-title') as HTMLElement ).textContent = 'Configure Competitor Schedule';
+    setBuilderTab('simple');
+    ( $('comp-schedule-modal') as HTMLDialogElement )?.showModal();
+  });
+
+  $('comp-schedule-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = ( $('comp-f-sched-id') as HTMLInputElement ).value;
+    const label = ( $('comp-f-sched-label') as HTMLInputElement ).value.trim();
+    const timezone = ( $('comp-f-sched-tz') as HTMLSelectElement ).value || 'UTC';
+    const enabled = ( $('comp-f-sched-enabled') as HTMLInputElement ).checked;
+    const token_id = ( $('comp-f-sched-token') as HTMLSelectElement ).value || null;
+
+    let cron_expression = '0 2 * * *';
+    if (currentBuilderTab === 'simple') {
+      const time = ( $('comp-f-sched-time') as HTMLInputElement ).value || '02:00';
+      const [hStr, mStr] = time.split(':');
+      cron_expression = `${parseInt(mStr || '0', 10)} ${parseInt(hStr || '2', 10)} * * *`;
+    } else {
+      cron_expression = ( $('comp-f-raw-cron') as HTMLInputElement ).value.trim();
+    }
+
+    try {
+      if (id) {
+        await fetchAPI(`/api/competitors/schedules/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ label, cron_expression, timezone, enabled, token_id }),
+        });
+        toast('Schedule updated successfully', 'success');
+      } else {
+        await fetchAPI('/api/competitors/schedules', {
+          method: 'POST',
+          body: JSON.stringify({ label, cron_expression, timezone, enabled, token_id }),
+        });
+        toast('New schedule created successfully', 'success');
+      }
+      ( $('comp-schedule-modal') as HTMLDialogElement )?.close();
+      await loadSchedules();
+    } catch (err: any) {
+      toast(`Failed to save schedule: ${err.message}`, 'error');
+    }
+  });
+
+  // Sync Missing & Refresh buttons
+  $('btn-comp-sync-missing')?.addEventListener('click', async () => {
+    try {
+      const res = await fetchAPI('/api/competitors/schedules/sync-missing', { method: 'POST' });
+      toast(res.message || 'Sync missing completed', 'success');
+      await loadSchedules();
+    } catch (err: any) {
+      toast(`Sync missing failed: ${err.message}`, 'error');
+    }
+  });
+
+  $('btn-comp-refresh-schedules')?.addEventListener('click', async () => {
+    toast('Refreshing schedule telemetry...', 'info');
+    await loadSchedules();
+  });
+
+  // ─── Existing Pipeline Controls, Cookies Vault & Competitor Matrix ─────────
+  function renderPipelineSettings(settings: any, kekActive: boolean) {
+    const isEnabled = settings?.is_enabled ?? true;
+    const dryRun = settings?.dry_run ?? false;
     const maxRetries = settings?.max_retries ?? 3;
-    const expr = settings?.cron_expression || null;
 
     ( $('pipe-is-enabled') as HTMLInputElement ).checked = isEnabled;
     ( $('pipe-dry-run') as HTMLInputElement ).checked = dryRun;
     ( $('pipe-max-retries') as HTMLInputElement ).value = String(maxRetries);
+
+    const kekBadge = $('kek-badge');
+    if (kekActive) {
+      kekBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/30';
+      kekBadge.textContent = '🔑 KEK Active';
+    } else {
+      kekBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/30';
+      kekBadge.textContent = '🔑 KEK Inactive';
+    }
 
     const pipeBadge = $('pipeline-status-badge');
     if (isEnabled) {
@@ -509,63 +1273,6 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
       dryBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground';
       dryBadge.textContent = 'Off';
     }
-
-    const cronBadge = $('comp-cron-badge');
-    if (cronBadge) {
-      if (expr) {
-        cronBadge.textContent = `${expr} (${humanCronTitle(expr)})`;
-        cronBadge.title = humanCronTitle(expr);
-        cronBadge.setAttribute('data-tooltip', humanCron(expr));
-      } else {
-        cronBadge.textContent = 'No schedule — Configure Schedule →';
-        cronBadge.title = 'No schedule yet';
-        cronBadge.setAttribute('data-tooltip', 'Create a schedule via Configure Schedule');
-      }
-    }
-  }
-
-  async function loadTokens() {
-    const tbody = $('tokens-table-rows');
-    const select = $('cron-token-select') as HTMLSelectElement;
-    try {
-      const res = await fetchAPI('/api/competitors/tokens');
-      const tokens = Array.isArray(res) ? res : [];
-      if (!tbody) return;
-
-      if (tokens.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted-foreground">No FastCron tokens registered. Click "+ Add Token" above to add one.</td></tr>`;
-      } else {
-        tbody.innerHTML = tokens.map((t: any) => {
-          const isEnv = t.source === 'env';
-          const isDefault = Boolean(t.is_default);
-          const defaultBadge = isDefault
-            ? `<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/30">★ Default</span>`
-            : `<span class="text-muted-foreground text-[10px]">Active</span>`;
-          const sourceBadge = isEnv
-            ? `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-500">Env</span>`
-            : `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground">Vault</span>`;
-          const delBtn = isEnv
-            ? `<span class="text-[10px] text-muted-foreground">Managed by Server</span>`
-            : `<button data-token-id="${t.id}" class="token-del text-rose-500 hover:text-rose-400 font-semibold text-xs transition-colors cursor-pointer">Delete</button>`;
-
-          return `<tr class="hover:bg-muted/30 transition-colors border-b border-border/60">
-            <td class="p-2.5 font-semibold text-foreground">${escHtml(t.name)}</td>
-            <td class="p-2.5 font-mono text-muted-foreground text-[11px]">${escHtml(t.masked_token)}</td>
-            <td class="p-2.5">${sourceBadge}</td>
-            <td class="p-2.5">${defaultBadge}</td>
-            <td class="p-2.5 text-right">${delBtn}</td>
-          </tr>`;
-        }).join('');
-      }
-
-      if (select) {
-        select.innerHTML = tokens.length === 0
-          ? `<option value="">Server Default (Environment Variable)</option>`
-          : tokens.map((t: any) => `<option value="${t.id || ''}" ${t.is_default ? 'selected' : ''}>${escHtml(t.name)} (${escHtml(t.masked_token)}) ${t.is_default ? '★ Default' : ''}</option>`).join('');
-      }
-    } catch (err: any) {
-      if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-rose-500">Failed to load tokens: ${escHtml(err.message)}</td></tr>`;
-    }
   }
 
   function renderCookies(cookies: any[]) {
@@ -582,10 +1289,10 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     }
 
     tbody.innerHTML = cookies.map((c: any) => {
-      const maskedId = c.id ? `vault-${c.id.slice(0, 8)}…` : '—';
-      const isActive = Boolean(c.is_active);
-      const expires = c.expires_at ? new Date(c.expires_at).toLocaleDateString() : 'Never';
+      const maskedId = c.id.slice(0, 8) + '••••' + c.id.slice(-4);
+      const isActive = c.is_active !== false;
       const created = c.created_at ? new Date(c.created_at).toLocaleDateString() : '—';
+      const expires = c.expires_at ? new Date(c.expires_at).toLocaleDateString() : 'No expiry set';
 
       return `<tr class="hover:bg-muted/30 transition-colors">
         <td class="py-3 px-4 font-mono font-bold text-foreground text-[11px]">${escHtml(maskedId)}</td>
@@ -648,21 +1355,27 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         </td>
         <td class="py-3 px-4">
           <div class="flex items-center gap-1.5">
-            <input type="number" min="1" max="168" value="${freq}" data-id="${c.id}"
-              class="comp-freq w-16 rounded-lg border border-border bg-card py-1 px-2 text-xs font-semibold text-foreground focus:border-primary focus:outline-none" />
-            <span class="text-[10px] text-muted-foreground">hrs</span>
+            <select data-id="${c.id}" class="comp-freq rounded-lg border border-border bg-background py-1 px-2 text-[11px] font-semibold text-foreground focus:border-primary focus:outline-none">
+              <option value="6" ${freq === 6 ? 'selected' : ''}>Every 6h</option>
+              <option value="12" ${freq === 12 ? 'selected' : ''}>Every 12h</option>
+              <option value="24" ${freq === 24 ? 'selected' : ''}>Every 24h (Daily)</option>
+              <option value="48" ${freq === 48 ? 'selected' : ''}>Every 48h (2 Days)</option>
+              <option value="168" ${freq === 168 ? 'selected' : ''}>Weekly</option>
+            </select>
           </div>
         </td>
-        <td class="py-3 px-4 text-[11px]">
-          <div class="font-semibold text-foreground">${reach} reach</div>
-          <div class="text-[10px] text-muted-foreground">${followers} followers</div>
+        <td class="py-3 px-4">
+          <div class="flex flex-col text-xs">
+            <span class="font-semibold text-foreground">${followers} <span class="text-[10px] text-muted-foreground font-normal">followers</span></span>
+            <span class="text-[10px] text-muted-foreground">${reach} views/mo</span>
+          </div>
         </td>
         <td class="py-3 px-4 text-[11px]">${timeAgo(c.last_checked_at)}</td>
         <td class="py-3 px-4 text-right">
           <button data-id="${c.id}" data-username="${escHtml(c.username)}"
-            class="update-now inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs hover:bg-muted transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 pointer-events-none text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            <span class="pointer-events-none">Update Now</span>
+            class="update-now inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            <span>Scrape Now</span>
           </button>
         </td>
       </tr>`;
@@ -672,83 +1385,74 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
   function renderJobs(jobs: any[]) {
     const tbody = $('jobs-table-body');
     if (!jobs || jobs.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-muted-foreground">No recent ingestion jobs recorded.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-muted-foreground">
+        No recent ingestion jobs recorded yet.
+      </td></tr>`;
       return;
     }
 
-    const badgeStyle: Record<string, string> = {
-      queued: 'bg-blue-500/10 text-blue-500 border-blue-500/30',
-      running: 'bg-amber-500/10 text-amber-500 border-amber-500/30 animate-pulse',
-      completed: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30',
-      failed: 'bg-rose-500/10 text-rose-500 border-rose-500/30',
-    };
-
     tbody.innerHTML = jobs.map((j: any) => {
-      const shortId = j.id ? `job-${j.id.slice(0, 8)}` : '—';
-      const target = j.competitor_id ? `Targeted (${j.competitor_id.slice(0, 8)}…)` : 'All Active Profiles';
-      const statusCls = badgeStyle[j.status] || 'bg-muted text-muted-foreground';
-      const processed = j.items_processed ?? 0;
-      const started = j.started_at ? timeAgo(j.started_at) : (j.created_at ? timeAgo(j.created_at) : '—');
-      const completed = j.completed_at ? timeAgo(j.completed_at) : (j.status === 'running' ? 'In Progress…' : '—');
-      const err = j.error_message ? `<span class="text-rose-500 text-[10px] truncate max-w-xs block" title="${escHtml(j.error_message)}">⚠️ ${escHtml(j.error_message)}</span>` : '<span class="text-muted-foreground text-[10px]">None</span>';
+      const statusColors: Record<string, string> = {
+        completed: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+        failed: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
+        running: 'bg-primary/10 text-primary border-primary/20 animate-pulse',
+        pending: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+      };
+      const pillClass = statusColors[j.status] || 'bg-muted text-muted-foreground border-border';
+      const shortId = j.id ? j.id.slice(0, 8) : '—';
+      const scopeLabel = j.competitor_id ? `Target: ${j.competitor_id.slice(0, 8)}` : 'Full Workspace Ingestion';
+      const started = j.started_at ? new Date(j.started_at).toLocaleTimeString() : '—';
+      const completed = j.completed_at ? new Date(j.completed_at).toLocaleTimeString() : (j.status === 'running' ? 'In progress' : '—');
+      const err = j.error_message ? `<span class="text-rose-500 font-mono text-[10px]" title="${escHtml(j.error_message)}">${escHtml(j.error_message.slice(0, 30))}…</span>` : '<span class="text-muted-foreground/60">—</span>';
 
       return `<tr class="hover:bg-muted/30 transition-colors">
-        <td class="py-3 px-4 font-mono font-bold text-foreground text-[11px]">${escHtml(shortId)}</td>
-        <td class="py-3 px-4 text-[11px] font-medium text-foreground">${escHtml(target)}</td>
+        <td class="py-3 px-4 font-mono font-bold text-foreground text-[11px]">#${escHtml(shortId)}</td>
+        <td class="py-3 px-4 font-medium text-foreground text-[11px]">${escHtml(scopeLabel)}</td>
         <td class="py-3 px-4">
-          <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${statusCls}">
+          <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold border ${pillClass}">
             ${escHtml(j.status)}
           </span>
         </td>
-        <td class="py-3 px-4 text-[11px] font-semibold text-foreground">${processed}</td>
+        <td class="py-3 px-4 font-mono text-foreground font-semibold text-[11px]">${j.items_processed ?? 0}</td>
         <td class="py-3 px-4 text-[11px]">${escHtml(started)}</td>
         <td class="py-3 px-4 text-[11px]">${escHtml(completed)}</td>
-        <td class="py-3 px-4">${err}</td>
+        <td class="py-3 px-4 text-[11px]">${err}</td>
       </tr>`;
     }).join('');
   }
 
-  // ─── Data Loading ─────────────────────────────────────────────────────────
   async function loadAllState() {
+    await Promise.all([loadSchedules(), loadTokens()]);
+
     try {
-      const [opsData, cookiesData] = await Promise.all([
+      const [opsRes, cookiesRes] = await Promise.all([
         fetchAPI('/api/admin/competitor-ops'),
         fetchAPI('/api/admin/pinterest-cookies'),
-        loadTokens(),
       ]);
 
-      if (opsData.success) {
-        const kekBadge = $('kek-badge');
-        if (opsData.kekActive) {
-          kekBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500';
-          kekBadge.textContent = '🔑 KEK active';
-        } else {
-          kekBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground';
-          kekBadge.textContent = '🔑 KEK —';
-        }
-        renderPipelineSettings(opsData.settings);
-        renderCompetitorsMatrix(opsData.competitors);
-        renderJobs(opsData.jobs);
+      if (opsRes.success) {
+        renderPipelineSettings(opsRes.settings, opsRes.kekActive);
+        renderCompetitorsMatrix(opsRes.competitors);
+        renderJobs(opsRes.jobs);
       }
-      if (cookiesData.success) {
-        renderCookies(cookiesData.cookies);
+
+      if (cookiesRes.success) {
+        renderCookies(cookiesRes.cookies);
       }
     } catch (err: any) {
-      toast(`Failed to load console state: ${err.message}`, 'error');
+      toast(`Failed to load pipeline state: ${err.message}`, 'error');
     }
   }
 
-  // ─── Event Handlers ───────────────────────────────────────────────────────
-  // 1. Refresh All
-  $('refresh-all-btn').addEventListener('click', async () => {
-    $('refresh-icon').classList.add('animate-spin');
+  // Event Listeners for existing features
+  $('refresh-all-btn')?.addEventListener('click', async () => {
+    $('refresh-icon')?.classList.add('animate-spin');
+    toast('Refreshing full console state...', 'info');
     await loadAllState();
-    setTimeout(() => $('refresh-icon').classList.remove('animate-spin'), 400);
-    toast('Operations state refreshed', 'info');
+    setTimeout(() => $('refresh-icon')?.classList.remove('animate-spin'), 500);
   });
 
-  // 2. Pipeline Settings Form Submit
-  $('pipeline-settings-form').addEventListener('submit', async (e) => {
+  $('pipeline-settings-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const is_enabled = ( $('pipe-is-enabled') as HTMLInputElement ).checked;
     const dry_run = ( $('pipe-dry-run') as HTMLInputElement ).checked;
@@ -760,82 +1464,47 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         body: JSON.stringify({ is_enabled, dry_run, max_retries }),
       });
       if (res.success) {
-        renderPipelineSettings(res.settings);
         toast('Pipeline settings updated successfully', 'success');
+        renderPipelineSettings(res.settings, true);
       }
     } catch (err: any) {
-      toast(`Update failed: ${err.message}`, 'error');
+      toast(`Failed to save settings: ${err.message}`, 'error');
     }
   });
 
-  let activePollingInterval: any = null;
-
-  function pollJobStatus(jobId: string) {
-    if (activePollingInterval) clearInterval(activePollingInterval);
-
-    const startTime = Date.now();
-    activePollingInterval = setInterval(async () => {
-      try {
-        const res = await fetchAPI(`/api/admin/competitor-ops?job_id=${jobId}`);
-        if (res.job) {
-          const { status, items_processed = 0, error_message } = res.job;
-          if (status === 'completed') {
-            clearInterval(activePollingInterval);
-            activePollingInterval = null;
-            toast(`✅ Scraping complete! ${items_processed} profile(s) updated`, 'success');
-            loadAllState();
-          } else if (status === 'failed') {
-            clearInterval(activePollingInterval);
-            activePollingInterval = null;
-            toast(`❌ Scraping failed: ${error_message || 'Workflow error'}`, 'error');
-            loadAllState();
-          }
-        }
-        if (Date.now() - startTime > 300000) {
-          clearInterval(activePollingInterval);
-          activePollingInterval = null;
-        }
-      } catch {
-        // network retry
-      }
-    }, 2000);
-  }
-
-  // 3. Run Full Update Now
-  $('btn-run-full-update').addEventListener('click', async () => {
+  $('btn-run-full-update')?.addEventListener('click', async () => {
+    if (!confirm('Trigger immediate full workspace competitor ingestion run?')) return;
     try {
       const res = await fetchAPI('/api/admin/competitor-ops', {
         method: 'POST',
-        body: JSON.stringify({ scope: 'all' }),
+        body: JSON.stringify({}),
       });
-      if (res.job_id) {
-        toast(`🚀 Workflow dispatched (#${res.job_id.slice(0, 8)}) — scraping in progress...`, 'success');
-        pollJobStatus(res.job_id);
-      } else {
-        toast('Full update dispatched', 'success');
-      }
-      loadAllState();
+      toast(`🚀 Ingestion workflow dispatched (#${res.job_id?.slice(0, 8)})`, 'success');
+      await loadAllState();
     } catch (err: any) {
       toast(`Dispatch failed: ${err.message}`, 'error');
     }
   });
 
-  // 4. Modal: Add Cookie
-  $('open-add-cookie-modal').addEventListener('click', () => {
-    $('add-cookie-error').classList.add('hidden');
+  // Cookie Modal
+  $('open-add-cookie-modal')?.addEventListener('click', () => {
+    $('add-cookie-error')?.classList.add('hidden');
     ( $('cookie-value-input') as HTMLTextAreaElement ).value = '';
     ( $('cookie-expires-input') as HTMLInputElement ).value = '';
     showModal($('add-cookie-modal'));
   });
 
-  $('add-cookie-form').addEventListener('submit', async (e) => {
+  $('add-cookie-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const cookie_value = ( $('cookie-value-input') as HTMLTextAreaElement ).value.trim();
     const expires_at = ( $('cookie-expires-input') as HTMLInputElement ).value || null;
 
     if (cookie_value.length < 20) {
-      $('add-cookie-error').textContent = 'Cookie string must be at least 20 characters.';
-      $('add-cookie-error').classList.remove('hidden');
+      const errEl = $('add-cookie-error');
+      if (errEl) {
+        errEl.textContent = 'Cookie string must be at least 20 characters.';
+        errEl.classList.remove('hidden');
+      }
       return;
     }
 
@@ -847,128 +1516,19 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
       if (res.success) {
         hideModal($('add-cookie-modal'));
         toast('Cookie stored and encrypted in vault', 'success');
-        loadAllState();
+        await loadAllState();
       }
     } catch (err: any) {
-      $('add-cookie-error').textContent = err.message;
-      $('add-cookie-error').classList.remove('hidden');
-    }
-  });
-
-  // 5. Event Delegation for Interactive Tables
-  document.addEventListener('change', async (e) => {
-    const target = e.target as HTMLElement;
-
-    // Cookie active toggle
-    if (target.classList.contains('ck-toggle')) {
-      const id = target.dataset.id;
-      const is_active = (target as HTMLInputElement).checked;
-      try {
-        await fetchAPI('/api/admin/pinterest-cookies', {
-          method: 'PATCH',
-          body: JSON.stringify({ id, is_active }),
-        });
-        toast(`Cookie status updated`, 'success');
-      } catch (err: any) {
-        toast(`Failed to toggle cookie: ${err.message}`, 'error');
-        (target as HTMLInputElement).checked = !is_active;
-      }
-    }
-
-    // Competitor active toggle
-    if (target.classList.contains('comp-active')) {
-      const competitor_id = target.dataset.id;
-      const is_active = (target as HTMLInputElement).checked;
-      try {
-        await fetchAPI('/api/admin/competitor-ops', {
-          method: 'PATCH',
-          body: JSON.stringify({ competitor_id, is_active }),
-        });
-        toast(`Competitor status updated`, 'success');
-      } catch (err: any) {
-        toast(`Failed to update competitor: ${err.message}`, 'error');
-        (target as HTMLInputElement).checked = !is_active;
-      }
-    }
-
-    // Competitor frequency change
-    if (target.classList.contains('comp-freq')) {
-      const competitor_id = target.dataset.id;
-      const update_frequency_hours = Number((target as HTMLInputElement).value || 24);
-      try {
-        await fetchAPI('/api/admin/competitor-ops', {
-          method: 'PATCH',
-          body: JSON.stringify({ competitor_id, update_frequency_hours }),
-        });
-        toast(`Update cadence updated to ${update_frequency_hours}h`, 'success');
-      } catch (err: any) {
-        toast(`Failed to update cadence: ${err.message}`, 'error');
+      const errEl = $('add-cookie-error');
+      if (errEl) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
       }
     }
   });
 
-  document.addEventListener('click', async (e) => {
-    const target = (e.target as HTMLElement).closest('button');
-    if (!target) return;
-
-    // Delete Cookie
-    if (target.classList.contains('ck-del')) {
-      const id = target.dataset.id;
-      if (!confirm('Are you sure you want to remove this credential from the vault?')) return;
-      try {
-        await fetchAPI('/api/admin/pinterest-cookies', {
-          method: 'DELETE',
-          body: JSON.stringify({ id }),
-        });
-        toast('Cookie removed from vault', 'info');
-        loadAllState();
-      } catch (err: any) {
-        toast(`Failed to delete: ${err.message}`, 'error');
-      }
-    }
-
-    // Delete FastCron Token
-    if (target.classList.contains('token-del')) {
-      const id = target.dataset.tokenId;
-      if (!id || !confirm('Are you sure you want to delete this API token from the vault?')) return;
-      try {
-        await fetchAPI(`/api/competitors/tokens/${id}`, {
-          method: 'DELETE',
-        });
-        toast('Token removed from vault', 'info');
-        await loadTokens();
-      } catch (err: any) {
-        toast(`Failed to delete token: ${err.message}`, 'error');
-      }
-    }
-
-    // Update single competitor now
-    if (target.classList.contains('update-now')) {
-      const competitor_id = target.dataset.id;
-      const username = target.dataset.username;
-      try {
-        const res = await fetchAPI('/api/admin/competitor-ops', {
-          method: 'POST',
-          body: JSON.stringify({ competitor_id, username }),
-        });
-        toast(`Queued @${username} (job ${res.job_id?.slice(0, 8)}) — runs within 5 min`, 'success');
-        loadAllState();
-      } catch (err: any) {
-        toast(`Dispatch failed: ${err.message}`, 'error');
-      }
-    }
-  });
-
-  // 6. FastCron Token Vault Actions
+  // Token Modal
   $('btn-add-token')?.addEventListener('click', () => {
-    $('comp-token-error')?.classList.add('hidden');
-    ( $('comp-f-token-name') as HTMLInputElement ).value = '';
-    ( $('comp-f-token-value') as HTMLInputElement ).value = '';
-    ( $('comp-f-token-default') as HTMLInputElement ).checked = true;
-    showModal($('comp-token-modal'));
-  });
-
-  $('add-token-modal-btn')?.addEventListener('click', () => {
     $('comp-token-error')?.classList.add('hidden');
     ( $('comp-f-token-name') as HTMLInputElement ).value = '';
     ( $('comp-f-token-value') as HTMLInputElement ).value = '';
@@ -1000,6 +1560,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         hideModal($('comp-token-modal'));
         toast('Token saved and encrypted in vault', 'success');
         await loadTokens();
+        await loadSchedules();
       }
     } catch (err: any) {
       const errEl = $('comp-token-error');
@@ -1015,7 +1576,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     if (statusEl) statusEl.textContent = 'Testing connection...';
     try {
       await fetchAPI('/api/competitors/tokens');
-      if (statusEl) statusEl.textContent = '✓ Vault healthy';
+      if (statusEl) statusEl.textContent = '✓ Connection healthy';
       toast('FastCron token registry connection verified', 'success');
     } catch (err: any) {
       if (statusEl) statusEl.textContent = '⚠ Connection error';
@@ -1023,27 +1584,102 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     }
   });
 
-  // 7. Schedule Modal & Provider Selection
-  $('btn-open-schedule-modal')?.addEventListener('click', () => {
-    document.getElementById('competitors-schedule-modal')?.classList.remove('hidden');
-  });
-
-  window.addEventListener('cron:schedule-selected', async (e: any) => {
-    const { expression, timezone } = e.detail;
-    try {
-      const res = await fetchAPI('/api/admin/competitor-ops', {
-        method: 'PUT',
-        body: JSON.stringify({ cron_expression: expression, timezone, schedule_status: 'active' }),
-      });
-      if (res.success) {
-        toast(`Schedule updated to ${expression} (${timezone})`, 'success');
-        loadAllState();
+  // Delegated interactive actions (cookies, competitors matrix)
+  document.addEventListener('change', async (e) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('ck-toggle')) {
+      const id = target.dataset.id;
+      const is_active = (target as HTMLInputElement).checked;
+      try {
+        await fetchAPI('/api/admin/pinterest-cookies', {
+          method: 'PATCH',
+          body: JSON.stringify({ id, is_active }),
+        });
+        toast('Cookie status updated', 'success');
+      } catch (err: any) {
+        toast(`Failed to toggle cookie: ${err.message}`, 'error');
+        (target as HTMLInputElement).checked = !is_active;
       }
-    } catch (err: any) {
-      toast(`Failed to update schedule: ${err.message}`, 'error');
+    }
+
+    if (target.classList.contains('comp-active')) {
+      const competitor_id = target.dataset.id;
+      const is_active = (target as HTMLInputElement).checked;
+      try {
+        await fetchAPI('/api/admin/competitor-ops', {
+          method: 'PATCH',
+          body: JSON.stringify({ competitor_id, is_active }),
+        });
+        toast('Competitor status updated', 'success');
+      } catch (err: any) {
+        toast(`Failed to update competitor: ${err.message}`, 'error');
+        (target as HTMLInputElement).checked = !is_active;
+      }
+    }
+
+    if (target.classList.contains('comp-freq')) {
+      const competitor_id = target.dataset.id;
+      const update_frequency_hours = Number((target as HTMLInputElement).value || 24);
+      try {
+        await fetchAPI('/api/admin/competitor-ops', {
+          method: 'PATCH',
+          body: JSON.stringify({ competitor_id, update_frequency_hours }),
+        });
+        toast(`Update cadence updated to ${update_frequency_hours}h`, 'success');
+      } catch (err: any) {
+        toast(`Failed to update cadence: ${err.message}`, 'error');
+      }
     }
   });
 
-  // Initial Boot
+  document.addEventListener('click', async (e) => {
+    const target = (e.target as HTMLElement).closest('button');
+    if (!target) return;
+
+    if (target.classList.contains('ck-del')) {
+      const id = target.dataset.id;
+      if (!confirm('Are you sure you want to remove this credential from the vault?')) return;
+      try {
+        await fetchAPI('/api/admin/pinterest-cookies', {
+          method: 'DELETE',
+          body: JSON.stringify({ id }),
+        });
+        toast('Cookie removed from vault', 'info');
+        await loadAllState();
+      } catch (err: any) {
+        toast(`Failed to delete: ${err.message}`, 'error');
+      }
+    }
+
+    if (target.classList.contains('token-del')) {
+      const id = target.dataset.tokenId;
+      if (!id || !confirm('Are you sure you want to delete this API token from the vault?')) return;
+      try {
+        await fetchAPI(`/api/competitors/tokens/${id}`, { method: 'DELETE' });
+        toast('Token removed from vault', 'info');
+        await loadTokens();
+        await loadSchedules();
+      } catch (err: any) {
+        toast(`Failed to delete token: ${err.message}`, 'error');
+      }
+    }
+
+    if (target.classList.contains('update-now')) {
+      const competitor_id = target.dataset.id;
+      const username = target.dataset.username;
+      try {
+        const res = await fetchAPI('/api/admin/competitor-ops', {
+          method: 'POST',
+          body: JSON.stringify({ competitor_id, username }),
+        });
+        toast(`Queued @${username} (job ${res.job_id?.slice(0, 8)})`, 'success');
+        await loadAllState();
+      } catch (err: any) {
+        toast(`Dispatch failed: ${err.message}`, 'error');
+      }
+    }
+  });
+
+  // Initial load
   loadAllState();
 </script>
