@@ -36,3 +36,7 @@ export function escapeHtml(str: string | null | undefined): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+export { fmtAuditTimestamp, fmtDuration } from '../lib/format-audit';
+export type { AuditTimestampResult, AuditTimestampOptions } from '../lib/format-audit';
+

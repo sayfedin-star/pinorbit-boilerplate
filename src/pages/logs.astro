@@ -63,7 +63,7 @@ const schedulingTabs = [
 <script>
   import { requireAuth } from '../lib/auth';
   import { getLogs, getPinDeliveryLogs } from '../lib/supabase';
-  import { renderStatusBadge, formatDate, renderEmptyStateHTML, escapeHtml, maskWebhookUrl } from '../lib/ui-helpers';
+  import { renderStatusBadge, formatDate, renderEmptyStateHTML, escapeHtml, maskWebhookUrl, fmtAuditTimestamp } from '../lib/ui-helpers';
   import type { Log, PinDeliveryLog } from '../lib/types';
 
   let currentTab: 'delivery' | 'system' = 'delivery';
@@ -187,8 +187,8 @@ const schedulingTabs = [
                   ${escapeHtml(details)}
                 </p>
               </td>
-              <td class="px-6 py-4 text-xs text-muted-foreground whitespace-nowrap">
-                ${formatDate(log.created_at)}
+              <td class="px-6 py-4 whitespace-nowrap">
+                ${fmtAuditTimestamp(log.created_at).html}
               </td>
             </tr>
           `;
@@ -282,8 +282,8 @@ const schedulingTabs = [
                     : `<span class="text-muted-foreground/60 italic">N/A</span>`
                 }
               </td>
-              <td class="px-6 py-4 text-xs text-muted-foreground whitespace-nowrap">
-                ${formatDate(log.created_at)}
+              <td class="px-6 py-4 whitespace-nowrap">
+                ${fmtAuditTimestamp(log.created_at).html}
               </td>
             </tr>
           `;

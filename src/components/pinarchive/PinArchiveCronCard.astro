@@ -459,6 +459,8 @@ import ProviderBadge from '../cron/ProviderBadge.astro';
 </div>
 
 <script>
+  import { fmtAuditTimestamp } from '../../lib/format-audit';
+
   // ═══ CLIENT ENGINE: Carbon-Copy FastCron Automation ═══
   const toMs = (v: any): number | null => {
     if (v === null || v === undefined) return null;
@@ -711,8 +713,8 @@ import ProviderBadge from '../cron/ProviderBadge.astro';
       const nextRunMs = toMs(job.next_run);
       const lastRunMs = toMs(job.last_run);
 
-      const nextRunStr = nextRunMs ? new Date(nextRunMs).toLocaleString() : '—';
-      const lastRunStr = lastRunMs ? new Date(lastRunMs).toLocaleString() : '—';
+      const nextRunHtml = fmtAuditTimestamp(nextRunMs, { timezone: job.timezone }).html;
+      const lastRunHtml = lastRunMs ? fmtAuditTimestamp(lastRunMs, { timezone: job.timezone }).html : '<span class="text-muted-foreground/60 text-xs">Never</span>';
       const lastHttp = job.last_http_code || (job.last_status === 'OK' ? 202 : null);
 
       rowsHtml += `
@@ -734,13 +736,12 @@ import ProviderBadge from '../cron/ProviderBadge.astro';
             <div class="text-[10px] text-muted-foreground">${buildHumanReadableSummary(job.expression)}</div>
           </td>
           <td class="p-2.5">
-            <div class="font-semibold text-foreground">${nextRunStr}</div>
-            <div class="text-[10px] text-muted-foreground">${job.timezone || 'UTC'}</div>
+            ${nextRunHtml}
           </td>
           <td class="p-2.5">
-            <div class="flex items-center gap-1.5">
-              ${lastHttp ? `<span class="rounded px-1.5 py-0.2 text-[9px] font-bold ${lastHttp >= 200 && lastHttp < 300 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}">HTTP ${lastHttp}</span>` : ''}
-              <span class="font-semibold text-muted-foreground">${lastRunStr}</span>
+            <div class="flex flex-col gap-1">
+              ${lastRunHtml}
+              ${lastHttp ? `<div><span class="rounded px-1.5 py-0.2 text-[9px] font-bold ${lastHttp >= 200 && lastHttp < 300 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}">HTTP ${lastHttp}</span></div>` : ''}
             </div>
           </td>
           <td class="p-2.5">
@@ -1046,7 +1047,7 @@ import ProviderBadge from '../cron/ProviderBadge.astro';
             } else {
               tbody.innerHTML = logs.map(l => `
                 <tr class="border-b border-border/60">
-                  <td class="p-2 font-mono">${l.date || l.created_at || '—'}</td>
+                  <td class="p-2">${fmtAuditTimestamp(l.date || l.created_at, { timezone: job.timezone }).html}</td>
                   <td class="p-2"><span class="font-bold ${l.status === 'OK' ? 'text-emerald-500' : 'text-amber-500'}">${l.status || 'OK'}</span></td>
                   <td class="p-2"><span class="rounded px-1.5 py-0.2 text-[10px] font-bold ${l.http_status_code === 202 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-muted text-muted-foreground'}">${l.http_status_code || '—'}</span></td>
                   <td class="p-2 text-right font-mono text-muted-foreground">${l.duration ? l.duration + 's' : '—'}</td>

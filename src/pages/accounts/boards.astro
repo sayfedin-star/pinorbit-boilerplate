@@ -272,7 +272,7 @@ export const prerender = false;
     createBoard,
     updateBoard,
   } from '../../lib/supabase';
-  import { formatDate, escapeHtml } from '../../lib/ui-helpers';
+  import { formatDate, escapeHtml, fmtAuditTimestamp } from '../../lib/ui-helpers';
   import type { Account, Board, AccountWebhook } from '../../lib/types';
 
   let accountId = '';
@@ -405,8 +405,8 @@ export const prerender = false;
       const isStaged = (board.board_id && board.board_id.startsWith('pin_bd_')) || (board.pinterest_board_id && board.pinterest_board_id.startsWith('pin_bd_'));
       const pinCountDisplay = board.pin_count !== undefined && board.pin_count !== null ? Number(board.pin_count).toLocaleString() : '—';
       const followerCountDisplay = board.follower_count !== undefined && board.follower_count !== null ? Number(board.follower_count).toLocaleString() : '—';
-      const boardCreatedDisplay = board.board_created_at ? formatDate(board.board_created_at) : (board.created_at ? formatDate(board.created_at) : '—');
-      const lastSyncedDisplay = board.last_synced_at ? formatDate(board.last_synced_at) : '—';
+      const boardCreatedDisplay = fmtAuditTimestamp(board.board_created_at || board.created_at).html;
+      const lastSyncedDisplay = board.last_synced_at ? fmtAuditTimestamp(board.last_synced_at).html : '<span class="text-muted-foreground/60 italic text-xs">never</span>';
 
       return `
         <tr class="border-b border-border hover:bg-muted/30 transition-colors ${isStaged ? 'bg-amber-500/5' : ''}">
@@ -443,8 +443,8 @@ export const prerender = false;
           <td class="p-3.5 text-muted-foreground text-[11px]">
             ${boardCreatedDisplay}
           </td>
-          <td class="p-3.5 text-muted-foreground text-[11px]">
-            ${lastSyncedDisplay === '—' ? '<span class="text-muted-foreground/60 italic">never</span>' : lastSyncedDisplay}
+          <td class="p-3.5">
+            ${lastSyncedDisplay}
           </td>
           <td class="p-3.5 text-center">
             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${

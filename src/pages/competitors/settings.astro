@@ -456,11 +456,12 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
               <th scope="col" class="py-3 px-4">Items Processed</th>
               <th scope="col" class="py-3 px-4">Started At</th>
               <th scope="col" class="py-3 px-4">Completed At</th>
+              <th scope="col" class="py-3 px-4">Duration</th>
               <th scope="col" class="py-3 px-4">Telemetry / Errors</th>
             </tr>
           </thead>
           <tbody id="jobs-table-body" class="divide-y divide-border bg-card">
-            <tr><td colspan="7" class="py-6 text-center text-muted-foreground">Loading recent jobs…</td></tr>
+            <tr><td colspan="8" class="py-6 text-center text-muted-foreground">Loading recent jobs…</td></tr>
           </tbody>
         </table>
       </div>
@@ -685,6 +686,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
 
 <script>
   import { humanCron, humanCronTitle } from '../../lib/cron-helper';
+  import { fmtAuditTimestamp, fmtDuration } from '../../lib/format-audit';
 
   // ─── Helpers & Utilities ───────────────────────────────────────────────────
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
@@ -832,10 +834,10 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         ? `<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">⏸ Paused</span>`
         : `<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">● Active</span>`;
 
-      const nextRunStr = s.next_run ? new Date(s.next_run).toLocaleString() : '—';
-      const lastRunStr = s.last_run ? timeAgo(new Date(s.last_run).toISOString()) : 'Never';
+      const nextRunHtml = fmtAuditTimestamp(s.next_run, { timezone: s.timezone }).html;
+      const lastRunHtml = s.last_run ? fmtAuditTimestamp(s.last_run, { timezone: s.timezone }).html : '<span class="text-muted-foreground/60 text-xs font-medium">Never</span>';
       const httpBadge = s.last_http_code
-        ? `<span class="rounded px-1 text-[9px] font-bold ${s.last_http_code === 202 || s.last_http_code === 200 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}">HTTP ${s.last_http_code}</span>`
+        ? `<span class="rounded px-1.5 py-0.5 text-[9px] font-bold ${s.last_http_code === 202 || s.last_http_code === 200 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}">HTTP ${s.last_http_code}</span>`
         : '';
 
       return `<tr class="hover:bg-muted/30 transition-colors border-b border-border/60 ${isSelected ? 'bg-primary/5' : ''}">
@@ -851,12 +853,12 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         </td>
         <td class="p-3">
           <div class="font-mono font-semibold text-primary text-[11px]">${escHtml(s.expression)}</div>
-          <div class="text-[10px] text-muted-foreground">${escHtml(humanCronTitle(s.expression))} (${escHtml(s.timezone)})</div>
+          <div class="text-[10px] text-muted-foreground">${escHtml(humanCronTitle(s.expression))} (${escHtml(s.timezone || 'UTC')})</div>
         </td>
-        <td class="p-3 font-mono text-[11px] text-muted-foreground">${escHtml(nextRunStr)}</td>
+        <td class="p-3">${nextRunHtml}</td>
         <td class="p-3">
-          <div class="text-[11px] text-foreground font-medium">${escHtml(lastRunStr)}</div>
-          <div class="mt-0.5">${httpBadge}</div>
+          ${lastRunHtml}
+          ${httpBadge ? `<div class="mt-1">${httpBadge}</div>` : ''}
         </td>
         <td class="p-3">
           <div class="font-semibold text-foreground text-[11px]">${escHtml(s.token_name)}</div>
@@ -1382,10 +1384,32 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     }).join('');
   }
 
+  function renderTriggerBadge(trigger?: string | null): string {
+    const t = String(trigger || 'manual').toLowerCase();
+    if (t === 'cron') {
+      return `<span class="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+        <span>🕐</span><span>cron</span>
+      </span>`;
+    }
+    if (t === 'run_now') {
+      return `<span class="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold border border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400">
+        <span>⚡</span><span>run_now</span>
+      </span>`;
+    }
+    if (t === 'full') {
+      return `<span class="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold border border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400">
+        <span>🧹</span><span>full</span>
+      </span>`;
+    }
+    return `<span class="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold border border-border bg-muted/60 text-muted-foreground">
+      <span>manual</span>
+    </span>`;
+  }
+
   function renderJobs(jobs: any[]) {
     const tbody = $('jobs-table-body');
     if (!jobs || jobs.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-muted-foreground">
+      tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-muted-foreground">
         No recent ingestion jobs recorded yet.
       </td></tr>`;
       return;
@@ -1401,21 +1425,33 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
       const pillClass = statusColors[j.status] || 'bg-muted text-muted-foreground border-border';
       const shortId = j.id ? j.id.slice(0, 8) : '—';
       const scopeLabel = j.competitor_id ? `Target: ${j.competitor_id.slice(0, 8)}` : 'Full Workspace Ingestion';
-      const started = j.started_at ? new Date(j.started_at).toLocaleTimeString() : '—';
-      const completed = j.completed_at ? new Date(j.completed_at).toLocaleTimeString() : (j.status === 'running' ? 'In progress' : '—');
+      const triggerBadge = renderTriggerBadge(j.trigger);
+
+      const startedHtml = fmtAuditTimestamp(j.started_at).html;
+      const completedHtml = j.status === 'running'
+        ? `<span class="inline-flex items-center gap-1.5 text-primary font-semibold text-xs"><span class="h-1.5 w-1.5 rounded-full bg-primary animate-ping"></span>In progress</span>`
+        : fmtAuditTimestamp(j.completed_at).html;
+      const durationStr = fmtDuration(j.started_at, j.completed_at);
+
       const err = j.error_message ? `<span class="text-rose-500 font-mono text-[10px]" title="${escHtml(j.error_message)}">${escHtml(j.error_message.slice(0, 30))}…</span>` : '<span class="text-muted-foreground/60">—</span>';
 
       return `<tr class="hover:bg-muted/30 transition-colors">
         <td class="py-3 px-4 font-mono font-bold text-foreground text-[11px]">#${escHtml(shortId)}</td>
-        <td class="py-3 px-4 font-medium text-foreground text-[11px]">${escHtml(scopeLabel)}</td>
+        <td class="py-3 px-4">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="font-semibold text-foreground text-[11px]">${escHtml(scopeLabel)}</span>
+            ${triggerBadge}
+          </div>
+        </td>
         <td class="py-3 px-4">
           <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold border ${pillClass}">
             ${escHtml(j.status)}
           </span>
         </td>
         <td class="py-3 px-4 font-mono text-foreground font-semibold text-[11px]">${j.items_processed ?? 0}</td>
-        <td class="py-3 px-4 text-[11px]">${escHtml(started)}</td>
-        <td class="py-3 px-4 text-[11px]">${escHtml(completed)}</td>
+        <td class="py-3 px-4">${startedHtml}</td>
+        <td class="py-3 px-4">${completedHtml}</td>
+        <td class="py-3 px-4 font-mono text-foreground font-semibold text-[11px]">${escHtml(durationStr)}</td>
         <td class="py-3 px-4 text-[11px]">${err}</td>
       </tr>`;
     }).join('');

@@ -291,10 +291,12 @@ async function main() {
     let jobId = inputJobId;
 
     if (!jobId) {
+      const runTrigger = process.env.RUN_TRIGGER || (process.env.GITHUB_EVENT_NAME === 'schedule' ? 'cron' : 'full');
       const { data: job } = await db.from('competitor_ingestion_jobs').insert({
         workspace_id: wsId,
         competitor_id: competitorIds.length === 1 ? competitorIds[0] : null,
         status: 'running',
+        trigger: runTrigger,
         items_processed: 0,
         started_at: new Date().toISOString(),
       }).select('id').single();

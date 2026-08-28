@@ -59,7 +59,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (jobId) {
       const { data: job, error: jobErr } = await competitorsClient
         .from('competitor_ingestion_jobs')
-        .select('id, workspace_id, competitor_id, status, items_processed, error_message, started_at, completed_at, created_at')
+        .select('id, workspace_id, competitor_id, status, trigger, items_processed, error_message, started_at, completed_at, created_at')
         .eq('id', jobId)
         .eq('workspace_id', workspaceId)
         .maybeSingle();
@@ -98,7 +98,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const { data: jobs, error: jobsErr } = await competitorsClient
       .from('competitor_ingestion_jobs')
-      .select('id, workspace_id, competitor_id, status, items_processed, error_message, started_at, completed_at, created_at')
+      .select('id, workspace_id, competitor_id, status, trigger, items_processed, error_message, started_at, completed_at, created_at')
       .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false })
       .limit(15);
@@ -322,17 +322,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const targetUsername = typeof body.username === 'string' ? body.username.trim() : (typeof body.target_username === 'string' ? body.target_username.trim() : '');
 
   try {
-    // 2. Insert Ingestion Job record with 'running' status (not queued)
+    // 2. Insert Ingestion Job record with 'running' status (not queued) and trigger origin
+    const trigger = (selectedIds.length === 1 || body.competitor_id) ? 'run_now' : 'full';
     const { data: job, error: jobErr } = await competitorsClient
       .from('competitor_ingestion_jobs')
       .insert({
         workspace_id: workspaceId,
-        competitor_id: selectedIds.length === 1 ? selectedIds[0] : null,
+        competitor_id: selectedIds.length === 1 ? selectedIds[0] : (body.competitor_id || null),
         status: 'running',
+        trigger,
         items_processed: 0,
         started_at: new Date().toISOString(),
       })
-      .select('id, workspace_id, competitor_id, status, created_at')
+      .select('id, workspace_id, competitor_id, status, trigger, created_at')
       .single();
 
     if (jobErr || !job) throw jobErr || new Error('Failed to create ingestion job record');

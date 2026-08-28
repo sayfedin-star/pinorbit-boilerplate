@@ -515,6 +515,8 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
 </Layout>
 
 <script>
+  import { fmtAuditTimestamp } from '../lib/format-audit';
+
   let rawAccounts: any[] = [];
   const selectedAccounts = new Set<string>();
 
@@ -958,13 +960,11 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
             <td class="py-3 px-4 font-medium" title="Last refresh: ${changed} of ${total} checked">
               <span class="font-bold ${changed>0?'text-emerald-500':'text-muted-foreground'}">${changed}/${total}</span>
             </td>
-            <td class="py-3 px-4 text-muted-foreground">
-              <div class="text-foreground font-semibold text-xs" title="Last run: ${lastRunFull}">
-                ${lastRunStr}
-              </div>
-              <span class="text-[10px] ${changed>0?'text-emerald-500':'text-muted-foreground'}">+${changed} today</span>
-              <div class="text-[10px] text-muted-foreground/80 mt-0.5">
-                Next: ${nextRunStr}
+            <td class="py-3 px-4">
+              ${acc.last_run_at ? fmtAuditTimestamp(acc.last_run_at).html : '<span class="text-muted-foreground/60 text-xs">Never</span>'}
+              <div class="flex items-center gap-1.5 mt-1 text-[10px]">
+                <span class="${changed>0?'text-emerald-500 font-bold':'text-muted-foreground'}">+${changed} today</span>
+                ${acc.next_run_at ? `<span class="opacity-40">•</span><span class="text-muted-foreground/80">Next: ${escapeHtml(fmtAuditTimestamp(acc.next_run_at).line1)}</span>` : ''}
               </div>
             </td>
             <td class="py-3 px-4 text-center">

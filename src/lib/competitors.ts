@@ -363,7 +363,7 @@ export function calculateCompetitorDeltas(
 /**
  * Finds the oldest board created date and calculates account strategy age in days.
  */
-export function calculateStrategyAge(boards: Array<{ created_at?: string; board_created_at?: string; last_pinned_at?: string }>): {
+export function calculateStrategyAge(boards: Array<{ created_at?: string | null; board_created_at?: string | null; last_pinned_at?: string | null }>): {
   label: string;
   days: number;
   oldestBoardDate: string | null;

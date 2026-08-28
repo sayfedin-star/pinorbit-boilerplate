@@ -203,6 +203,7 @@ async function handleCompetitorsDispatch(
           target_username: targetUsername,
           dry_run: dryRunValue,
           force_run: forceValue,
+          run_trigger: payload.trigger || url.searchParams.get('trigger') || 'cron',
         },
       }),
       signal: AbortSignal.timeout(8000),

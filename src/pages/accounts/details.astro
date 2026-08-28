@@ -1030,7 +1030,7 @@ import ProviderBadge from '../../components/cron/ProviderBadge.astro';
     toggleAccountActive,
     rescheduleAccountPendingPins,
   } from '../../lib/supabase';
-  import { renderStatusBadge, formatDate, formatTime, renderEmptyStateHTML, escapeHtml } from '../../lib/ui-helpers';
+  import { renderStatusBadge, formatDate, formatTime, renderEmptyStateHTML, escapeHtml, fmtAuditTimestamp } from '../../lib/ui-helpers';
   import type { Account, AccountPinStats, Pin, Log, AccountWebhook, Board } from '../../lib/types';
 
   let currentAccount: Account | null = null;
@@ -1690,8 +1690,8 @@ import ProviderBadge from '../../components/cron/ProviderBadge.astro';
           <td class="px-5 py-3 text-muted-foreground">${escapeHtml(pin.board_name || 'No board')}</td>
           <td class="px-5 py-3">${renderPinStatusBadgeWithRetry(pin)}</td>
           <td class="px-5 py-3 text-muted-foreground font-mono text-[11px]">${pin.retry_count || 0}/${pin.max_retries || 3}</td>
-          <td class="px-5 py-3 text-muted-foreground whitespace-nowrap">${pin.scheduled_for ? formatDate(pin.scheduled_for) : '-'}</td>
-          <td class="px-5 py-3 text-muted-foreground whitespace-nowrap">${pin.posted_at ? formatDate(pin.posted_at) : formatDate(pin.created_at)}</td>
+          <td class="px-5 py-3 whitespace-nowrap">${pin.scheduled_for ? fmtAuditTimestamp(pin.scheduled_for).html : '<span class="text-muted-foreground/60">-</span>'}</td>
+          <td class="px-5 py-3 whitespace-nowrap">${fmtAuditTimestamp(pin.posted_at || pin.created_at).html}</td>
         </tr>
       `
       )
@@ -1740,7 +1740,7 @@ import ProviderBadge from '../../components/cron/ProviderBadge.astro';
           <td class="px-5 py-3">${renderStatusBadge(log.status)}</td>
           <td class="px-5 py-3 font-medium text-foreground max-w-md truncate" title="${escapeHtml(log.message || '')}">${escapeHtml(log.message || 'Execution completed.')}</td>
           <td class="px-5 py-3 text-muted-foreground font-mono text-[11px]">${log.webhook_label ? escapeHtml(log.webhook_label) : 'System Hook'}</td>
-          <td class="px-5 py-3 text-muted-foreground whitespace-nowrap">${formatDate(log.created_at)}</td>
+          <td class="px-5 py-3 whitespace-nowrap">${fmtAuditTimestamp(log.created_at).html}</td>
         </tr>
       `
       )
@@ -3352,7 +3352,7 @@ import ProviderBadge from '../../components/cron/ProviderBadge.astro';
             ? (new Date(s.started_at) > new Date() ? 'Starts ' + String(s.started_at).slice(0, 10) : 'Started ' + String(s.started_at).slice(0, 10))
             : 'Immediate';
           const lastDispHtml = s.last_dispatched_at 
-            ? '<span>Last dispatch: ' + escapeHtml(new Date(s.last_dispatched_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) + '</span>' 
+            ? '<span>Last dispatch: ' + escapeHtml(fmtAuditTimestamp(s.last_dispatched_at, { timezone: tz }).line1) + ' <span class="font-mono text-[9px] text-muted-foreground">(' + escapeHtml(fmtAuditTimestamp(s.last_dispatched_at, { timezone: tz }).line2utc) + ')</span></span>' 
             : '<span title="No successful dispatch yet">Last dispatch: never</span>';
 
           const tokenDisplay = s.token_name
