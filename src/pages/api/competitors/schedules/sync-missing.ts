@@ -23,6 +23,14 @@ export const POST: APIRoute = async ({ locals }) => {
 
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
+
+    const { data: ws } = await schedulingClient
+      .from('workspaces')
+      .select('name')
+      .eq('id', workspaceId)
+      .maybeSingle();
+    const wsName = (ws?.name || 'workspace').replace(/[—\r\n\t]+/g, ' ').trim().slice(0, 40) || 'workspace';
+
     const compAdmin = dbClients.getCompetitorsAdmin(runtimeEnv);
 
     // 1. Resolve Effective Ingest Secret First
@@ -67,11 +75,12 @@ export const POST: APIRoute = async ({ locals }) => {
             runtimeEnv
           );
           const apiToken = schedTokenObj?.token || targetTokenObj.token;
-          const schedLabel = sched.label || 'Default Daily';
+          let schedLabel = sched.label || 'Default Daily';
+          if (/^[a-f0-9]{8}$/i.test(schedLabel)) schedLabel = 'Default Daily';
           const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: schedLabel, trigger: 'cron' });
           const repairParams = {
             id: Number(sched.fastcron_job_id),
-            name: `PinOrbit competitors — ${schedLabel} — ${workspaceId.slice(0, 8)}`,
+            name: `PinOrbit competitors — ${wsName} — ${schedLabel} — ${workspaceId.slice(0, 8)}`,
             url: dispatchUrl,
             expression: sched.cron_expression || '0 2 * * *',
             timezone: sched.timezone || 'UTC',
@@ -106,7 +115,7 @@ export const POST: APIRoute = async ({ locals }) => {
     const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label, trigger: 'cron' });
 
     const defaultParams = {
-      name: `PinOrbit competitors — ${label} — ${workspaceId.slice(0, 8)}`,
+      name: `PinOrbit competitors — ${wsName} — ${label} — ${workspaceId.slice(0, 8)}`,
       url: dispatchUrl,
       expression: cronExpression,
       timezone,

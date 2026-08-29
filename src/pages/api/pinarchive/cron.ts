@@ -215,7 +215,8 @@ export function isMatchingPinArchiveJob(job: any, workspaceId: string, dispatchE
     return true;
   }
 
-  if (urlMatches && (
+  const wsOk = !postData || !postData.workspace_id || postData.workspace_id === workspaceId;
+  if (urlMatches && wsOk && (
     !job.name ||
     job.name.toLowerCase().includes('pinarchive') ||
     job.name.toLowerCase().includes('pinorbit') ||
@@ -338,6 +339,13 @@ export const GET: APIRoute = async ({ locals }) => {
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id);
 
+    const { data: ws } = await schedulingClient
+      .from('workspaces')
+      .select('name')
+      .eq('id', workspaceId)
+      .maybeSingle();
+    const wsName = (ws?.name || 'workspace').replace(/[—\r\n\t]+/g, ' ').trim().slice(0, 40) || 'workspace';
+
     const dispatchUrl = getDispatchEndpointUrl(runtimeEnv);
     const tokens = await getWorkspaceFastCronTokens(workspaceId, runtimeEnv);
     const tokenInfo = await getPinArchiveTokenInfo(workspaceId, runtimeEnv);
@@ -448,13 +456,16 @@ export const GET: APIRoute = async ({ locals }) => {
         let label = postData.label;
         if (!label && job.name && job.name.includes(' — ')) {
           const parts = job.name.split(' — ');
-          if (parts.length >= 2) label = parts[1].trim();
+          label = (parts.length >= 4 ? parts.slice(2, -1) : parts.slice(1, -1)).join(' — ').trim();
+          if (!label && parts.length === 2) {
+            label = parts[1].trim();
+          }
         }
-        if (!label) label = 'Daily Refresh';
+        if (!label || /^[a-f0-9]{8}$/i.test(label)) label = 'Daily Refresh';
 
         return {
           id: Number(job.id),
-          name: job.name || `PinOrbit pinarchive — ${label}`,
+          name: job.name || `PinOrbit pinarchive — ${wsName} — ${label} — ${workspaceId.slice(0, 8)}`,
           label,
           expression: job.expression || job.cron_expression || '0 3 * * *',
           timezone: job.timezone || 'UTC',
@@ -556,6 +567,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id);
 
+    const { data: ws } = await schedulingClient
+      .from('workspaces')
+      .select('name')
+      .eq('id', workspaceId)
+      .maybeSingle();
+    const wsName = (ws?.name || 'workspace').replace(/[—\r\n\t]+/g, ' ').trim().slice(0, 40) || 'workspace';
+
     const action = body?.action || 'create';
     const dispatchUrl = getDispatchEndpointUrl(runtimeEnv);
 
@@ -647,8 +665,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         for (const job of matchedJobs) {
           const jobId = Number(job.id);
           if (jobId) {
-            const jobLabel =
-              job.name?.replace(/^PinOrbit\s*pinarchive\s*—\s*/i, '').replace(/\s*—\s*[a-f0-9-]+$/i, '') || 'Default Daily';
+            const segs = (job.name || '').split(' — ');
+            let jobLabel = segs.length >= 4 ? segs.slice(2, -1).join(' — ').trim()
+                         : segs.length === 3 ? segs.slice(1, -1).join(' — ').trim()
+                         : segs.length === 2 ? segs[1].trim() : 'Default Daily';
+            if (/^[a-f0-9]{8}$/i.test(jobLabel)) jobLabel = 'Default Daily';
             const postDataStr = JSON.stringify({
               workspace_id: workspaceId,
               pipeline: 'pinarchive',
@@ -656,7 +677,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             });
             const repairParams = {
               id: jobId,
-              name: `PinOrbit pinarchive — ${jobLabel} — ${workspaceId.slice(0, 8)}`,
+              name: `PinOrbit pinarchive — ${wsName} — ${jobLabel} — ${workspaceId.slice(0, 8)}`,
               url: getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim()),
               expression: job.expression || job.cron_expression || '0 3 * * *',
               timezone: job.timezone || 'UTC',
@@ -688,7 +709,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const targetDispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim());
       const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label: 'Default Daily' });
       const defaultParams = {
-        name: `PinOrbit pinarchive — Default Daily — ${workspaceId.slice(0, 8)}`,
+        name: `PinOrbit pinarchive — ${wsName} — Default Daily — ${workspaceId.slice(0, 8)}`,
         url: targetDispatchUrl,
         expression: '0 3 * * *',
         timezone: 'UTC',
@@ -774,7 +795,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const clonedLabel = `${postData.label || 'Schedule'} (copy)`;
       const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label: clonedLabel });
       const cloneParams = {
-        name: `PinOrbit pinarchive — ${clonedLabel} — ${workspaceId.slice(0, 8)}`,
+        name: `PinOrbit pinarchive — ${wsName} — ${clonedLabel} — ${workspaceId.slice(0, 8)}`,
         url: getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim()),
         expression: existingJob.expression || '0 3 * * *',
         timezone: existingJob.timezone || 'UTC',
@@ -849,7 +870,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       const editParams = {
         id: jobId,
-        name: `PinOrbit pinarchive — ${label} — ${workspaceId.slice(0, 8)}`,
+        name: `PinOrbit pinarchive — ${wsName} — ${label} — ${workspaceId.slice(0, 8)}`,
         url: getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim()),
         expression: cronExpression,
         timezone,
@@ -913,7 +934,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const createPostDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label });
 
     const addParams = {
-      name: `PinOrbit pinarchive — ${label} — ${workspaceId.slice(0, 8)}`,
+      name: `PinOrbit pinarchive — ${wsName} — ${label} — ${workspaceId.slice(0, 8)}`,
       url: getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim()),
       expression: cronExpression,
       timezone,

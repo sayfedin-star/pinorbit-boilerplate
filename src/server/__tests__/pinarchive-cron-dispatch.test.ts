@@ -248,23 +248,22 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite (v3 Delta)', () =>
         return new Response(JSON.stringify({ status: 'OK' }), { status: 200 });
       });
 
-      const mockSupabase = {
-        from: (table: string) => ({
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                single: async () => ({ data: { id: 'm1', role: 'admin' }, error: null }),
-                maybeSingle: async () => ({ data: { name: 'Main Registry Token', token_masked: 'fastcron...' }, error: null }),
-              }),
-            }),
-          }),
-        }),
-      };
+      const createMockSupabase = (wsName = 'Workspace Default') => ({
+        from: () => {
+          const builder: any = {
+            select: () => builder,
+            eq: () => builder,
+            single: async () => ({ data: { id: 'm1', role: 'admin', name: wsName }, error: null }),
+            maybeSingle: async () => ({ data: { id: 'm1', role: 'admin', name: wsName, token_masked: 'fastcron...' }, error: null }),
+          };
+          return builder;
+        },
+      });
 
       const res = await cronApi.GET({
         locals: {
           user: { id: '99999999-8888-7777-6666-555555555555' },
-          supabase: mockSupabase,
+          supabase: createMockSupabase(),
           activeWorkspaceId: mockWorkspaceId,
           runtimeEnv: {
             FASTCRON_API_TOKEN: mockToken,
@@ -294,17 +293,17 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite (v3 Delta)', () =>
         return new Response(JSON.stringify({ status: 'OK' }), { status: 200 });
       });
 
-      const mockSupabase = {
-        from: () => ({
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                single: async () => ({ data: { id: 'm1', role: 'admin' }, error: null }),
-              }),
-            }),
-          }),
-        }),
-      };
+      const createMockSupabase = () => ({
+        from: () => {
+          const builder: any = {
+            select: () => builder,
+            eq: () => builder,
+            single: async () => ({ data: { id: 'm1', role: 'admin' }, error: null }),
+            maybeSingle: async () => ({ data: { id: 'm1', role: 'admin' }, error: null }),
+          };
+          return builder;
+        },
+      });
 
       const res = await cronApi.POST({
         request: new Request('https://example.com/api/pinarchive/cron', {
@@ -314,7 +313,7 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite (v3 Delta)', () =>
         }),
         locals: {
           user: { id: '99999999-8888-7777-6666-555555555555' },
-          supabase: mockSupabase,
+          supabase: createMockSupabase(),
           activeWorkspaceId: mockWorkspaceId,
           runtimeEnv: {
             GITHUB_DISPATCH_TOKEN: 'ghp_mock_token_123',
@@ -345,18 +344,17 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite (v3 Delta)', () =>
         return new Response(JSON.stringify({ status: 'OK' }), { status: 200 });
       });
 
-      const mockSupabase = {
-        from: () => ({
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                single: async () => ({ data: { id: 'm1', role: 'admin' }, error: null }),
-                maybeSingle: async () => ({ data: null, error: null }),
-              }),
-            }),
-          }),
-        }),
-      };
+      const createMockSupabase = () => ({
+        from: () => {
+          const builder: any = {
+            select: () => builder,
+            eq: () => builder,
+            single: async () => ({ data: { id: 'm1', role: 'admin' }, error: null }),
+            maybeSingle: async () => ({ data: { name: 'TestWorkspace' }, error: null }),
+          };
+          return builder;
+        },
+      });
 
       const res = await cronApi.POST({
         request: new Request('https://example.com/api/pinarchive/cron', {
@@ -370,7 +368,7 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite (v3 Delta)', () =>
         }),
         locals: {
           user: { id: '99999999-8888-7777-6666-555555555555' },
-          supabase: mockSupabase,
+          supabase: createMockSupabase(),
           activeWorkspaceId: mockWorkspaceId,
           runtimeEnv: {
             FASTCRON_API_TOKEN: mockToken,
@@ -393,13 +391,16 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite (v3 Delta)', () =>
       let deletedId = 0;
       const mockJob = {
         id: 404,
-        name: `PinOrbit pinarchive — ${mockWorkspaceId.slice(0, 8)}`,
+        name: `PinOrbit pinarchive — TestWorkspace — ${mockWorkspaceId.slice(0, 8)}`,
         post_data: JSON.stringify({ workspace_id: mockWorkspaceId, pipeline: 'pinarchive' }),
       };
 
       global.fetch = vi.fn().mockImplementation(async (url: string, opts: any) => {
         if (url.includes('cron_list')) {
           return new Response(JSON.stringify({ status: 'OK', data: [mockJob] }), { status: 200 });
+        }
+        if (url.includes('cron_get')) {
+          return new Response(JSON.stringify({ status: 'OK', data: mockJob }), { status: 200 });
         }
         if (url.includes('cron_delete')) {
           const body = JSON.parse(opts.body);
@@ -415,8 +416,9 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite (v3 Delta)', () =>
             eq: () => ({
               eq: () => ({
                 single: async () => ({ data: { id: 'm1', role: 'admin' }, error: null }),
-                maybeSingle: async () => ({ data: null, error: null }),
+                maybeSingle: async () => ({ data: { name: 'TestWorkspace' }, error: null }),
               }),
+              maybeSingle: async () => ({ data: { name: 'TestWorkspace' }, error: null }),
             }),
           }),
         }),
@@ -437,6 +439,76 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite (v3 Delta)', () =>
       const json = await res.json();
       expect(json.success).toBe(true);
       expect(deletedId).toBe(404);
+    });
+
+    it('prevents cross-tenant leak: isMatchingPinArchiveJob returns false for foreign workspace jobs', () => {
+      const foreignWsId = '99999999-0000-0000-0000-000000000000';
+      const myWsId = '11111111-2222-3333-4444-555555555555';
+      const dispatchUrl = 'https://pinorbit-v2.o-i.workers.dev/api/internal/pinarchive/dispatch';
+
+      const foreignJob = {
+        id: 999,
+        url: dispatchUrl,
+        name: 'PinOrbit pinarchive — ForeignWS — Daily Refresh — 99999999',
+        post_data: JSON.stringify({ workspace_id: foreignWsId, pipeline: 'pinarchive' }),
+      };
+
+      const myJob = {
+        id: 111,
+        url: dispatchUrl,
+        name: 'PinOrbit pinarchive — MyWS — Daily Refresh — 11111111',
+        post_data: JSON.stringify({ workspace_id: myWsId, pipeline: 'pinarchive' }),
+      };
+
+      expect(cronApi.isMatchingPinArchiveJob(foreignJob, myWsId, dispatchUrl)).toBe(false);
+      expect(cronApi.isMatchingPinArchiveJob(myJob, myWsId, dispatchUrl)).toBe(true);
+    });
+
+    it('DELETE /api/pinarchive/cron returns 403 when attempting to delete a foreign workspace job', async () => {
+      const foreignWsId = '99999999-0000-0000-0000-000000000000';
+      const foreignJob = {
+        id: 999,
+        name: `PinOrbit pinarchive — Foreign — ${foreignWsId.slice(0, 8)}`,
+        url: 'https://pinorbit-v2.o-i.workers.dev/api/internal/pinarchive/dispatch',
+        post_data: JSON.stringify({ workspace_id: foreignWsId, pipeline: 'pinarchive' }),
+      };
+
+      global.fetch = vi.fn().mockImplementation(async (url: string) => {
+        if (url.includes('cron_get')) {
+          return new Response(JSON.stringify({ status: 'OK', data: foreignJob }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ status: 'OK' }), { status: 200 });
+      });
+
+      const mockSupabase = {
+        from: () => ({
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                single: async () => ({ data: { id: 'm1', role: 'admin' }, error: null }),
+                maybeSingle: async () => ({ data: { name: 'MyWS' }, error: null }),
+              }),
+              maybeSingle: async () => ({ data: { name: 'MyWS' }, error: null }),
+            }),
+          }),
+        }),
+      };
+
+      const res = await cronApi.DELETE({
+        request: new Request('https://example.com/api/pinarchive/cron?job_id=999', { method: 'DELETE' }),
+        locals: {
+          user: { id: '99999999-8888-7777-6666-555555555555' },
+          supabase: mockSupabase,
+          activeWorkspaceId: mockWorkspaceId,
+          runtimeEnv: {
+            FASTCRON_API_TOKEN: mockToken,
+          },
+        },
+      } as any);
+
+      expect(res.status).toBe(403);
+      const json = await res.json();
+      expect(json.error).toMatch(/Unauthorized marker check/);
     });
   });
 });

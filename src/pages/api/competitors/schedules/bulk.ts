@@ -51,6 +51,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
+
+    const { data: ws } = await schedulingClient
+      .from('workspaces')
+      .select('name')
+      .eq('id', workspaceId)
+      .maybeSingle();
+    const wsName = (ws?.name || 'workspace').replace(/[—\r\n\t]+/g, ' ').trim().slice(0, 40) || 'workspace';
+
     const compAdmin = dbClients.getCompetitorsAdmin(runtimeEnv);
 
     const { data: schedules, error: fetchErr } = await compAdmin
@@ -116,7 +124,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           if (targetTokenObj?.token) {
             const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: newLabel, trigger: 'cron' });
             const cloneParams = {
-              name: `PinOrbit competitors — ${newLabel} — ${workspaceId.slice(0, 8)}`,
+              name: `PinOrbit competitors — ${wsName} — ${newLabel} — ${workspaceId.slice(0, 8)}`,
               url: dispatchUrl,
               expression: sched.cron_expression,
               timezone: sched.timezone || 'UTC',

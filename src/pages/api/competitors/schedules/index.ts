@@ -6,7 +6,7 @@ import { dbClients } from '../../../../server/db/clients';
 import { getEffectiveSecret } from '../../../../server/services/webhook-secrets';
 import { fastcronCall, isFastCronJobPaused } from '../../../../server/lib/fastcron-client';
 import { listWorkspaceTokens, resolveToken } from '../../../../server/lib/token-resolver';
-import { isMatchingCompetitorJob } from '../cron';
+import { isMatchingCompetitorJob, extractPostData } from '../cron';
 
 export const getDispatchEndpointUrl = (
   runtimeEnv?: Record<string, any>,
@@ -108,16 +108,25 @@ export const GET: APIRoute = async ({ locals }) => {
               : [];
 
         for (const rJob of rawJobs) {
-          if (isMatchingCompetitorJob(rJob, workspaceId, dispatchUrl)) {
+          const pd = extractPostData(rJob);
+          if (pd?.pipeline === 'competitors' && pd?.workspace_id === workspaceId) {
             const rJobIdStr = String(rJob.id);
             if (!knownJobIds.has(rJobIdStr)) {
+              const segs = (rJob.name || '').split(' — ');
+              let adoptLabel = pd.label || (
+                segs.length >= 4 ? segs.slice(2, -1).join(' — ').trim()
+                : segs.length === 3 ? segs.slice(1, -1).join(' — ').trim()
+                : segs.length === 2 ? segs[1].trim() : 'Default Daily'
+              );
+              if (/^[a-f0-9]{8}$/i.test(adoptLabel)) adoptLabel = 'Default Daily';
+
               // Remote orphan/duplicate job discovered in FastCron! Auto-adopt into competitor_schedules
               try {
                 const { data: adoptedRow } = await compAdmin
                   .from('competitor_schedules')
                   .insert({
                     workspace_id: workspaceId,
-                    label: rJob.name?.replace(/^PinOrbit\s*competitors\s*—\s*/i, '').replace(/\s*—\s*[a-f0-9-]+$/i, '') || 'Default Daily',
+                    label: adoptLabel,
                     cron_expression: rJob.expression || rJob.cron_expression || '0 2 * * *',
                     timezone: rJob.timezone || 'UTC',
                     fastcron_token_id: defaultToken.id || null,
@@ -275,6 +284,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
 
+    const { data: ws } = await schedulingClient
+      .from('workspaces')
+      .select('name')
+      .eq('id', workspaceId)
+      .maybeSingle();
+    const wsName = (ws?.name || 'workspace').replace(/[—\r\n\t]+/g, ' ').trim().slice(0, 40) || 'workspace';
+
     const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
     if (!effSecret || !effSecret.value || effSecret.value.trim() === '') {
       return new Response(
@@ -299,7 +315,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Call FastCron cron_add with explicit http_method / httpMethod: 'POST'
     const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label, trigger: 'cron' });
     const fastcronParams = {
-      name: `PinOrbit competitors — ${label} — ${workspaceId.slice(0, 8)}`,
+      name: `PinOrbit competitors — ${wsName} — ${label} — ${workspaceId.slice(0, 8)}`,
       url: dispatchUrl,
       expression: cronExpression,
       timezone,

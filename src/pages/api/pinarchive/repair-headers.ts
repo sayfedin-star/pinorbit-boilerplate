@@ -24,6 +24,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
 
+    const { data: ws } = await schedulingClient
+      .from('workspaces')
+      .select('name')
+      .eq('id', workspaceId)
+      .maybeSingle();
+    const wsName = (ws?.name || 'workspace').replace(/[—\r\n\t]+/g, ' ').trim().slice(0, 40) || 'workspace';
+
     const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
     if (!effSecret || !effSecret.value || effSecret.value.trim() === '') {
       return new Response(
@@ -64,8 +71,12 @@ export const POST: APIRoute = async ({ locals, request }) => {
         processedJobIds.add(jobId);
         totalMatched++;
 
-        const jobLabel =
-          job.name?.replace(/^PinOrbit\s*pinarchive\s*—\s*/i, '').replace(/\s*—\s*[a-f0-9-]+$/i, '') || 'Default Daily';
+        const segs = (job.name || '').split(' — ');
+        let jobLabel = segs.length >= 4 ? segs.slice(2, -1).join(' — ').trim()
+                     : segs.length === 3 ? segs.slice(1, -1).join(' — ').trim()
+                     : segs.length === 2 ? segs[1].trim() : 'Default Daily';
+        if (/^[a-f0-9]{8}$/i.test(jobLabel)) jobLabel = 'Default Daily';
+
         const repairPostData = JSON.stringify({
           workspace_id: workspaceId,
           pipeline: 'pinarchive',
@@ -74,7 +85,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
         const repairParams = {
           id: jobId,
-          name: `PinOrbit pinarchive — ${jobLabel} — ${workspaceId.slice(0, 8)}`,
+          name: `PinOrbit pinarchive — ${wsName} — ${jobLabel} — ${workspaceId.slice(0, 8)}`,
           url: dispatchUrl,
           expression: job.expression || job.cron_expression || '0 3 * * *',
           timezone: job.timezone || 'UTC',

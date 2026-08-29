@@ -78,7 +78,8 @@ const mockSupabase = {
   from: vi.fn(() => ({
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
-    single: vi.fn(async () => ({ data: { id: 'm1', role: 'admin', cron_provider: 'fastcron' }, error: null })),
+    single: vi.fn(async () => ({ data: { id: 'm1', role: 'admin', cron_provider: 'fastcron', name: 'TestWS' }, error: null })),
+    maybeSingle: vi.fn(async () => ({ data: { id: 'm1', role: 'admin', cron_provider: 'fastcron', name: 'TestWS' }, error: null })),
   })),
 };
 
