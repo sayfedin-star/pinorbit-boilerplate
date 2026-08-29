@@ -203,28 +203,71 @@ export function extractPostData(job: any): any | null {
 /**
  * Verifies that a FastCron job belongs to PinArchive in this workspace.
  */
-export function isMatchingPinArchiveJob(job: any, workspaceId: string, dispatchEndpointUrl: string): boolean {
+export function isMatchingPinArchiveJob(job: any, workspaceId: string, dispatchEndpointUrl?: string): boolean {
+  if (!job || !workspaceId) return false;
+  const wsPrefix = workspaceId.slice(0, 8).toLowerCase();
+
   const postData = extractPostData(job);
-  const urlMatches = typeof job.url === 'string' && (
-    job.url === dispatchEndpointUrl ||
-    job.url.includes('/api/internal/pinarchive/dispatch') ||
-    job.url.includes('/pinarchive/dispatch')
+  const rawName = (typeof job.name === 'string' ? job.name : '').trim();
+  const lowerName = rawName.toLowerCase();
+  const rawUrl = (typeof job.url === 'string' ? job.url : '').trim();
+
+  // 1. Pipeline Gate: Must be pinarchive pipeline
+  if (postData?.pipeline && postData.pipeline !== 'pinarchive') {
+    return false;
+  }
+  if (lowerName.includes('competitor') && !lowerName.includes('pinarchive')) {
+    return false;
+  }
+
+  const isPinArchiveUrl = Boolean(
+    (dispatchEndpointUrl && rawUrl === dispatchEndpointUrl) ||
+    rawUrl.includes('/api/internal/pinarchive/dispatch') ||
+    rawUrl.includes('/pinarchive/dispatch')
   );
+  const isPinArchivePostData = postData?.pipeline === 'pinarchive';
+  const isPinArchiveName = lowerName.includes('pinarchive');
 
-  if (postData && postData.pipeline === 'pinarchive' && (!postData.workspace_id || postData.workspace_id === workspaceId)) {
+  if (!isPinArchiveUrl && !isPinArchivePostData && !isPinArchiveName) {
+    return false;
+  }
+
+  // 2. Strict Workspace Ownership Verification
+
+  // Priority 2a: postData workspace_id (exact UUID check)
+  if (postData?.workspace_id) {
+    return String(postData.workspace_id).toLowerCase() === workspaceId.toLowerCase();
+  }
+
+  // Priority 2b: URL workspace_id query parameter (if present in URL)
+  try {
+    if (rawUrl.includes('?')) {
+      const parsedUrl = new URL(rawUrl);
+      const urlWs = parsedUrl.searchParams.get('workspace_id');
+      if (urlWs) {
+        return urlWs.toLowerCase() === workspaceId.toLowerCase() || urlWs.toLowerCase() === wsPrefix;
+      }
+    }
+  } catch {}
+
+  // Priority 2c: Name-based workspace identifier (8-character hex prefix)
+  // PinOrbit job naming formats:
+  // - 4-segment: `PinOrbit pinarchive — <wsName> — <label> — <wsPrefix>`
+  // - 3-segment: `PinOrbit pinarchive — <label> — <wsPrefix>`
+  // - 2-segment / Legacy: `PinOrbit pinarchive — <wsPrefix>`
+  const hexTokens = rawName.match(/\b[a-f0-9]{8}\b/gi) || [];
+  if (hexTokens.length > 0) {
+    // The last 8-hex token in the name is the workspace prefix
+    const lastHex = hexTokens[hexTokens.length - 1].toLowerCase();
+    return lastHex === wsPrefix;
+  }
+
+  // Priority 2d: Direct substring check if name contains wsPrefix
+  if (lowerName.includes(wsPrefix)) {
     return true;
   }
 
-  const wsOk = !postData || !postData.workspace_id || postData.workspace_id === workspaceId;
-  if (urlMatches && wsOk && (
-    !job.name ||
-    job.name.toLowerCase().includes('pinarchive') ||
-    job.name.toLowerCase().includes('pinorbit') ||
-    (workspaceId && job.name.includes(workspaceId.slice(0, 8)))
-  )) {
-    return true;
-  }
-
+  // Reject anything that doesn't explicitly prove ownership of this workspace
   return false;
 }
 
@@ -503,12 +546,23 @@ export const GET: APIRoute = async ({ locals }) => {
       } catch (err: any) {
         console.warn(`[PinArchive FastCron] Could not sync pa_workspace_settings for ${workspaceId}:`, err?.message || err);
       }
+    } else {
+      try {
+        const pinArchive = dbClients.getPinArchive(runtimeEnv);
+        await pinArchive
+          .from('pa_workspace_settings')
+          .update({
+            fastcron_job_id: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('workspace_id', workspaceId);
+      } catch {}
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        configured: true,
+        configured: Boolean(enrichedJobs.length > 0),
         token_source: tokenInfo.token_source || 'workspace_registry',
         token_name: tokenInfo.token_name || 'Workspace Default',
         masked_token: tokenInfo.masked_token || 'fastcron...',

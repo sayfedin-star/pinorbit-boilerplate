@@ -116,13 +116,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
           const tokenRes = await resolveScheduleToken(schedulingAdmin, ws, 'pinarchive', runtimeEnv);
           if (tokenRes?.token) {
             const { fastcronCall } = await import('../../../server/lib/fastcron-client');
+            const { isMatchingPinArchiveJob } = await import('./cron');
             const listRes = await fastcronCall('cron_list', { keyword: 'PinOrbit' }, tokenRes.token);
             const list = Array.isArray(listRes.data) ? listRes.data : Array.isArray(listRes.data?.data) ? listRes.data.data : [];
-            const matchingJob = list.find((j: any) => {
-              const isMatch = String(j.url || '').includes(ws) || String(j.name || '').includes(ws.slice(0, 8));
-              const isActive = j.status !== 'paused' && j.status !== 'disabled' && !j.paused;
-              return isMatch && isActive;
-            }) || list.find((j: any) => String(j.url || '').includes(ws) || String(j.name || '').includes(ws.slice(0, 8)));
+            const matchingJob = list.find((j: any) => isMatchingPinArchiveJob(j, ws) && j.status !== 'paused' && j.status !== 'disabled' && !j.paused)
+              || list.find((j: any) => isMatchingPinArchiveJob(j, ws));
 
             if (matchingJob) {
               cronExpr = matchingJob.expression || matchingJob.cron_expression;

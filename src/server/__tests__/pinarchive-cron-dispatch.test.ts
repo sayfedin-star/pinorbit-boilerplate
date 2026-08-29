@@ -442,26 +442,88 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite (v3 Delta)', () =>
     });
 
     it('prevents cross-tenant leak: isMatchingPinArchiveJob returns false for foreign workspace jobs', () => {
-      const foreignWsId = '99999999-0000-0000-0000-000000000000';
-      const myWsId = '11111111-2222-3333-4444-555555555555';
+      const foreignWsId = '9f08ca03-e79c-46fa-9518-6858216daf65';
+      const myWsId = '46afe19d-f16f-4d75-9164-41614616da27';
       const dispatchUrl = 'https://pinorbit-v2.o-i.workers.dev/api/internal/pinarchive/dispatch';
 
-      const foreignJob = {
+      // 1. With post_data
+      const foreignJobWithPostData = {
         id: 999,
         url: dispatchUrl,
-        name: 'PinOrbit pinarchive — ForeignWS — Daily Refresh — 99999999',
+        name: 'PinOrbit pinarchive — Hymum — Default Daily — 9f08ca03',
         post_data: JSON.stringify({ workspace_id: foreignWsId, pipeline: 'pinarchive' }),
       };
+      expect(cronApi.isMatchingPinArchiveJob(foreignJobWithPostData, myWsId, dispatchUrl)).toBe(false);
 
-      const myJob = {
-        id: 111,
+      // 2. WITHOUT post_data (exact payload returned by FastCron cron_list API)
+      const foreignJobWithoutPostData = {
+        id: 20845402,
         url: dispatchUrl,
-        name: 'PinOrbit pinarchive — MyWS — Daily Refresh — 11111111',
-        post_data: JSON.stringify({ workspace_id: myWsId, pipeline: 'pinarchive' }),
+        name: 'PinOrbit pinarchive — Hymum — Default Daily — 9f08ca03',
+        expression: '0 3 * * *',
+        status: 'enabled',
+      };
+      // For my workspace (46afe19d), it MUST be false!
+      expect(cronApi.isMatchingPinArchiveJob(foreignJobWithoutPostData, myWsId, dispatchUrl)).toBe(false);
+      // For foreign workspace (9f08ca03), it MUST be true!
+      expect(cronApi.isMatchingPinArchiveJob(foreignJobWithoutPostData, foreignWsId, dispatchUrl)).toBe(true);
+
+      // 3. Competitor job without post_data must NEVER match PinArchive
+      const competitorJob = {
+        id: 20845401,
+        url: 'https://pinorbit-v2.o-i.workers.dev/api/internal/competitors/dispatch',
+        name: 'PinOrbit competitors — Hymum — Daily Competitor Ingestion — 9f08ca03',
+        expression: '0 2 * * *',
+      };
+      expect(cronApi.isMatchingPinArchiveJob(competitorJob, myWsId, dispatchUrl)).toBe(false);
+      expect(cronApi.isMatchingPinArchiveJob(competitorJob, foreignWsId, dispatchUrl)).toBe(false);
+    });
+
+    it('GET /api/pinarchive/cron does NOT leak foreign FastCron jobs when token is shared', async () => {
+      const myWsId = '46afe19d-f16f-4d75-9164-41614616da27';
+      const foreignJob = {
+        id: 20845402,
+        name: 'PinOrbit pinarchive — Hymum — Default Daily — 9f08ca03',
+        url: 'https://pinorbit-v2.o-i.workers.dev/api/internal/pinarchive/dispatch',
+        expression: '0 3 * * *',
+        status: 'enabled',
       };
 
-      expect(cronApi.isMatchingPinArchiveJob(foreignJob, myWsId, dispatchUrl)).toBe(false);
-      expect(cronApi.isMatchingPinArchiveJob(myJob, myWsId, dispatchUrl)).toBe(true);
+      global.fetch = vi.fn().mockImplementation(async (url: string) => {
+        if (url.includes('cron_list')) {
+          return new Response(JSON.stringify({ status: 'OK', data: [foreignJob] }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ status: 'OK' }), { status: 200 });
+      });
+
+      const createMockSupabase = () => ({
+        from: () => {
+          const builder: any = {
+            select: () => builder,
+            eq: () => builder,
+            single: async () => ({ data: { id: 'm1', role: 'admin', name: '5Acc-R001' }, error: null }),
+            maybeSingle: async () => ({ data: { name: '5Acc-R001', token_masked: '••••chVF' }, error: null }),
+          };
+          return builder;
+        },
+      });
+
+      const res = await cronApi.GET({
+        locals: {
+          user: { id: '99999999-8888-7777-6666-555555555555' },
+          supabase: createMockSupabase(),
+          activeWorkspaceId: myWsId,
+          runtimeEnv: {
+            FASTCRON_API_TOKEN: mockToken,
+          },
+        },
+      } as any);
+
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.jobs.length).toBe(0);
+      expect(json.configured).toBe(false);
     });
 
     it('DELETE /api/pinarchive/cron returns 403 when attempting to delete a foreign workspace job', async () => {
