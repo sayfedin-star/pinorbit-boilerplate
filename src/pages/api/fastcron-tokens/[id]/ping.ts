@@ -35,9 +35,10 @@ export const POST: APIRoute = async ({ params, locals }) => {
       .from('fastcron_tokens')
       .select('id, workspace_id, token_encrypted')
       .eq('id', id)
+      .eq('workspace_id', workspaceId)
       .maybeSingle();
 
-    if (dbErr || !tokenRow || tokenRow.workspace_id !== workspaceId) {
+    if (dbErr || !tokenRow) {
       return new Response(JSON.stringify({ healthy: false, error: 'Token not found in active workspace' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' },

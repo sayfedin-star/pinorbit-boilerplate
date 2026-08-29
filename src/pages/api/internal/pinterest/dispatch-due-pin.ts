@@ -165,7 +165,7 @@ async function handleDispatch(body: any, locals: any) {
   }
 
   if (dispatched > 0) {
-    await admin.from('posting_schedules').update({ last_dispatched_at: new Date().toISOString() }).eq('id', scheduleId).then(() => {});
+    await admin.from('posting_schedules').update({ last_dispatched_at: new Date().toISOString() }).eq('id', scheduleId).eq('workspace_id', workspaceId).then(() => {});
   }
 
   return json({ success: true, dispatched, skipped });

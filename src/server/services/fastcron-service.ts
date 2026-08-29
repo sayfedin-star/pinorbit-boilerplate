@@ -1002,7 +1002,11 @@ export async function resolveScheduleToken(schedule: any, runtimeEnv: Record<str
 
 export const resolveTokenForSchedule = resolveScheduleToken;
 
-export async function syncPublishingSchedule(schedule: any, runtimeEnv: Record<string, any>): Promise<{ success: boolean; job_id?: number | null; error?: string }> {
+export async function syncPublishingSchedule(
+  schedule: any,
+  runtimeEnv: Record<string, any>,
+  workspaceId?: string
+): Promise<{ success: boolean; job_id?: number | null; error?: string }> {
   const schedulingClient = getSchedulingAdminClient(runtimeEnv);
   let token: string;
   try {
@@ -1069,14 +1073,29 @@ export async function syncPublishingSchedule(schedule: any, runtimeEnv: Record<s
   const returnedId = result.data?.id ?? result.data?.data?.id ?? (Array.isArray(result.data?.ids) ? result.data.ids[0] : null);
   const parsedId = returnedId != null && !isNaN(Number(returnedId)) ? Number(returnedId) : null;
   if (parsedId) {
-    await schedulingClient.from('posting_schedules').update({ fastcron_job_id: parsedId }).eq('id', schedule.id);
+    const wsId = workspaceId || schedule?.workspace_id;
+    let updateQuery = schedulingClient.from('posting_schedules').update({ fastcron_job_id: parsedId }).eq('id', schedule.id);
+    if (wsId) {
+      updateQuery = updateQuery.eq('workspace_id', wsId);
+    }
+    await updateQuery;
   }
   return { success: true, job_id: parsedId };
 }
 
-export async function pausePublishingSchedule(scheduleId: string, jobId: number, runtimeEnv: Record<string, any>): Promise<{ success: boolean; error?: string }> {
+export async function pausePublishingSchedule(
+  scheduleId: string,
+  jobId: number,
+  runtimeEnv: Record<string, any>,
+  workspaceId: string
+): Promise<{ success: boolean; error?: string }> {
   const schedulingClient = getSchedulingAdminClient(runtimeEnv);
-  const { data: schedule } = await schedulingClient.from('posting_schedules').select('*').eq('id', scheduleId).single();
+  const { data: schedule } = await schedulingClient
+    .from('posting_schedules')
+    .select('*')
+    .eq('id', scheduleId)
+    .eq('workspace_id', workspaceId)
+    .single();
   let token: string;
   try {
     token = await resolveScheduleToken(schedule, runtimeEnv);
@@ -1085,13 +1104,27 @@ export async function pausePublishingSchedule(scheduleId: string, jobId: number,
   }
   const res = await fastcronService.fastcronCall('cron_disable', { id: jobId }, token);
   if (!res.success) return { success: false, error: res.error };
-  await schedulingClient.from('posting_schedules').update({ status: 'paused' }).eq('id', scheduleId);
+  await schedulingClient
+    .from('posting_schedules')
+    .update({ status: 'paused' })
+    .eq('id', scheduleId)
+    .eq('workspace_id', workspaceId);
   return { success: true };
 }
 
-export async function resumePublishingSchedule(scheduleId: string, jobId: number, runtimeEnv: Record<string, any>): Promise<{ success: boolean; error?: string }> {
+export async function resumePublishingSchedule(
+  scheduleId: string,
+  jobId: number,
+  runtimeEnv: Record<string, any>,
+  workspaceId: string
+): Promise<{ success: boolean; error?: string }> {
   const schedulingClient = getSchedulingAdminClient(runtimeEnv);
-  const { data: schedule } = await schedulingClient.from('posting_schedules').select('*').eq('id', scheduleId).single();
+  const { data: schedule } = await schedulingClient
+    .from('posting_schedules')
+    .select('*')
+    .eq('id', scheduleId)
+    .eq('workspace_id', workspaceId)
+    .single();
   let token: string;
   try {
     token = await resolveScheduleToken(schedule, runtimeEnv);
@@ -1100,21 +1133,31 @@ export async function resumePublishingSchedule(scheduleId: string, jobId: number
   }
   const res = await fastcronService.fastcronCall('cron_enable', { id: jobId }, token);
   if (!res.success) return { success: false, error: res.error };
-  await schedulingClient.from('posting_schedules').update({ status: 'active' }).eq('id', scheduleId);
+  await schedulingClient
+    .from('posting_schedules')
+    .update({ status: 'active' })
+    .eq('id', scheduleId)
+    .eq('workspace_id', workspaceId);
   return { success: true };
 }
 
 export async function deletePublishingSchedule(
   scheduleId: string,
   jobId: number | null | undefined,
-  runtimeEnv: Record<string, any>
+  runtimeEnv: Record<string, any>,
+  workspaceId: string
 ): Promise<{ success: boolean; remote_deleted?: boolean; remote_error?: string; error?: string }> {
   const schedulingClient = getSchedulingAdminClient(runtimeEnv);
   let remoteError: string | undefined;
   let remoteDeleted = false;
 
   if (jobId) {
-    const { data: schedule } = await schedulingClient.from('posting_schedules').select('*').eq('id', scheduleId).maybeSingle();
+    const { data: schedule } = await schedulingClient
+      .from('posting_schedules')
+      .select('*')
+      .eq('id', scheduleId)
+      .eq('workspace_id', workspaceId)
+      .maybeSingle();
     try {
       const token = await resolveScheduleToken(schedule, runtimeEnv);
       if (token) {
@@ -1132,7 +1175,11 @@ export async function deletePublishingSchedule(
     }
   }
 
-  const { error: dbErr } = await schedulingClient.from('posting_schedules').delete().eq('id', scheduleId);
+  const { error: dbErr } = await schedulingClient
+    .from('posting_schedules')
+    .delete()
+    .eq('id', scheduleId)
+    .eq('workspace_id', workspaceId);
   if (dbErr) {
     return { success: false, error: dbErr.message, remote_error: remoteError };
   }
@@ -1140,9 +1187,18 @@ export async function deletePublishingSchedule(
   return { success: true, remote_deleted: remoteDeleted, remote_error: remoteError };
 }
 
-export async function clonePublishingSchedule(scheduleId: string, runtimeEnv: Record<string, any>): Promise<{ success: boolean; new_schedule?: any; error?: string }> {
+export async function clonePublishingSchedule(
+  scheduleId: string,
+  runtimeEnv: Record<string, any>,
+  workspaceId: string
+): Promise<{ success: boolean; new_schedule?: any; error?: string }> {
   const schedulingClient = getSchedulingAdminClient(runtimeEnv);
-  const { data: orig, error: fetchErr } = await schedulingClient.from('posting_schedules').select('*').eq('id', scheduleId).single();
+  const { data: orig, error: fetchErr } = await schedulingClient
+    .from('posting_schedules')
+    .select('*')
+    .eq('id', scheduleId)
+    .eq('workspace_id', workspaceId)
+    .single();
   if (fetchErr || !orig) return { success: false, error: 'Original schedule not found' };
   const newDispatchToken = crypto.randomUUID();
   const newLabel = (orig.label || '') + ' (copy)';
@@ -1169,7 +1225,7 @@ export async function clonePublishingSchedule(scheduleId: string, runtimeEnv: Re
     .select()
     .single();
   if (insertErr || !newRow) return { success: false, error: insertErr?.message || 'Failed to insert clone' };
-  const syncResult = await syncPublishingSchedule(newRow, runtimeEnv);
+  const syncResult = await syncPublishingSchedule(newRow, runtimeEnv, orig.workspace_id);
   if (!syncResult.success) return { success: false, error: syncResult.error };
   return { success: true, new_schedule: newRow };
 }

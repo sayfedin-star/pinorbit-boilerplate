@@ -73,7 +73,7 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
       .select()
       .single();
     if (updateErr || !updated) throw updateErr || new Error('Update failed');
-    const syncResult = await syncPublishingSchedule(updated, runtimeEnv);
+    const syncResult = await syncPublishingSchedule(updated, runtimeEnv, workspaceId);
     const responseSchedule = { ...updated };
     delete responseSchedule.fastcron_token_encrypted;
     delete responseSchedule.dispatch_token;
@@ -106,7 +106,7 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     if (!schedule) {
       return new Response(JSON.stringify({ error: 'Schedule not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
-    const result = await deletePublishingSchedule(id, schedule?.fastcron_job_id, runtimeEnv);
+    const result = await deletePublishingSchedule(id, schedule?.fastcron_job_id, runtimeEnv, workspaceId);
     if (!result.success) throw new Error(result.error);
     return new Response(JSON.stringify({ success: true, remote_deleted: result.remote_deleted, remote_error: result.remote_error }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (err: any) {

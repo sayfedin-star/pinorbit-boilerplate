@@ -64,7 +64,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       let query = adminClient
         .from('boards')
         .delete()
-        .eq('account_id', account_id);
+        .eq('account_id', account_id)
+        .eq('workspace_id', workspaceId);
 
       if (isUuid) {
         query = query.or(`id.eq.${sanitizedId},board_id.eq.${sanitizedId},pinterest_board_id.eq.${sanitizedId}`);

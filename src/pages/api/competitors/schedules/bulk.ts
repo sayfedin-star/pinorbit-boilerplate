@@ -86,7 +86,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await compAdmin
             .from('competitor_schedules')
             .update({ status: action === 'pause' ? 'paused' : 'active', updated_at: new Date().toISOString() })
-            .eq('id', sched.id);
+            .eq('id', sched.id)
+            .eq('workspace_id', workspaceId);
 
           successCount++;
           results.push({ id: sched.id, action, success: true });
@@ -94,7 +95,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           if (sched.fastcron_job_id && targetTokenObj?.token) {
             await fastcronCall('cron_delete', { id: Number(sched.fastcron_job_id) }, targetTokenObj.token).catch(() => {});
           }
-          await compAdmin.from('competitor_schedules').delete().eq('id', sched.id);
+          await compAdmin
+            .from('competitor_schedules')
+            .delete()
+            .eq('id', sched.id)
+            .eq('workspace_id', workspaceId);
           successCount++;
           results.push({ id: sched.id, action, success: true });
         } else if (action === 'clone') {

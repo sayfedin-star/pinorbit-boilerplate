@@ -29,8 +29,13 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
     const adminClient = dbClients.getSchedulingAdmin(runtimeEnv);
 
-    const { data: existing } = await adminClient.from('fastcron_tokens').select('*').eq('id', id).single();
-    if (!existing || existing.workspace_id !== workspaceId) {
+    const { data: existing } = await adminClient
+      .from('fastcron_tokens')
+      .select('*')
+      .eq('id', id)
+      .eq('workspace_id', workspaceId)
+      .maybeSingle();
+    if (!existing) {
       return new Response(JSON.stringify({ error: 'Token not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -67,6 +72,7 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
       .from('fastcron_tokens')
       .update(updateFields)
       .eq('id', id)
+      .eq('workspace_id', workspaceId)
       .select('id, workspace_id, name, token_masked, is_default, created_at, updated_at')
       .single();
 
@@ -92,12 +98,21 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
     const adminClient = dbClients.getSchedulingAdmin(runtimeEnv);
 
-    const { data: existing } = await adminClient.from('fastcron_tokens').select('*').eq('id', id).single();
-    if (!existing || existing.workspace_id !== workspaceId) {
+    const { data: existing } = await adminClient
+      .from('fastcron_tokens')
+      .select('*')
+      .eq('id', id)
+      .eq('workspace_id', workspaceId)
+      .maybeSingle();
+    if (!existing) {
       return new Response(JSON.stringify({ error: 'Token not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const { error: delErr } = await adminClient.from('fastcron_tokens').delete().eq('id', id);
+    const { error: delErr } = await adminClient
+      .from('fastcron_tokens')
+      .delete()
+      .eq('id', id)
+      .eq('workspace_id', workspaceId);
     if (delErr) throw delErr;
 
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });

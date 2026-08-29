@@ -29,7 +29,7 @@ export const POST: APIRoute = async ({ locals }) => {
     const results: { id: string; success: boolean; error?: string; job_id?: number | null }[] = [];
     for (const schedule of schedules || []) {
       try {
-        const syncResult = await syncPublishingSchedule(schedule, runtimeEnv);
+        const syncResult = await syncPublishingSchedule(schedule, runtimeEnv, workspaceId);
         results.push({ id: schedule.id, success: syncResult.success, error: syncResult.error, job_id: syncResult.job_id });
       } catch (e: any) {
         results.push({ id: schedule.id, success: false, error: e.message });
