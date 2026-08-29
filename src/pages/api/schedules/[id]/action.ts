@@ -54,13 +54,13 @@ export const POST: APIRoute = async ({ request, params, locals }) => {
 
     if (action === 'pause') {
       if (!schedule.fastcron_job_id) return new Response(JSON.stringify({ error: 'Job not configured' }), { status: 400 });
-      const result = await pausePublishingSchedule(id, schedule.fastcron_job_id, runtimeEnv);
+      const result = await pausePublishingSchedule(id, schedule.fastcron_job_id, runtimeEnv, workspaceId);
       if (!result.success) throw new Error(result.error);
       return new Response(JSON.stringify({ success: true }), { status: 200 });
     }
     if (action === 'resume') {
       if (!schedule.fastcron_job_id) return new Response(JSON.stringify({ error: 'Job not configured' }), { status: 400 });
-      const result = await resumePublishingSchedule(id, schedule.fastcron_job_id, runtimeEnv);
+      const result = await resumePublishingSchedule(id, schedule.fastcron_job_id, runtimeEnv, workspaceId);
       if (!result.success) throw new Error(result.error);
       return new Response(JSON.stringify({ success: true }), { status: 200 });
     }
@@ -98,7 +98,7 @@ export const POST: APIRoute = async ({ request, params, locals }) => {
       });
     }
     if (action === 'clone') {
-      const result = await clonePublishingSchedule(id, runtimeEnv);
+      const result = await clonePublishingSchedule(id, runtimeEnv, workspaceId);
       if (!result.success) throw new Error(result.error);
       const sanitized = { ...result.new_schedule };
       delete sanitized.fastcron_token_encrypted;
@@ -106,7 +106,7 @@ export const POST: APIRoute = async ({ request, params, locals }) => {
       return new Response(JSON.stringify({ success: true, new_schedule: sanitized }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
     if (action === 'delete') {
-      const result = await deletePublishingSchedule(id, schedule.fastcron_job_id, runtimeEnv);
+      const result = await deletePublishingSchedule(id, schedule.fastcron_job_id, runtimeEnv, workspaceId);
       if (!result.success) throw new Error(result.error);
       return new Response(JSON.stringify({ success: true, remote_deleted: result.remote_deleted, remote_error: result.remote_error }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }

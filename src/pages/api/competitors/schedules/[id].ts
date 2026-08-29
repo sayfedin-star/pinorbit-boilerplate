@@ -138,6 +138,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       .from('competitor_schedules')
       .update(updatePayload)
       .eq('id', id)
+      .eq('workspace_id', workspaceId)
       .select('*')
       .single();
 

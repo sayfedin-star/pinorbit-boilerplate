@@ -172,11 +172,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
     const { data: inserted, error: insertErr } = await adminClient.from('posting_schedules').insert(newRow).select().single();
     if (insertErr || !inserted) throw insertErr || new Error('Insert failed');
-    const syncResult = await syncPublishingSchedule(inserted, runtimeEnv);
+    const syncResult = await syncPublishingSchedule(inserted, runtimeEnv, workspaceId);
     if (!syncResult.success) {
-      await adminClient.from('posting_schedules').update({ status: 'error' }).eq('id', inserted.id);
+      await adminClient.from('posting_schedules').update({ status: 'error' }).eq('id', inserted.id).eq('workspace_id', workspaceId);
     } else {
-      await adminClient.from('posting_schedules').update({ status: 'active', fastcron_job_id: syncResult.job_id }).eq('id', inserted.id);
+      await adminClient.from('posting_schedules').update({ status: 'active', fastcron_job_id: syncResult.job_id }).eq('id', inserted.id).eq('workspace_id', workspaceId);
     }
     const responseSchedule = { ...inserted };
     delete responseSchedule.fastcron_token_encrypted;

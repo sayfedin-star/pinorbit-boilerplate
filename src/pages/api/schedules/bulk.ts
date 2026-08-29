@@ -62,16 +62,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
           results.push({ id, success: true });
         } else if (action === 'pause') {
           if (!schedule.fastcron_job_id) throw new Error('Job not configured');
-          const result = await pausePublishingSchedule(id, schedule.fastcron_job_id, runtimeEnv);
+          const result = await pausePublishingSchedule(id, schedule.fastcron_job_id, runtimeEnv, workspaceId);
           if (!result.success) throw new Error(result.error);
           results.push({ id, success: true });
         } else if (action === 'resume') {
           if (!schedule.fastcron_job_id) throw new Error('Job not configured');
-          const result = await resumePublishingSchedule(id, schedule.fastcron_job_id, runtimeEnv);
+          const result = await resumePublishingSchedule(id, schedule.fastcron_job_id, runtimeEnv, workspaceId);
           if (!result.success) throw new Error(result.error);
           results.push({ id, success: true });
         } else if (action === 'delete') {
-          const result = await deletePublishingSchedule(id, schedule.fastcron_job_id, runtimeEnv);
+          const result = await deletePublishingSchedule(id, schedule.fastcron_job_id, runtimeEnv, workspaceId);
           if (!result.success) throw new Error(result.error);
           results.push({
             id,
@@ -80,7 +80,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             remote_error: result.remote_error,
           });
         } else if (action === 'clone') {
-          const result = await clonePublishingSchedule(id, runtimeEnv);
+          const result = await clonePublishingSchedule(id, runtimeEnv, workspaceId);
           if (!result.success) throw new Error(result.error);
           results.push({ id, success: true });
         }
