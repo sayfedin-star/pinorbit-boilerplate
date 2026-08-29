@@ -39,7 +39,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       full_name: p.full_name || comp.data.full_name, avatar_url: p.avatar_url || comp.data.avatar_url,
       website_url: p.website_url ?? comp.data.website_url, domain_verified: p.domain_verified ?? comp.data.domain_verified,
       last_pin_at: p.last_pin_at ?? comp.data.last_pin_at, last_checked_at: now,
-    }).eq('id', comp.data.id);
+    }).eq('id', comp.data.id).eq('workspace_id', ws);
     await db.from('competitor_snapshots').insert({ competitor_id: comp.data.id, profile_reach: reach, profile_views: views, follower_count: fol, pin_count: pins, recorded_at: now });
     await db.from('competitor_daily_snapshots').upsert({ competitor_id: comp.data.id, snapshot_date: now.slice(0, 10), profile_reach: reach, profile_views: views, follower_count: fol, pin_count: pins }, { onConflict: 'competitor_id,snapshot_date' });
 

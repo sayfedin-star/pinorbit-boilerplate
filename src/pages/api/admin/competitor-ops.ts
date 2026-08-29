@@ -134,7 +134,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
   const auth = await authenticateAdmin(request, locals, body.workspace_id);
   if (auth.error) return auth.error;
 
-  const { workspaceId, competitorsClient } = auth.ok!;
+  const { workspaceId, competitorsClient, runtimeEnv } = auth.ok!;
 
   const isEnabled = body.is_enabled !== undefined ? Boolean(body.is_enabled) : true;
   const dryRun = body.dry_run !== undefined ? Boolean(body.dry_run) : false;
