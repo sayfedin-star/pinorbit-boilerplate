@@ -83,6 +83,11 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(json.pin_filter_min_repins).toBe(0);
       expect(json.pin_filter_rising_age_days).toBe(14);
       expect(json.pin_filter_rising_saves).toBe(34);
+      expect(json.discovery_stop_pages).toBe(3);
+      expect(json.audit_sweep_enabled).toBe(true);
+      expect(json.candidates_enabled).toBe(true);
+      expect(json.sheet_write_mode).toBe('append_only');
+      expect(json.daily_sheet_sync_enabled).toBe(false);
       expect(json.pin_filter_max_age_days).toBeUndefined();
       expect(json.is_default).toBe(true);
     });
@@ -101,6 +106,11 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
                 pin_filter_min_repins: 100,
                 pin_filter_rising_age_days: 10,
                 pin_filter_rising_saves: 50,
+                discovery_stop_pages: 5,
+                audit_sweep_enabled: true,
+                candidates_enabled: false,
+                sheet_write_mode: 'full_update',
+                daily_sheet_sync_enabled: true,
                 updated_at: '2026-08-23T12:00:00Z',
               },
               error: null,
@@ -118,6 +128,7 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.success).toBe(true);
+      expect(json.workspace_id).toBe(mockWsId);
       expect(json.ingest_enabled).toBe(false);
       expect(json.paused_account_policy).toBe('accept');
       expect(json.max_batch_pins).toBe(1200);
@@ -125,7 +136,11 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(json.pin_filter_min_repins).toBe(100);
       expect(json.pin_filter_rising_age_days).toBe(10);
       expect(json.pin_filter_rising_saves).toBe(50);
-      expect(json.pin_filter_max_age_days).toBeUndefined();
+      expect(json.discovery_stop_pages).toBe(5);
+      expect(json.audit_sweep_enabled).toBe(true);
+      expect(json.candidates_enabled).toBe(false);
+      expect(json.sheet_write_mode).toBe('full_update');
+      expect(json.daily_sheet_sync_enabled).toBe(true);
       expect(json.is_default).toBe(false);
     });
   });
@@ -293,6 +308,11 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
           pin_filter_min_repins: 50,
           pin_filter_rising_age_days: 10,
           pin_filter_rising_saves: 30,
+          discovery_stop_pages: 5,
+          audit_sweep_enabled: true,
+          candidates_enabled: false,
+          sheet_write_mode: 'full_update',
+          daily_sheet_sync_enabled: true,
         }),
       });
 
@@ -311,10 +331,20 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(json.pin_filter_min_repins).toBe(50);
       expect(json.pin_filter_rising_age_days).toBe(10);
       expect(json.pin_filter_rising_saves).toBe(30);
+      expect(json.discovery_stop_pages).toBe(5);
+      expect(json.audit_sweep_enabled).toBe(true);
+      expect(json.candidates_enabled).toBe(false);
+      expect(json.sheet_write_mode).toBe('full_update');
+      expect(json.daily_sheet_sync_enabled).toBe(true);
       expect(savedPayload.workspace_id).toBe(mockWsId);
       expect(savedPayload.default_interval_days).toBeUndefined();
       expect(savedPayload.pin_filter_rising_age_days).toBe(10);
       expect(savedPayload.pin_filter_rising_saves).toBe(30);
+      expect(savedPayload.discovery_stop_pages).toBe(5);
+      expect(savedPayload.audit_sweep_enabled).toBe(true);
+      expect(savedPayload.candidates_enabled).toBe(false);
+      expect(savedPayload.sheet_write_mode).toBe('full_update');
+      expect(savedPayload.daily_sheet_sync_enabled).toBe(true);
     });
   });
 
