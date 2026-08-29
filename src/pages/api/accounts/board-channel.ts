@@ -68,7 +68,8 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
         board_webhook_id: targetWhId,
         board_creation_webhook_id: targetWhId, // Keep synced for backward compatibility
       })
-      .eq('id', account_id);
+      .eq('id', account_id)
+      .eq('workspace_id', workspaceId);
 
     if (updateErr) {
       return new Response(JSON.stringify({ error: updateErr.message || 'Failed to update board channel.' }), { status: 500, headers: { 'Content-Type': 'application/json' } });

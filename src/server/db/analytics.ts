@@ -1553,16 +1553,22 @@ export const analyticsDb = {
   /**
    * Updates the last_analytics_sync_at timestamp for a connection in Project 3.
    */
-  async updateConnectionLastSync(connectionId: string): Promise<void> {
+  async updateConnectionLastSync(connectionId: string, workspaceId?: string): Promise<void> {
     if (!connectionId) return;
     const analyticsClient = dbClients.getAnalytics();
-    await analyticsClient
+    let query = analyticsClient
       .from('analytics_connections')
       .update({
         last_analytics_sync_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq('id', connectionId);
+
+    if (workspaceId) {
+      query = query.eq('workspace_id', workspaceId);
+    }
+
+    await query;
   },
 
   /**

@@ -20,6 +20,10 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   const comp = await db.from('competitors').select('id').eq('id', snap.data.competitor_id).eq('workspace_id', ws).maybeSingle();
   if (!comp.data) return json({ error: 'Not found in workspace' }, 404);
 
-  const { error } = await db.from('competitor_snapshots').delete().eq('id', body.snapshot_id);
+  const { error } = await db
+    .from('competitor_snapshots')
+    .delete()
+    .eq('id', body.snapshot_id)
+    .eq('competitor_id', comp.data.id);
   return error ? json({ error: error.message }, 500) : json({ success: true });
 };

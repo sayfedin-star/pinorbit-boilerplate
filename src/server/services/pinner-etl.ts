@@ -810,7 +810,7 @@ export const pinnerETL = {
       // Edge Cache Invalidation & Post-Persistence Warmup
       // =========================================================================
       await edgeCache.invalidateConnection(workspaceId, connectionId, runtimeKvNamespace);
-      await analyticsDb.updateConnectionLastSync(connectionId);
+      await analyticsDb.updateConnectionLastSync(connectionId, workspaceId);
 
       return {
         success: true,
