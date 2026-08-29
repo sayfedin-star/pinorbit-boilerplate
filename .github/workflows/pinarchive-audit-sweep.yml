@@ -1,0 +1,87 @@
+name: PinArchive Monthly Audit Sweep
+
+on:
+  schedule:
+    - cron: '0 2 1 * *'
+  workflow_dispatch:
+    inputs:
+      workspace_id:
+        description: 'Workspace UUID (empty = all workspaces)'
+        required: false
+        type: string
+      usernames:
+        description: 'Comma-separated usernames (optional)'
+        required: false
+        type: string
+
+concurrency:
+  group: pinarchive-audit-sweep
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Log Egress IP
+        run: |
+          echo "Checking runner egress IP..."
+          curl -s --max-time 10 https://api.ipify.org?format=json || true
+
+      - name: Check audit_sweep_enabled Gate & Run Full Sweep
+        env:
+          PINARCHIVE_SUPABASE_URL: ${{ secrets.PINARCHIVE_SUPABASE_URL }}
+          PINARCHIVE_SUPABASE_KEY: ${{ secrets.PINARCHIVE_SUPABASE_KEY }}
+          PINORBIT_WORKER_URL: ${{ secrets.PINORBIT_WORKER_URL }}
+          PINARCHIVE_INGEST_SECRET: ${{ secrets.PINARCHIVE_INGEST_SECRET }}
+          PINARCHIVE_GAS_URL: ${{ secrets.PINARCHIVE_GAS_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DISCOVERY_WORKSPACE_ID: ${{ github.event.inputs.workspace_id || '' }}
+          DISCOVERY_USERNAMES: ${{ github.event.inputs.usernames || '' }}
+          AUDIT_SWEEP: 'true'
+          FORCE_RUN: 'true'
+          SHARD_COUNT: 1
+          DISCOVERY_SHARD: 0
+        run: |
+          node -e '
+          async function checkAuditGate() {
+            const supaUrl = process.env.PINARCHIVE_SUPABASE_URL;
+            const supaKey = process.env.PINARCHIVE_SUPABASE_KEY;
+            const targetWs = process.env.DISCOVERY_WORKSPACE_ID;
+            if (!supaUrl || !supaKey) {
+              console.log("Missing Supabase credentials for audit gate check");
+              return true;
+            }
+            try {
+              const url = `${supaUrl}/rest/v1/pa_workspace_settings?select=workspace_id,audit_sweep_enabled${targetWs ? "&workspace_id=eq." + targetWs : ""}`;
+              const res = await fetch(url, {
+                headers: { apikey: supaKey, Authorization: "Bearer " + supaKey, Accept: "application/json" }
+              });
+              if (res.ok) {
+                const settings = await res.json();
+                if (Array.isArray(settings) && settings.length > 0) {
+                  const anyEnabled = settings.some(s => s.audit_sweep_enabled !== false);
+                  if (!anyEnabled) {
+                    console.log("⏸️ Audit sweep is disabled across all target workspaces. Exiting cleanly (exit 0).");
+                    process.exit(0);
+                  }
+                }
+              }
+            } catch (e) {
+              console.warn("Could not check audit_sweep_enabled gate, proceeding with run:", e.message);
+            }
+          }
+          checkAuditGate().then(() => {
+            import("./scripts/pinarchive-discovery.mjs");
+          });
+          '

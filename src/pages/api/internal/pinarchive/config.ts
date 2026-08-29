@@ -55,7 +55,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const pinArchive = dbClients.getPinArchive(runtimeEnv);
     const { data: settings, error } = await pinArchive
       .from('pa_workspace_settings')
-      .select('pin_filter_min_saves, pin_filter_min_repins, pin_filter_rising_age_days, pin_filter_rising_saves, refresh_max_pins')
+      .select('pin_filter_min_saves, pin_filter_min_repins, pin_filter_rising_age_days, pin_filter_rising_saves, refresh_max_pins, discovery_stop_pages, audit_sweep_enabled, candidates_enabled, sheet_write_mode, daily_sheet_sync_enabled')
       .eq('workspace_id', workspaceId)
       .maybeSingle();
 
@@ -68,6 +68,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
           pin_filter_rising_age_days: 14,
           pin_filter_rising_saves: 34,
           refresh_max_pins: 0,
+          discovery_stop_pages: 3,
+          audit_sweep_enabled: true,
+          candidates_enabled: true,
+          sheet_write_mode: 'append_only',
+          daily_sheet_sync_enabled: false,
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
@@ -81,6 +86,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
         pin_filter_rising_age_days: Number(settings.pin_filter_rising_age_days ?? 14),
         pin_filter_rising_saves: Number(settings.pin_filter_rising_saves ?? 34),
         refresh_max_pins: Number(settings.refresh_max_pins || 0),
+        discovery_stop_pages: Number(settings.discovery_stop_pages ?? 3),
+        audit_sweep_enabled: settings.audit_sweep_enabled ?? true,
+        candidates_enabled: settings.candidates_enabled ?? true,
+        sheet_write_mode: settings.sheet_write_mode || 'append_only',
+        daily_sheet_sync_enabled: settings.daily_sheet_sync_enabled ?? false,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
@@ -94,6 +104,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
         pin_filter_rising_age_days: 14,
         pin_filter_rising_saves: 34,
         refresh_max_pins: 0,
+        discovery_stop_pages: 3,
+        audit_sweep_enabled: true,
+        candidates_enabled: true,
+        sheet_write_mode: 'append_only',
+        daily_sheet_sync_enabled: false,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );

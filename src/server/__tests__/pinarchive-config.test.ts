@@ -87,6 +87,11 @@ describe('PinArchive Internal Config Endpoint Suite (/api/internal/pinarchive/co
               pin_filter_min_repins: 100,
               pin_filter_rising_age_days: 7,
               pin_filter_rising_saves: 25,
+              discovery_stop_pages: 5,
+              audit_sweep_enabled: true,
+              candidates_enabled: false,
+              sheet_write_mode: 'full_update',
+              daily_sheet_sync_enabled: true,
             },
             error: null,
           }),
@@ -106,10 +111,15 @@ describe('PinArchive Internal Config Endpoint Suite (/api/internal/pinarchive/co
     expect(json.pin_filter_min_repins).toBe(100);
     expect(json.pin_filter_rising_age_days).toBe(7);
     expect(json.pin_filter_rising_saves).toBe(25);
+    expect(json.discovery_stop_pages).toBe(5);
+    expect(json.audit_sweep_enabled).toBe(true);
+    expect(json.candidates_enabled).toBe(false);
+    expect(json.sheet_write_mode).toBe('full_update');
+    expect(json.daily_sheet_sync_enabled).toBe(true);
     expect(json.pin_filter_max_age_days).toBeUndefined();
   });
 
-  it('FAIL-LAZY: returns 200 with fallback {0,0,14,34} when row is absent or on any DB query error', async () => {
+  it('FAIL-LAZY: returns 200 with fallback {0,0,14,34,3,true,true,append_only,false} when row is absent or on any DB query error', async () => {
     mockPinArchiveClient.from.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
@@ -133,6 +143,11 @@ describe('PinArchive Internal Config Endpoint Suite (/api/internal/pinarchive/co
     expect(json.pin_filter_min_repins).toBe(0);
     expect(json.pin_filter_rising_age_days).toBe(14);
     expect(json.pin_filter_rising_saves).toBe(34);
+    expect(json.discovery_stop_pages).toBe(3);
+    expect(json.audit_sweep_enabled).toBe(true);
+    expect(json.candidates_enabled).toBe(true);
+    expect(json.sheet_write_mode).toBe('append_only');
+    expect(json.daily_sheet_sync_enabled).toBe(false);
     expect(json.pin_filter_max_age_days).toBeUndefined();
   });
 });

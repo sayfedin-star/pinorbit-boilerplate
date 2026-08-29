@@ -1,0 +1,163 @@
+name: PinArchive Pipeline (GH Brain)
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      workspace_id:
+        description: 'Workspace UUID (empty = all workspaces)'
+        required: false
+        type: string
+      usernames:
+        description: 'Comma-separated usernames (optional)'
+        required: false
+        type: string
+      mode:
+        description: 'Pipeline mode: all | discovery | rotation | promotion'
+        required: false
+        type: choice
+        options:
+          - all
+          - discovery
+          - rotation
+          - promotion
+        default: all
+
+concurrency:
+  group: pinarchive-pipeline
+  cancel-in-progress: false
+
+jobs:
+  # ── STAGE 1: Discovery (Vault Cookies + IP Rotation + GAS Thin Writer) ──
+  discovery:
+    if: github.event.inputs.mode == 'all' || github.event.inputs.mode == 'discovery' || github.event_name == 'schedule' || github.event.inputs.mode == ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Log Egress IP
+        run: |
+          echo "Checking runner egress IP..."
+          curl -s --max-time 10 https://api.ipify.org?format=json || true
+
+      - name: Stagger Job Start (IP distribution)
+        run: |
+          DELAY=$(( ${{ matrix.shard }} * 30 ))
+          echo "Stagger delay for shard ${{ matrix.shard }}: ${DELAY}s"
+          sleep $DELAY
+
+      - name: Run PinArchive Discovery (Shard ${{ matrix.shard }}/4)
+        env:
+          PINARCHIVE_SUPABASE_URL: ${{ secrets.PINARCHIVE_SUPABASE_URL }}
+          PINARCHIVE_SUPABASE_KEY: ${{ secrets.PINARCHIVE_SUPABASE_KEY }}
+          PINORBIT_WORKER_URL: ${{ secrets.PINORBIT_WORKER_URL }}
+          PINARCHIVE_INGEST_SECRET: ${{ secrets.PINARCHIVE_INGEST_SECRET }}
+          PINARCHIVE_GAS_URL: ${{ secrets.PINARCHIVE_GAS_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DISCOVERY_WORKSPACE_ID: ${{ github.event.inputs.workspace_id || '' }}
+          DISCOVERY_USERNAMES: ${{ github.event.inputs.usernames || '' }}
+          DISCOVERY_SHARD: ${{ matrix.shard }}
+          SHARD_COUNT: 4
+        run: node scripts/pinarchive-discovery.mjs
+
+  # ── STAGE 2: Rotation (Metrics & Enrichment Refresh) ──
+  rotation:
+    needs: [discovery]
+    if: always() && (github.event.inputs.mode == 'all' || github.event.inputs.mode == 'rotation' || github.event_name == 'schedule' || github.event.inputs.mode == '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run PinArchive Refresh (Shard ${{ matrix.shard }}/4)
+        env:
+          PINARCHIVE_SUPABASE_URL: ${{ secrets.PINARCHIVE_SUPABASE_URL }}
+          PINARCHIVE_SUPABASE_KEY: ${{ secrets.PINARCHIVE_SUPABASE_KEY }}
+          PINORBIT_WORKER_URL: ${{ secrets.PINORBIT_WORKER_URL }}
+          PINARCHIVE_INGEST_SECRET: ${{ secrets.PINARCHIVE_INGEST_SECRET }}
+          REFRESH_WORKSPACE_ID: ${{ github.event.inputs.workspace_id || '' }}
+          REFRESH_USERNAMES: ${{ github.event.inputs.usernames || '' }}
+          REFRESH_SHARD: ${{ matrix.shard }}
+          SHARD_COUNT: 4
+          REFRESH_MAX_PINS: '0'
+        run: node scripts/pinarchive-refresh.mjs
+
+  # ── STAGE 3: Promotion (Re-evaluate Candidates via OR Rules) ──
+  promotion:
+    needs: [rotation]
+    if: always() && (github.event.inputs.mode == 'all' || github.event.inputs.mode == 'promotion' || github.event_name == 'schedule' || github.event.inputs.mode == '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Candidate Promotion
+        env:
+          PINORBIT_WORKER_URL: ${{ secrets.PINORBIT_WORKER_URL }}
+          PINARCHIVE_INGEST_SECRET: ${{ secrets.PINARCHIVE_INGEST_SECRET }}
+          PROMOTION_WORKSPACE_ID: ${{ github.event.inputs.workspace_id || '' }}
+        run: |
+          node -e '
+          async function runPromotion() {
+            const base = process.env.PINORBIT_WORKER_URL;
+            const secret = process.env.PINARCHIVE_INGEST_SECRET;
+            const wsId = process.env.PROMOTION_WORKSPACE_ID;
+            if (!base || !secret) {
+              console.log("Promotion skipped: missing PINORBIT_WORKER_URL / PINARCHIVE_INGEST_SECRET");
+              return;
+            }
+            const url = `${base.replace(/\/+$/, "")}/api/internal/pinarchive/reevaluate${wsId ? "?workspace_id=" + wsId : ""}`;
+            console.log("Triggering promotion at:", url);
+            try {
+              const res = await fetch(url, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-ingest-secret": secret,
+                },
+                body: JSON.stringify({ workspace_id: wsId || undefined }),
+              });
+              if (res.status === 404) {
+                console.log("ℹ️ /api/internal/pinarchive/reevaluate endpoint not yet deployed (Tier 2). Skipping for Tier 1.");
+                return;
+              }
+              const data = await res.json().catch(() => ({}));
+              console.log("Promotion result:", res.status, data);
+            } catch (e) {
+              console.warn("Promotion call failed (non-blocking):", e.message);
+            }
+          }
+          runPromotion();
+          '
