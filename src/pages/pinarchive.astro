@@ -156,7 +156,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
         </span>
         <h2 id="ingest-settings-heading" class="text-sm font-bold text-foreground">
-          GAS Ingestion &amp; Archive Rules
+          PinArchive Ingestion &amp; Archive Rules
         </h2>
         <span id="settings-summary-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
           🟢 Ingest Active
@@ -500,7 +500,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           id="gas-bulk-run-btn"
           type="button"
           class="inline-flex items-center gap-1 rounded-xl border border-border bg-card hover:bg-muted px-2.5 py-1.5 text-xs font-bold text-foreground shadow-xs transition-colors cursor-pointer"
-          title="Trigger Pinterest scraping run in GAS"
+          title="Trigger GH discovery + rotation pipeline"
         >
           <span>▶ Run</span>
         </button>
@@ -509,7 +509,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           id="gas-bulk-sync-btn"
           type="button"
           class="inline-flex items-center gap-1 rounded-xl border border-border bg-card hover:bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 shadow-xs transition-colors cursor-pointer"
-          title="Push filtered Sheet pins to DB"
+          title="Re-evaluate archive rules on candidates (server-side)"
         >
           <span>🔄 Sync</span>
         </button>
@@ -565,7 +565,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
             <th class="py-3 px-4 font-semibold">Pins Total</th>
             <th class="py-3 px-4 font-semibold">Δ Changed</th>
             <th class="py-3 px-4 font-semibold">Last / Next Run</th>
-            <th class="py-3 px-4 font-semibold text-center">Accept GAS</th>
+            <th class="py-3 px-4 font-semibold text-center">Ingest Active</th>
             <th class="py-3 px-4 text-right font-semibold">Actions</th>
           </tr>
         </thead>
@@ -893,7 +893,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         ${optHeaders}
         <th class="py-3 px-4 font-semibold">Δ Changed</th>
         <th class="py-3 px-4 font-semibold">Last / Next Run</th>
-        <th class="py-3 px-4 font-semibold text-center">Accept GAS</th>
+        <th class="py-3 px-4 font-semibold text-center">Ingest Active</th>
         <th class="py-3 px-4 text-right font-semibold">Actions</th>
       </tr>
     `;
@@ -1604,7 +1604,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         const usernames = getSelectedUsernames();
         if (usernames.length === 0) return;
         runBtn.disabled = true;
-        toast(`Triggered GAS run for ${usernames.length} account(s)...`, 'info');
+        toast(`Triggered pipeline run for ${usernames.length} account(s)...`, 'info');
 
         try {
           const res = await fetch('/api/pinarchive/accounts-gas', {
@@ -1614,12 +1614,12 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           });
           const json = await res.json();
           if (json.success) {
-            toast(`GAS run queued for ${usernames.join(', ')}.`, 'success');
+            toast(`Pipeline run queued for ${usernames.join(', ')}.`, 'success');
           } else {
-            toast(json.error || 'Failed to dispatch GAS run', 'error');
+            toast(json.error || 'Failed to dispatch pipeline run', 'error');
           }
         } catch (err: any) {
-          toast(err?.message || 'Network error triggering GAS run', 'error');
+          toast(err?.message || 'Network error triggering pipeline run', 'error');
         } finally {
           runBtn.disabled = false;
         }
@@ -1633,7 +1633,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         const usernames = getSelectedUsernames();
         if (usernames.length === 0) return;
         syncBtn.disabled = true;
-        toast(`Syncing ${usernames.length} account(s) from Sheet → DB...`, 'info');
+        toast(`Re-evaluating candidates for ${usernames.length} account(s)...`, 'info');
 
         try {
           const res = await fetch('/api/pinarchive/accounts-gas', {
@@ -1643,13 +1643,13 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           });
           const json = await res.json();
           if (json.success) {
-            toast(`Sync complete for ${usernames.length} account(s)!`, 'success');
+            toast(`Candidate re-evaluation complete!`, 'success');
             await loadOverview();
           } else {
-            toast(json.error || 'Failed to dispatch GAS sync', 'error');
+            toast(json.error || 'Failed to re-evaluate candidates', 'error');
           }
         } catch (err: any) {
-          toast(err?.message || 'Network error triggering GAS sync', 'error');
+          toast(err?.message || 'Network error triggering candidate re-evaluation', 'error');
         } finally {
           syncBtn.disabled = false;
         }

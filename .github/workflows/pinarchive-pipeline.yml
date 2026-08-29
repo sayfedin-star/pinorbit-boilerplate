@@ -1,3 +1,15 @@
+# ==============================================================================
+# PinArchive Staged Cutover & Execution Guide:
+# 1. First manual dispatch: Scope to <= 3 accounts using the `usernames` input.
+# 2. Verify 4 Rollout Gates:
+#    - >= 90% HTTP 200 responses from Pinterest API.
+#    - Zero circuit-breaker trips (vault cookie decrypted & self-healed).
+#    - Sheet spot-check: 0 duplicate pin_ids, correct data integrity.
+#    - Sane candidate promotion counts in DB.
+# 3. Full Matrix Run: Once gates pass, run without `usernames` filter for full
+#    workspace coverage across all 4 matrix runner shards.
+# ==============================================================================
+
 name: PinArchive Pipeline (GH Brain)
 
 on:

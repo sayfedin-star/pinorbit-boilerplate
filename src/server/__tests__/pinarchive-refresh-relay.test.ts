@@ -136,7 +136,7 @@ describe('PinArchive Refresh Relay Endpoint (/api/internal/pinarchive/refresh)',
 
     // Verify GitHub dispatch call
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://api.github.com/repos/sayfedin-star/pinorbit-v2/actions/workflows/pinarchive-refresh.yml/dispatches',
+      'https://api.github.com/repos/sayfedin-star/pinorbit-v2/actions/workflows/pinarchive-pipeline.yml/dispatches',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
@@ -147,8 +147,8 @@ describe('PinArchive Refresh Relay Endpoint (/api/internal/pinarchive/refresh)',
           ref: 'main',
           inputs: {
             workspace_id: mockWsId,
-            username: 'foodblogger',
-            usernames: '',
+            usernames: 'foodblogger',
+            mode: 'all',
           },
         }),
       })
@@ -309,15 +309,15 @@ describe('PinArchive Refresh Relay Endpoint (/api/internal/pinarchive/refresh)',
     expect(json.accounts).toBe(2);
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://api.github.com/repos/sayfedin-star/pinorbit-v2/actions/workflows/pinarchive-refresh.yml/dispatches',
+      'https://api.github.com/repos/sayfedin-star/pinorbit-v2/actions/workflows/pinarchive-pipeline.yml/dispatches',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
           ref: 'main',
           inputs: {
             workspace_id: mockWsId,
-            username: '',
             usernames: 'foodblogger,travel_tips',
+            mode: 'all',
           },
         }),
       })
@@ -359,15 +359,15 @@ describe('PinArchive Refresh Relay Endpoint (/api/internal/pinarchive/refresh)',
     expect(json.usernames).toEqual(['acc_one', 'acc_two']);
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://api.github.com/repos/sayfedin-star/pinorbit-v2/actions/workflows/pinarchive-refresh.yml/dispatches',
+      'https://api.github.com/repos/sayfedin-star/pinorbit-v2/actions/workflows/pinarchive-pipeline.yml/dispatches',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
           ref: 'main',
           inputs: {
             workspace_id: mockWsId,
-            username: '',
             usernames: 'acc_one,acc_two',
+            mode: 'all',
           },
         }),
       })

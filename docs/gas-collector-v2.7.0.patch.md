@@ -4,6 +4,16 @@ This document contains the deployed, canonical Google Apps Script (GAS) Collecto
 
 ---
 
+## ⚡ Cutover Instructions & Architecture Modes
+
+> **Operational Runbook**: See [docs/cutover-runbook.md](file:///C:/Users/D.Mouad/.gemini/antigravity/worktrees/PinOrbit/migrate_pinorbit_brain_gas/docs/cutover-runbook.md) for the complete atomic switch and rollback procedures.
+
+In v2.7.0, the `legacy_mode` Script Property controls the system role:
+- **`legacy_mode = false` (GH Brain Active / Thin Writer)**: GAS acts purely as a passive receiver for the `sheet_write` webhook from GitHub Actions. Autonomous scraping (`tick`), metric refreshing (`refreshArchived`), and direct Sheet scraping are bypassed (no-ops). Zero egress calls to Pinterest.
+- **`legacy_mode = true` (Legacy Autonomous Fallback)**: GAS owns the entire collection cycle (v2.6.2 behavior) using `PINTEREST_COOKIE` and direct HTTP polling. Use this mode for instant rollback if needed.
+
+---
+
 ## 1. Changelog (v2.7.0)
 
 - **[W1] `sheet_write` Action**: Added `doPost` action `sheet_write` supporting atomic chunked writes (`mode: 'append' | 'update'`) up to 500 rows per request with dedicated `LockService` synchronization.

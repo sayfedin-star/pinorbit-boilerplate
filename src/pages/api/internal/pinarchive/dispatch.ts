@@ -160,7 +160,22 @@ async function handlePinArchiveDispatch(
     );
   }
 
-  const dispatchUrl = `https://api.github.com/repos/${githubRepo}/actions/workflows/pinarchive-refresh.yml/dispatches`;
+  const dispatchUrl = `https://api.github.com/repos/${githubRepo}/actions/workflows/pinarchive-pipeline.yml/dispatches`;
+
+  let usernamesVal = '';
+  if (Array.isArray(payload.usernames)) {
+    usernamesVal = payload.usernames.join(',');
+  } else if (typeof payload.usernames === 'string') {
+    usernamesVal = payload.usernames;
+  } else if (typeof payload.username === 'string') {
+    usernamesVal = payload.username;
+  } else if (url.searchParams.get('usernames')) {
+    usernamesVal = url.searchParams.get('usernames')!;
+  } else if (url.searchParams.get('username')) {
+    usernamesVal = url.searchParams.get('username')!;
+  }
+
+  const modeVal = payload.mode || url.searchParams.get('mode') || 'discovery';
   const forceValue =
     payload.force === 'true' || payload.force === true || url.searchParams.get('force') === 'true'
       ? 'true'
@@ -179,6 +194,8 @@ async function handlePinArchiveDispatch(
         ref: 'main',
         inputs: {
           workspace_id: workspaceId,
+          usernames: usernamesVal,
+          mode: modeVal,
           force: forceValue,
         },
       }),

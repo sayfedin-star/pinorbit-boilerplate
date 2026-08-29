@@ -180,7 +180,7 @@ describe('PinArchive FastCron Migration & Dispatch Test Suite (v3 Delta)', () =>
       expect(json.success).toBe(true);
       expect(json.dispatched).toBe(true);
       expect(json.force).toBe(true);
-      expect(capturedUrl).toContain('sayfedin-star/PinOrbit-v2/actions/workflows/pinarchive-refresh.yml/dispatches');
+      expect(capturedUrl).toContain('sayfedin-star/PinOrbit-v2/actions/workflows/pinarchive-pipeline.yml/dispatches');
       expect(capturedBody.inputs.workspace_id).toBe(mockWorkspaceId);
       expect(capturedBody.inputs.force).toBe('true');
     });
