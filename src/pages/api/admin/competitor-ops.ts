@@ -170,13 +170,18 @@ export const PUT: APIRoute = async ({ request, locals }) => {
             const wsName = (ws?.name || 'workspace').replace(/[—\r\n\t]+/g, ' ').trim().slice(0, 40) || 'workspace';
 
             const dispatchUrl = (runtimeEnv?.COMPETITORS_DISPATCH_URL as string) || 'https://pinorbit-v2.o-i.workers.dev/api/internal/competitors/dispatch';
+            const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: 'Schedule', trigger: 'cron' });
             const fastcronParams = {
               name: `PinOrbit competitors — ${wsName} — Schedule — ${workspaceId.slice(0, 8)}`,
               url: dispatchUrl,
               expression: body.cron_expression,
               timezone: body.timezone || updatePayload.timezone || 'UTC',
+              httpMethod: 'POST',
+              http_method: 'POST',
+              httpHeaders: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
               http_headers: `Content-Type: application/json\r\nx-ingest-secret: ${effSecret.value.trim()}`,
-              post_data: JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: 'Schedule' }),
+              postData: postDataStr,
+              post_data: postDataStr,
               status: isEnabled ? 'enabled' : 'disabled',
             };
 

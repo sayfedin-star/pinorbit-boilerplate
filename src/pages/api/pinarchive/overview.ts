@@ -4,7 +4,7 @@ import { assertWorkspaceAccess } from '../../../server/auth/workspace-guard';
 import { dbClients } from '../../../server/db/clients';
 import { errorStatus } from '../../../server/lib/http-error';
 import { getNextCronDate } from '../../../lib/cron-helper';
-import { resolveScheduleToken } from '../../../server/services/fastcron-service';
+import { resolveToken } from '../../../server/lib/token-resolver';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -112,8 +112,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       if (!cronExpr) {
         try {
           const runtimeEnv = (locals as any)?.runtime?.env || (locals as any)?.runtimeEnv || process.env || {};
-          const schedulingAdmin = dbClients.getSchedulingAdmin(runtimeEnv);
-          const tokenRes = await resolveScheduleToken(schedulingAdmin, ws, 'pinarchive', runtimeEnv);
+          const tokenRes = await resolveToken({ workspaceId: ws }, 'pinarchive', runtimeEnv);
           if (tokenRes?.token) {
             const { fastcronCall } = await import('../../../server/lib/fastcron-client');
             const { isMatchingPinArchiveJob } = await import('./cron');

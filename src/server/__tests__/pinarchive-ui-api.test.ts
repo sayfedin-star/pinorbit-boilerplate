@@ -255,7 +255,9 @@ describe('PinArchive Dashboard UI Read Layer API Suite', () => {
           return {
             select: vi.fn().mockReturnValue({
               in: vi.fn().mockReturnValue({
-                order: vi.fn().mockResolvedValue({ data: [], error: null }),
+                order: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+                }),
               }),
             }),
           };

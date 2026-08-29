@@ -194,7 +194,9 @@ describe('PinArchive Intelligence Upgrade Test Suite (T1, T2, T3)', () => {
           return {
             select: vi.fn().mockReturnValue({
               in: vi.fn().mockReturnValue({
-                order: vi.fn().mockResolvedValue({ data: mockMetrics, error: null }),
+                order: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue({ data: mockMetrics, error: null }),
+                }),
               }),
             }),
           };
@@ -296,8 +298,8 @@ describe('PinArchive Intelligence Upgrade Test Suite (T1, T2, T3)', () => {
       };
 
       const mockMetrics = [
-        { recorded_at: '2026-08-22T00:00:00Z', saves: 20000, repins: 18000, comments: 10, shares: 500, reactions_total: 100 },
         { recorded_at: '2026-08-23T00:00:00Z', saves: 23887, repins: 21346, comments: 34, shares: 1602, reactions_total: 705 },
+        { recorded_at: '2026-08-22T00:00:00Z', saves: 20000, repins: 18000, comments: 10, shares: 500, reactions_total: 100 },
       ];
 
       const mockClusterRows = [

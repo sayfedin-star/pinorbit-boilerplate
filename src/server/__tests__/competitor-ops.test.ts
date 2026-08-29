@@ -541,7 +541,9 @@ describe('Competitor Ops Console API Endpoints', () => {
               }),
             }),
             delete: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({ error: null }),
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({ error: null }),
+              }),
             }),
           };
         }

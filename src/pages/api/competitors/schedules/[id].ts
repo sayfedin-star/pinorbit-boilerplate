@@ -192,13 +192,20 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     }
     const { data: schedule } = await query.maybeSingle();
 
-    const targetJobId = schedule?.fastcron_job_id || (!isNaN(Number(id)) ? id : null);
+    if (!schedule) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Schedule not found.' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const targetJobId = schedule.fastcron_job_id;
 
     // 2. Best-effort FastCron delete
     if (targetJobId) {
       try {
         const targetTokenObj = await resolveToken(
-          { workspaceId, tokenId: schedule?.fastcron_token_id },
+          { workspaceId, tokenId: schedule.fastcron_token_id },
           'competitors',
           runtimeEnv
         );
@@ -210,14 +217,12 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       }
     }
 
-    // 3. Delete from DB if row exists
-    if (schedule?.id) {
-      await compAdmin
-        .from('competitor_schedules')
-        .delete()
-        .eq('id', schedule.id)
-        .eq('workspace_id', workspaceId);
-    }
+    // 3. Delete from DB
+    await compAdmin
+      .from('competitor_schedules')
+      .delete()
+      .eq('id', schedule.id)
+      .eq('workspace_id', workspaceId);
 
     return new Response(
       JSON.stringify({ success: true, message: 'Schedule deleted successfully.' }),
