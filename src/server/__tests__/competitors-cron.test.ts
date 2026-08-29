@@ -100,6 +100,23 @@ vi.mock('../../server/lib/fastcron-client', async (importOriginal) => {
         ],
       };
     }
+    if (action === 'cron_get') {
+      return {
+        success: true,
+        data: {
+          id: params?.id || 88801,
+          name: 'PinOrbit competitors — TestWS — Default Daily — 44444444',
+          url: 'https://pinorbit-v2.o-i.workers.dev/api/internal/competitors/dispatch',
+          expression: '0 2 * * *',
+          status: 'enabled',
+          post_data: JSON.stringify({
+            workspace_id: mockWorkspaceId,
+            pipeline: 'competitors',
+            label: 'Default Daily',
+          }),
+        },
+      };
+    }
     if (action === 'cron_next') {
       return { success: true, data: [1700000000] };
     }
@@ -261,5 +278,28 @@ describe('Competitors FastCron Control Plane API Suite', () => {
       }),
       expect.any(String)
     );
+  });
+
+  it('prevents cross-tenant leak: isMatchingCompetitorJob returns false for foreign workspace jobs', () => {
+    const foreignWsId = '99999999-0000-0000-0000-000000000000';
+    const myWsId = '11111111-2222-3333-4444-555555555555';
+    const dispatchUrl = 'https://pinorbit-v2.o-i.workers.dev/api/internal/competitors/dispatch';
+
+    const foreignJob = {
+      id: 999,
+      url: dispatchUrl,
+      name: 'PinOrbit competitors — ForeignWS — Daily Refresh — 99999999',
+      post_data: JSON.stringify({ workspace_id: foreignWsId, pipeline: 'competitors' }),
+    };
+
+    const myJob = {
+      id: 111,
+      url: dispatchUrl,
+      name: 'PinOrbit competitors — MyWS — Daily Refresh — 11111111',
+      post_data: JSON.stringify({ workspace_id: myWsId, pipeline: 'competitors' }),
+    };
+
+    expect(competitorCronApi.isMatchingCompetitorJob(foreignJob, myWsId, dispatchUrl)).toBe(false);
+    expect(competitorCronApi.isMatchingCompetitorJob(myJob, myWsId, dispatchUrl)).toBe(true);
   });
 });

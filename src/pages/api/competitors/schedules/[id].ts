@@ -36,6 +36,14 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
 
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
+
+    const { data: ws } = await schedulingClient
+      .from('workspaces')
+      .select('name')
+      .eq('id', workspaceId)
+      .maybeSingle();
+    const wsName = (ws?.name || 'workspace').replace(/[—\r\n\t]+/g, ' ').trim().slice(0, 40) || 'workspace';
+
     const compAdmin = dbClients.getCompetitorsAdmin(runtimeEnv);
 
     // 1. Fetch current schedule (support UUID or numeric fastcron_job_id)
@@ -110,7 +118,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
 
         const fastcronParams: Record<string, any> = {
           id: Number(schedule.fastcron_job_id),
-          name: `PinOrbit competitors — ${updatePayload.label || schedule.label || 'Schedule'} — ${workspaceId.slice(0, 8)}`,
+          name: `PinOrbit competitors — ${wsName} — ${updatePayload.label || schedule.label || 'Schedule'} — ${workspaceId.slice(0, 8)}`,
           url: dispatchUrl,
           expression: updatePayload.cron_expression || schedule.cron_expression,
           timezone: updatePayload.timezone || schedule.timezone || 'UTC',

@@ -81,13 +81,25 @@ describe('FastCron Job Headers Repair Endpoints Suite (P2 & P4)', () => {
       return { success: true };
     });
 
+    const mockSupabase = {
+      from: () => {
+        const builder: any = {
+          select: () => builder,
+          eq: () => builder,
+          single: async () => ({ data: { id: 'm1', role: 'admin', name: 'TestWS' }, error: null }),
+          maybeSingle: async () => ({ data: { id: 'm1', role: 'admin', name: 'TestWS' }, error: null }),
+        };
+        return builder;
+      },
+    };
+
     const res = await competitorRepairApi.POST({
       request: new Request('https://example.com/api/competitors/schedules/repair-headers', {
         method: 'POST',
       }),
       locals: {
         user: { id: mockUserId },
-        supabase: {},
+        supabase: mockSupabase,
         activeWorkspaceId: mockWorkspaceId,
         runtimeEnv: {},
       },
@@ -137,13 +149,25 @@ describe('FastCron Job Headers Repair Endpoints Suite (P2 & P4)', () => {
       return { success: true };
     });
 
+    const mockSupabase = {
+      from: () => {
+        const builder: any = {
+          select: () => builder,
+          eq: () => builder,
+          single: async () => ({ data: { id: 'm1', role: 'admin', name: 'TestWS' }, error: null }),
+          maybeSingle: async () => ({ data: { id: 'm1', role: 'admin', name: 'TestWS' }, error: null }),
+        };
+        return builder;
+      },
+    };
+
     const res = await pinArchiveRepairApi.POST({
       request: new Request('https://example.com/api/pinarchive/repair-headers', {
         method: 'POST',
       }),
       locals: {
         user: { id: mockUserId },
-        supabase: {},
+        supabase: mockSupabase,
         activeWorkspaceId: mockWorkspaceId,
         runtimeEnv: {},
       },

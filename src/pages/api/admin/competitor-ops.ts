@@ -162,9 +162,16 @@ export const PUT: APIRoute = async ({ request, locals }) => {
         if (targetToken?.token) {
           const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
           if (effSecret?.value) {
+            const { data: ws } = await locals.supabase
+              .from('workspaces')
+              .select('name')
+              .eq('id', workspaceId)
+              .maybeSingle();
+            const wsName = (ws?.name || 'workspace').replace(/[—\r\n\t]+/g, ' ').trim().slice(0, 40) || 'workspace';
+
             const dispatchUrl = (runtimeEnv?.COMPETITORS_DISPATCH_URL as string) || 'https://pinorbit-v2.o-i.workers.dev/api/internal/competitors/dispatch';
             const fastcronParams = {
-              name: `PinOrbit competitors — Schedule — ${workspaceId.slice(0, 8)}`,
+              name: `PinOrbit competitors — ${wsName} — Schedule — ${workspaceId.slice(0, 8)}`,
               url: dispatchUrl,
               expression: body.cron_expression,
               timezone: body.timezone || updatePayload.timezone || 'UTC',

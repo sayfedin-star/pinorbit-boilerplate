@@ -77,7 +77,8 @@ export function isMatchingCompetitorJob(job: any, workspaceId: string, dispatchE
     return true;
   }
 
-  if (urlMatches && (
+  const wsOk = !postData || !postData.workspace_id || postData.workspace_id === workspaceId;
+  if (urlMatches && wsOk && (
     !job.name ||
     job.name.toLowerCase().includes('competitor') ||
     job.name.toLowerCase().includes('pinorbit competitors') ||
@@ -155,6 +156,13 @@ export const GET: APIRoute = async ({ locals }) => {
 
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id);
+
+    const { data: ws } = await schedulingClient
+      .from('workspaces')
+      .select('name')
+      .eq('id', workspaceId)
+      .maybeSingle();
+    const wsName = (ws?.name || 'workspace').replace(/[—\r\n\t]+/g, ' ').trim().slice(0, 40) || 'workspace';
 
     const dispatchUrl = getDispatchEndpointUrl(runtimeEnv);
     const tokens = await getWorkspaceFastCronTokens(workspaceId, runtimeEnv);
@@ -234,10 +242,20 @@ export const GET: APIRoute = async ({ locals }) => {
         const postData = extractPostData(job) || {};
         const isPaused = isFastCronJobPaused(job);
 
+        let label = postData.label;
+        if (!label && job.name && job.name.includes(' — ')) {
+          const parts = job.name.split(' — ');
+          label = (parts.length >= 4 ? parts.slice(2, -1) : parts.slice(1, -1)).join(' — ').trim();
+          if (!label && parts.length === 2) {
+            label = parts[1].trim();
+          }
+        }
+        if (!label || /^[a-f0-9]{8}$/i.test(label)) label = 'Daily Competitor Ingestion';
+
         return {
           id: Number(job.id),
-          name: job.name,
-          label: postData.label || job.name,
+          name: job.name || `PinOrbit competitors — ${wsName} — ${label} — ${workspaceId.slice(0, 8)}`,
+          label,
           expression: job.expression || job.cron_expression || '0 2 * * *',
           timezone: job.timezone || 'UTC',
           url: job.url,
@@ -317,6 +335,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
 
+    const { data: ws } = await schedulingClient
+      .from('workspaces')
+      .select('name')
+      .eq('id', workspaceId)
+      .maybeSingle();
+    const wsName = (ws?.name || 'workspace').replace(/[—\r\n\t]+/g, ' ').trim().slice(0, 40) || 'workspace';
+
     const dispatchUrl = getDispatchEndpointUrl(runtimeEnv);
     const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
     if (!effSecret || !effSecret.value || effSecret.value.trim() === '') {
@@ -353,8 +378,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         for (const job of matchedJobs) {
           const jobId = Number(job.id);
           if (jobId) {
-            const jobLabel =
-              job.name?.replace(/^PinOrbit\s*competitors\s*—\s*/i, '').replace(/\s*—\s*[a-f0-9-]+$/i, '') || 'Default Daily';
+            const segs = (job.name || '').split(' — ');
+            let jobLabel = segs.length >= 4 ? segs.slice(2, -1).join(' — ').trim()
+                         : segs.length === 3 ? segs.slice(1, -1).join(' — ').trim()
+                         : segs.length === 2 ? segs[1].trim() : 'Default Daily';
+            if (/^[a-f0-9]{8}$/i.test(jobLabel)) jobLabel = 'Default Daily';
+
             const repairPostData = JSON.stringify({
               workspace_id: workspaceId,
               pipeline: 'competitors',
@@ -363,7 +392,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             });
             const repairParams = {
               id: jobId,
-              name: `PinOrbit competitors — ${jobLabel} — ${workspaceId.slice(0, 8)}`,
+              name: `PinOrbit competitors — ${wsName} — ${jobLabel} — ${workspaceId.slice(0, 8)}`,
               url: getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim()),
               expression: job.expression || job.cron_expression || '0 2 * * *',
               timezone: job.timezone || 'UTC',
@@ -406,7 +435,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       const defaultPostDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: 'Default Daily', trigger: 'cron' });
       const defaultParams = {
-        name: `PinOrbit competitors — Default Daily — ${workspaceId.slice(0, 8)}`,
+        name: `PinOrbit competitors — ${wsName} — Default Daily — ${workspaceId.slice(0, 8)}`,
         url: getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim()),
         expression: '0 2 * * *',
         timezone: 'UTC',
@@ -457,6 +486,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
       }
 
+      // Marker verification before modification
+      const getRes = await fastcronCall('cron_get', { id: jobId }, token);
+      const existingJob = getRes.data?.data || getRes.data?.job || getRes.data;
+      if (!existingJob || !isMatchingCompetitorJob(existingJob, workspaceId, dispatchUrl)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Unauthorized marker check: Job does not belong to this workspace pipeline.' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
       const toggleAction = action === 'pause' ? 'cron_disable' : 'cron_enable';
       const toggleRes = await fastcronCall(toggleAction, { id: jobId }, token);
 
@@ -497,7 +536,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label, trigger: 'cron' });
 
     const fastcronParams = {
-      name: `PinOrbit competitors — ${label} — ${workspaceId.slice(0, 8)}`,
+      name: `PinOrbit competitors — ${wsName} — ${label} — ${workspaceId.slice(0, 8)}`,
       url: getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim()),
       expression: cronExpression,
       timezone,
@@ -515,6 +554,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (isEdit) {
       const jobId = Number(body.job_id);
+      if (!jobId || isNaN(jobId)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'job_id is required for edit.' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Marker verification before edit
+      const getRes = await fastcronCall('cron_get', { id: jobId }, token);
+      const existingJob = getRes.data?.data || getRes.data?.job || getRes.data;
+      if (!existingJob || !isMatchingCompetitorJob(existingJob, workspaceId, dispatchUrl)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Unauthorized marker check: Job does not belong to this workspace pipeline.' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
       apiRes = await fastcronCall('cron_edit', { id: jobId, ...fastcronParams }, token);
     } else {
       apiRes = await fastcronCall('cron_add', fastcronParams, token);
@@ -597,6 +653,16 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     }
 
     if (jobId) {
+      // Marker verification before delete
+      const getRes = await fastcronCall('cron_get', { id: jobId }, targetTokenObj.token);
+      const existingJob = getRes.data?.data || getRes.data?.job || getRes.data;
+      if (!existingJob || !isMatchingCompetitorJob(existingJob, workspaceId, getDispatchEndpointUrl(runtimeEnv))) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Unauthorized marker check: Job does not belong to this workspace pipeline.' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
       const delRes = await fastcronCall('cron_delete', { id: jobId }, targetTokenObj.token);
       if (!delRes.success) {
         return new Response(
