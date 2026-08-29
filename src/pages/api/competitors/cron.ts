@@ -65,28 +65,74 @@ export function extractPostData(job: any): any | null {
   }
 }
 
-export function isMatchingCompetitorJob(job: any, workspaceId: string, dispatchEndpointUrl: string): boolean {
+/**
+ * Verifies that a FastCron job belongs to Competitors in this workspace.
+ */
+export function isMatchingCompetitorJob(job: any, workspaceId: string, dispatchEndpointUrl?: string): boolean {
+  if (!job || !workspaceId) return false;
+  const wsPrefix = workspaceId.slice(0, 8).toLowerCase();
+
   const postData = extractPostData(job);
-  const urlMatches = typeof job.url === 'string' && (
-    job.url === dispatchEndpointUrl ||
-    job.url.includes('/api/internal/competitors/dispatch') ||
-    job.url.includes('/competitors/dispatch')
+  const rawName = (typeof job.name === 'string' ? job.name : '').trim();
+  const lowerName = rawName.toLowerCase();
+  const rawUrl = (typeof job.url === 'string' ? job.url : '').trim();
+
+  // 1. Pipeline Gate: Must be competitors pipeline
+  if (postData?.pipeline && postData.pipeline !== 'competitors') {
+    return false;
+  }
+  if (lowerName.includes('pinarchive') && !lowerName.includes('competitor')) {
+    return false;
+  }
+
+  const isCompetitorUrl = Boolean(
+    (dispatchEndpointUrl && rawUrl === dispatchEndpointUrl) ||
+    rawUrl.includes('/api/internal/competitors/dispatch') ||
+    rawUrl.includes('/competitors/dispatch')
   );
+  const isCompetitorPostData = postData?.pipeline === 'competitors';
+  const isCompetitorName = lowerName.includes('competitor');
 
-  if (postData && postData.pipeline === 'competitors' && (!postData.workspace_id || postData.workspace_id === workspaceId)) {
+  if (!isCompetitorUrl && !isCompetitorPostData && !isCompetitorName) {
+    return false;
+  }
+
+  // 2. Strict Workspace Ownership Verification
+
+  // Priority 2a: postData workspace_id (exact UUID check)
+  if (postData?.workspace_id) {
+    return String(postData.workspace_id).toLowerCase() === workspaceId.toLowerCase();
+  }
+
+  // Priority 2b: URL workspace_id query parameter (if present in URL)
+  try {
+    if (rawUrl.includes('?')) {
+      const parsedUrl = new URL(rawUrl);
+      const urlWs = parsedUrl.searchParams.get('workspace_id');
+      if (urlWs) {
+        return urlWs.toLowerCase() === workspaceId.toLowerCase() || urlWs.toLowerCase() === wsPrefix;
+      }
+    }
+  } catch {}
+
+  // Priority 2c: Name-based workspace identifier (8-character hex prefix)
+  // PinOrbit job naming formats:
+  // - 4-segment: `PinOrbit competitors — <wsName> — <label> — <wsPrefix>`
+  // - 3-segment: `PinOrbit competitors — <label> — <wsPrefix>`
+  // - 2-segment / Legacy: `PinOrbit competitors — <wsPrefix>`
+  const hexTokens = rawName.match(/\b[a-f0-9]{8}\b/gi) || [];
+  if (hexTokens.length > 0) {
+    // The last 8-hex token in the name is the workspace prefix
+    const lastHex = hexTokens[hexTokens.length - 1].toLowerCase();
+    return lastHex === wsPrefix;
+  }
+
+  // Priority 2d: Direct substring check if name contains wsPrefix
+  if (lowerName.includes(wsPrefix)) {
     return true;
   }
 
-  const wsOk = !postData || !postData.workspace_id || postData.workspace_id === workspaceId;
-  if (urlMatches && wsOk && (
-    !job.name ||
-    job.name.toLowerCase().includes('competitor') ||
-    job.name.toLowerCase().includes('pinorbit competitors') ||
-    (workspaceId && job.name.includes(workspaceId.slice(0, 8)))
-  )) {
-    return true;
-  }
-
+  // Reject anything that doesn't explicitly prove ownership of this workspace
   return false;
 }
 
