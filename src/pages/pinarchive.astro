@@ -1097,8 +1097,8 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
   }
 
   function setupReevaluateButton() {
-    const btn = document.getElementById('reevaluate-btn') as HTMLButtonElement | null;
-    const icon = document.getElementById('reevaluate-btn-icon');
+    const btn = document.getElementById('reevaluate-candidates-btn') as HTMLButtonElement | null;
+    const icon = document.getElementById('reevaluate-icon');
     const text = document.getElementById('reevaluate-btn-text');
     if (!btn) return;
 
