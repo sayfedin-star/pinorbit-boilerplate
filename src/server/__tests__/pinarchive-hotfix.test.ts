@@ -324,6 +324,28 @@ describe('Phase 0 Hotfixes (F1-F4) — PinArchive Wipe Prevention & Ingest Stomp
 
     // pins_count must NOT be present in the upsert payload when trigger is 'refresh'
     expect(accountUpsertPayload).not.toHaveProperty('pins_count');
-    expect(accountUpsertPayload.last_result).toBe('sync');
+    // Generic 'sync' / 'refresh' must NOT overwrite last_result
+    expect(accountUpsertPayload).not.toHaveProperty('last_result');
+
+    // Discovery summary MUST be written to last_result
+    const discoveryPayload = {
+      workspace_id: mockWsId,
+      username: 'creator1',
+      account_meta: {
+        last_result: 'pages=12 +161 qual=161 sheet=544',
+      },
+      pins: [{ pin_id: 'p2', saves: 200 }],
+    };
+    const reqDiscovery = new Request('http://localhost:4321/api/internal/pinarchive/ingest', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-ingest-secret': mockSecret,
+      },
+      body: JSON.stringify(discoveryPayload),
+    });
+    const resDiscovery = await ingestHandler({ request: reqDiscovery, locals: { runtime: { env: mockRuntimeEnv } } } as any);
+    expect(resDiscovery.status).toBe(200);
+    expect(accountUpsertPayload.last_result).toBe('pages=12 +161 qual=161 sheet=544');
   });
 });

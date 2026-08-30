@@ -188,8 +188,10 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
       workspace_id: workspaceId,
       username,
       last_run_at: fetchedAt,
-      last_result: account_meta.last_result || 'success',
     };
+    if (typeof account_meta.last_result === 'string' && /^(pages=|discovery)/i.test(account_meta.last_result.trim())) {
+      accountData.last_result = account_meta.last_result.trim();
+    }
     if (payload.trigger === 'refresh') {
       accountData.last_refresh_at = fetchedAt;
     }
