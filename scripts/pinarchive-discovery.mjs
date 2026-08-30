@@ -384,7 +384,7 @@ async function writeToGas(gasUrl, secret, payload, maxRetries = 1) {
           'Content-Type': 'application/json',
           'x-ingest-secret': secret,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, action: 'sheet_write', secret }),
         signal: AbortSignal.timeout(30000),
       });
 
