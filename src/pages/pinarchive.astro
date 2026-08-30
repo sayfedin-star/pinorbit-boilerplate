@@ -806,7 +806,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
   }
 
   const COLUMN_DEFS: ColDef[] = [
-    { key: 'interval_days', label: 'Interval (Days)', defaultVisible: false },
+    { key: 'interval_days', label: 'Interval (Days)', defaultVisible: true },
     { key: 'backfill_status', label: 'Backfill Status', defaultVisible: false },
     { key: 'backfill_cursor', label: 'Backfill Cursor', defaultVisible: false },
     { key: 'last_result', label: 'Last Result', defaultVisible: false },
@@ -819,7 +819,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       if (saved) return JSON.parse(saved);
     } catch {}
     return {
-      interval_days: false,
+      interval_days: true,
       backfill_status: false,
       backfill_cursor: false,
       last_result: false,
@@ -1245,11 +1245,27 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
 
         let optCells = '';
         if (colVisible.interval_days) {
+          const currentDays = Number(acc.interval_days || 3);
           optCells += `
             <td class="py-3 px-4 font-medium text-foreground">
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-[11px] font-bold">
-                ${acc.interval_days || 3}d
-              </span>
+              <div class="relative inline-flex items-center">
+                <select
+                  class="interval-select appearance-none cursor-pointer inline-flex items-center gap-1 pl-2 pr-5 py-0.5 rounded-md bg-muted hover:bg-muted/80 text-[11px] font-bold border border-border/60 transition-colors focus:ring-1 focus:ring-primary focus:outline-none"
+                  data-username="${escapeHtml(acc.username || '')}"
+                  data-prev-days="${currentDays}"
+                  title="Click to change discovery interval"
+                >
+                  <option value="1" ${currentDays === 1 ? 'selected' : ''}>1d</option>
+                  <option value="3" ${currentDays === 3 ? 'selected' : ''}>3d</option>
+                  <option value="7" ${currentDays === 7 ? 'selected' : ''}>7d</option>
+                  <option value="14" ${currentDays === 14 ? 'selected' : ''}>14d</option>
+                </select>
+                <div class="pointer-events-none absolute right-1 flex items-center text-muted-foreground">
+                  <svg class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/>
+                  </svg>
+                </div>
+              </div>
             </td>
           `;
         }
@@ -1382,6 +1398,49 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     attachAccountSelectionListeners();
     attachAccountIngestToggleListeners();
     attachSingleDeleteListeners();
+    attachIntervalChangeListeners();
+  }
+
+  function attachIntervalChangeListeners() {
+    const selects = document.querySelectorAll<HTMLSelectElement>('.interval-select');
+    selects.forEach((sel) => {
+      sel.addEventListener('change', async (e) => {
+        const target = e.target as HTMLSelectElement;
+        const username = target.getAttribute('data-username');
+        const days = parseInt(target.value, 10);
+        if (!username || isNaN(days)) return;
+
+        const prevDays = target.getAttribute('data-prev-days') || '3';
+        target.disabled = true;
+
+        try {
+          const res = await fetch('/api/pinarchive/accounts-gas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'set_interval',
+              usernames: [username],
+              days,
+            }),
+          });
+          const json = await res.json();
+          if (json.success) {
+            toast(`Interval for @${username} set to ${days}d`, 'success');
+            target.setAttribute('data-prev-days', String(days));
+            const found = rawAccounts.find((a: any) => a.username?.toLowerCase() === username.toLowerCase());
+            if (found) found.interval_days = days;
+          } else {
+            toast(json.error || 'Failed to update interval', 'error');
+            target.value = prevDays;
+          }
+        } catch (err: any) {
+          toast(err?.message || 'Network error updating interval', 'error');
+          target.value = prevDays;
+        } finally {
+          target.disabled = false;
+        }
+      });
+    });
   }
 
   function attachAccountSelectionListeners() {
