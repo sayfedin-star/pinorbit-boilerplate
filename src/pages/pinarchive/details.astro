@@ -757,7 +757,7 @@ import Layout from '../../layouts/Layout.astro';
       if (mainContent) mainContent.classList.add('hidden');
       if (errorContainer) errorContainer.classList.add('hidden');
 
-      const res = await fetch(`/api/pinarchive/pin?id=${encodeURIComponent(pinId)}`);
+      const res = await fetch(`/api/pinarchive/pin?id=${encodeURIComponent(pinId)}`, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
         throw new Error(errJson.error || `HTTP ${res.status}`);

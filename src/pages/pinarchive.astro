@@ -723,8 +723,19 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
   }
 
   async function loadOverview(retries = 2) {
+    const kpiAccounts = document.getElementById('kpi-accounts-count');
+    const kpiArchived = document.getElementById('kpi-archived-pins');
+    const kpiSaves = document.getElementById('kpi-total-saves');
+    const kpiShares = document.getElementById('kpi-total-shares');
+    const metaText = document.getElementById('refresh-meta-text');
+    const tbody = document.getElementById('accounts-table-body');
+
     try {
-      const res = await fetch('/api/pinarchive/overview');
+      const root = document.getElementById('pinarchive-page-root');
+      const wsId = root?.getAttribute('data-workspace-id');
+      const url = wsId ? `/api/pinarchive/overview?workspace_id=${encodeURIComponent(wsId)}` : '/api/pinarchive/overview';
+
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Failed to load overview');
@@ -734,23 +745,18 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       rawAccounts = accounts;
 
       // Update KPI cards (full numbers via fmtNumber)
-      const kpiAccounts = document.getElementById('kpi-accounts-count');
-      if (kpiAccounts) kpiAccounts.textContent = fmtNumber(totals.accounts);
-
-      const kpiArchived = document.getElementById('kpi-archived-pins');
-      if (kpiArchived) kpiArchived.textContent = fmtNumber(totals.archived_pins);
-
-      const kpiSaves = document.getElementById('kpi-total-saves');
-      if (kpiSaves) kpiSaves.textContent = fmtNumber(totals.sum_saves);
-
-      const kpiShares = document.getElementById('kpi-total-shares');
-      if (kpiShares) kpiShares.textContent = fmtNumber(totals.sum_shares);
+      if (kpiAccounts) kpiAccounts.textContent = fmtNumber(totals.accounts ?? accounts.length);
+      if (kpiArchived) kpiArchived.textContent = fmtNumber(totals.archived_pins ?? 0);
+      if (kpiSaves) kpiSaves.textContent = fmtNumber(totals.sum_saves ?? 0);
+      if (kpiShares) kpiShares.textContent = fmtNumber(totals.sum_shares ?? 0);
 
       // Meta refresh line
-      const metaText = document.getElementById('refresh-meta-text');
-      if (metaText && accounts.length > 0) {
-        const firstAcc = accounts[0];
-        metaText.textContent = `Last refreshed ${timeAgo(firstAcc.last_run_at)}`;
+      if (metaText) {
+        if (accounts.length > 0 && accounts[0].last_run_at) {
+          metaText.textContent = `Last refreshed ${timeAgo(accounts[0].last_run_at)}`;
+        } else {
+          metaText.textContent = 'No sync runs recorded';
+        }
       }
 
       // Render Accounts Table with Checkboxes & Search Filter
@@ -759,12 +765,26 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     } catch (e: any) {
       if (retries > 0) { setTimeout(() => loadOverview(retries - 1), 1500); return; }
       console.error('Error loading PinArchive overview:', e);
-      const tbody = document.getElementById('accounts-table-body');
+
+      if (kpiAccounts) kpiAccounts.textContent = '—';
+      if (kpiArchived) kpiArchived.textContent = '—';
+      if (kpiSaves) kpiSaves.textContent = '—';
+      if (kpiShares) kpiShares.textContent = '—';
+      if (metaText) metaText.textContent = 'Sync schedule unavailable';
+
       if (tbody) tbody.innerHTML =
         `<tr><td colspan="12" class="p-8 text-center text-xs text-rose-500">
-           Failed to load accounts. <button id="retry-load-btn" class="underline font-bold">Retry</button>
+           Failed to load accounts. <button id="retry-load-btn" class="underline font-bold cursor-pointer ml-1">Retry</button>
          </td></tr>`;
-      document.getElementById('retry-load-btn')?.addEventListener('click', () => loadOverview(2));
+      document.getElementById('retry-load-btn')?.addEventListener('click', () => {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="12" class="p-8 text-center text-xs text-muted-foreground animate-pulse">Loading tracked accounts…</td></tr>`;
+        if (kpiAccounts) kpiAccounts.innerHTML = '<div class="h-8 w-12 bg-muted/60 rounded animate-pulse"></div>';
+        if (kpiArchived) kpiArchived.innerHTML = '<div class="h-8 w-12 bg-muted/60 rounded animate-pulse"></div>';
+        if (kpiSaves) kpiSaves.innerHTML = '<div class="h-8 w-12 bg-muted/60 rounded animate-pulse"></div>';
+        if (kpiShares) kpiShares.innerHTML = '<div class="h-8 w-12 bg-muted/60 rounded animate-pulse"></div>';
+        if (metaText) metaText.textContent = 'Loading sync schedule...';
+        loadOverview(2);
+      });
     }
   }
 
@@ -785,7 +805,19 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
   let colVisible: Record<string, boolean> = (() => {
     try {
       const saved = localStorage.getItem('po_pa_cols');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          return {
+            interval_days: true,
+            backfill_status: false,
+            backfill_cursor: false,
+            last_result: false,
+            archived_count: true,
+            ...parsed,
+          };
+        }
+      }
     } catch {}
     return {
       interval_days: true,
@@ -885,7 +917,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
 
   async function loadSettings(retries = 1) {
     try {
-      const res = await fetch('/api/pinarchive/settings');
+      const res = await fetch('/api/pinarchive/settings', { signal: AbortSignal.timeout(8000) });
       if (res.status === 401 || res.status === 403) {
         canAdminSettings = false;
         disableSettingsForm();
@@ -1785,34 +1817,44 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
   }
 
   function init() {
-    setupTabs();
-    setupSettingsCollapse();
-    setupAccountSearch();
-    buildColVisibilityMenu();
-    setupColVisibilityToggle();
-    renderTableHeader();
-    setupReevaluateButton();
+    try {
+      setupTabs();
+      setupSettingsCollapse();
+      setupAccountSearch();
+      buildColVisibilityMenu();
+      setupColVisibilityToggle();
+      renderTableHeader();
+      setupReevaluateButton();
+    } catch (uiErr) {
+      console.warn('[PinArchive] UI setup warning:', uiErr);
+    }
+
     loadSettings();
     loadOverview();
-    setupAccountDeleteModal();
-    setupBulkGasControls();
 
-    // Ingest settings save button
-    const saveSettingsBtn = document.getElementById('save-ingest-settings-btn');
-    if (saveSettingsBtn) {
-      saveSettingsBtn.addEventListener('click', saveSettings);
+    try {
+      setupAccountDeleteModal();
+      setupBulkGasControls();
+
+      // Ingest settings save button
+      const saveSettingsBtn = document.getElementById('save-ingest-settings-btn');
+      if (saveSettingsBtn) {
+        saveSettingsBtn.addEventListener('click', saveSettings);
+      }
+
+      // Live update cost estimate on discovery stop pages change
+      const stopPagesInput = document.getElementById('setting-discovery-stop-pages');
+      if (stopPagesInput) {
+        stopPagesInput.addEventListener('input', updateCostEstimate);
+      }
+
+      // Listen for audit timestamp display preference changes
+      window.addEventListener('pinorbit_audit_ts_mode_changed', () => {
+        filterAndRenderAccounts();
+      });
+    } catch (handlerErr) {
+      console.warn('[PinArchive] Handlers setup warning:', handlerErr);
     }
-
-    // Live update cost estimate on discovery stop pages change
-    const stopPagesInput = document.getElementById('setting-discovery-stop-pages');
-    if (stopPagesInput) {
-      stopPagesInput.addEventListener('input', updateCostEstimate);
-    }
-
-    // Listen for audit timestamp display preference changes
-    window.addEventListener('pinorbit_audit_ts_mode_changed', () => {
-      filterAndRenderAccounts();
-    });
   }
 
   if (document.readyState === 'loading') {

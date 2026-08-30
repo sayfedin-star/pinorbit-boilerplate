@@ -893,7 +893,7 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
     if (!boardSelect || !accountId) return;
 
     try {
-      const res = await fetch(`/api/pinarchive/account-boards?account_id=${encodeURIComponent(accountId)}`);
+      const res = await fetch(`/api/pinarchive/account-boards?account_id=${encodeURIComponent(accountId)}`, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (!json.success || !Array.isArray(json.boards)) throw new Error(json.error || 'Failed to load boards');
@@ -936,7 +936,7 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
       if (currentBoard) params.set('board', currentBoard);
       if (currentStage) params.set('stage', currentStage);
 
-      const res = await fetch(`/api/pinarchive/pins?${params.toString()}`);
+      const res = await fetch(`/api/pinarchive/pins?${params.toString()}`, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Failed to load pins');
