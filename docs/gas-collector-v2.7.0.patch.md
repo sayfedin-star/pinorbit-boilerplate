@@ -32,7 +32,7 @@ In v2.7.0, the `legacy_mode` Script Property controls the system role:
 | :--- | :--- | :--- | :--- |
 | `PINARCHIVE_SECRET` | **Yes** | Shared secret matching `PINARCHIVE_INGEST_SECRET` | `pa_sec_live_...` |
 | `legacy_mode` | *Optional* | `false` (thin writer) or `true` (autonomous legacy runner) | `false` |
-| `PINORBIT_URL` | *Legacy only* | Base URL of PinOrbit instance (used when `legacy_mode=true`) | `https://pinorbit.yourdomain.com` |
+| `PINORBIT_URL` | **Yes** | Required for `sheet_sync` (Sheet→DB re-evaluation); also used in legacy mode | `https://pinorbit.yourdomain.com` |
 | `PINTEREST_COOKIE` | *Legacy only* | Session cookie for Pinterest scraping (used when `legacy_mode=true`) | `_auth=1; ...` |
 
 ---
@@ -41,7 +41,7 @@ In v2.7.0, the `legacy_mode` Script Property controls the system role:
 
 1. Open the Google Spreadsheet containing your **Control** and **pins_** sheets.
 2. Open **Extensions > Apps Script**.
-3. In **Project Settings (gear icon) > Script Properties**, verify `PINARCHIVE_SECRET` and set `legacy_mode` to `false` (or `true` during rollback).
+3. In **Project Settings (gear icon) > Script Properties**, verify `PINARCHIVE_SECRET`, set `PINORBIT_URL` to your PinOrbit Cloudflare Worker URL, and set `legacy_mode` to `false` (or `true` during rollback).
 4. Paste the complete `gas-collector-v2.7.0.gs` code below into your script editor (`Code.gs`).
 5. Click **Save** (`Ctrl+S`).
 6. Click **Deploy > Manage deployments > Edit > New version > Deploy**.
