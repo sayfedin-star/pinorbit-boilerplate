@@ -18,6 +18,7 @@ In v2.7.0, the `legacy_mode` Script Property controls the system role:
 
 - **[W1] `sheet_write` Action**: Added `doPost` action `sheet_write` supporting atomic chunked writes (`mode: 'append' | 'update'`) up to 500 rows per request with dedicated `LockService` synchronization.
 - **[W2] Change-Detection & Counters**: In `sheet_write` update mode, rows with identical saves/repins/comments are skipped from re-writing; returns `{ok:true, written: updatedCount+toAppend.length, appended: toAppend.length, updated: updatedCount}`.
+- **[H1] Secret Guard & Array Coercion**: Early return when `PINARCHIVE_SECRET` is not configured (`{ok:false, error:'secret not configured'}`); `buildRow_` auto-coerces array values with `.join(', ')`.
 - **[L1] `legacy_mode` Switch**: Controlled via Script Property `legacy_mode`. When `false` (default for GH Brain architecture), background timers (`tick`, `refreshArchived`, Pinterest scraping, Control-sheet writes) become immediate no-ops.
 - **[Z1] Zero External Egress**: When `legacy_mode` is `false`, zero `UrlFetchApp.fetch` network requests occur. GAS operates purely as a passive Sheet writer.
 - **[B1] Rollback Ready**: Setting `legacy_mode` to `true` in Script Properties restores full autonomous v2.6.2 scraping and sync behavior without requiring code edits.
@@ -140,6 +141,7 @@ function buildRow_(obj, map, width) {
     if (h === 'tags' && val === undefined && Array.isArray(obj.annotations)) {
       val = obj.annotations.map(a => (typeof a === 'string' ? a : a.name || '')).filter(Boolean).join(', ');
     }
+    if (Array.isArray(val)) val = val.join(', ');
     row[(map[h] || 1) - 1] = (val !== undefined && val !== null ? val : '');
   });
   return row;
@@ -163,8 +165,9 @@ function setup() {
 }
 
 function doGet(e) {
-  const secret = prop_('PINARCHIVE_SECRET');
-  const authed = e && e.parameter && timingSafeEqual_(e.parameter.secret, secret);
+  const serverSecret = prop_('PINARCHIVE_SECRET');
+  if (!serverSecret) return out_({ok: false, error: 'secret not configured'});
+  const authed = e && e.parameter && timingSafeEqual_(e.parameter.secret, serverSecret);
   const base = {
     ok: true,
     service: 'pinarchive-collector',
@@ -180,8 +183,11 @@ function doPost(e) {
   let b = {};
   try { b = JSON.parse(e.postData.contents || '{}'); } catch (err) { return out_({ok: false, error: 'bad json'}); }
   
+  const serverSecret = prop_('PINARCHIVE_SECRET');
+  if (!serverSecret) return out_({ok: false, error: 'secret not configured'});
+
   const providedSecret = b.secret || (b.payload && b.payload.secret) || '';
-  if (!timingSafeEqual_(providedSecret, prop_('PINARCHIVE_SECRET'))) {
+  if (!timingSafeEqual_(providedSecret, serverSecret)) {
     return out_({ok: false, error: 'unauthorized'});
   }
 
