@@ -18,6 +18,7 @@ In v2.7.0, the `legacy_mode` Script Property controls the system role:
 
 - **[W1] `sheet_write` Action**: Added `doPost` action `sheet_write` supporting atomic chunked writes (`mode: 'append' | 'update'`) up to 500 rows per request with dedicated `LockService` synchronization.
 - **[W2] Change-Detection & Counters**: In `sheet_write` update mode, rows with identical saves/repins/comments are skipped from re-writing; returns `{ok:true, written: updatedCount+toAppend.length, appended: toAppend.length, updated: updatedCount}`.
+- **[S1] `sheet_sync` Action**: Added `doPost` action `sheet_sync` for on-demand re-evaluation of `pins_<username>` sheets against current workspace filter rules, pushing newly qualifying rows to PinOrbit DB and stamping `archived_at` in Sheet.
 - **[H1] Secret Guard & Array Coercion**: Early return when `PINARCHIVE_SECRET` is not configured (`{ok:false, error:'secret not configured'}`); `buildRow_` auto-coerces array values with `.join(', ')`.
 - **[L1] `legacy_mode` Switch**: Controlled via Script Property `legacy_mode`. When `false` (default for GH Brain architecture), background timers (`tick`, `refreshArchived`, Pinterest scraping, Control-sheet writes) become immediate no-ops.
 - **[Z1] Zero External Egress**: When `legacy_mode` is `false`, zero `UrlFetchApp.fetch` network requests occur. GAS operates purely as a passive Sheet writer.
@@ -198,6 +199,11 @@ function doPost(e) {
     return handleSheetWrite_(p);
   }
 
+  // ── Action: sheet_sync (On-demand Sheet → DB Re-evaluation) ──
+  if (p.action === 'sheet_sync') {
+    return handleSheetSync_(p);
+  }
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const ctl = ensureControl_(ss);
 
@@ -227,6 +233,119 @@ function doPost(e) {
       return out_({ok: true});
     default:
       return out_({ok: false, error: 'unknown action'});
+  }
+}
+
+/* ================= معالج إعادة تقييم ومزامنة الشيت (sheet_sync) ================= */
+function handleSheetSync_(p) {
+  const wsId = String(p.workspace_id || '').trim();
+  if (!wsId) return out_({ok: false, error: 'workspace_id required'});
+
+  const usernames = Array.isArray(p.usernames) ? p.usernames.map(String).map(s => s.trim()).filter(Boolean) : [];
+  if (usernames.length === 0) return out_({ok: true, synced: 0, message: 'no usernames provided'});
+
+  const cfg = fetchWorkspaceConfig_(wsId);
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return out_({ok: false, error: 'locked'});
+
+  let totalSynced = 0;
+  const results = [];
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const nowHuman = fmtDate_(new Date());
+
+    for (const username of usernames) {
+      const sheetName = 'pins_' + username;
+      const sh = ss.getSheetByName(sheetName);
+      if (!sh) {
+        results.push({ username, ok: true, synced: 0, note: 'sheet not found' });
+        continue;
+      }
+
+      const schema = ensureSchema_(sh, PIN_HEADERS);
+      const map = schema.map, width = schema.width;
+      const lastRow = sh.getLastRow();
+      if (lastRow <= 1) {
+        results.push({ username, ok: true, synced: 0, rows: 0 });
+        continue;
+      }
+
+      const rawValues = sh.getRange(2, 1, lastRow - 1, width).getValues();
+      const qualifyingPins = [];
+      const rowIndicesToStamp = [];
+
+      for (let i = 0; i < rawValues.length; i++) {
+        const row = rawValues[i];
+        const pinId = String(getF_(row, map, 'pin_id') || '').trim();
+        if (!pinId) continue;
+
+        const archivedAt = String(getF_(row, map, 'archived_at') || '').trim();
+        if (archivedAt) continue; // Already marked archived in DB
+
+        const saves = Number(getF_(row, map, 'saves') || 0);
+        const repins = Number(getF_(row, map, 'repins') || 0);
+        const comments = Number(getF_(row, map, 'comments') || 0);
+        const ageDays = Number(getF_(row, map, 'age_days') || 0);
+
+        const pinObj = {
+          pin_id: pinId,
+          title: String(getF_(row, map, 'title') || ''),
+          description: String(getF_(row, map, 'description') || ''),
+          link: String(getF_(row, map, 'link') || ''),
+          domain: String(getF_(row, map, 'domain') || ''),
+          board_name: String(getF_(row, map, 'board_name') || ''),
+          image_url: String(getF_(row, map, 'image_url') || ''),
+          image_signature: String(getF_(row, map, 'image_signature') || ''),
+          dominant_color: String(getF_(row, map, 'dominant_color') || ''),
+          created_at: String(getF_(row, map, 'created_at') || ''),
+          created_at_pinterest: String(getF_(row, map, 'created_at') || ''),
+          saves: saves,
+          repins: repins,
+          comments: comments,
+          age_days: ageDays,
+          velocity: Number(getF_(row, map, 'velocity') || 0),
+          archived_at: new Date().toISOString()
+        };
+
+        if (qualifies_(pinObj, cfg)) {
+          qualifyingPins.push(pinObj);
+          rowIndicesToStamp.push(i + 2); // 1-based sheet row index
+        }
+      }
+
+      let accountSynced = 0;
+      if (qualifyingPins.length > 0) {
+        for (let b = 0; b < qualifyingPins.length; b += 500) {
+          const batch = qualifyingPins.slice(b, b + 500);
+          const sendRes = sendToPinOrbit_({ workspace_id: wsId, username: username }, batch, {
+            pins_count: qualifyingPins.length,
+            last_result: 'sheet_sync'
+          });
+          if (sendRes.ok) {
+            accountSynced += batch.length;
+          } else {
+            console.error('sheet_sync sendToPinOrbit_ failed for @' + username + ': ' + sendRes.error);
+          }
+        }
+
+        if (map['archived_at']) {
+          const colIdx = map['archived_at'];
+          for (const rIdx of rowIndicesToStamp) {
+            sh.getRange(rIdx, colIdx).setValue(nowHuman);
+          }
+        }
+      }
+
+      totalSynced += accountSynced;
+      results.push({ username, ok: true, synced: accountSynced, checked: rawValues.length });
+    }
+
+    return out_({ ok: true, synced: totalSynced, accounts: results });
+  } catch (err) {
+    return out_({ ok: false, error: String(err && err.message ? err.message : err) });
+  } finally {
+    lock.releaseLock();
   }
 }
 
@@ -492,7 +611,6 @@ function mapPin_(p) {
 }
 
 function qualifies_(m, cfg) {
-  if (!isLegacyMode_()) return false;
   const minS = (cfg && typeof cfg.pin_filter_min_saves === 'number') ? cfg.pin_filter_min_saves : CONFIG.THRESHOLD_SAVES;
   const minR = (cfg && typeof cfg.pin_filter_min_repins === 'number') ? cfg.pin_filter_min_repins : CONFIG.THRESHOLD_REPINS;
   const risA = (cfg && typeof cfg.pin_filter_rising_age_days === 'number') ? cfg.pin_filter_rising_age_days : CONFIG.RISING_AGE_DAYS;
@@ -505,7 +623,6 @@ function qualifies_(m, cfg) {
 }
 
 function sendToPinOrbit_(acc, pins, accountMeta) {
-  if (!isLegacyMode_()) return {ok: true, note: 'disabled outside legacy mode'};
   const base = prop_('PINORBIT_URL'), secret = prop_('PINARCHIVE_SECRET');
   if (!base || !secret) return {ok: false, error: 'missing PINORBIT_URL / PINARCHIVE_SECRET'};
   if (!acc.workspace_id) return {ok: false, error: 'missing workspace_id'};
@@ -530,7 +647,6 @@ function sendToPinOrbit_(acc, pins, accountMeta) {
 }
 
 function fetchWorkspaceConfig_(wsId) {
-  if (!isLegacyMode_()) return null;
   if (!wsId) return null;
   const base = prop_('PINORBIT_URL'), secret = prop_('PINARCHIVE_SECRET');
   if (!base || !secret) return null;
