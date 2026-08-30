@@ -60,10 +60,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node 20
+      - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install @supabase/supabase-js --no-save
 
       - name: Log Egress IP
         run: |
@@ -108,10 +111,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node 20
+      - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Run PinArchive Refresh (Shard ${{ matrix.shard }}/4)
         env:
@@ -134,15 +137,15 @@ jobs:
     if: always() && (github.event.inputs.mode == 'all' || github.event.inputs.mode == 'promotion' || github.event_name == 'schedule' || github.event.inputs.mode == '')
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
+ 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node 20
+      - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Run Candidate Promotion
         env:
