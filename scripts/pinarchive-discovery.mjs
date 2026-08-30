@@ -443,7 +443,7 @@ async function main() {
   // Load accounts from P4
   let accounts = await supaQuery(
     'pa_accounts',
-    'select=id,workspace_id,username,follower_count,status,ingest_enabled,interval_days,next_run_at,last_run_at,backfill_status,backfill_cursor,pins_count'
+    'select=id,workspace_id,username,follower_count,status,ingest_enabled,interval_days,next_run_at,last_run_at,backfill_status,backfill_cursor,pins_count&order=username.asc'
   );
   if (!accounts.length) {
     console.log('No accounts found in database.');
