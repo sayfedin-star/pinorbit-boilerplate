@@ -1043,12 +1043,33 @@ import Layout from '../../layouts/Layout.astro';
       setupNotes(pin);
 
       if (skeleton) skeleton.classList.add('hidden');
+      if (errorContainer) errorContainer.classList.add('hidden');
       if (mainContent) mainContent.classList.remove('hidden');
     } catch (e: any) {
+      if (retries > 0) {
+        setTimeout(() => loadPinDetail(retries - 1), 1500);
+        return;
+      }
       console.error('Error loading pin detail:', e);
       if (skeleton) skeleton.classList.add('hidden');
-      if (errorContainer) errorContainer.classList.remove('hidden');
-      if (errorText) errorText.textContent = e.message || 'Failed to load pin details.';
+      if (mainContent) mainContent.classList.add('hidden');
+      if (errorContainer) {
+        errorContainer.classList.remove('hidden');
+        errorContainer.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 text-rose-500 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <p id="pin-error-text" class="font-bold text-sm">Failed to load pin details: ${escapeHtml(e.message || 'Error')}</p>
+          <div class="mt-4 flex items-center justify-center gap-3">
+            <button id="retry-pin-detail-btn" class="font-bold underline cursor-pointer">Retry</button>
+            <span class="text-muted-foreground">•</span>
+            <a href="/pinarchive" class="font-semibold text-primary hover:underline">Return to PinArchive</a>
+          </div>
+        `;
+        document.getElementById('retry-pin-detail-btn')?.addEventListener('click', () => {
+          if (skeleton) skeleton.classList.remove('hidden');
+          if (errorContainer) errorContainer.classList.add('hidden');
+          loadPinDetail(2);
+        });
+      }
     }
   }
 

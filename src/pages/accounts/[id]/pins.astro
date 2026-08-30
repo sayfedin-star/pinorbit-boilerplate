@@ -386,7 +386,7 @@ const { id } = Astro.params;
     }
   }
 
-  async function loadInitialData() {
+  async function loadInitialData(retries = 2) {
     try {
       const [acc, boards] = await Promise.all([
         getAccountDetails(accountId),
@@ -402,8 +402,21 @@ const { id } = Astro.params;
       accountBoards = boards;
       populateBoardSelects(boards);
       await fetchAndRenderPins();
-    } catch (err) {
+    } catch (err: any) {
+      if (retries > 0) {
+        setTimeout(() => loadInitialData(retries - 1), 1500);
+        return;
+      }
       console.error('Error loading pins page initial data:', err);
+      const container = document.getElementById('pins-table-container');
+      if (container) {
+        container.innerHTML = `
+          <div class="p-8 text-center text-xs text-rose-500 bg-rose-500/10 rounded-2xl border border-rose-500/20">
+            Failed to load pins data: ${escapeHtml(err?.message || 'Database error')} <button id="retry-pins-init-btn" class="underline font-bold cursor-pointer ml-1">Retry</button>
+          </div>
+        `;
+        document.getElementById('retry-pins-init-btn')?.addEventListener('click', () => loadInitialData(2));
+      }
     }
   }
 

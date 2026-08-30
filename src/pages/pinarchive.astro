@@ -722,7 +722,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     }
   }
 
-  async function loadOverview() {
+  async function loadOverview(retries = 2) {
     try {
       const res = await fetch('/api/pinarchive/overview');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -757,7 +757,14 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       filterAndRenderAccounts();
       updateCostEstimate();
     } catch (e: any) {
+      if (retries > 0) { setTimeout(() => loadOverview(retries - 1), 1500); return; }
       console.error('Error loading PinArchive overview:', e);
+      const tbody = document.getElementById('accounts-table-body');
+      if (tbody) tbody.innerHTML =
+        `<tr><td colspan="12" class="p-8 text-center text-xs text-rose-500">
+           Failed to load accounts. <button id="retry-load-btn" class="underline font-bold">Retry</button>
+         </td></tr>`;
+      document.getElementById('retry-load-btn')?.addEventListener('click', () => loadOverview(2));
     }
   }
 
@@ -876,7 +883,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     transparencyEl.textContent = `≈ ${fmtNumber(pagesPerDay)} pages/day, ≈ ${fmtNumber(candidatesPerDay)} pins/day (${accCount} accounts × ${stopPages} pages)`;
   }
 
-  async function loadSettings() {
+  async function loadSettings(retries = 1) {
     try {
       const res = await fetch('/api/pinarchive/settings');
       if (res.status === 401 || res.status === 403) {
@@ -884,6 +891,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         disableSettingsForm();
         return;
       }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (!json.success) return;
 
@@ -943,6 +951,10 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
 
       updateCostEstimate();
     } catch (e) {
+      if (retries > 0) {
+        setTimeout(() => loadSettings(retries - 1), 1500);
+        return;
+      }
       console.error('Failed to load settings:', e);
     }
   }
