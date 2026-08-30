@@ -580,13 +580,10 @@ async function main() {
       try {
         const res = await pinterestFetch(
           url,
-          {
-            headers: getDiscoveryHeaders(cookie?.cookie_value, acc.username),
-            signal: AbortSignal.timeout(CFG.FETCH_TIMEOUT_MS),
-          },
-          acc.workspace_id,
-          cookie,
-          vaultDb
+          acc.username,
+          cookie?.plain || '',
+          vaultDb,
+          cookie?.id || null
         );
 
         if (!res.ok) {
