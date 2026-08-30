@@ -378,35 +378,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
             <span class="text-[10px] text-muted-foreground mt-1">Audit sweep enabled</span>
           </div>
 
-          <!-- Card 4.1: Candidates Enabled -->
-          <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
-            <div class="flex items-center justify-between">
-              <label for="setting-candidates-enabled" class="text-xs font-bold text-foreground">Track Candidates</label>
-              <span id="setting-candidates-label" class="text-xs font-bold text-emerald-500">Active</span>
-            </div>
-            <div class="mt-2 flex items-center justify-between">
-              <span class="text-[11px] text-muted-foreground">Ingest unarchived pins</span>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input id="setting-candidates-enabled" type="checkbox" checked class="sr-only peer" />
-                <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
-              </label>
-            </div>
-            <span class="text-[10px] text-muted-foreground mt-1">Re-evaluate as metrics grow</span>
-          </div>
-
-          <!-- Card 5.1: Sheet Write Mode -->
-          <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
-            <label for="setting-sheet-write-mode" class="text-xs font-bold text-foreground">Sheet Write Mode</label>
-            <select
-              id="setting-sheet-write-mode"
-              class="mt-2 w-full rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground focus:outline-none cursor-pointer"
-            >
-              <option value="append_only">Append Only (Fast)</option>
-              <option value="full_update">Full Update (Exact)</option>
-            </select>
-            <span class="text-[10px] text-muted-foreground mt-1">GAS thin writer write mode</span>
-          </div>
-
           <!-- Card 5.2: Daily Sheet Sync -->
           <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
             <div class="flex items-center justify-between">
@@ -503,15 +474,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           title="Trigger GH discovery + rotation pipeline"
         >
           <span>▶ Run</span>
-        </button>
-
-        <button
-          id="gas-bulk-sync-btn"
-          type="button"
-          class="inline-flex items-center gap-1 rounded-xl border border-border bg-card hover:bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 shadow-xs transition-colors cursor-pointer"
-          title="Re-evaluate archive rules on candidates (server-side)"
-        >
-          <span>🔄 Sync</span>
         </button>
 
         <button
@@ -937,9 +899,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       const discoveryStopInp = document.getElementById('setting-discovery-stop-pages') as HTMLInputElement | null;
       const auditSweepCb = document.getElementById('setting-audit-sweep-enabled') as HTMLInputElement | null;
       const auditSweepLabel = document.getElementById('setting-audit-sweep-label');
-      const candidatesCb = document.getElementById('setting-candidates-enabled') as HTMLInputElement | null;
-      const candidatesLabel = document.getElementById('setting-candidates-label');
-      const sheetWriteModeSel = document.getElementById('setting-sheet-write-mode') as HTMLSelectElement | null;
       const dailySheetSyncCb = document.getElementById('setting-daily-sheet-sync') as HTMLInputElement | null;
       const dailySheetSyncLabel = document.getElementById('setting-daily-sheet-sync-label');
       const summaryBadge = document.getElementById('settings-summary-badge');
@@ -974,14 +933,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           auditSweepLabel.className = `text-xs font-bold ${auditSweepCb.checked ? 'text-emerald-500' : 'text-muted-foreground'}`;
         }
       }
-      if (candidatesCb) {
-        candidatesCb.checked = json.candidates_enabled !== false;
-        if (candidatesLabel) {
-          candidatesLabel.textContent = candidatesCb.checked ? 'Active' : 'Off';
-          candidatesLabel.className = `text-xs font-bold ${candidatesCb.checked ? 'text-emerald-500' : 'text-muted-foreground'}`;
-        }
-      }
-      if (sheetWriteModeSel) sheetWriteModeSel.value = json.sheet_write_mode || 'append_only';
       if (dailySheetSyncCb) {
         dailySheetSyncCb.checked = Boolean(json.daily_sheet_sync_enabled);
         if (dailySheetSyncLabel) {
@@ -1031,7 +982,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     const reevaluateBtn = document.getElementById('reevaluate-candidates-btn') as HTMLButtonElement | null;
     const roleBadge = document.getElementById('settings-role-badge');
     const inputs = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
-      '#setting-ingest-enabled, #setting-paused-policy, #setting-max-batch, #setting-refresh-max-pins, #setting-min-saves, #setting-min-repins, #setting-rising-age, #setting-rising-saves, #setting-discovery-stop-pages, #setting-audit-sweep-enabled, #setting-candidates-enabled, #setting-sheet-write-mode, #setting-daily-sheet-sync'
+      '#setting-ingest-enabled, #setting-paused-policy, #setting-max-batch, #setting-refresh-max-pins, #setting-min-saves, #setting-min-repins, #setting-rising-age, #setting-rising-saves, #setting-discovery-stop-pages, #setting-audit-sweep-enabled, #setting-daily-sheet-sync'
     );
     inputs.forEach((el) => {
       el.disabled = true;
@@ -1058,8 +1009,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     const risingSavesInp = document.getElementById('setting-rising-saves') as HTMLInputElement | null;
     const discoveryStopInp = document.getElementById('setting-discovery-stop-pages') as HTMLInputElement | null;
     const auditSweepCb = document.getElementById('setting-audit-sweep-enabled') as HTMLInputElement | null;
-    const candidatesCb = document.getElementById('setting-candidates-enabled') as HTMLInputElement | null;
-    const sheetWriteModeSel = document.getElementById('setting-sheet-write-mode') as HTMLSelectElement | null;
     const dailySheetSyncCb = document.getElementById('setting-daily-sheet-sync') as HTMLInputElement | null;
     const statusMsg = document.getElementById('settings-status-msg');
     const saveBtn = document.getElementById('save-ingest-settings-btn') as HTMLButtonElement | null;
@@ -1088,8 +1037,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           pin_filter_rising_saves: Number.isInteger(parseInt(risingSavesInp.value, 10)) ? parseInt(risingSavesInp.value, 10) : 34,
           discovery_stop_pages: parseInt(discoveryStopInp?.value || '3', 10) || 3,
           audit_sweep_enabled: auditSweepCb ? auditSweepCb.checked : true,
-          candidates_enabled: candidatesCb ? candidatesCb.checked : true,
-          sheet_write_mode: sheetWriteModeSel?.value || 'append_only',
           daily_sheet_sync_enabled: dailySheetSyncCb ? dailySheetSyncCb.checked : false,
         }),
       });
@@ -1151,29 +1098,39 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         return;
       }
 
+      const allUsernames = rawAccounts.map((a: any) => a.username).filter(Boolean);
+      if (allUsernames.length === 0) {
+        toast('No accounts found to run discovery', 'info');
+        return;
+      }
+
       btn.disabled = true;
       if (icon) icon.classList.add('animate-spin');
-      if (text) text.textContent = 'Re-evaluating...';
+      if (text) text.textContent = 'Queueing...';
 
       try {
-        const res = await fetch('/api/internal/pinarchive/reevaluate', {
+        const res = await fetch('/api/pinarchive/accounts-gas', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ workspace_id: workspaceId }),
+          body: JSON.stringify({
+            workspace_id: workspaceId,
+            action: 'run_now',
+            usernames: allUsernames,
+          }),
         });
 
         const json = await res.json().catch(() => ({}));
         if (res.ok && json.success) {
-          toast(`Candidate Re-evaluation: ${json.promoted} promoted out of ${json.checked} candidates checked`, 'success');
-          await loadOverview();
+          const queuedCount = Array.isArray(json.results) ? json.results.filter((r: any) => r.ok).length : allUsernames.length;
+          toast(`Discovery run queued for ${queuedCount} account(s)!`, 'success');
         } else if (res.status === 401 || res.status === 403) {
-          toast('Admin access required for candidate re-evaluation', 'error');
+          toast('Admin access required to trigger discovery', 'error');
         } else {
-          toast(json.error || 'Promotion evaluation failed', 'error');
+          toast(json.error || 'Failed to dispatch discovery run', 'error');
         }
       } catch (err: any) {
-        console.error('Candidate promotion error:', err);
-        toast(err?.message || 'Network error triggering re-evaluation', 'error');
+        console.error('Discovery dispatch error:', err);
+        toast(err?.message || 'Network error triggering discovery', 'error');
       } finally {
         if (icon) icon.classList.remove('animate-spin');
         if (text) text.textContent = 'Re-evaluate Now';
@@ -1682,36 +1639,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           toast(err?.message || 'Network error triggering pipeline run', 'error');
         } finally {
           runBtn.disabled = false;
-        }
-      });
-    }
-
-    // Bulk Sync Now
-    const syncBtn = document.getElementById('gas-bulk-sync-btn') as HTMLButtonElement | null;
-    if (syncBtn) {
-      syncBtn.addEventListener('click', async () => {
-        const usernames = getSelectedUsernames();
-        if (usernames.length === 0) return;
-        syncBtn.disabled = true;
-        toast(`Re-evaluating candidates for ${usernames.length} account(s)...`, 'info');
-
-        try {
-          const res = await fetch('/api/pinarchive/accounts-gas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'sync_now', usernames }),
-          });
-          const json = await res.json();
-          if (json.success) {
-            toast(`Candidate re-evaluation complete!`, 'success');
-            await loadOverview();
-          } else {
-            toast(json.error || 'Failed to re-evaluate candidates', 'error');
-          }
-        } catch (err: any) {
-          toast(err?.message || 'Network error triggering candidate re-evaluation', 'error');
-        } finally {
-          syncBtn.disabled = false;
         }
       });
     }

@@ -24,8 +24,6 @@ const DEFAULT_SETTINGS = {
   refresh_max_pins: 0,
   discovery_stop_pages: 3,
   audit_sweep_enabled: true,
-  candidates_enabled: true,
-  sheet_write_mode: 'append_only' as const,
   daily_sheet_sync_enabled: false,
 };
 
@@ -41,8 +39,6 @@ const ALLOWED_PATCH_KEYS = new Set([
   'refresh_max_pins',
   'discovery_stop_pages',
   'audit_sweep_enabled',
-  'candidates_enabled',
-  'sheet_write_mode',
   'daily_sheet_sync_enabled',
 ]);
 
@@ -104,8 +100,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
       refresh_max_pins: settings.refresh_max_pins ?? DEFAULT_SETTINGS.refresh_max_pins,
       discovery_stop_pages: Number(settings.discovery_stop_pages ?? DEFAULT_SETTINGS.discovery_stop_pages),
       audit_sweep_enabled: settings.audit_sweep_enabled ?? DEFAULT_SETTINGS.audit_sweep_enabled,
-      candidates_enabled: settings.candidates_enabled ?? DEFAULT_SETTINGS.candidates_enabled,
-      sheet_write_mode: settings.sheet_write_mode || DEFAULT_SETTINGS.sheet_write_mode,
       daily_sheet_sync_enabled: settings.daily_sheet_sync_enabled ?? DEFAULT_SETTINGS.daily_sheet_sync_enabled,
       is_default: false,
       updated_at: settings.updated_at,
@@ -227,20 +221,6 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
     return json({ success: false, error: 'audit_sweep_enabled must be a boolean.' }, 422);
   }
 
-  // Validate candidates_enabled
-  if (body.candidates_enabled !== undefined && typeof body.candidates_enabled !== 'boolean') {
-    return json({ success: false, error: 'candidates_enabled must be a boolean.' }, 422);
-  }
-
-  // Validate sheet_write_mode
-  if (
-    body.sheet_write_mode !== undefined &&
-    body.sheet_write_mode !== 'append_only' &&
-    body.sheet_write_mode !== 'full_update'
-  ) {
-    return json({ success: false, error: "sheet_write_mode must be 'append_only' or 'full_update'." }, 422);
-  }
-
   // Validate daily_sheet_sync_enabled
   if (body.daily_sheet_sync_enabled !== undefined && typeof body.daily_sheet_sync_enabled !== 'boolean') {
     return json({ success: false, error: 'daily_sheet_sync_enabled must be a boolean.' }, 422);
@@ -305,14 +285,6 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
         body.audit_sweep_enabled !== undefined
           ? body.audit_sweep_enabled
           : (existing?.audit_sweep_enabled ?? DEFAULT_SETTINGS.audit_sweep_enabled),
-      candidates_enabled:
-        body.candidates_enabled !== undefined
-          ? body.candidates_enabled
-          : (existing?.candidates_enabled ?? DEFAULT_SETTINGS.candidates_enabled),
-      sheet_write_mode:
-        body.sheet_write_mode !== undefined
-          ? body.sheet_write_mode
-          : (existing?.sheet_write_mode ?? DEFAULT_SETTINGS.sheet_write_mode),
       daily_sheet_sync_enabled:
         body.daily_sheet_sync_enabled !== undefined
           ? body.daily_sheet_sync_enabled
@@ -343,8 +315,6 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
       refresh_max_pins: saved.refresh_max_pins ?? DEFAULT_SETTINGS.refresh_max_pins,
       discovery_stop_pages: Number(saved.discovery_stop_pages ?? DEFAULT_SETTINGS.discovery_stop_pages),
       audit_sweep_enabled: saved.audit_sweep_enabled ?? DEFAULT_SETTINGS.audit_sweep_enabled,
-      candidates_enabled: saved.candidates_enabled ?? DEFAULT_SETTINGS.candidates_enabled,
-      sheet_write_mode: saved.sheet_write_mode || DEFAULT_SETTINGS.sheet_write_mode,
       daily_sheet_sync_enabled: saved.daily_sheet_sync_enabled ?? DEFAULT_SETTINGS.daily_sheet_sync_enabled,
       is_default: false,
       updated_at: saved.updated_at,
