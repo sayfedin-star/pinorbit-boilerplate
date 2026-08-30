@@ -435,7 +435,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs text-muted-foreground">
             <div class="flex items-center gap-2">
               <span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
-              <span>Candidate Promotion: <strong class="text-foreground">Daily @ 07:15 UTC</strong></span>
+              <span>Daily Pipeline: <strong class="text-foreground">Daily @ 07:00 UTC</strong></span>
             </div>
             <div class="flex items-center gap-2">
               <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
@@ -793,6 +793,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
 
       // Render Accounts Table with Checkboxes & Search Filter
       filterAndRenderAccounts();
+      updateCostEstimate();
     } catch (e: any) {
       console.error('Error loading PinArchive overview:', e);
     }
@@ -1802,6 +1803,12 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     const saveSettingsBtn = document.getElementById('save-ingest-settings-btn');
     if (saveSettingsBtn) {
       saveSettingsBtn.addEventListener('click', saveSettings);
+    }
+
+    // Live update cost estimate on discovery stop pages change
+    const stopPagesInput = document.getElementById('setting-discovery-stop-pages');
+    if (stopPagesInput) {
+      stopPagesInput.addEventListener('input', updateCostEstimate);
     }
 
     // Listen for audit timestamp display preference changes
