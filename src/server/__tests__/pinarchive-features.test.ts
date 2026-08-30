@@ -23,12 +23,10 @@ vi.mock('../../server/auth/workspace-guard', () => ({
   assertWorkspaceAccess: vi.fn().mockResolvedValue({ workspaceId: mockWsId }),
 }));
 
-vi.mock('../../server/lib/gas-bridge', () => ({
-  gasCall: vi.fn().mockImplementation(async (_env, _ws, action, payload) => {
-    if (action === 'sync') {
-      return { ok: true, summary: { pushed: 12, matched: 12, skippedUnchanged: 0 } };
-    }
-    return { ok: true };
+vi.mock('../../server/services/promotion-service', () => ({
+  promoteCandidates: vi.fn().mockResolvedValue({
+    promoted: 5,
+    checked: 10,
   }),
 }));
 
@@ -167,7 +165,8 @@ describe('PinArchive Features & RPCs Suite', () => {
       expect(json.action).toBe('sync_now');
       expect(json.results.length).toBe(1);
       expect(json.results[0].ok).toBe(true);
-      expect(json.results[0].summary.pushed).toBe(12);
+      expect(json.results[0].summary.promoted).toBe(5);
+      expect(json.results[0].summary.checked).toBe(10);
     });
 
     it('rejects unauthorized action strings with 422', async () => {

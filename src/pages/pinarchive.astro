@@ -156,7 +156,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
         </span>
         <h2 id="ingest-settings-heading" class="text-sm font-bold text-foreground">
-          GAS Ingestion &amp; Archive Rules
+          PinArchive Ingestion &amp; Archive Rules
         </h2>
         <span id="settings-summary-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
           🟢 Ingest Active
@@ -168,6 +168,15 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
 
       <div class="flex items-center gap-2.5">
         <span id="settings-status-msg" class="text-xs font-semibold"></span>
+        <button
+          id="reevaluate-candidates-btn"
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 text-xs font-bold shadow-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          title="Re-evaluate candidate pins against current OR rules"
+        >
+          <svg id="reevaluate-icon" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+          <span id="reevaluate-btn-text">Re-evaluate Now</span>
+        </button>
         <button
           id="save-ingest-settings-btn"
           type="button"
@@ -327,13 +336,125 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           </div>
         </div>
       </div>
+
+      <!-- Tier 3: Execution Settings (GH Brain & GAS Thin Writer) -->
+      <div class="pt-3 border-t border-border/60">
+        <div class="flex items-center justify-between mb-2.5">
+          <h3 class="text-xs font-bold text-foreground">GH Brain &amp; Sheet Execution Settings</h3>
+          <span class="text-[11px] text-muted-foreground">Governs discovery heuristics, candidate storage, and Google Sheets sync.</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <!-- Card 1: Discovery Stop Pages -->
+          <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
+            <label for="setting-discovery-stop-pages" class="text-xs font-bold text-foreground">Discovery Stop</label>
+            <div class="mt-2 flex items-center gap-1.5">
+              <input
+                id="setting-discovery-stop-pages"
+                type="number"
+                min="1"
+                max="10"
+                value="3"
+                class="w-full rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:outline-none"
+              />
+              <span class="text-[11px] font-medium text-muted-foreground">pages</span>
+            </div>
+            <span class="text-[10px] text-muted-foreground mt-1">Stop after K all-known pages</span>
+          </div>
+
+          <!-- Card 1.3: Audit Sweep Enabled -->
+          <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <label for="setting-audit-sweep-enabled" class="text-xs font-bold text-foreground">Monthly Sweep</label>
+              <span id="setting-audit-sweep-label" class="text-xs font-bold text-emerald-500">Active</span>
+            </div>
+            <div class="mt-2 flex items-center justify-between">
+              <span class="text-[11px] text-muted-foreground">Day-1 02:00 full scan</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input id="setting-audit-sweep-enabled" type="checkbox" checked class="sr-only peer" />
+                <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+            <span class="text-[10px] text-muted-foreground mt-1">Audit sweep enabled</span>
+          </div>
+
+          <!-- Card 4.1: Candidates Enabled -->
+          <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <label for="setting-candidates-enabled" class="text-xs font-bold text-foreground">Track Candidates</label>
+              <span id="setting-candidates-label" class="text-xs font-bold text-emerald-500">Active</span>
+            </div>
+            <div class="mt-2 flex items-center justify-between">
+              <span class="text-[11px] text-muted-foreground">Ingest unarchived pins</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input id="setting-candidates-enabled" type="checkbox" checked class="sr-only peer" />
+                <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+            <span class="text-[10px] text-muted-foreground mt-1">Re-evaluate as metrics grow</span>
+          </div>
+
+          <!-- Card 5.1: Sheet Write Mode -->
+          <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
+            <label for="setting-sheet-write-mode" class="text-xs font-bold text-foreground">Sheet Write Mode</label>
+            <select
+              id="setting-sheet-write-mode"
+              class="mt-2 w-full rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground focus:outline-none cursor-pointer"
+            >
+              <option value="append_only">Append Only (Fast)</option>
+              <option value="full_update">Full Update (Exact)</option>
+            </select>
+            <span class="text-[10px] text-muted-foreground mt-1">GAS thin writer write mode</span>
+          </div>
+
+          <!-- Card 5.2: Daily Sheet Sync -->
+          <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <label for="setting-daily-sheet-sync" class="text-xs font-bold text-foreground">Daily Sheet Sync</label>
+              <span id="setting-daily-sheet-sync-label" class="text-xs font-bold text-muted-foreground">Off</span>
+            </div>
+            <div class="mt-2 flex items-center justify-between">
+              <span class="text-[11px] text-muted-foreground">Sheets → DB daily sync</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input id="setting-daily-sheet-sync" type="checkbox" class="sr-only peer" />
+                <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+            <span class="text-[10px] text-muted-foreground mt-1">Sync manually edited rows</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tier 4: Pipeline Transparency & Cost Estimation Box -->
+      <div class="pt-3 border-t border-border/60">
+        <div class="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-foreground">Pipeline Transparency &amp; Cost Estimation</span>
+            <span class="text-[10px] font-semibold text-muted-foreground">Automated &amp; Serverless</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs text-muted-foreground">
+            <div class="flex items-center gap-2">
+              <span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
+              <span>Daily Pipeline: <strong class="text-foreground">Daily @ 07:00 UTC</strong></span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+              <span>Monthly Audit Sweep: <strong class="text-foreground">Day 1 @ 02:00 UTC</strong></span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+              <span id="transparency-cost-estimate">Estimating workload…</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
   <!-- ═══ View A: Accounts Table with Search & Bulk Action Bar ═══ -->
   <section class="mb-8 rounded-2xl border border-border bg-card overflow-hidden shadow-xs" aria-labelledby="accounts-section-heading">
     <div class="sticky top-0 bg-card z-10 p-4 border-b border-border/80 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-3 flex-wrap">
         <h2 id="accounts-section-heading" class="text-sm font-bold text-foreground flex items-center gap-2">
           <span>👤 Tracked Accounts</span>
           <span class="text-xs font-normal text-muted-foreground" id="accounts-strip-count"></span>
@@ -348,6 +469,16 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
             placeholder="Search creator…"
             class="w-full rounded-xl border border-border bg-background py-1 pl-7 pr-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
           />
+        </div>
+
+        <!-- Columns Dropdown -->
+        <div class="relative" id="pa-col-visibility-wrapper">
+          <button id="pa-col-visibility-btn" type="button" class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted transition-all cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span>Columns</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div id="pa-col-visibility-menu" class="hidden absolute left-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-border bg-card shadow-lg p-2 space-y-0.5"></div>
         </div>
       </div>
 
@@ -369,7 +500,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           id="gas-bulk-run-btn"
           type="button"
           class="inline-flex items-center gap-1 rounded-xl border border-border bg-card hover:bg-muted px-2.5 py-1.5 text-xs font-bold text-foreground shadow-xs transition-colors cursor-pointer"
-          title="Trigger Pinterest scraping run in GAS"
+          title="Trigger GH discovery + rotation pipeline"
         >
           <span>▶ Run</span>
         </button>
@@ -378,7 +509,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           id="gas-bulk-sync-btn"
           type="button"
           class="inline-flex items-center gap-1 rounded-xl border border-border bg-card hover:bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 shadow-xs transition-colors cursor-pointer"
-          title="Push filtered Sheet pins to DB"
+          title="Re-evaluate archive rules on candidates (server-side)"
         >
           <span>🔄 Sync</span>
         </button>
@@ -434,7 +565,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
             <th class="py-3 px-4 font-semibold">Pins Total</th>
             <th class="py-3 px-4 font-semibold">Δ Changed</th>
             <th class="py-3 px-4 font-semibold">Last / Next Run</th>
-            <th class="py-3 px-4 font-semibold text-center">Accept GAS</th>
+            <th class="py-3 px-4 font-semibold text-center">Ingest Active</th>
             <th class="py-3 px-4 text-right font-semibold">Actions</th>
           </tr>
         </thead>
@@ -462,16 +593,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
 
       <div class="rounded-xl bg-rose-500/5 border border-rose-500/20 p-3.5 text-xs text-muted-foreground space-y-2.5">
         <p class="text-rose-500 font-bold">⚠️ Warning: Database Deletion is Permanent</p>
-        <p><strong class="text-foreground">Cascade Clean:</strong> DB deletion is permanent; GAS Sheets unaffected — next tick will RE-CREATE the account and re-ingest all pins unless paused in GAS first.</p>
-        <label class="flex items-center gap-2 pt-2 border-t border-rose-500/20 text-foreground font-semibold cursor-pointer">
-          <input
-            type="checkbox"
-            id="delete-pause-gas-checkbox"
-            checked
-            class="rounded border-rose-500/40 text-rose-500 focus:ring-rose-500 h-4 w-4"
-          />
-          <span>Pause in GAS before delete (recommended)</span>
-        </label>
+        <p><strong class="text-foreground">Permanent Purge:</strong> DB deletion is permanent. GH discovery will NOT re-create the account (source of truth is the DB, not GAS).</p>
       </div>
 
       <div class="space-y-2">
@@ -671,12 +793,126 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
 
       // Render Accounts Table with Checkboxes & Search Filter
       filterAndRenderAccounts();
+      updateCostEstimate();
     } catch (e: any) {
       console.error('Error loading PinArchive overview:', e);
     }
   }
 
+  interface ColDef {
+    key: string;
+    label: string;
+    defaultVisible: boolean;
+  }
+
+  const COLUMN_DEFS: ColDef[] = [
+    { key: 'interval_days', label: 'Interval (Days)', defaultVisible: true },
+    { key: 'backfill_status', label: 'Backfill Status', defaultVisible: false },
+    { key: 'backfill_cursor', label: 'Backfill Cursor', defaultVisible: false },
+    { key: 'last_result', label: 'Last Result', defaultVisible: false },
+    { key: 'archived_count', label: 'Archived Pins', defaultVisible: true },
+  ];
+
+  let colVisible: Record<string, boolean> = (() => {
+    try {
+      const saved = localStorage.getItem('po_pa_cols');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      interval_days: true,
+      backfill_status: false,
+      backfill_cursor: false,
+      last_result: false,
+      archived_count: true,
+    };
+  })();
+
+  function buildColVisibilityMenu() {
+    const colMenu = document.getElementById('pa-col-visibility-menu');
+    if (!colMenu) return;
+    colMenu.innerHTML = COLUMN_DEFS.map(
+      (c) => `
+      <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-muted/60 transition-colors text-xs font-medium text-foreground">
+        <input type="checkbox" class="rounded accent-primary" data-pa-col-key="${c.key}" ${colVisible[c.key] ? 'checked' : ''} />
+        <span>${c.label}</span>
+      </label>`
+    ).join('');
+
+    colMenu.querySelectorAll<HTMLInputElement>('input[data-pa-col-key]').forEach((cb) => {
+      cb.addEventListener('change', () => {
+        const key = cb.dataset.paColKey!;
+        colVisible[key] = cb.checked;
+        localStorage.setItem('po_pa_cols', JSON.stringify(colVisible));
+        renderTableHeader();
+        filterAndRenderAccounts();
+      });
+    });
+  }
+
+  function setupColVisibilityToggle() {
+    const btn = document.getElementById('pa-col-visibility-btn');
+    const colMenu = document.getElementById('pa-col-visibility-menu');
+    const wrapper = document.getElementById('pa-col-visibility-wrapper');
+    if (!btn || !colMenu) return;
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      colMenu.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (wrapper && !wrapper.contains(e.target as Node)) {
+        colMenu.classList.add('hidden');
+      }
+    });
+  }
+
+  function renderTableHeader() {
+    const thead = document.querySelector('#accounts-table-body')?.parentElement?.querySelector('thead');
+    if (!thead) return;
+
+    let optHeaders = '';
+    if (colVisible.interval_days) optHeaders += `<th class="py-3 px-4 font-semibold">Interval</th>`;
+    if (colVisible.backfill_status) optHeaders += `<th class="py-3 px-4 font-semibold">Backfill</th>`;
+    if (colVisible.backfill_cursor) optHeaders += `<th class="py-3 px-4 font-semibold">Cursor</th>`;
+    if (colVisible.last_result) optHeaders += `<th class="py-3 px-4 font-semibold">Last Result</th>`;
+    if (colVisible.archived_count) optHeaders += `<th class="py-3 px-4 font-semibold">Archived Pins</th>`;
+
+    thead.innerHTML = `
+      <tr>
+        <th class="py-3 px-4 w-10 text-center">
+          <input
+            type="checkbox"
+            id="select-all-accounts-cb"
+            class="rounded border-border text-rose-500 focus:ring-rose-500 h-3.5 w-3.5 cursor-pointer"
+            title="Select all accounts"
+          />
+        </th>
+        <th class="py-3 px-4 font-semibold text-foreground">Creator Account</th>
+        <th class="py-3 px-4 font-semibold">Followers</th>
+        <th class="py-3 px-4 font-semibold">Pins Total</th>
+        ${optHeaders}
+        <th class="py-3 px-4 font-semibold">Δ Changed</th>
+        <th class="py-3 px-4 font-semibold">Last / Next Run</th>
+        <th class="py-3 px-4 font-semibold text-center">Ingest Active</th>
+        <th class="py-3 px-4 text-right font-semibold">Actions</th>
+      </tr>
+    `;
+    attachAccountSelectionListeners();
+  }
+
   let canAdminSettings = true;
+
+  function updateCostEstimate() {
+    const transparencyEl = document.getElementById('transparency-cost-estimate');
+    if (!transparencyEl) return;
+    const accCount = rawAccounts.length;
+    const stopPagesInp = document.getElementById('setting-discovery-stop-pages') as HTMLInputElement | null;
+    const stopPages = parseInt(stopPagesInp?.value || '3', 10) || 3;
+    const pagesPerDay = accCount * stopPages;
+    const candidatesPerDay = pagesPerDay * 50;
+    transparencyEl.textContent = `≈ ${fmtNumber(pagesPerDay)} pages/day, ≈ ${fmtNumber(candidatesPerDay)} pins/day (${accCount} accounts × ${stopPages} pages)`;
+  }
 
   async function loadSettings() {
     try {
@@ -698,6 +934,14 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       const risingAgeInp = document.getElementById('setting-rising-age') as HTMLInputElement | null;
       const risingSavesInp = document.getElementById('setting-rising-saves') as HTMLInputElement | null;
       const refreshMaxPinsInp = document.getElementById('setting-refresh-max-pins') as HTMLInputElement | null;
+      const discoveryStopInp = document.getElementById('setting-discovery-stop-pages') as HTMLInputElement | null;
+      const auditSweepCb = document.getElementById('setting-audit-sweep-enabled') as HTMLInputElement | null;
+      const auditSweepLabel = document.getElementById('setting-audit-sweep-label');
+      const candidatesCb = document.getElementById('setting-candidates-enabled') as HTMLInputElement | null;
+      const candidatesLabel = document.getElementById('setting-candidates-label');
+      const sheetWriteModeSel = document.getElementById('setting-sheet-write-mode') as HTMLSelectElement | null;
+      const dailySheetSyncCb = document.getElementById('setting-daily-sheet-sync') as HTMLInputElement | null;
+      const dailySheetSyncLabel = document.getElementById('setting-daily-sheet-sync-label');
       const summaryBadge = document.getElementById('settings-summary-badge');
 
       if (ingestCb) {
@@ -722,6 +966,31 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       if (risingAgeInp) risingAgeInp.value = String(json.pin_filter_rising_age_days ?? 14);
       if (risingSavesInp) risingSavesInp.value = String(json.pin_filter_rising_saves ?? 34);
       if (refreshMaxPinsInp) refreshMaxPinsInp.value = String(json.refresh_max_pins ?? 0);
+      if (discoveryStopInp) discoveryStopInp.value = String(json.discovery_stop_pages ?? 3);
+      if (auditSweepCb) {
+        auditSweepCb.checked = json.audit_sweep_enabled !== false;
+        if (auditSweepLabel) {
+          auditSweepLabel.textContent = auditSweepCb.checked ? 'Active' : 'Off';
+          auditSweepLabel.className = `text-xs font-bold ${auditSweepCb.checked ? 'text-emerald-500' : 'text-muted-foreground'}`;
+        }
+      }
+      if (candidatesCb) {
+        candidatesCb.checked = json.candidates_enabled !== false;
+        if (candidatesLabel) {
+          candidatesLabel.textContent = candidatesCb.checked ? 'Active' : 'Off';
+          candidatesLabel.className = `text-xs font-bold ${candidatesCb.checked ? 'text-emerald-500' : 'text-muted-foreground'}`;
+        }
+      }
+      if (sheetWriteModeSel) sheetWriteModeSel.value = json.sheet_write_mode || 'append_only';
+      if (dailySheetSyncCb) {
+        dailySheetSyncCb.checked = Boolean(json.daily_sheet_sync_enabled);
+        if (dailySheetSyncLabel) {
+          dailySheetSyncLabel.textContent = dailySheetSyncCb.checked ? 'Active' : 'Off';
+          dailySheetSyncLabel.className = `text-xs font-bold ${dailySheetSyncCb.checked ? 'text-emerald-500' : 'text-muted-foreground'}`;
+        }
+      }
+
+      updateCostEstimate();
     } catch (e) {
       console.error('Failed to load settings:', e);
     }
@@ -759,9 +1028,10 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
 
   function disableSettingsForm() {
     const saveBtn = document.getElementById('save-ingest-settings-btn') as HTMLButtonElement | null;
+    const reevaluateBtn = document.getElementById('reevaluate-candidates-btn') as HTMLButtonElement | null;
     const roleBadge = document.getElementById('settings-role-badge');
     const inputs = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
-      '#setting-ingest-enabled, #setting-paused-policy, #setting-max-batch, #setting-refresh-max-pins, #setting-min-saves, #setting-min-repins, #setting-rising-age, #setting-rising-saves'
+      '#setting-ingest-enabled, #setting-paused-policy, #setting-max-batch, #setting-refresh-max-pins, #setting-min-saves, #setting-min-repins, #setting-rising-age, #setting-rising-saves, #setting-discovery-stop-pages, #setting-audit-sweep-enabled, #setting-candidates-enabled, #setting-sheet-write-mode, #setting-daily-sheet-sync'
     );
     inputs.forEach((el) => {
       el.disabled = true;
@@ -769,6 +1039,10 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     if (saveBtn) {
       saveBtn.disabled = true;
       saveBtn.classList.add('hidden');
+    }
+    if (reevaluateBtn) {
+      reevaluateBtn.disabled = true;
+      reevaluateBtn.classList.add('hidden');
     }
     if (roleBadge) roleBadge.classList.remove('hidden');
   }
@@ -782,6 +1056,11 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     const minRepinsInp = document.getElementById('setting-min-repins') as HTMLInputElement | null;
     const risingAgeInp = document.getElementById('setting-rising-age') as HTMLInputElement | null;
     const risingSavesInp = document.getElementById('setting-rising-saves') as HTMLInputElement | null;
+    const discoveryStopInp = document.getElementById('setting-discovery-stop-pages') as HTMLInputElement | null;
+    const auditSweepCb = document.getElementById('setting-audit-sweep-enabled') as HTMLInputElement | null;
+    const candidatesCb = document.getElementById('setting-candidates-enabled') as HTMLInputElement | null;
+    const sheetWriteModeSel = document.getElementById('setting-sheet-write-mode') as HTMLSelectElement | null;
+    const dailySheetSyncCb = document.getElementById('setting-daily-sheet-sync') as HTMLInputElement | null;
     const statusMsg = document.getElementById('settings-status-msg');
     const saveBtn = document.getElementById('save-ingest-settings-btn') as HTMLButtonElement | null;
     const summaryBadge = document.getElementById('settings-summary-badge');
@@ -807,6 +1086,11 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           pin_filter_min_repins: parseInt(minRepinsInp.value, 10) || 0,
           pin_filter_rising_age_days: Number.isInteger(parseInt(risingAgeInp.value, 10)) ? parseInt(risingAgeInp.value, 10) : 14,
           pin_filter_rising_saves: Number.isInteger(parseInt(risingSavesInp.value, 10)) ? parseInt(risingSavesInp.value, 10) : 34,
+          discovery_stop_pages: parseInt(discoveryStopInp?.value || '3', 10) || 3,
+          audit_sweep_enabled: auditSweepCb ? auditSweepCb.checked : true,
+          candidates_enabled: candidatesCb ? candidatesCb.checked : true,
+          sheet_write_mode: sheetWriteModeSel?.value || 'append_only',
+          daily_sheet_sync_enabled: dailySheetSyncCb ? dailySheetSyncCb.checked : false,
         }),
       });
 
@@ -834,6 +1118,8 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         }`;
       }
 
+      updateCostEstimate();
+
       if (statusMsg) {
         statusMsg.textContent = 'Settings saved!';
         statusMsg.className = 'text-xs font-semibold text-emerald-500';
@@ -849,6 +1135,51 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     } finally {
       if (saveBtn && canAdminSettings) saveBtn.disabled = false;
     }
+  }
+
+  function setupReevaluateButton() {
+    const btn = document.getElementById('reevaluate-candidates-btn') as HTMLButtonElement | null;
+    const icon = document.getElementById('reevaluate-icon');
+    const text = document.getElementById('reevaluate-btn-text');
+    if (!btn) return;
+
+    btn.addEventListener('click', async () => {
+      const root = document.getElementById('pinarchive-page-root');
+      const workspaceId = root?.getAttribute('data-workspace-id') || '';
+      if (!workspaceId) {
+        toast('Workspace identifier missing', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      if (icon) icon.classList.add('animate-spin');
+      if (text) text.textContent = 'Re-evaluating...';
+
+      try {
+        const res = await fetch('/api/internal/pinarchive/reevaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workspace_id: workspaceId }),
+        });
+
+        const json = await res.json().catch(() => ({}));
+        if (res.ok && json.success) {
+          toast(`Candidate Re-evaluation: ${json.promoted} promoted out of ${json.checked} candidates checked`, 'success');
+          await loadOverview();
+        } else if (res.status === 401 || res.status === 403) {
+          toast('Admin access required for candidate re-evaluation', 'error');
+        } else {
+          toast(json.error || 'Promotion evaluation failed', 'error');
+        }
+      } catch (err: any) {
+        console.error('Candidate promotion error:', err);
+        toast(err?.message || 'Network error triggering re-evaluation', 'error');
+      } finally {
+        if (icon) icon.classList.remove('animate-spin');
+        if (text) text.textContent = 'Re-evaluate Now';
+        btn.disabled = false;
+      }
+    });
   }
 
   function attachAccountIngestToggleListeners() {
@@ -896,7 +1227,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     if (accounts.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" class="p-8 text-center text-xs text-muted-foreground bg-muted/10">
+          <td colspan="12" class="p-8 text-center text-xs text-muted-foreground bg-muted/10">
             ${rawAccounts.length === 0 ? 'No Pinterest accounts tracked in archive yet.' : 'No accounts matching search query.'}
           </td>
         </tr>
@@ -909,11 +1240,70 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         const isActive = acc.status === 'active';
         const isChecked = selectedAccounts.has(acc.id);
         const { bg: avatarBg, initial } = getAvatarStyle(acc.username || '');
-        const lastRunStr = acc.last_run_at ? fmtDateTime(acc.last_run_at) : '—';
-        const lastRunFull = acc.last_run_at ? new Date(acc.last_run_at).toLocaleString() : 'Never';
-        const nextRunStr = acc.next_run_at ? fmtDateTime(acc.next_run_at) : 'Pending';
         const changed = Number(acc.changed_last_refresh ?? 0);
         const total = Number(acc.checked_last_refresh ?? (acc.db_pins_count !== undefined ? acc.db_pins_count : (acc.pins_count ?? 0)));
+
+        let optCells = '';
+        if (colVisible.interval_days) {
+          const currentDays = Number(acc.interval_days || 3);
+          optCells += `
+            <td class="py-3 px-4 font-medium text-foreground">
+              <div class="relative inline-flex items-center">
+                <select
+                  class="interval-select appearance-none cursor-pointer inline-flex items-center gap-1 pl-2 pr-5 py-0.5 rounded-md bg-muted hover:bg-muted/80 text-[11px] font-bold border border-border/60 transition-colors focus:ring-1 focus:ring-primary focus:outline-none"
+                  data-username="${escapeHtml(acc.username || '')}"
+                  data-prev-days="${currentDays}"
+                  title="Click to change discovery interval"
+                >
+                  <option value="1" ${currentDays === 1 ? 'selected' : ''}>1d</option>
+                  <option value="3" ${currentDays === 3 ? 'selected' : ''}>3d</option>
+                  <option value="7" ${currentDays === 7 ? 'selected' : ''}>7d</option>
+                  <option value="14" ${currentDays === 14 ? 'selected' : ''}>14d</option>
+                </select>
+                <div class="pointer-events-none absolute right-1 flex items-center text-muted-foreground">
+                  <svg class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/>
+                  </svg>
+                </div>
+              </div>
+            </td>
+          `;
+        }
+        if (colVisible.backfill_status) {
+          const isDone = acc.backfill_status === 'done';
+          const isProg = acc.backfill_status === 'in_progress';
+          optCells += `
+            <td class="py-3 px-4">
+              <span class="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
+                isDone
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  : isProg
+                  ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 animate-pulse'
+                  : 'bg-muted text-muted-foreground'
+              }">
+                ${escapeHtml(acc.backfill_status || 'pending')}
+              </span>
+            </td>
+          `;
+        }
+        if (colVisible.backfill_cursor) {
+          const cur = acc.backfill_cursor ? String(acc.backfill_cursor) : '—';
+          const shortCur = cur.length > 12 ? cur.slice(0, 10) + '…' : cur;
+          optCells += `<td class="py-3 px-4 font-mono text-[10px] text-muted-foreground" title="${escapeHtml(cur)}">${escapeHtml(shortCur)}</td>`;
+        }
+        if (colVisible.last_result) {
+          optCells += `<td class="py-3 px-4 text-[11px] text-muted-foreground max-w-[200px] truncate" title="${escapeHtml(acc.last_result || '')}">${escapeHtml(acc.last_result || '—')}</td>`;
+        }
+        if (colVisible.archived_count) {
+          const archCount = acc.archived_count !== undefined ? acc.archived_count : (acc.db_pins_count ?? acc.pins_count ?? 0);
+          optCells += `
+            <td class="py-3 px-4 font-semibold text-emerald-600 dark:text-emerald-400">
+              <span class="inline-flex items-center gap-1 font-bold">
+                ${fmtNumber(archCount)}
+              </span>
+            </td>
+          `;
+        }
 
         return `
           <tr class="hover:bg-muted/40 transition-colors group">
@@ -953,10 +1343,11 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
               ${fmtNumber(acc.follower_count)}
             </td>
             <td class="py-3 px-4 font-semibold text-foreground">
-              <span class="inline-flex items-center gap-1 font-bold" title="GAS sheet count: ${fmtNumber(acc.pins_count)}">
+              <span class="inline-flex items-center gap-1 font-bold" title="Total pins recorded in archive">
                 ${fmtNumber(acc.db_pins_count !== undefined ? acc.db_pins_count : acc.pins_count)}
               </span>
             </td>
+            ${optCells}
             <td class="py-3 px-4 font-medium" title="Last refresh: ${changed} of ${total} checked">
               <span class="font-bold ${changed>0?'text-emerald-500':'text-muted-foreground'}">${changed}/${total}</span>
             </td>
@@ -1007,6 +1398,49 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     attachAccountSelectionListeners();
     attachAccountIngestToggleListeners();
     attachSingleDeleteListeners();
+    attachIntervalChangeListeners();
+  }
+
+  function attachIntervalChangeListeners() {
+    const selects = document.querySelectorAll<HTMLSelectElement>('.interval-select');
+    selects.forEach((sel) => {
+      sel.addEventListener('change', async (e) => {
+        const target = e.target as HTMLSelectElement;
+        const username = target.getAttribute('data-username');
+        const days = parseInt(target.value, 10);
+        if (!username || isNaN(days)) return;
+
+        const prevDays = target.getAttribute('data-prev-days') || '3';
+        target.disabled = true;
+
+        try {
+          const res = await fetch('/api/pinarchive/accounts-gas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'set_interval',
+              usernames: [username],
+              days,
+            }),
+          });
+          const json = await res.json();
+          if (json.success) {
+            toast(`Interval for @${username} set to ${days}d`, 'success');
+            target.setAttribute('data-prev-days', String(days));
+            const found = rawAccounts.find((a: any) => a.username?.toLowerCase() === username.toLowerCase());
+            if (found) found.interval_days = days;
+          } else {
+            toast(json.error || 'Failed to update interval', 'error');
+            target.value = prevDays;
+          }
+        } catch (err: any) {
+          toast(err?.message || 'Network error updating interval', 'error');
+          target.value = prevDays;
+        } finally {
+          target.disabled = false;
+        }
+      });
+    });
   }
 
   function attachAccountSelectionListeners() {
@@ -1094,7 +1528,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     const confirmInput = document.getElementById('delete-confirm-input') as HTMLInputElement | null;
     const confirmBtn = document.getElementById('confirm-delete-modal-btn') as HTMLButtonElement | null;
     const cancelModalBtn = document.getElementById('cancel-delete-modal-btn');
-    const pauseGasCheckbox = document.getElementById('delete-pause-gas-checkbox') as HTMLInputElement | null;
 
     if (cancelSelectionBtn) {
       cancelSelectionBtn.addEventListener('click', () => {
@@ -1132,19 +1565,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         confirmBtn.textContent = 'Deleting...';
 
         try {
-          const usernames = getSelectedUsernames();
-          if (pauseGasCheckbox && pauseGasCheckbox.checked && usernames.length > 0) {
-            try {
-              await fetch('/api/pinarchive/accounts-gas', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'pause', usernames }),
-              });
-            } catch (gasErr) {
-              console.warn('Could not pause accounts in GAS prior to deletion:', gasErr);
-            }
-          }
-
           const res = await fetch('/api/pinarchive/accounts-delete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1244,7 +1664,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         const usernames = getSelectedUsernames();
         if (usernames.length === 0) return;
         runBtn.disabled = true;
-        toast(`Triggered GAS run for ${usernames.length} account(s)...`, 'info');
+        toast(`Triggered pipeline run for ${usernames.length} account(s)...`, 'info');
 
         try {
           const res = await fetch('/api/pinarchive/accounts-gas', {
@@ -1254,12 +1674,12 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           });
           const json = await res.json();
           if (json.success) {
-            toast(`GAS run queued for ${usernames.join(', ')}.`, 'success');
+            toast(`Pipeline run queued for ${usernames.join(', ')}.`, 'success');
           } else {
-            toast(json.error || 'Failed to dispatch GAS run', 'error');
+            toast(json.error || 'Failed to dispatch pipeline run', 'error');
           }
         } catch (err: any) {
-          toast(err?.message || 'Network error triggering GAS run', 'error');
+          toast(err?.message || 'Network error triggering pipeline run', 'error');
         } finally {
           runBtn.disabled = false;
         }
@@ -1273,7 +1693,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         const usernames = getSelectedUsernames();
         if (usernames.length === 0) return;
         syncBtn.disabled = true;
-        toast(`Syncing ${usernames.length} account(s) from Sheet → DB...`, 'info');
+        toast(`Re-evaluating candidates for ${usernames.length} account(s)...`, 'info');
 
         try {
           const res = await fetch('/api/pinarchive/accounts-gas', {
@@ -1283,13 +1703,13 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           });
           const json = await res.json();
           if (json.success) {
-            toast(`Sync complete for ${usernames.length} account(s)!`, 'success');
+            toast(`Candidate re-evaluation complete!`, 'success');
             await loadOverview();
           } else {
-            toast(json.error || 'Failed to dispatch GAS sync', 'error');
+            toast(json.error || 'Failed to re-evaluate candidates', 'error');
           }
         } catch (err: any) {
-          toast(err?.message || 'Network error triggering GAS sync', 'error');
+          toast(err?.message || 'Network error triggering candidate re-evaluation', 'error');
         } finally {
           syncBtn.disabled = false;
         }
@@ -1429,6 +1849,10 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     setupTabs();
     setupSettingsCollapse();
     setupAccountSearch();
+    buildColVisibilityMenu();
+    setupColVisibilityToggle();
+    renderTableHeader();
+    setupReevaluateButton();
     loadSettings();
     loadOverview();
     setupAccountDeleteModal();
@@ -1438,6 +1862,12 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     const saveSettingsBtn = document.getElementById('save-ingest-settings-btn');
     if (saveSettingsBtn) {
       saveSettingsBtn.addEventListener('click', saveSettings);
+    }
+
+    // Live update cost estimate on discovery stop pages change
+    const stopPagesInput = document.getElementById('setting-discovery-stop-pages');
+    if (stopPagesInput) {
+      stopPagesInput.addEventListener('input', updateCostEstimate);
     }
 
     // Listen for audit timestamp display preference changes

@@ -431,7 +431,9 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
           ),
 
           // Preserved Enrichment & Scalar non-null fallback
-          archived_at: p.archived_at || existing?.archived_at || (isNew ? fetchedAt : null),
+          archived_at: p.archived_at !== undefined
+            ? p.archived_at
+            : (existing?.archived_at || (isNew ? fetchedAt : null)),
           annotations: Array.from(mergedByName.values()),
           board_pin_count: p.board_pin_count ?? existing?.board_pin_count ?? null,
           board_last_modified_at: p.board_last_modified_at ?? existing?.board_last_modified_at ?? null,

@@ -2,7 +2,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../server/auth/workspace-guard';
 import { dbClients } from '../../../server/db/clients';
-import { gasCall } from '../../../server/lib/gas-bridge';
+import { promoteCandidates } from '../../../server/services/promotion-service';
 import { errorStatus } from '../../../server/lib/http-error';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -13,8 +13,6 @@ const json = (o: any, s = 200) =>
     status: s,
     headers: { 'Content-Type': 'application/json' },
   });
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
@@ -46,16 +44,33 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const wsCtx = await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'member');
-    const db = dbClients.getPinArchive(locals.runtime?.env);
+    const runtimeEnv =
+      (locals as { runtime?: { env?: Record<string, any> }; runtimeEnv?: Record<string, any> })?.runtime?.env ||
+      (locals as { runtimeEnv?: Record<string, any> })?.runtimeEnv ||
+      (typeof process !== 'undefined' ? process.env : {}) ||
+      {};
+    const db = dbClients.getPinArchive(runtimeEnv);
 
-    // Status action: workspace-level status request
+    // Status action: workspace-level status request (DB-direct)
     if (action === 'status') {
-      const gasRes = await gasCall(locals.runtime?.env, wsCtx.workspaceId, 'status', {});
+      const { data: accounts, error: accErr } = await db
+        .from('pa_accounts')
+        .select('id, username, status, follower_count, pins_count, last_run_at, next_run_at, interval_days, backfill_status, backfill_cursor, last_result, ingest_enabled')
+        .eq('workspace_id', wsCtx.workspaceId)
+        .order('username', { ascending: true });
+
+      const { data: settings } = await db
+        .from('pa_workspace_settings')
+        .select('*')
+        .eq('workspace_id', wsCtx.workspaceId)
+        .maybeSingle();
+
       return json({
         success: true,
-        ok: gasRes.ok,
-        accounts: gasRes.accounts || [],
-        error: gasRes.error,
+        ok: !accErr,
+        accounts: accounts || [],
+        settings: settings || null,
+        error: accErr?.message,
       });
     }
 
@@ -64,7 +79,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const usernames = rawUsernames
       .map((u) => String(u).trim().toLowerCase())
       .filter((u) => USERNAME_REGEX.test(u))
-      .slice(0, 20);
+      .slice(0, 50);
 
     if (usernames.length === 0) {
       return json({ success: false, error: 'At least one valid username is required.' }, 422);
@@ -93,57 +108,92 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const results: Array<{ username: string; ok: boolean; error?: string; summary?: any }> = [];
     const days = Number(body.days) || 3;
 
-    // Concurrency Policy:
-    // run_now / sync_now -> SEQUENTIAL with 1500ms spacing (due to single GAS script lock)
-    if (action === 'run_now' || action === 'sync_now') {
-      for (let i = 0; i < usernames.length; i++) {
-        const u = usernames[i];
-        if (i > 0) await sleep(1500);
+    if (action === 'run_now') {
+      const githubRepo =
+        (runtimeEnv.GITHUB_REPO as string) ||
+        (typeof process !== 'undefined' ? process.env.GITHUB_REPO : '') ||
+        'sayfedin-star/PinOrbit-v2';
 
-        if (action === 'run_now') {
-          const res = await gasCall(locals.runtime?.env, wsCtx.workspaceId, 'run', { username: u, force: true });
-          results.push({ username: u, ok: res.ok, error: res.error, summary: res.summary });
-        } else if (action === 'sync_now') {
-          const res = await gasCall(locals.runtime?.env, wsCtx.workspaceId, 'sync', { username: u });
-          results.push({ username: u, ok: res.ok, error: res.error, summary: res.summary });
+      const dispatchToken =
+        (runtimeEnv.GITHUB_DISPATCH_TOKEN as string) ||
+        (runtimeEnv.GH_REFRESH_TOKEN as string) ||
+        (typeof process !== 'undefined' ? process.env.GITHUB_DISPATCH_TOKEN || process.env.GH_REFRESH_TOKEN : '') ||
+        '';
+
+      if (!dispatchToken || !dispatchToken.trim()) {
+        return json({ success: false, error: 'GitHub dispatch token not configured on server.' }, 503);
+      }
+
+      const dispatchUrl = `https://api.github.com/repos/${githubRepo}/actions/workflows/pinarchive-pipeline.yml/dispatches`;
+      const ghRes = await fetch(dispatchUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${dispatchToken.trim()}`,
+          Accept: 'application/vnd.github.v3+json',
+          'User-Agent': 'PinOrbit-v2',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ref: 'main',
+          inputs: {
+            workspace_id: wsCtx.workspaceId,
+            usernames: usernames.join(','),
+            mode: 'all',
+            force: 'true',
+          },
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (ghRes.status === 204 || (ghRes.status >= 200 && ghRes.status < 300)) {
+        for (const u of usernames) {
+          results.push({ username: u, ok: true, summary: { queued: true } });
+        }
+      } else {
+        const ghErrText = await ghRes.text().catch(() => '');
+        for (const u of usernames) {
+          results.push({ username: u, ok: false, error: `GitHub dispatch failed (HTTP ${ghRes.status}): ${ghErrText}` });
         }
       }
-    } else {
-      // Parallel execution for pause, resume, set_interval (chunks of 5)
-      const CHUNK_SIZE = 5;
-      for (let i = 0; i < usernames.length; i += CHUNK_SIZE) {
-        const chunk = usernames.slice(i, i + CHUNK_SIZE);
-        const chunkPromises = chunk.map(async (u) => {
-          let gasAction = action;
-          let gasPayload: Record<string, any> = { username: u };
-
-          if (action === 'pause') {
-            gasAction = 'pause';
-          } else if (action === 'resume') {
-            gasAction = 'resume';
-          } else if (action === 'set_interval') {
-            gasAction = 'set_interval';
-            gasPayload.days = days;
-          }
-
-          const res = await gasCall(locals.runtime?.env, wsCtx.workspaceId, gasAction, gasPayload);
-
-          // Update local DB status if successful
-          if (res.ok) {
-            if (action === 'pause') {
-              await db.from('pa_accounts').update({ status: 'paused' }).eq('workspace_id', wsCtx.workspaceId).eq('username', u);
-            } else if (action === 'resume') {
-              await db.from('pa_accounts').update({ status: 'active' }).eq('workspace_id', wsCtx.workspaceId).eq('username', u);
-            } else if (action === 'set_interval') {
-              await db.from('pa_accounts').update({ interval_days: days }).eq('workspace_id', wsCtx.workspaceId).eq('username', u);
-            }
-          }
-
-          return { username: u, ok: res.ok, error: res.error, summary: res.summary };
+    } else if (action === 'sync_now') {
+      const promRes = await promoteCandidates(wsCtx.workspaceId, runtimeEnv);
+      for (const u of usernames) {
+        results.push({
+          username: u,
+          ok: !promRes.error,
+          error: promRes.error,
+          summary: { promoted: promRes.promoted, checked: promRes.checked },
         });
+      }
+    } else if (action === 'pause') {
+      await db
+        .from('pa_accounts')
+        .update({ status: 'paused' })
+        .eq('workspace_id', wsCtx.workspaceId)
+        .in('username', usernames);
 
-        const chunkResults = await Promise.all(chunkPromises);
-        results.push(...chunkResults);
+      for (const u of usernames) {
+        results.push({ username: u, ok: true });
+      }
+    } else if (action === 'resume') {
+      await db
+        .from('pa_accounts')
+        .update({ status: 'active' })
+        .eq('workspace_id', wsCtx.workspaceId)
+        .in('username', usernames);
+
+      for (const u of usernames) {
+        results.push({ username: u, ok: true });
+      }
+    } else if (action === 'set_interval') {
+      await db
+        .from('pa_accounts')
+        .update({ interval_days: days })
+        .eq('workspace_id', wsCtx.workspaceId)
+        .in('username', usernames);
+
+      for (const u of usernames) {
+        results.push({ username: u, ok: true });
       }
     }
 

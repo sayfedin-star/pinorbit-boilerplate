@@ -125,13 +125,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return json({ success: false, error: 'refresh_not_configured' }, 503);
   }
 
-  const dispatchUrl = 'https://api.github.com/repos/sayfedin-star/pinorbit-v2/actions/workflows/pinarchive-refresh.yml/dispatches';
+  const dispatchUrl = 'https://api.github.com/repos/sayfedin-star/pinorbit-v2/actions/workflows/pinarchive-pipeline.yml/dispatches';
   const dispatchPayload = {
     ref: 'main',
     inputs: {
       workspace_id: workspaceId,
-      username: validatedUsernames.length > 0 ? '' : (username || ''),
-      usernames: validatedUsernames.length > 0 ? validatedUsernames.join(',') : '',
+      usernames: validatedUsernames.length > 0 ? validatedUsernames.join(',') : (username || ''),
+      mode: 'all',
     },
   };
 

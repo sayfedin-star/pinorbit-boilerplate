@@ -47,7 +47,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   try {
     const accRes = await db
       .from('pa_accounts')
-      .select('id, username, status, pins_count, follower_count, last_run_at, sheet_id, next_run_at, ingest_enabled')
+      .select('id, username, status, pins_count, follower_count, last_run_at, sheet_id, next_run_at, ingest_enabled, interval_days, backfill_status, backfill_cursor, last_result')
       .eq('workspace_id', ws)
       .limit(100);
 
@@ -57,14 +57,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     let accounts = (accRes.data || []).map((a: any) => ({ ...a }));
 
-    // Fetch live DB pin count per account
+    // Fetch live DB pin count per account (pins total + archived qualifying)
     const countMap = new Map<string, number>();
+    const archivedMap = new Map<string, number>();
     try {
       if (typeof db.rpc === 'function') {
         const { data: countData, error: countRpcErr } = await db.rpc('pa_account_pin_counts', { p_workspace_id: ws });
         if (!countRpcErr && Array.isArray(countData)) {
           for (const row of countData) {
-            if (row.account_id) countMap.set(row.account_id, Number(row.pins || 0));
+            if (row.account_id) {
+              countMap.set(row.account_id, Number(row.pins || 0));
+              archivedMap.set(row.account_id, Number(row.archived ?? row.pins ?? 0));
+            }
           }
         }
       }
@@ -74,6 +78,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     for (const a of accounts) {
       a.db_pins_count = countMap.has(a.id) ? countMap.get(a.id) : a.pins_count;
+      a.archived_count = archivedMap.has(a.id) ? archivedMap.get(a.id) : (a.db_pins_count ?? a.pins_count ?? 0);
     }
 
     // Last full Refresh = 4 shards of the newest run. They start within ~2 minutes.

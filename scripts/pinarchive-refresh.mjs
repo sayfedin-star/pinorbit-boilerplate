@@ -38,7 +38,7 @@ const REFRESH_USERNAMES = (process.env.REFRESH_USERNAMES || '')
   .split(',')
   .map(s => s.trim().toLowerCase())
   .filter(Boolean);
-const REFRESH_FORCE = (process.env.REFRESH_FORCE || '').trim().toLowerCase() === 'true';
+const REFRESH_FORCE = (process.env.REFRESH_FORCE || process.env.FORCE_RUN || '').trim().toLowerCase() === 'true';
 
 function checkEnv() {
   const missing = [];
@@ -420,7 +420,7 @@ async function main() {
   // Load workspace settings to map gating controls
   const settingsMap = new Map();
   try {
-    const wsSettings = await supaQuery('pa_workspace_settings', 'select=workspace_id,ingest_enabled,paused_account_policy,refresh_max_pins');
+    const wsSettings = await supaQuery('pa_workspace_settings', 'select=workspace_id,ingest_enabled,paused_account_policy,refresh_max_pins,discovery_stop_pages,audit_sweep_enabled,candidates_enabled,sheet_write_mode,daily_sheet_sync_enabled');
     if (Array.isArray(wsSettings)) {
       for (const s of wsSettings) {
         settingsMap.set(s.workspace_id, s);
