@@ -661,7 +661,8 @@ async function main() {
       console.log(`📄 Page ${pageCount}: ${pagePins.length} pins fetched (${pageNewPinsCount} new, ${pagePins.length - pageNewPinsCount} known).`);
 
       // Early-stop check: stop after K consecutive pages of all-known pins
-      if (pageNewPinsCount === 0 && knownPinIds.size > 0 && !IS_AUDIT_SWEEP) {
+      const inBackfill = acc.backfill_status === 'in_progress';
+      if (pageNewPinsCount === 0 && knownPinIds.size > 0 && !IS_AUDIT_SWEEP && !inBackfill) {
         consecutiveKnownPages++;
         console.log(`⏳ Consecutive all-known pages: ${consecutiveKnownPages}/${discoveryStopPages}`);
         if (consecutiveKnownPages >= discoveryStopPages) {
