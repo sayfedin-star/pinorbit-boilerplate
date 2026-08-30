@@ -1212,7 +1212,7 @@ import ProviderBadge from '../../components/cron/ProviderBadge.astro';
     await loadRecentPins();
   }
 
-  async function loadAllData() {
+  async function loadAllData(retries = 2) {
     try {
       const [acc, stats, boards, logs, whSummary] = await Promise.all([
         getAccountDetails(accountId),
@@ -1270,15 +1270,20 @@ import ProviderBadge from '../../components/cron/ProviderBadge.astro';
 
       await loadRecentPins();
     } catch (err: any) {
+      if (retries > 0) {
+        setTimeout(() => loadAllData(retries - 1), 1500);
+        return;
+      }
       console.error('Error loading account details:', err);
       showFeedbackBanner(err.message || 'Database error loading account details', 'error');
       const headerInfo = document.getElementById('account-header-info');
       if (headerInfo) {
-        headerInfo.innerHTML = renderEmptyStateHTML(
-          'Error Loading Account',
-          `Database error: ${escapeHtml(err.message || 'Failed to query account details.')}`,
-          'alert-circle'
-        );
+        headerInfo.innerHTML = `
+          <div class="p-8 text-center text-xs text-rose-500 bg-rose-500/10 rounded-2xl border border-rose-500/20">
+            Failed to load account details: ${escapeHtml(err.message || 'Database error')} <button id="retry-account-details-btn" class="underline font-bold cursor-pointer ml-1">Retry</button>
+          </div>
+        `;
+        document.getElementById('retry-account-details-btn')?.addEventListener('click', () => loadAllData(2));
       }
     }
   }

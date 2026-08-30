@@ -330,7 +330,7 @@ export const prerender = false;
     await loadData();
   }
 
-  async function loadData() {
+  async function loadData(retries = 2) {
     try {
       const [acc, boards, webhooks, pinsRes] = await Promise.all([
         getAccountDetails(accountId),
@@ -376,8 +376,23 @@ export const prerender = false;
       renderBoardsTable();
       populateChannelDropdown();
     } catch (err: any) {
+      if (retries > 0) {
+        setTimeout(() => loadData(retries - 1), 1500);
+        return;
+      }
       console.error('Error loading account boards:', err);
       showFeedback(`Database query error: ${err.message || 'Unknown error'}`, 'error');
+      const rows = document.getElementById('account-boards-rows');
+      if (rows) {
+        rows.innerHTML = `
+          <tr>
+            <td colspan="9" class="p-8 text-center text-xs text-rose-500 bg-rose-500/10">
+              Failed to load boards: ${escapeHtml(err.message || 'Error')} <button id="retry-boards-data-btn" class="underline font-bold cursor-pointer ml-1">Retry</button>
+            </td>
+          </tr>
+        `;
+        document.getElementById('retry-boards-data-btn')?.addEventListener('click', () => loadData(2));
+      }
     }
   }
 

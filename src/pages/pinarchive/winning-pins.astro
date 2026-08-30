@@ -617,7 +617,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       boards.map((b) => `<option value="${escapeHtml(b)}" ${b === currentVal ? 'selected' : ''}>${escapeHtml(b)}</option>`).join('');
   }
 
-  async function loadPins() {
+  async function loadPins(retries = 2) {
     const searchInput = document.getElementById('filter-search-input') as HTMLInputElement | null;
     const boardSelect = document.getElementById('filter-board-select') as HTMLSelectElement | null;
     const stageSelect = document.getElementById('filter-stage-select') as HTMLSelectElement | null;
@@ -653,7 +653,24 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
 
       renderCanonicalClusters(rawPins);
     } catch (e: any) {
+      if (retries > 0) {
+        setTimeout(() => loadPins(retries - 1), 1500);
+        return;
+      }
       console.error('Error loading PinArchive pins:', e);
+      const grid = document.getElementById('winners-grid');
+      if (grid) {
+        grid.innerHTML = `
+          <div class="col-span-full py-12 text-center text-xs text-rose-500 bg-rose-500/10 rounded-2xl border border-rose-500/20 p-6">
+            Failed to load winning pins. <button id="retry-load-pins-btn" class="underline font-bold cursor-pointer ml-1">Retry</button>
+          </div>
+        `;
+        document.getElementById('retry-load-pins-btn')?.addEventListener('click', () => loadPins(2));
+      }
+      const canonicalContainer = document.getElementById('canonical-container');
+      if (canonicalContainer) {
+        canonicalContainer.innerHTML = '<div class="p-6 text-center text-xs text-muted-foreground">Failed to load cluster data.</div>';
+      }
     }
   }
 

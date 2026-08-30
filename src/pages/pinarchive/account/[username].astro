@@ -888,15 +888,15 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
     }
   }
 
-  async function loadBoardsList() {
+  async function loadBoardsList(retries = 1) {
     const boardSelect = document.getElementById('account-pins-board') as HTMLSelectElement | null;
     if (!boardSelect || !accountId) return;
 
     try {
       const res = await fetch(`/api/pinarchive/account-boards?account_id=${encodeURIComponent(accountId)}`);
-      if (!res.ok) return;
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      if (!json.success || !Array.isArray(json.boards)) return;
+      if (!json.success || !Array.isArray(json.boards)) throw new Error(json.error || 'Failed to load boards');
 
       const currentVal = boardSelect.value;
       boardSelect.innerHTML = '<option value="" selected>All Boards</option>' + json.boards.map((b: any) => `
@@ -905,11 +905,15 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
         </option>
       `).join('');
     } catch (err) {
+      if (retries > 0) {
+        setTimeout(() => loadBoardsList(retries - 1), 1500);
+        return;
+      }
       console.error('Failed to load boards list:', err);
     }
   }
 
-  async function loadAccountPins() {
+  async function loadAccountPins(retries = 2) {
     const grid = document.getElementById('account-pins-grid');
     const tableBody = document.getElementById('account-pins-table-body');
     const badge = document.getElementById('account-pins-badge');
@@ -980,22 +984,28 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
 
       renderAccountPagination(total, currentPage, currentLimit);
     } catch (err: any) {
+      if (retries > 0) {
+        setTimeout(() => loadAccountPins(retries - 1), 1500);
+        return;
+      }
       console.error('Error loading account pins:', err);
       if (grid) {
         grid.innerHTML = `
           <div class="col-span-full py-8 text-center text-xs text-rose-500 bg-rose-500/10 rounded-xl border border-rose-500/20">
-            Failed to load pins: ${escapeHtml(err.message)}
+            Failed to load pins: ${escapeHtml(err.message)} <button id="retry-account-pins-grid-btn" class="underline font-bold cursor-pointer ml-1">Retry</button>
           </div>
         `;
+        document.getElementById('retry-account-pins-grid-btn')?.addEventListener('click', () => loadAccountPins(2));
       }
       if (tableBody) {
         tableBody.innerHTML = `
           <tr>
             <td colspan="12" class="p-8 text-center text-xs text-rose-500 bg-rose-500/10">
-              Failed to load pins: ${escapeHtml(err.message)}
+              Failed to load pins: ${escapeHtml(err.message)} <button id="retry-account-pins-table-btn" class="underline font-bold cursor-pointer ml-1">Retry</button>
             </td>
           </tr>
         `;
+        document.getElementById('retry-account-pins-table-btn')?.addEventListener('click', () => loadAccountPins(2));
       }
     }
   }

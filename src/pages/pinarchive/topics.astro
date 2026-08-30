@@ -591,7 +591,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     });
   }
 
-  async function loadClusterList() {
+  async function loadClusterList(retries = 2) {
     const loadingEl = document.getElementById('topics-loading');
     const listModeEl = document.getElementById('topics-list-mode');
     const tbody = document.getElementById('topics-table-body');
@@ -616,6 +616,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       const topics = json.topics || [];
       const total = Number(json.total || 0);
 
+      if (errorEl) errorEl.classList.add('hidden');
       if (loadingEl) loadingEl.classList.add('hidden');
       if (listModeEl) listModeEl.classList.remove('hidden');
 
@@ -657,9 +658,24 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         renderClusterPagination(total, clusterPage, clusterPageSize);
       }
     } catch (err: any) {
+      if (retries > 0) {
+        setTimeout(() => loadClusterList(retries - 1), 1500);
+        return;
+      }
+      console.error('Error loading topic clusters:', err);
       if (loadingEl) loadingEl.classList.add('hidden');
-      if (errorEl) errorEl.classList.remove('hidden');
-      if (errorMsg) errorMsg.textContent = err.message || 'Failed to load topic clusters';
+      if (errorEl) {
+        errorEl.classList.remove('hidden');
+        errorEl.innerHTML = `
+          <p id="topics-error-msg" class="font-bold">Failed to load topic clusters: ${escapeHtml(err.message || 'Network error')}</p>
+          <button id="retry-topics-list-btn" class="mt-2 text-xs font-bold underline cursor-pointer text-rose-500 hover:text-rose-600">Retry</button>
+        `;
+        document.getElementById('retry-topics-list-btn')?.addEventListener('click', () => {
+          if (loadingEl) loadingEl.classList.remove('hidden');
+          if (errorEl) errorEl.classList.add('hidden');
+          loadClusterList(2);
+        });
+      }
     }
   }
 
@@ -854,7 +870,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     }
   }
 
-  async function loadClusterDetail(name: string) {
+  async function loadClusterDetail(name: string, retries = 2) {
     cachedTopicName = name;
     const loadingEl = document.getElementById('topics-loading');
     const detailModeEl = document.getElementById('topics-detail-mode');
@@ -870,6 +886,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       rawClusterData = json;
       allClusterPins = json.pins || json.top_pins || [];
 
+      if (errorEl) errorEl.classList.add('hidden');
       if (loadingEl) loadingEl.classList.add('hidden');
       if (detailModeEl) detailModeEl.classList.remove('hidden');
 
@@ -917,9 +934,24 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
 
       renderFilteredClusterView();
     } catch (err: any) {
+      if (retries > 0) {
+        setTimeout(() => loadClusterDetail(name, retries - 1), 1500);
+        return;
+      }
+      console.error('Error loading topic cluster detail:', err);
       if (loadingEl) loadingEl.classList.add('hidden');
-      if (errorEl) errorEl.classList.remove('hidden');
-      if (errorMsg) errorMsg.textContent = err.message || 'Failed to load topic cluster detail';
+      if (errorEl) {
+        errorEl.classList.remove('hidden');
+        errorEl.innerHTML = `
+          <p id="topics-error-msg" class="font-bold">Failed to load topic cluster detail: ${escapeHtml(err.message || 'Network error')}</p>
+          <button id="retry-topic-detail-btn" class="mt-2 text-xs font-bold underline cursor-pointer text-rose-500 hover:text-rose-600">Retry</button>
+        `;
+        document.getElementById('retry-topic-detail-btn')?.addEventListener('click', () => {
+          if (loadingEl) loadingEl.classList.remove('hidden');
+          if (errorEl) errorEl.classList.add('hidden');
+          loadClusterDetail(name, 2);
+        });
+      }
     }
   }
 
