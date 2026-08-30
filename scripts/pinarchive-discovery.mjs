@@ -50,7 +50,7 @@ const DISCOVERY_USERNAMES = (process.env.DISCOVERY_USERNAMES || process.env.USER
   .map(s => s.trim().toLowerCase())
   .filter(Boolean);
 const IS_AUDIT_SWEEP = (process.env.AUDIT_SWEEP || '').trim().toLowerCase() === 'true';
-const FORCE_RUN = (process.env.FORCE_RUN || '').trim().toLowerCase() === 'true';
+const FORCE_RUN = (process.env.FORCE_RUN || process.env.DISCOVERY_FORCE || '').trim().toLowerCase() === 'true';
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -500,7 +500,9 @@ async function main() {
     }
 
     // Schedule eligibility check unless FORCE_RUN or AUDIT_SWEEP or backfill in progress
-    if (!FORCE_RUN && !IS_AUDIT_SWEEP && acc.next_run_at && acc.backfill_status !== 'in_progress') {
+    if (FORCE_RUN) {
+      console.log(`[FORCE] Account @${acc.username} forced (bypassing next_run_at check).`);
+    } else if (!IS_AUDIT_SWEEP && acc.next_run_at && acc.backfill_status !== 'in_progress') {
       const nextRunMs = new Date(acc.next_run_at).getTime();
       if (Date.now() < nextRunMs) {
         console.log(`[SKIP] Account @${acc.username} not eligible yet (next_run_at: ${acc.next_run_at}).`);

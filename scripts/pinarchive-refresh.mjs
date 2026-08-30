@@ -38,7 +38,7 @@ const REFRESH_USERNAMES = (process.env.REFRESH_USERNAMES || '')
   .split(',')
   .map(s => s.trim().toLowerCase())
   .filter(Boolean);
-const REFRESH_FORCE = (process.env.REFRESH_FORCE || '').trim().toLowerCase() === 'true';
+const REFRESH_FORCE = (process.env.REFRESH_FORCE || process.env.FORCE_RUN || '').trim().toLowerCase() === 'true';
 
 function checkEnv() {
   const missing = [];

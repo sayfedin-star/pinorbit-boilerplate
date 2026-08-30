@@ -35,6 +35,11 @@ on:
           - rotation
           - promotion
         default: all
+      force:
+        description: 'Force run (skip interval & schedule check)'
+        required: false
+        type: string
+        default: ''
 
 concurrency:
   group: pinarchive-pipeline
@@ -82,6 +87,8 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           DISCOVERY_WORKSPACE_ID: ${{ github.event.inputs.workspace_id || '' }}
           DISCOVERY_USERNAMES: ${{ github.event.inputs.usernames || '' }}
+          DISCOVERY_FORCE: ${{ github.event.inputs.force || '' }}
+          FORCE_RUN: ${{ github.event.inputs.force || '' }}
           DISCOVERY_SHARD: ${{ matrix.shard }}
           SHARD_COUNT: 4
         run: node scripts/pinarchive-discovery.mjs
@@ -114,6 +121,8 @@ jobs:
           PINARCHIVE_INGEST_SECRET: ${{ secrets.PINARCHIVE_INGEST_SECRET }}
           REFRESH_WORKSPACE_ID: ${{ github.event.inputs.workspace_id || '' }}
           REFRESH_USERNAMES: ${{ github.event.inputs.usernames || '' }}
+          REFRESH_FORCE: ${{ github.event.inputs.force || '' }}
+          FORCE_RUN: ${{ github.event.inputs.force || '' }}
           REFRESH_SHARD: ${{ matrix.shard }}
           SHARD_COUNT: 4
           REFRESH_MAX_PINS: '0'

@@ -139,6 +139,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             workspace_id: wsCtx.workspaceId,
             usernames: usernames.join(','),
             mode: 'all',
+            force: 'true',
           },
         }),
         signal: AbortSignal.timeout(8000),
