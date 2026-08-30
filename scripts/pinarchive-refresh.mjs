@@ -597,7 +597,7 @@ async function main() {
               repins: fresh.repins,
               comments: fresh.comments,
               velocity: Math.round((fresh.saves / ageDays) * 100) / 100,
-              archived_at: new Date().toISOString(),
+              archived_at: p.archived_at ?? null,
               refreshed_at: new Date().toISOString(),
             };
             if (fresh.reactions && Object.keys(fresh.reactions).length > 0) {
