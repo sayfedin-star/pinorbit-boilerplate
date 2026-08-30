@@ -430,7 +430,7 @@ async function main() {
     console.warn('Could not query pa_workspace_settings (using defaults):', e.message);
   }
 
-  let accounts = await supaQuery('pa_accounts', 'select=id,workspace_id,username,follower_count,status,ingest_enabled,last_run_at');
+  let accounts = await supaQuery('pa_accounts', 'select=id,workspace_id,username,follower_count,status,ingest_enabled,last_run_at&order=username.asc');
   if (!accounts.length) { console.log('No accounts found.'); return; }
 
   if (REFRESH_USERNAME) {
