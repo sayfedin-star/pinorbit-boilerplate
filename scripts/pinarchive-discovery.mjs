@@ -429,7 +429,7 @@ async function main() {
   try {
     const wsSettings = await supaQuery(
       'pa_workspace_settings',
-      'select=workspace_id,ingest_enabled,paused_account_policy,pin_filter_min_saves,pin_filter_min_repins,pin_filter_rising_age_days,pin_filter_rising_saves,max_batch_pins,discovery_stop_pages,audit_sweep_enabled,candidates_enabled,sheet_write_mode,daily_sheet_sync_enabled'
+      'select=workspace_id,ingest_enabled,paused_account_policy,pin_filter_min_saves,pin_filter_min_repins,pin_filter_rising_age_days,pin_filter_rising_saves,max_batch_pins,discovery_stop_pages,audit_sweep_enabled,daily_sheet_sync_enabled'
     );
     if (Array.isArray(wsSettings)) {
       for (const s of wsSettings) {
@@ -474,15 +474,13 @@ async function main() {
     return;
   }
 
-  const grandSummary = { accounts: 0, pages: 0, newPins: 0, qualifyingPins: 0, candidatePins: 0, sheetPushed: 0, errors: [] };
+  const grandSummary = { accounts: 0, pages: 0, newPins: 0, qualifyingPins: 0, sheetPushed: 0, errors: [] };
 
   for (const acc of shardedAccounts) {
     const wsSetting = settingsMap.get(acc.workspace_id) || {};
     const wsIngestEnabled = wsSetting.ingest_enabled ?? true;
     const pausedPolicy = wsSetting.paused_account_policy ?? 'reject';
     const discoveryStopPages = Number(wsSetting.discovery_stop_pages ?? 3);
-    const candidatesEnabled = wsSetting.candidates_enabled ?? true;
-    const sheetWriteMode = wsSetting.sheet_write_mode || 'append_only';
     const maxBatchPins = Math.min(Number(wsSetting.max_batch_pins || CFG.MAX_BATCH_PINS), 500);
 
     // Gating checks
@@ -553,8 +551,8 @@ async function main() {
     let circuitBroken = false;
     let hasMore = true;
 
-    const newPinsToIngest = [];
-    const newQualifyingPinsForSheet = [];
+    const qualifyingForDb = [];
+    const allPinsForSheet = [];
 
     while (hasMore && pageCount < CFG.MAX_PAGES_DEFAULT) {
       if (circuitBroken) break;
@@ -576,18 +574,24 @@ async function main() {
       try {
         const res = await pinterestFetch(
           url,
-          acc.username,
-          cookie?.plain || '',
-          vaultDb,
-          cookie?.id || null
+          {
+            headers: getDiscoveryHeaders(cookie?.cookie_value, acc.username),
+            signal: AbortSignal.timeout(CFG.FETCH_TIMEOUT_MS),
+          },
+          acc.workspace_id,
+          cookie,
+          vaultDb
         );
 
-        if (!res || !res.ok) {
-          const status = res?.status || 0;
+        if (!res.ok) {
+          const status = res.status;
           if (status === 429) {
             consecutiveErrors++;
             rateLimitCooldownUntil = Date.now() + 60000;
-            console.warn(`[429 RATE LIMIT] Page ${pageCount} for @${acc.username} hit 429. Setting 60s cooldown.`);
+            console.warn(`⚠️ [429 RATE LIMIT] Discovery page ${pageCount} hit 429 for @${acc.username}. 60s cooldown.`);
+          } else if (status === 401 || status === 403) {
+            consecutiveErrors++;
+            console.warn(`⚠️ [AUTH ${status}] Cookie authentication failed on page ${pageCount} for @${acc.username}.`);
           } else {
             consecutiveErrors++;
           }
@@ -630,22 +634,19 @@ async function main() {
 
       for (const p of formattedPagePins) {
         if (!p.pin_id) continue;
+        allPinsForSheet.push(p);
+
         if (!knownPinIds.has(p.pin_id)) {
           pageNewPinsCount++;
-          knownPinIds.add(p.pin_id);
 
           const doesQualify = qualifies(p, wsSetting);
           if (doesQualify) {
             p.archived_at = new Date().toISOString();
-            newPinsToIngest.push(p);
-            newQualifyingPinsForSheet.push(p);
+            qualifyingForDb.push(p);
+            knownPinIds.add(p.pin_id);
             grandSummary.qualifyingPins++;
-          } else if (candidatesEnabled) {
-            p.archived_at = null;
-            newPinsToIngest.push(p);
-            grandSummary.candidatePins++;
+            grandSummary.newPins++;
           }
-          grandSummary.newPins++;
         }
       }
 
@@ -671,15 +672,15 @@ async function main() {
       }
     }
 
-    const newPinsCount = newPinsToIngest.length;
-    console.log(`\n📊 Discovery summary for @${acc.username}: ${pageCount} pages, ${newPinsCount} new pins discovered (${newQualifyingPinsForSheet.length} qualifying, ${newPinsCount - newQualifyingPinsForSheet.length} candidates).`);
+    const newPinsCount = qualifyingForDb.length;
+    console.log(`\n📊 Discovery summary for @${acc.username}: ${pageCount} pages, ${newPinsCount} qualifying pins discovered for DB, ${allPinsForSheet.length} total pins for Sheet.`);
 
-    // 4. Push new pins to Ingest API in batches ≤ maxBatchPins
+    // 4. Push qualifying pins to Ingest API in batches ≤ maxBatchPins
     let pushedToIngest = 0;
-    if (newPinsToIngest.length > 0) {
-      console.log(`📤 Pushing ${newPinsToIngest.length} pins to /api/internal/pinarchive/ingest...`);
-      for (let i = 0; i < newPinsToIngest.length; i += maxBatchPins) {
-        const batch = newPinsToIngest.slice(i, i + maxBatchPins);
+    if (qualifyingForDb.length > 0) {
+      console.log(`📤 Pushing ${qualifyingForDb.length} qualifying pins to /api/internal/pinarchive/ingest...`);
+      for (let i = 0; i < qualifyingForDb.length; i += maxBatchPins) {
+        const batch = qualifyingForDb.slice(i, i + maxBatchPins);
         const res = await pushToIngest(
           acc.workspace_id,
           acc.username,
@@ -697,21 +698,22 @@ async function main() {
       }
     }
 
-    // 5. Push qualifying pins to GAS writer (sheet_write mode=append)
+    // 5. Push all pins to GAS writer (sheet_write mode=update)
     let sheetPushed = 0;
-    if (newQualifyingPinsForSheet.length > 0 && PINARCHIVE_GAS_URL) {
-      console.log(`📑 Writing ${newQualifyingPinsForSheet.length} qualifying pins to Google Sheet via GAS writer...`);
-      for (let i = 0; i < newQualifyingPinsForSheet.length; i += maxBatchPins) {
-        const batch = newQualifyingPinsForSheet.slice(i, i + maxBatchPins);
+    if (allPinsForSheet.length > 0 && PINARCHIVE_GAS_URL) {
+      console.log(`📑 Writing ${allPinsForSheet.length} pins to Google Sheet via GAS writer (mode=update)...`);
+      for (let i = 0; i < allPinsForSheet.length; i += maxBatchPins) {
+        const batch = allPinsForSheet.slice(i, i + maxBatchPins);
         const gasRes = await writeToGas(PINARCHIVE_GAS_URL, PINARCHIVE_INGEST_SECRET, {
           workspace_id: acc.workspace_id,
           username: acc.username,
-          mode: sheetWriteMode === 'full_update' ? 'update' : 'append',
+          mode: 'update',
           rows: batch,
         });
         if (gasRes?.ok) {
-          sheetPushed += batch.length;
-          grandSummary.sheetPushed += batch.length;
+          const writtenCount = gasRes.written ?? batch.length;
+          sheetPushed += writtenCount;
+          grandSummary.sheetPushed += writtenCount;
         }
       }
     }
@@ -722,7 +724,7 @@ async function main() {
       ? new Date().toISOString()
       : new Date(Date.now() + intervalDays * 86400000).toISOString();
 
-    const lastResult = `pages=${pageCount} +${newPinsCount} (qual=${newQualifyingPinsForSheet.length}, cand=${newPinsCount - newQualifyingPinsForSheet.length}) sent=${sheetPushed}`;
+    const lastResult = `pages=${pageCount} +${newPinsCount} qual=${newPinsCount} sheet=${sheetPushed}`;
 
     await supaPatch('pa_accounts', `workspace_id=eq.${acc.workspace_id}&id=eq.${acc.id}`, {
       next_run_at: nextRunAt,
@@ -743,7 +745,7 @@ async function main() {
       pages_fetched: pageCount,
       pins_added: newPinsCount,
       pins_updated: 0,
-      pins_promoted: newQualifyingPinsForSheet.length,
+      pins_promoted: newPinsCount,
       status: circuitBroken ? 'failed' : 'completed',
       message: lastResult,
     });
@@ -751,7 +753,7 @@ async function main() {
 
   console.log(`\n==================================================`);
   console.log(`🎉 Discovery Complete!`);
-  console.log(`Accounts: ${grandSummary.accounts} | Pages: ${grandSummary.pages} | New Pins: ${grandSummary.newPins} (Qual: ${grandSummary.qualifyingPins}, Cand: ${grandSummary.candidatePins}) | Sheet Pushed: ${grandSummary.sheetPushed} | Errors: ${grandSummary.errors.length}`);
+  console.log(`Accounts: ${grandSummary.accounts} | Pages: ${grandSummary.pages} | New Qualifying Pins: ${grandSummary.qualifyingPins} | Sheet Pushed: ${grandSummary.sheetPushed} | Errors: ${grandSummary.errors.length}`);
 
   if (grandSummary.errors.length > 0 && grandSummary.newPins === 0 && grandSummary.accounts > 0) {
     process.exit(1);

@@ -17,6 +17,7 @@ In v2.7.0, the `legacy_mode` Script Property controls the system role:
 ## 1. Changelog (v2.7.0)
 
 - **[W1] `sheet_write` Action**: Added `doPost` action `sheet_write` supporting atomic chunked writes (`mode: 'append' | 'update'`) up to 500 rows per request with dedicated `LockService` synchronization.
+- **[W2] Change-Detection & Counters**: In `sheet_write` update mode, rows with identical saves/repins/comments are skipped from re-writing; returns `{ok:true, written: updatedCount+toAppend.length, appended: toAppend.length, updated: updatedCount}`.
 - **[L1] `legacy_mode` Switch**: Controlled via Script Property `legacy_mode`. When `false` (default for GH Brain architecture), background timers (`tick`, `refreshArchived`, Pinterest scraping, Control-sheet writes) become immediate no-ops.
 - **[Z1] Zero External Egress**: When `legacy_mode` is `false`, zero `UrlFetchApp.fetch` network requests occur. GAS operates purely as a passive Sheet writer.
 - **[B1] Rollback Ready**: Setting `legacy_mode` to `true` in Script Properties restores full autonomous v2.6.2 scraping and sync behavior without requiring code edits.
@@ -272,7 +273,20 @@ function handleSheetWrite_(p) {
       if (!pinId) continue;
       const idx = index[pinId];
       if (idx !== undefined) {
-        r.first_seen_at = getF_(existingRows[idx], map, 'first_seen_at') || nowHuman;
+        const existRow = existingRows[idx];
+        const oldSaves = Number(getF_(existRow, map, 'saves') || 0);
+        const oldRepins = Number(getF_(existRow, map, 'repins') || 0);
+        const oldComments = Number(getF_(existRow, map, 'comments') || 0);
+        const newSaves = Number(r.saves || 0);
+        const newRepins = Number(r.repins || 0);
+        const newComments = Number(r.comments || 0);
+
+        if (oldSaves === newSaves && oldRepins === newRepins && oldComments === newComments) {
+          // No metrics changed, skip writing
+          continue;
+        }
+
+        r.first_seen_at = getF_(existRow, map, 'first_seen_at') || nowHuman;
         r.last_updated_at = nowHuman;
         sh.getRange(idx + 2, 1, 1, width).setValues([buildRow_(r, map, width)]);
         updatedCount++;
@@ -287,7 +301,12 @@ function handleSheetWrite_(p) {
       sh.getRange(sh.getLastRow() + 1, 1, toAppend.length, width).setValues(toAppend);
     }
 
-    return out_({ok: true, written: updatedCount + toAppend.length});
+    return out_({
+      ok: true,
+      written: updatedCount + toAppend.length,
+      appended: toAppend.length,
+      updated: updatedCount,
+    });
   } catch (err) {
     return out_({ok: false, error: err.message});
   } finally {
