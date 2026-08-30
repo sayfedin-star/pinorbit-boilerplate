@@ -1085,8 +1085,8 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
   }
 
   function setupReevaluateButton() {
-    const btn = document.getElementById('reevaluate-candidates-btn') as HTMLButtonElement | null;
-    const icon = document.getElementById('reevaluate-icon');
+    const btn = document.getElementById('reevaluate-btn') as HTMLButtonElement | null;
+    const icon = document.getElementById('reevaluate-btn-icon');
     const text = document.getElementById('reevaluate-btn-text');
     if (!btn) return;
 
@@ -1098,39 +1098,35 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         return;
       }
 
-      const allUsernames = rawAccounts.map((a: any) => a.username).filter(Boolean);
-      if (allUsernames.length === 0) {
-        toast('No accounts found to run discovery', 'info');
-        return;
-      }
-
       btn.disabled = true;
       if (icon) icon.classList.add('animate-spin');
-      if (text) text.textContent = 'Queueing...';
+      if (text) text.textContent = 'Re-evaluating...';
 
       try {
-        const res = await fetch('/api/pinarchive/accounts-gas', {
+        const res = await fetch('/api/internal/pinarchive/reevaluate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             workspace_id: workspaceId,
-            action: 'run_now',
-            usernames: allUsernames,
           }),
         });
 
         const json = await res.json().catch(() => ({}));
         if (res.ok && json.success) {
-          const queuedCount = Array.isArray(json.results) ? json.results.filter((r: any) => r.ok).length : allUsernames.length;
-          toast(`Discovery run queued for ${queuedCount} account(s)!`, 'success');
+          const synced = json.sheet_synced ?? 0;
+          const promoted = json.promoted ?? 0;
+          toast(`Re-evaluation complete! (${synced} synced from Sheet, ${promoted} promoted)`, 'success');
+          if (typeof loadOverview === 'function') {
+            loadOverview(false);
+          }
         } else if (res.status === 401 || res.status === 403) {
-          toast('Admin access required to trigger discovery', 'error');
+          toast('Admin access required to trigger re-evaluation', 'error');
         } else {
-          toast(json.error || 'Failed to dispatch discovery run', 'error');
+          toast(json.error || 'Failed to trigger re-evaluation', 'error');
         }
       } catch (err: any) {
-        console.error('Discovery dispatch error:', err);
-        toast(err?.message || 'Network error triggering discovery', 'error');
+        console.error('Re-evaluation error:', err);
+        toast(err?.message || 'Network error triggering re-evaluation', 'error');
       } finally {
         if (icon) icon.classList.remove('animate-spin');
         if (text) text.textContent = 'Re-evaluate Now';

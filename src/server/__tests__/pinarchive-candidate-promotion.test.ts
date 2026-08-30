@@ -416,6 +416,7 @@ describe('PinArchive Tier 2 Suite: Candidates, Promotion & Re-evaluation', () =>
       expect(json.success).toBe(true);
       expect(json.promoted).toBe(8);
       expect(json.checked).toBe(30);
+      expect(json.sheet_synced).toBe(0);
       expect(json.workspace_id).toBe(mockWsId);
     });
 
@@ -446,6 +447,50 @@ describe('PinArchive Tier 2 Suite: Candidates, Promotion & Re-evaluation', () =>
       expect(json.success).toBe(true);
       expect(json.promoted).toBe(5);
       expect(json.checked).toBe(20);
+      expect(json.sheet_synced).toBe(0);
+    });
+
+    it('invokes GAS sheet_sync when PINARCHIVE_GAS_URL is configured', async () => {
+      mockPinArchiveClient.rpc.mockResolvedValue({
+        data: [{ promoted: 2, checked: 10 }],
+        error: null,
+      });
+
+      const originalFetch = globalThis.fetch;
+      const mockFetch = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ ok: true, synced: 15 }), { status: 200 })
+      );
+      globalThis.fetch = mockFetch;
+
+      try {
+        const envWithGas = {
+          ...mockRuntimeEnv,
+          PINARCHIVE_GAS_URL: 'https://script.google.com/macros/s/TEST/exec',
+        };
+
+        const req = new Request('http://localhost:4321/api/internal/pinarchive/reevaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-ingest-secret': mockSecret },
+          body: JSON.stringify({ workspace_id: mockWsId, usernames: ['foodie'] }),
+        });
+
+        const res = await reevaluateHandler({ request: req, locals: { runtime: { env: envWithGas } } } as any);
+        expect(res.status).toBe(200);
+        const json = await res.json();
+        expect(json.success).toBe(true);
+        expect(json.sheet_synced).toBe(15);
+        expect(json.promoted).toBe(2);
+        expect(json.checked).toBe(10);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://script.google.com/macros/s/TEST/exec',
+          expect.objectContaining({
+            method: 'POST',
+            body: expect.stringContaining('"action":"sheet_sync"'),
+          })
+        );
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
     });
   });
 });
