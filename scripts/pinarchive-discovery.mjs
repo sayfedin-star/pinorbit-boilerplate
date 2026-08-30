@@ -551,6 +551,12 @@ async function main() {
     let circuitBroken = false;
     let hasMore = true;
 
+    // Watermark for early-stop: pins created after (last_run_at - 24h buffer).
+    // If account has never run or has zero known pins in DB, watermark is 0 (full sweep).
+    const watermarkMs = acc.last_run_at && knownPinIds.size > 0
+      ? new Date(acc.last_run_at).getTime() - 24 * 60 * 60 * 1000
+      : 0;
+
     const qualifyingForDb = [];
     const allPinsForSheet = [];
 
@@ -628,7 +634,7 @@ async function main() {
         break;
       }
 
-      // Check how many pins on this page are already known
+      // Check how many pins on this page are already known / after watermark
       let pageNewPinsCount = 0;
       const formattedPagePins = pagePins.map(mapDiscoveryPin);
 
@@ -637,7 +643,12 @@ async function main() {
         allPinsForSheet.push(p);
 
         if (!knownPinIds.has(p.pin_id)) {
-          pageNewPinsCount++;
+          const pinCreatedAtMs = p.created_at_pinterest ? new Date(p.created_at_pinterest).getTime() : 0;
+          const isAfterWatermark = watermarkMs === 0 || pinCreatedAtMs >= watermarkMs;
+
+          if (isAfterWatermark) {
+            pageNewPinsCount++;
+          }
 
           const doesQualify = qualifies(p, wsSetting);
           if (doesQualify) {
