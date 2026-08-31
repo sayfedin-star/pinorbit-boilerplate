@@ -779,9 +779,29 @@ import ProviderBadge from '../cron/ProviderBadge.astro';
         activeCount++;
         const parts = (j.expression || '').trim().split(/\s+/);
         if (parts.length >= 5) {
-          const hours = parts[1] === '*' ? 24 : parts[1].split(',').length;
-          const days = parts[4] === '*' ? 7 : parts[4].split(',').length;
-          totalWeeklyRuns += (hours * days);
+          const [min, hour, , , dow] = parts;
+          let runsPerHour = 1;
+          if (min.startsWith('*/')) {
+            const step = parseInt(min.slice(2), 10) || 15;
+            runsPerHour = Math.round(60 / step);
+          } else if (min === '*') {
+            runsPerHour = 60;
+          } else {
+            runsPerHour = min.split(',').length;
+          }
+
+          let hoursPerDay = 1;
+          if (hour.startsWith('*/')) {
+            const step = parseInt(hour.slice(2), 10) || 1;
+            hoursPerDay = Math.round(24 / step);
+          } else if (hour === '*') {
+            hoursPerDay = 24;
+          } else {
+            hoursPerDay = hour.split(',').length;
+          }
+
+          const daysPerWeek = dow === '*' ? 7 : dow.split(',').length;
+          totalWeeklyRuns += (runsPerHour * hoursPerDay * daysPerWeek);
         }
       }
     }

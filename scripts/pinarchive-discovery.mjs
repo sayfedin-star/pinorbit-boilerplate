@@ -729,17 +729,17 @@ async function main() {
 
     // 6. Update pa_accounts metadata & next_run_at
     const intervalDays = Number(acc.interval_days || 3);
-    const nextRunAt = hasMore && cursor
+    const nextRunAt = hasMore && cursor && !circuitBroken
       ? new Date().toISOString()
       : new Date(Date.now() + intervalDays * 86400000).toISOString();
 
-    const lastResult = `pages=${pageCount} +${newPinsCount} qual=${newPinsCount} sheet=${sheetPushed}`;
+    const lastResult = `pages=${pageCount} +${newPinsCount} qual=${newPinsCount} sheet=${sheetPushed}${circuitBroken ? ' (circuit-broken)' : ''}`;
 
     await supaPatch('pa_accounts', `workspace_id=eq.${acc.workspace_id}&id=eq.${acc.id}`, {
       next_run_at: nextRunAt,
       last_run_at: new Date().toISOString(),
-      backfill_status: hasMore && cursor ? 'in_progress' : 'done',
-      backfill_cursor: hasMore && cursor ? cursor : null,
+      backfill_status: circuitBroken ? (acc.backfill_status || 'in_progress') : (hasMore && cursor ? 'in_progress' : 'done'),
+      backfill_cursor: circuitBroken ? (acc.backfill_cursor || cursor) : (hasMore && cursor ? cursor : null),
       last_result: lastResult,
       pins_count: knownPinIds.size,
     });
