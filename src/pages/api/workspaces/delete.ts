@@ -66,18 +66,44 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .select('id', { count: 'exact', head: true })
       .eq('workspace_id', workspaceId);
 
+    // Check P4 tables (PinArchive)
+    let paAccCount = 0;
+    let paPinCount = 0;
+    try {
+      const p4Admin = dbClients.getPinArchive(runtimeEnv);
+      if (p4Admin && typeof p4Admin.from === 'function') {
+        const [paAccRes, paPinRes] = await Promise.all([
+          p4Admin.from('pa_accounts').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
+          p4Admin.from('pa_pins').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
+        ]);
+        paAccCount = paAccRes?.count || 0;
+        paPinCount = paPinRes?.count || 0;
+      }
+    } catch {}
+
     const total = (accRes.count || 0) + (boardRes.count || 0) + (pinRes.count || 0) +
-                  (compRes.count || 0) + (compBoardRes.count || 0) + (connRes.count || 0);
+                  (compRes.count || 0) + (compBoardRes.count || 0) + (connRes.count || 0) +
+                  paAccCount + paPinCount;
 
     if (total > 0) {
       return new Response(JSON.stringify({
         success: false,
-        error: `Workspace is not empty (${total} records across P1/P2/P3). Delete all data first.`
+        error: `Workspace is not empty (${total} records across P1/P2/P3/P4). Delete all data first.`
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    // Clean up cross-project settings before deleting workspace
+    try {
+      const p4Admin = dbClients.getPinArchive(runtimeEnv);
+      await Promise.allSettled([
+        p4Admin?.from?.('pa_workspace_settings')?.delete?.()?.eq?.('workspace_id', workspaceId),
+        p3Admin?.from?.('workspace_analytics_settings')?.delete?.()?.eq?.('workspace_id', workspaceId),
+        p1Admin?.from?.('workspace_retention_settings')?.delete?.()?.eq?.('workspace_id', workspaceId),
+      ]);
+    } catch {}
 
     // Delete workspace
     const { error } = await schedulingClient.from('workspaces').delete().eq('id', workspaceId);

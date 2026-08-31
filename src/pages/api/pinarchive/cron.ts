@@ -13,7 +13,7 @@ export const FASTCRON_BASE = 'https://www.fastcron.com/api/v1';
 export const getDispatchEndpointUrl = (
   runtimeEnv?: Record<string, any>,
   workspaceId?: string,
-  secret?: string
+  _secret?: string
 ): string => {
   const base =
     (runtimeEnv?.PINARCHIVE_DISPATCH_URL as string) ||
@@ -23,9 +23,6 @@ export const getDispatchEndpointUrl = (
   const url = new URL(base);
   if (workspaceId) {
     url.searchParams.set('workspace_id', workspaceId);
-  }
-  if (secret) {
-    url.searchParams.set('secret', secret);
   }
   return url.toString();
 };
@@ -322,7 +319,8 @@ export async function cleanupOrphanJobs(
   token: string,
   workspaceId: string,
   dispatchEndpointUrl: string,
-  knownJobIds: Set<number>
+  knownJobIds: Set<number>,
+  targetLabel?: string
 ): Promise<number> {
   let cleanedCount = 0;
   try {
@@ -341,14 +339,18 @@ export async function cleanupOrphanJobs(
       const isPinArchive = postData && postData.pipeline === 'pinarchive' && postData.workspace_id === workspaceId;
       const urlMatches = typeof j.url === 'string' && (j.url === dispatchEndpointUrl || j.url.includes('/api/internal/pinarchive/dispatch'));
 
+      // If targetLabel is provided, only cleanup orphan duplicates with matching label
+      const labelMatches = !targetLabel || (postData?.label && String(postData.label).trim().toLowerCase() === targetLabel.trim().toLowerCase());
+
       // 4-Condition Gate Check
       if (
         urlMatches &&
         isPinArchive &&
         postData.workspace_id === workspaceId &&
+        labelMatches &&
         !knownJobIds.has(jId)
       ) {
-        console.log(`[PinArchive FastCron] Deleting orphan job #${jId} (${j.name})`);
+        console.log(`[PinArchive FastCron] Deleting orphan duplicate job #${jId} (${j.name}) for label "${postData?.label || 'default'}"`);
         const del = await fastcronCall('cron_delete', { id: jId }, token);
         if (del.success) cleanedCount++;
       }
@@ -952,7 +954,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // 4-Condition Orphan Cleanup
-      await cleanupOrphanJobs(token, workspaceId, dispatchUrl, new Set([jobId]));
+      await cleanupOrphanJobs(token, workspaceId, dispatchUrl, new Set([jobId]), label);
 
       return new Response(
         JSON.stringify({ success: true, message: 'FastCron job updated successfully.', job: editRes.data }),
@@ -1016,7 +1018,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // 4-Condition Orphan Cleanup after create
     if (newJobId) {
-      await cleanupOrphanJobs(token, workspaceId, dispatchUrl, new Set([newJobId]));
+      await cleanupOrphanJobs(token, workspaceId, dispatchUrl, new Set([newJobId]), label);
     }
 
     return new Response(

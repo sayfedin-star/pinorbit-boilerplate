@@ -93,9 +93,7 @@ async function handleCompetitorsDispatch(
       request.headers.get('x-ingest-secret') ||
       request.headers.get('x-dispatch-secret') ||
       (typeof payload.ingest_secret === 'string' ? payload.ingest_secret : null) ||
-      (typeof payload.secret === 'string' ? payload.secret : null) ||
-      url.searchParams.get('secret') ||
-      url.searchParams.get('ingest_secret');
+      (typeof payload.secret === 'string' ? payload.secret : null);
 
     // Candidate-set verification across all valid sources (workspace, workspace:prev, global, global:prev, env)
     const verification = await verifyIngestSecret(providedSecret, workspaceId, runtimeEnv);
@@ -105,10 +103,6 @@ async function handleCompetitorsDispatch(
         JSON.stringify({
           success: false,
           error: 'Unauthorized: missing or invalid x-ingest-secret header.',
-          debug: {
-            header_present: Boolean(providedSecret),
-            secret_length: providedSecret?.length || 0,
-          },
         }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );

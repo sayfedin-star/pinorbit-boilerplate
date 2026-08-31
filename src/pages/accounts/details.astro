@@ -3510,7 +3510,7 @@ import ProviderBadge from '../../components/cron/ProviderBadge.astro';
       tokInput.type = 'password';
 
       const base = window.location.origin;
-      const urlStr = `${base}/api/internal/pinterest/dispatch-due-pin?schedule_id=${encodeURIComponent(s.id)}&dispatch_token=${encodeURIComponent(s.dispatch_token || '')}`;
+      const urlStr = `${base}/api/internal/pinterest/dispatch-due-pin`;
       (document.getElementById('sched-int-url') as HTMLInputElement).value = urlStr;
     } else {
       intBox?.classList.add('hidden');

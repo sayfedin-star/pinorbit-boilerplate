@@ -226,8 +226,8 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
     const accountId = accountRow.id;
     const pinIds = pins.map((p: any) => String(p.pin_id || p.id || '')).filter(Boolean);
 
-    // Phase C1: Atomic Ingest Monitor Mode (pa_ingest_pin_batch dry-run verification)
-    const MONITOR = true;
+    // Phase C1: Atomic Ingest Write Mode (pa_ingest_pin_batch active)
+    const MONITOR = false;
     if (pins.length > 0 && typeof pinArchive.rpc === 'function') {
       try {
         const s = (v: any) => (v === '' || v == null ? undefined : v); // '' → omitted → NULL → R4 keeps target (mirrors legacy ||)
@@ -241,17 +241,17 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
             board_name: s(p.board_name),
             created_at_pinterest: p.created_at_pinterest ?? p.created_at ?? null,
             image_url: s(p.image_url),
-            is_video: !!p.is_video,
-            is_product: !!p.is_product,
-            price: p.price,
-            currency: p.currency,
-            site_name: p.site_name,
             saves: Number(p.saves || 0),
             repins: Number(p.repins || 0),
             comments: Number(p.comments || 0),
             velocity: Number(p.velocity || 0),
-            promoted: !!p.promoted,
           };
+          if (p.is_video !== undefined) row.is_video = Boolean(p.is_video);
+          if (p.is_product !== undefined) row.is_product = Boolean(p.is_product);
+          if (p.promoted !== undefined) row.promoted = Boolean(p.promoted);
+          if (p.price !== undefined) row.price = p.price;
+          if (p.currency !== undefined) row.currency = p.currency;
+          if (p.site_name !== undefined) row.site_name = p.site_name;
           if (p.node_id !== undefined) row.node_id = p.node_id;
           if (p.board_id !== undefined) row.board_id = p.board_id;
           if (p.utm_link !== undefined) row.utm_link = p.utm_link;
@@ -276,12 +276,12 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
           p_dry_run: MONITOR,
         });
         if (rpcErr) {
-          console.error('[ingest-rpc-dry] RPC error:', rpcErr);
+          console.error('[ingest-rpc] RPC error:', rpcErr);
         } else {
-          console.log('[ingest-rpc-dry]', rpcData);
+          console.log('[ingest-rpc]', rpcData);
         }
       } catch (dryErr: any) {
-        console.error('[ingest-rpc-dry] Exception invoking pa_ingest_pin_batch:', dryErr);
+        console.error('[ingest-rpc] Exception invoking pa_ingest_pin_batch:', dryErr);
       }
     }
 
@@ -296,7 +296,7 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
         const chunk = pinIds.slice(i, i + CHUNK_SIZE);
         const { data, error } = await pinArchive
           .from('pa_pins')
-          .select('id, pin_id, saves, repins, comments, share_count, reactions, archived_at, annotations, board_pin_count, board_last_modified_at, seo_category, canonical_pin_id, utm_link, image_signature, dominant_color, seo_alt_text, title, description, link, domain, board_name, board_id, created_at_pinterest, image_url, node_id')
+          .select('id, pin_id, saves, repins, comments, share_count, reactions, archived_at, annotations, board_pin_count, board_last_modified_at, seo_category, canonical_pin_id, utm_link, image_signature, dominant_color, seo_alt_text, title, description, link, domain, board_name, board_id, created_at_pinterest, image_url, node_id, is_video, is_product, promoted')
           .eq('workspace_id', workspaceId)
           .in('pin_id', chunk);
 
@@ -335,6 +335,9 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
         created_at_pinterest: string | null;
         image_url: string | null;
         node_id: string | null;
+        is_video: boolean;
+        is_product: boolean;
+        promoted: boolean;
       }>();
 
       if (Array.isArray(existingPins)) {
@@ -365,6 +368,9 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
             created_at_pinterest: ep.created_at_pinterest || null,
             image_url: ep.image_url || null,
             node_id: ep.node_id || null,
+            is_video: Boolean(ep.is_video),
+            is_product: Boolean(ep.is_product),
+            promoted: Boolean(ep.promoted),
           });
         }
       }
@@ -413,29 +419,27 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
           board_name: p.board_name || existing?.board_name || null,
           created_at_pinterest: p.created_at_pinterest || p.created_at || existing?.created_at_pinterest || null,
           image_url: p.image_url || existing?.image_url || null,
-          is_video: Boolean(p.is_video),
-          is_product: Boolean(p.is_product),
+          is_video: p.is_video !== undefined ? Boolean(p.is_video) : (existing?.is_video ?? false),
+          is_product: p.is_product !== undefined ? Boolean(p.is_product) : (existing?.is_product ?? false),
           price: p.price !== undefined ? p.price : null,
           currency: p.currency || null,
           site_name: p.site_name || null,
           saves: Math.max(Number(p.saves || 0), existing?.saves || 0),
           repins: Math.max(Number(p.repins || 0), existing?.repins || 0),
-          comments: Number(p.comments || 0),
+          comments: Math.max(Number(p.comments || 0), existing?.comments || 0),
           reactions: p.reactions === undefined
             ? (existing?.reactions ?? {})
             : (typeof p.reactions === 'object' && p.reactions !== null ? p.reactions : (existing?.reactions ?? {})),
           velocity: Number(p.velocity || 0),
-          promoted: Boolean(p.promoted),
+          promoted: p.promoted !== undefined ? Boolean(p.promoted) : (existing?.promoted ?? false),
           last_updated_at: fetchedAt,
           share_count: Math.max(
             p.share_count === undefined ? (existing?.share_count ?? 0) : Number(p.share_count || 0),
             existing?.share_count || 0
           ),
 
-          // Preserved Enrichment & Scalar non-null fallback
-          archived_at: p.archived_at !== undefined
-            ? p.archived_at
-            : (existing?.archived_at || (isNew ? fetchedAt : null)),
+          // Preserved Enrichment & Direct Qualified Ingestion
+          archived_at: p.archived_at !== undefined ? p.archived_at : (existing?.archived_at || fetchedAt),
           annotations: Array.from(mergedByName.values()),
           board_pin_count: p.board_pin_count ?? existing?.board_pin_count ?? null,
           board_last_modified_at: p.board_last_modified_at ?? existing?.board_last_modified_at ?? null,
