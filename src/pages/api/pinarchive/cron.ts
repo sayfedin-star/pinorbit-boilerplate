@@ -13,7 +13,7 @@ export const FASTCRON_BASE = 'https://www.fastcron.com/api/v1';
 export const getDispatchEndpointUrl = (
   runtimeEnv?: Record<string, any>,
   workspaceId?: string,
-  _secret?: string
+  secret?: string
 ): string => {
   const base =
     (runtimeEnv?.PINARCHIVE_DISPATCH_URL as string) ||
@@ -23,6 +23,9 @@ export const getDispatchEndpointUrl = (
   const url = new URL(base);
   if (workspaceId) {
     url.searchParams.set('workspace_id', workspaceId);
+  }
+  if (secret) {
+    url.searchParams.set('secret', secret);
   }
   return url.toString();
 };
