@@ -116,12 +116,8 @@ async function handleCompetitorsDispatch(
     );
   }
 
-  let isMasterScope =
-    payload.scope === 'all' ||
-    url.searchParams.get('scope') === 'all' ||
-    workspaceId === 'all';
-
   // 3. Verify workspace existence in Project 1
+  let isMasterScope = false;
   try {
     const admin = dbClients.getSchedulingAdmin(runtimeEnv);
     const { data: ws, error: wsErr } = await admin
@@ -137,9 +133,9 @@ async function handleCompetitorsDispatch(
       );
     }
 
-    if (ws.is_master && (payload.scope === 'all' || url.searchParams.get('scope') === 'all')) {
-      isMasterScope = true;
-    }
+    // Master Scope is strictly restricted to DB-verified master workspaces
+    const isMaster = Boolean(ws.is_master);
+    isMasterScope = isMaster && payload.scope !== 'current' && url.searchParams.get('scope') !== 'current';
   } catch {
     return new Response(
       JSON.stringify({ success: false, error: 'Workspace verification failed.' }),

@@ -857,7 +857,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
 
   <!-- ═══ Tab 2 View: FastCron Pipeline & Automation ═══ -->
   <div id="pa-tab-view-automation" class="hidden space-y-6">
-    <PinArchiveCronCard />
+    <PinArchiveCronCard isMasterWorkspace={isMasterWorkspace} />
   </div>
   </div>
 </Layout>

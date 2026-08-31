@@ -330,11 +330,19 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
           <p class="text-xs text-muted-foreground mt-0.5">Configure global automation parameters, dry-run safety modes, and retry boundaries.</p>
         </div>
         <div class="flex items-center gap-2.5">
-          <button id="btn-run-full-update"
-            class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary/90 transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            <span>Run Full Update Now</span>
-          </button>
+          <RunNowButton
+            endpoint="/api/admin/competitor-ops"
+            payload={{ scope: isMasterWorkspace ? 'all' : 'current' }}
+            forcePayload={{ scope: isMasterWorkspace ? 'all' : 'current', force: true }}
+            label={isMasterWorkspace ? 'Run All Workspaces' : 'Run Full Update'}
+            forceLabel="⚡ Force Run"
+            size="md"
+            variant="primary"
+            buttonId="comp-settings-run-full-update"
+            scope="competitors"
+            isMaster={isMasterWorkspace}
+            currentWsName={currentWorkspace?.name || 'Hymum'}
+          />
         </div>
       </div>
 

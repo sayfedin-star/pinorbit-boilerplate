@@ -1,6 +1,12 @@
 ---
 import RunNowButton from '../cron/RunNowButton.astro';
 import ProviderBadge from '../cron/ProviderBadge.astro';
+
+export interface Props {
+  isMasterWorkspace?: boolean;
+}
+
+const { isMasterWorkspace = false } = Astro.props;
 ---
 
 <div class="space-y-6" id="pinarchive-fastcron-container">
@@ -45,6 +51,7 @@ import ProviderBadge from '../cron/ProviderBadge.astro';
         variant="primary"
         buttonId="pa-run-now-btn-unified"
         scope="pinarchive"
+        isMaster={isMasterWorkspace}
       />
     </div>
   </div>
