@@ -4,7 +4,7 @@ import Layout from '../../layouts/Layout.astro';
 import SectionHeader from '../../components/ui/SectionHeader.astro';
 ---
 
-<Layout title="Winning Pins — PinArchive" description="Historical pin performance archive, high-velocity winners, and canonical groupings.">
+<Layout title="Winning Pins Intelligence — PinArchive" description="Historical pin performance archive, high-velocity winners, evergreen matrix, and deep SEO cluster analytics.">
   <!-- ═══ Back Link & Top Bar ═══ -->
   <div class="mb-5">
     <a
@@ -20,7 +20,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         <div class="flex items-center gap-2.5">
           <SectionHeader
             title="🏆 Winning Pins Intelligence"
-            description="High-velocity winning pins, performance breakdowns, cluster analysis, and side-by-side growth trajectories."
+            description="Deep performance analysis, evergreen strategy matrix, SEO keyword mining, and growth trajectory forecasts."
           />
         </div>
         <div id="refresh-meta-line" class="text-xs text-muted-foreground -mt-3 mb-2 flex items-center gap-2">
@@ -28,7 +28,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
-          <span id="refresh-meta-text" class="font-medium text-foreground">Historical archive active</span>
+          <span id="refresh-meta-text" class="font-medium text-foreground">Live archive active</span>
         </div>
       </div>
 
@@ -72,6 +72,16 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
             <span>Clusters</span>
           </button>
         </div>
+
+        <!-- Topic Clusters Direct Link -->
+        <a
+          href="/pinarchive/topics"
+          title="Explore cross-account Topic Clusters"
+          class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground shadow-xs hover:bg-muted transition-all"
+        >
+          <span class="text-amber-500 font-bold">🏷️</span>
+          <span>Topic Clusters</span>
+        </a>
 
         <!-- CSV Export Button -->
         <button
@@ -164,39 +174,78 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       </div>
     </div>
 
-    <!-- Card 4: Growth Stages Breakdown -->
+    <!-- Card 4: Strategy Matrix Breakdown -->
     <div class="relative overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-xs hover:border-primary/40 transition-all group flex flex-col justify-between">
       <div class="flex items-center justify-between">
-        <span class="text-[10.5px] font-bold text-muted-foreground uppercase tracking-wider">Growth Stages</span>
+        <span class="text-[10.5px] font-bold text-muted-foreground uppercase tracking-wider">Strategy Matrix</span>
         <span class="flex h-7 w-7 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500 border border-purple-500/20">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20"/><path d="m17 5-5-3-5 3"/><path d="m17 19-5 3-5-3"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
         </span>
       </div>
       <div class="mt-3 space-y-1.5">
         <!-- Visual Distribution Bar -->
         <div class="h-2 w-full bg-muted rounded-full overflow-hidden flex" id="kpi-stage-bar">
-          <div id="kpi-bar-growing" class="bg-emerald-500 h-full" style="width: 0%" title="Growing"></div>
-          <div id="kpi-bar-mature" class="bg-purple-500 h-full" style="width: 0%" title="Mature"></div>
-          <div id="kpi-bar-new" class="bg-cyan-500 h-full" style="width: 0%" title="New"></div>
-          <div id="kpi-bar-cooling" class="bg-amber-500 h-full" style="width: 0%" title="Cooling/Dormant"></div>
+          <div id="kpi-bar-evergreen" class="bg-emerald-600 h-full" style="width: 0%" title="Evergreen Giants"></div>
+          <div id="kpi-bar-rocket" class="bg-rose-500 h-full" style="width: 0%" title="Viral Rockets"></div>
+          <div id="kpi-bar-virality" class="bg-primary h-full" style="width: 0%" title="High Virality"></div>
+          <div id="kpi-bar-mature" class="bg-purple-500 h-full" style="width: 0%" title="Mature Stable"></div>
         </div>
-        <div class="flex items-center justify-between text-[10px] font-semibold text-muted-foreground pt-0.5">
-          <span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> <span id="kpi-count-growing">0</span> 🚀</span>
-          <span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-purple-500"></span> <span id="kpi-count-mature">0</span> 🟣</span>
-          <span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-cyan-500"></span> <span id="kpi-count-new">0</span> 🟢</span>
-          <span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span> <span id="kpi-count-cooling">0</span> ❄️</span>
+        <div class="flex items-center justify-between text-[10px] font-bold text-muted-foreground pt-0.5">
+          <span class="flex items-center gap-1" title="Evergreen Giants (>45d + steady high saves)"><span class="h-1.5 w-1.5 rounded-full bg-emerald-600"></span> <span id="kpi-count-evergreen">0</span> 🌲</span>
+          <span class="flex items-center gap-1" title="Viral Rockets (≤14d + fast pace)"><span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span> <span id="kpi-count-rocket">0</span> 🚀</span>
+          <span class="flex items-center gap-1" title="High Virality (>90% Repin/Save Ratio)"><span class="h-1.5 w-1.5 rounded-full bg-primary"></span> <span id="kpi-count-virality">0</span> 💎</span>
+          <span class="flex items-center gap-1" title="Mature Content"><span class="h-1.5 w-1.5 rounded-full bg-purple-500"></span> <span id="kpi-count-mature">0</span> 🟣</span>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ═══ 2. Smart Quick-Filter Chips & Search Toolbar ═══ -->
+  <!-- ═══ 2. In-Depth Keyword & SEO Mining Box ═══ -->
+  <div id="keyword-mining-box" class="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-xs mb-6 space-y-3">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/60 pb-3">
+      <div class="flex items-center gap-2.5">
+        <span class="flex h-7 w-7 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-sm">
+          🏷️
+        </span>
+        <div>
+          <h3 class="text-xs sm:text-sm font-bold text-foreground flex items-center gap-1.5">
+            <span>Winning SEO Keywords Mining</span>
+            <span class="text-[10px] font-semibold text-muted-foreground">(Top recurring Pinterest annotations in active filtered scope)</span>
+          </h3>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          id="copy-all-keywords-btn"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-background text-xs font-bold text-foreground hover:bg-muted shadow-2xs transition-all cursor-pointer"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+          <span>Copy All Tags</span>
+        </button>
+        <a
+          href="/pinarchive/topics"
+          class="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+        >
+          <span>All Topic Clusters →</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Active Keywords Cloud -->
+    <div id="keywords-cloud-container" class="flex flex-wrap items-center gap-1.5 min-h-[36px]">
+      <span class="text-xs text-muted-foreground animate-pulse">Mining keyword clusters from active winners...</span>
+    </div>
+  </div>
+
+  <!-- ═══ 3. Strategy Slicers & Filter Controls Toolbar ═══ -->
   <div class="rounded-2xl border border-border bg-card p-4 shadow-xs mb-6 space-y-3.5">
     <!-- Preset Slicer Pills -->
     <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
       <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-wider shrink-0 flex items-center gap-1">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-        <span>Quick:</span>
+        <span>Matrix:</span>
       </span>
       <button
         type="button"
@@ -207,10 +256,27 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       </button>
       <button
         type="button"
-        data-quick-filter="growing"
+        data-quick-filter="evergreen"
         class="quick-pill px-3 py-1 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
+        title="Pins >45d with high sustained saves"
       >
-        🚀 Growing Pace (<span id="quick-count-growing">0</span>)
+        🌲 Evergreen Giants (<span id="quick-count-evergreen">0</span>)
+      </button>
+      <button
+        type="button"
+        data-quick-filter="rocket"
+        class="quick-pill px-3 py-1 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
+        title="Pins ≤14d with velocity ≥15/d"
+      >
+        🚀 Viral Rockets (<span id="quick-count-rocket">0</span>)
+      </button>
+      <button
+        type="button"
+        data-quick-filter="high-virality"
+        class="quick-pill px-3 py-1 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
+        title="Repin to Save ratio ≥ 90%"
+      >
+        💎 High Virality (&gt;90%)
       </button>
       <button
         type="button"
@@ -218,20 +284,6 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         class="quick-pill px-3 py-1 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
       >
         🔥 Viral Spikes (<span id="quick-count-spike">0</span>)
-      </button>
-      <button
-        type="button"
-        data-quick-filter="velocity-high"
-        class="quick-pill px-3 py-1 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
-      >
-        ⚡ High Velocity (≥20/d)
-      </button>
-      <button
-        type="button"
-        data-quick-filter="fresh"
-        class="quick-pill px-3 py-1 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
-      >
-        🌱 Fresh Winners (≤14d)
       </button>
       <button
         type="button"
@@ -286,23 +338,29 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         </label>
       </div>
 
-      <!-- Right Controls: Sort & Limit & Clear -->
+      <!-- Right Controls: Multi-Field Sort & Limit & Clear -->
       <div class="flex items-center gap-2">
         <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-2xs">
           <label for="pins-sort-select" class="text-xs font-semibold text-muted-foreground">Sort:</label>
           <select id="pins-sort-select" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer">
-            <option value="saves">Total Saves</option>
-            <option value="velocity">Velocity (Saves/Day)</option>
+            <option value="saves_desc">Saves (High → Low)</option>
+            <option value="saves_asc">Saves (Low → High)</option>
+            <option value="velocity_desc">Velocity (High → Low)</option>
+            <option value="velocity_asc">Velocity (Low → High)</option>
+            <option value="repins_desc">Repins (High → Low)</option>
+            <option value="virality_desc">Virality Ratio %</option>
+            <option value="newest">Newest on Pinterest</option>
+            <option value="oldest">Oldest on Pinterest</option>
           </select>
         </div>
 
         <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-2xs">
-          <label for="pins-limit-select" class="text-xs font-semibold text-muted-foreground">Show:</label>
+          <label for="pins-limit-select" class="text-xs font-semibold text-muted-foreground">Per Page:</label>
           <select id="pins-limit-select" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer">
-            <option value="25">25</option>
-            <option value="50" selected>50</option>
-            <option value="100">100</option>
-            <option value="200">200</option>
+            <option value="24" selected>24</option>
+            <option value="48">48</option>
+            <option value="96">96</option>
+            <option value="200">200 (All)</option>
           </select>
         </div>
 
@@ -313,16 +371,28 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     </div>
   </div>
 
-  <!-- ═══ 3. Active Winners Presentation Area ═══ -->
-  <section class="mb-12" aria-labelledby="winners-section-heading">
-    <!-- Header Section Info -->
-    <div class="flex items-center justify-between mb-4">
+  <!-- ═══ 4. Active Winners Presentation Area ═══ -->
+  <section class="mb-8" aria-labelledby="winners-section-heading">
+    <!-- Header Section Info & Top Pagination Indicator -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
       <div>
         <h2 id="winners-section-heading" class="text-base font-bold text-foreground flex items-center gap-2">
           <span>Ranked Intelligence</span>
           <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20" id="winners-badge-count">0</span>
         </h2>
-        <p class="text-xs text-muted-foreground mt-0.5">Top performing archived pins ranked by selected metric (persisted workspace filters apply server-side).</p>
+        <p class="text-xs text-muted-foreground mt-0.5" id="winners-showing-range-text">Showing 0-0 of 0 winning pins</p>
+      </div>
+
+      <!-- Quick AI Prompt Export Action Button -->
+      <div class="flex items-center gap-2">
+        <button
+          id="bulk-ai-prompt-btn"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground text-xs font-bold shadow-2xs transition-all cursor-pointer"
+          title="Extract titles & keywords formatted as AI Content Generation Prompt"
+        >
+          <span>🤖 AI Prompt Generator</span>
+        </button>
       </div>
     </div>
 
@@ -360,17 +430,19 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
               <th class="py-3 px-3 text-center w-12">#</th>
               <th class="py-3 px-3 min-w-[240px]">Pin Title &amp; Details</th>
               <th class="py-3 px-3 min-w-[120px]">Board</th>
-              <th class="py-3 px-3 text-center">Stage</th>
-              <th class="py-3 px-3 text-right cursor-pointer hover:text-foreground table-sort-header" data-sort="saves">
-                Saves ↕
+              <th class="py-3 px-3 text-center min-w-[100px]">Strategy Matrix</th>
+              <th class="py-3 px-3 text-right cursor-pointer hover:text-foreground table-sort-header select-none" data-sort="saves">
+                Saves <span class="sort-indicator" id="sort-icon-saves">↕</span>
               </th>
-              <th class="py-3 px-3 text-right cursor-pointer hover:text-foreground table-sort-header" data-sort="repins">
-                Repins ↕
+              <th class="py-3 px-3 text-right cursor-pointer hover:text-foreground table-sort-header select-none" data-sort="repins">
+                Repins <span class="sort-indicator" id="sort-icon-repins">↕</span>
               </th>
-              <th class="py-3 px-3 text-right cursor-pointer hover:text-foreground table-sort-header" data-sort="velocity">
-                Velocity ↕
+              <th class="py-3 px-3 text-right cursor-pointer hover:text-foreground table-sort-header select-none" data-sort="velocity">
+                Velocity <span class="sort-indicator" id="sort-icon-velocity">↕</span>
               </th>
-              <th class="py-3 px-3 text-center">Virality</th>
+              <th class="py-3 px-3 text-center cursor-pointer hover:text-foreground table-sort-header select-none" data-sort="virality">
+                Virality <span class="sort-indicator" id="sort-icon-virality">↕</span>
+              </th>
               <th class="py-3 px-3 text-right w-28">Actions</th>
             </tr>
           </thead>
@@ -404,9 +476,20 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         </div>
       </div>
     </div>
+
+    <!-- ═══ 5. Full Pagination Bar ═══ -->
+    <div id="pagination-wrapper" class="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-card rounded-2xl border border-border shadow-xs">
+      <div class="text-xs text-muted-foreground font-medium" id="pagination-info-text">
+        Showing 1 to 24 of 0 winning pins
+      </div>
+
+      <div class="flex items-center gap-1.5 self-center sm:self-auto" id="pagination-controls-container">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
   </section>
 
-  <!-- ═══ 4. Floating Multi-Pin Compare Bar ═══ -->
+  <!-- ═══ 6. Floating Multi-Pin Compare & Bulk Actions Bar ═══ -->
   <div id="floating-compare-bar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-card/95 backdrop-blur-md border border-primary/40 rounded-2xl shadow-2xl px-5 py-3 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
     <div class="flex items-center gap-2.5">
       <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
@@ -414,12 +497,15 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       </span>
       <div>
         <span id="compare-count-text" class="text-xs font-bold text-foreground block">2 Pins Selected</span>
-        <span class="text-[10px] text-muted-foreground">Compare trajectories side-by-side</span>
+        <span class="text-[10px] text-muted-foreground">Compare growth or extract AI prompt</span>
       </div>
     </div>
     <div class="flex items-center gap-2">
-      <button id="launch-compare-btn" type="button" class="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all cursor-pointer">
-        Compare Trajectories
+      <button id="launch-compare-btn" type="button" class="rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all cursor-pointer">
+        Compare (Up to 4)
+      </button>
+      <button id="launch-bulk-ai-btn" type="button" class="rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-bold text-primary hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer">
+        🤖 Copy AI Prompt
       </button>
       <button id="clear-compare-btn" type="button" class="rounded-xl border border-border bg-background px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer">
         Clear
@@ -427,7 +513,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     </div>
   </div>
 
-  <!-- ═══ 5. Quick-Peek Slide-Over Drawer ═══ -->
+  <!-- ═══ 7. Quick-Peek Slide-Over Drawer ═══ -->
   <div id="quick-peek-backdrop" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs transition-opacity duration-300"></div>
   <div
     id="quick-peek-drawer"
@@ -441,7 +527,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         </span>
         <div>
           <h3 class="text-sm font-bold text-foreground">Quick-Peek Intelligence</h3>
-          <span id="peek-drawer-meta" class="text-[10px] text-muted-foreground">Snapshot metrics &amp; trajectory</span>
+          <span id="peek-drawer-meta" class="text-[10px] text-muted-foreground">Snapshot metrics, forecasts &amp; trajectory</span>
         </div>
       </div>
       <div class="flex items-center gap-1.5">
@@ -469,17 +555,56 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     </div>
   </div>
 
-  <!-- ═══ 6. Compare Modal Dialog ═══ -->
+  <!-- ═══ 8. AI Prompt Generator Modal ═══ -->
+  <div id="ai-prompt-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div class="relative w-full max-w-2xl rounded-3xl border border-border bg-card p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-border">
+        <div class="flex items-center gap-2.5">
+          <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 text-base">
+            🤖
+          </span>
+          <div>
+            <h3 class="text-sm font-bold text-foreground">AI Content Generation Prompt</h3>
+            <span class="text-[10px] text-muted-foreground">Formatted prompt extracted from winning pins &amp; keywords</span>
+          </div>
+        </div>
+        <button id="close-ai-modal-btn" type="button" class="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <textarea
+        id="ai-prompt-textarea"
+        rows="8"
+        readonly
+        class="w-full rounded-2xl border border-border bg-muted/40 p-3.5 text-xs font-mono text-foreground focus:outline-none leading-relaxed select-all"
+      ></textarea>
+
+      <div class="flex items-center justify-between pt-2">
+        <span class="text-[11px] text-muted-foreground">Paste directly into ChatGPT, Claude, or Midjourney</span>
+        <button
+          id="copy-ai-prompt-btn"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-xs hover:bg-primary/90 transition-all cursor-pointer"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+          <span id="copy-ai-prompt-text">Copy Prompt to Clipboard</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 9. Compare Modal Dialog (Up to 4 Pins) ═══ -->
   <div id="compare-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-    <div class="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-border bg-card p-6 shadow-2xl">
+    <div class="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-3xl border border-border bg-card p-6 shadow-2xl">
       <div class="flex items-center justify-between pb-4 border-b border-border mb-4">
         <div class="flex items-center gap-2.5">
           <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/></svg>
           </span>
           <div>
-            <h3 class="text-base font-bold text-foreground">Pin Trajectory Comparison</h3>
-            <span class="text-[10px] text-muted-foreground">Side-by-side growth analytics and historical snapshots</span>
+            <h3 class="text-base font-bold text-foreground">Pin Trajectory Comparison (Up to 4)</h3>
+            <span class="text-[10px] text-muted-foreground">Side-by-side growth pace, evergreen diagnostics &amp; snapshot histories</span>
           </div>
         </div>
         <button id="close-compare-modal" type="button" class="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted cursor-pointer">
@@ -497,8 +622,9 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
 <script>
   let rawPins: any[] = [];
   let filteredPins: any[] = [];
-  let currentSort = 'saves';
-  let currentLimit = 50;
+  let currentSort = 'saves_desc';
+  let currentPage = 1;
+  let pageSize = 24;
   let activeView: 'grid' | 'table' | 'board' | 'clusters' = 'grid';
   let activeQuickFilter = 'all';
   const selectedForCompare = new Set<string>();
@@ -536,6 +662,38 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     }
   }
 
+  // ═══ Winner Strategy Matrix Classification ═══
+  type PinStrategy = 'EVERGREEN' | 'ROCKET' | 'VIRAL' | 'MATURE' | 'COOLING';
+
+  function getPinStrategy(p: any): PinStrategy {
+    const saves = Number(p.saves || 0);
+    const repins = Number(p.repins || 0);
+    const velocity = Number(p.velocity || 0);
+    const ageDays = Number(p.age_days) || (p.created_at_pinterest ? Math.max(0, (Date.now() - new Date(p.created_at_pinterest).getTime()) / 86400000) : 30);
+    const viralityRatio = saves > 0 ? (repins / saves) * 100 : 0;
+
+    if (ageDays <= 14 && velocity >= 15) return 'ROCKET';
+    if (ageDays > 45 && velocity >= 8 && saves >= 2500) return 'EVERGREEN';
+    if (viralityRatio >= 90) return 'VIRAL';
+    if (p.stage === 'COOLING' || velocity < 2) return 'COOLING';
+    return 'MATURE';
+  }
+
+  function renderStrategyBadge(strategy: PinStrategy): string {
+    switch (strategy) {
+      case 'EVERGREEN':
+        return '<span class="inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 border border-emerald-600/20" title="Evergreen Giant (>45d, steady high saves)">🌲 EVERGREEN</span>';
+      case 'ROCKET':
+        return '<span class="inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20 animate-pulse" title="Viral Rocket (≤14d, high velocity)">🚀 ROCKET</span>';
+      case 'VIRAL':
+        return '<span class="inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20" title="High Repin/Save Ratio (>90%)">💎 VIRAL</span>';
+      case 'COOLING':
+        return '<span class="inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20" title="Slowing growth pace">❄️ COOLING</span>';
+      default:
+        return '<span class="inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">🟣 MATURE</span>';
+    }
+  }
+
   function renderStageBadge(stage?: string | null): string {
     switch (stage) {
       case 'NEW':
@@ -551,16 +709,6 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     }
   }
 
-  function renderAnomalyBadge(anomaly?: string | null): string {
-    if (anomaly === 'SPIKE') {
-      return '<span class="inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20 animate-pulse">🔥 SPIKE</span>';
-    }
-    if (anomaly === 'COOLING') {
-      return '<span class="inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">❄️ COOLING</span>';
-    }
-    return '';
-  }
-
   function renderRankBadge(index: number): string {
     if (index === 0) {
       return '<span class="inline-flex items-center justify-center h-6 px-2 rounded-lg bg-amber-500 text-white font-extrabold text-[10px] shadow-xs border border-amber-400">🥇 #1</span>';
@@ -572,6 +720,58 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       return '<span class="inline-flex items-center justify-center h-6 px-2 rounded-lg bg-amber-700 text-white font-extrabold text-[10px] shadow-xs border border-amber-600">🥉 #3</span>';
     }
     return `<span class="inline-flex items-center justify-center h-5 px-1.5 rounded-md bg-muted/90 text-muted-foreground font-bold text-[9px] border border-border">#${index + 1}</span>`;
+  }
+
+  // ═══ Keyword Mining Extraction ═══
+  function updateKeywordMining(pins: any[]) {
+    const container = document.getElementById('keywords-cloud-container');
+    if (!container) return;
+
+    if (!pins || pins.length === 0) {
+      container.innerHTML = '<span class="text-xs text-muted-foreground">No keyword annotations found for active filters.</span>';
+      return;
+    }
+
+    const keywordStats: Record<string, { count: number; totalSaves: number }> = {};
+
+    pins.forEach((p) => {
+      const pinSaves = Number(p.saves || 0);
+      const annotations = Array.isArray(p.annotations) ? p.annotations : [];
+      const seenForPin = new Set<string>();
+
+      annotations.forEach((a: any) => {
+        const name = typeof a === 'string' ? a.trim() : a?.name ? String(a.name).trim() : '';
+        if (name && !seenForPin.has(name.toLowerCase())) {
+          seenForPin.add(name.toLowerCase());
+          if (!keywordStats[name]) keywordStats[name] = { count: 0, totalSaves: 0 };
+          keywordStats[name].count += 1;
+          keywordStats[name].totalSaves += pinSaves;
+        }
+      });
+    });
+
+    const sortedKeywords = Object.entries(keywordStats)
+      .sort((a, b) => b[1].count !== a[1].count ? b[1].count - a[1].count : b[1].totalSaves - a[1].totalSaves)
+      .slice(0, 14);
+
+    if (sortedKeywords.length === 0) {
+      container.innerHTML = '<span class="text-xs text-muted-foreground">No Pinterest SEO annotations found on selected pins.</span>';
+      return;
+    }
+
+    container.innerHTML = sortedKeywords.map(([name, stat]) => `
+      <a
+        href="/pinarchive/topics?q=${encodeURIComponent(name)}"
+        title="${escapeHtml(name)} — ${stat.count} winning pins, ${fmtNumber(stat.totalSaves)} saves"
+        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-muted/60 hover:bg-primary/15 hover:text-primary border border-border/80 text-xs font-semibold text-foreground transition-all group"
+      >
+        <span class="text-amber-500 font-bold">#</span>
+        <span class="truncate max-w-[160px]">${escapeHtml(name)}</span>
+        <span class="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-background text-muted-foreground group-hover:text-primary font-bold border border-border/40">
+          ${stat.count}
+        </span>
+      </a>
+    `).join('');
   }
 
   // ═══ KPI Computation ═══
@@ -648,52 +848,55 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       if (domPins) domPins.textContent = `${dominantEntry[1].count} winning pins`;
     }
 
-    // 4. Growth Stages Distribution
-    let cGrowing = 0;
+    // 4. Strategy Matrix Distribution
+    let cEvergreen = 0;
+    let cRocket = 0;
+    let cVirality = 0;
     let cMature = 0;
-    let cNew = 0;
-    let cCooling = 0;
 
     pins.forEach((p) => {
-      if (p.stage === 'GROWING') cGrowing++;
-      else if (p.stage === 'MATURE') cMature++;
-      else if (p.stage === 'NEW') cNew++;
-      else cCooling++;
+      const st = getPinStrategy(p);
+      if (st === 'EVERGREEN') cEvergreen++;
+      else if (st === 'ROCKET') cRocket++;
+      else if (st === 'VIRAL') cVirality++;
+      else cMature++;
     });
 
     const len = pins.length;
-    const pGrowing = Math.round((cGrowing / len) * 100);
-    const pMature = Math.round((cMature / len) * 100);
-    const pNew = Math.round((cNew / len) * 100);
-    const pCooling = Math.max(0, 100 - pGrowing - pMature - pNew);
+    const pEvergreen = Math.round((cEvergreen / len) * 100);
+    const pRocket = Math.round((cRocket / len) * 100);
+    const pVirality = Math.round((cVirality / len) * 100);
+    const pMature = Math.max(0, 100 - pEvergreen - pRocket - pVirality);
 
-    const bGrowing = document.getElementById('kpi-bar-growing');
+    const bEvergreen = document.getElementById('kpi-bar-evergreen');
+    const bRocket = document.getElementById('kpi-bar-rocket');
+    const bVirality = document.getElementById('kpi-bar-virality');
     const bMature = document.getElementById('kpi-bar-mature');
-    const bNew = document.getElementById('kpi-bar-new');
-    const bCooling = document.getElementById('kpi-bar-cooling');
 
-    if (bGrowing) bGrowing.style.width = `${pGrowing}%`;
+    if (bEvergreen) bEvergreen.style.width = `${pEvergreen}%`;
+    if (bRocket) bRocket.style.width = `${pRocket}%`;
+    if (bVirality) bVirality.style.width = `${pVirality}%`;
     if (bMature) bMature.style.width = `${pMature}%`;
-    if (bNew) bNew.style.width = `${pNew}%`;
-    if (bCooling) bCooling.style.width = `${pCooling}%`;
 
-    const elGrow = document.getElementById('kpi-count-growing');
+    const elEver = document.getElementById('kpi-count-evergreen');
+    const elRoc = document.getElementById('kpi-count-rocket');
+    const elVir = document.getElementById('kpi-count-virality');
     const elMat = document.getElementById('kpi-count-mature');
-    const elNew = document.getElementById('kpi-count-new');
-    const elCool = document.getElementById('kpi-count-cooling');
 
-    if (elGrow) elGrow.textContent = String(cGrowing);
+    if (elEver) elEver.textContent = String(cEvergreen);
+    if (elRoc) elRoc.textContent = String(cRocket);
+    if (elVir) elVir.textContent = String(cVirality);
     if (elMat) elMat.textContent = String(cMature);
-    if (elNew) elNew.textContent = String(cNew);
-    if (elCool) elCool.textContent = String(cCooling);
 
     // Update Quick Filter counts
     const qAll = document.getElementById('quick-count-all');
-    const qGrow = document.getElementById('quick-count-growing');
+    const qEver = document.getElementById('quick-count-evergreen');
+    const qRoc = document.getElementById('quick-count-rocket');
     const qSpike = document.getElementById('quick-count-spike');
 
     if (qAll) qAll.textContent = String(rawPins.length);
-    if (qGrow) qGrow.textContent = String(rawPins.filter((p) => p.stage === 'GROWING').length);
+    if (qEver) qEver.textContent = String(rawPins.filter((p) => getPinStrategy(p) === 'EVERGREEN').length);
+    if (qRoc) qRoc.textContent = String(rawPins.filter((p) => getPinStrategy(p) === 'ROCKET').length);
     if (qSpike) qSpike.textContent = String(rawPins.filter((p) => p.anomaly === 'SPIKE').length);
   }
 
@@ -711,8 +914,8 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     const isSelected = selectedForCompare.has(pinId);
     const createdDate = fmtDate(p.created_at_pinterest);
     const viralityRatio = saves > 0 ? ((repins / saves) * 100).toFixed(0) : '0';
+    const strategy = getPinStrategy(p);
 
-    // Linked annotations chips (max 3)
     const tagsHtml = annotations.slice(0, 3).map((a: any) => {
       const name = typeof a === 'string' ? a : a?.name || '';
       if (!name) return '';
@@ -740,7 +943,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
             class="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
             id="compare-${escapeHtml(pinId)}"
           />
-          <label for="compare-${escapeHtml(pinId)}" class="text-[10px] font-bold text-muted-foreground cursor-pointer select-none">Compare</label>
+          <label for="compare-${escapeHtml(pinId)}" class="text-[10px] font-bold text-muted-foreground cursor-pointer select-none">Select</label>
         </div>
 
         <div>
@@ -781,8 +984,8 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
           <!-- Card Body -->
           <div class="p-4 space-y-2.5">
             <div class="flex flex-wrap items-center gap-1.5">
+              ${renderStrategyBadge(strategy)}
               ${renderStageBadge(p.stage)}
-              ${renderAnomalyBadge(p.anomaly)}
               ${p.canonical_pin_id ? '<span class="text-[9.5px] font-bold px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-500 border border-purple-500/20">🧬 Cluster</span>' : ''}
             </div>
 
@@ -796,7 +999,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
               </h3>
               <div class="text-[10px] text-muted-foreground mt-1 flex items-center justify-between">
                 <span>Created: <strong class="text-foreground font-medium">${createdDate}</strong></span>
-                <span class="text-[10px] font-mono text-muted-foreground">VR: ${viralityRatio}%</span>
+                <span class="text-[10px] font-mono text-muted-foreground">VR: <strong class="text-foreground">${viralityRatio}%</strong></span>
               </div>
             </div>
 
@@ -846,11 +1049,11 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
   }
 
   // ═══ Pro Data Table View ═══
-  function renderTableView(pins: any[]) {
+  function renderTableView(pagePins: any[], startIdx: number) {
     const tbody = document.getElementById('winners-table-body');
     if (!tbody) return;
 
-    if (pins.length === 0) {
+    if (pagePins.length === 0) {
       tbody.innerHTML = `
         <tr>
           <td colspan="9" class="py-12 text-center text-xs text-muted-foreground">
@@ -861,19 +1064,21 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       return;
     }
 
-    tbody.innerHTML = pins.map((p, idx) => {
+    tbody.innerHTML = pagePins.map((p, i) => {
+      const globalIdx = startIdx + i;
       const saves = Number(p.saves || 0);
       const repins = Number(p.repins || 0);
       const velocity = Number(p.velocity || 0);
       const viralityRatio = saves > 0 ? ((repins / saves) * 100).toFixed(0) : '0';
       const pinterestUrl = `https://www.pinterest.com/pin/${p.pin_id}/`;
       const isSelected = selectedForCompare.has(p.id);
+      const strategy = getPinStrategy(p);
 
       return `
         <tr class="hover:bg-muted/30 transition-colors group">
           <!-- Rank -->
           <td class="py-3 px-3 text-center font-bold text-muted-foreground font-mono">
-            ${renderRankBadge(idx)}
+            ${renderRankBadge(globalIdx)}
           </td>
 
           <!-- Details & Image -->
@@ -906,9 +1111,9 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
             </span>
           </td>
 
-          <!-- Stage -->
+          <!-- Strategy Matrix -->
           <td class="py-3 px-3 text-center">
-            ${renderStageBadge(p.stage)}
+            ${renderStrategyBadge(strategy)}
           </td>
 
           <!-- Saves -->
@@ -958,7 +1163,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
                 data-pin-compare="${escapeHtml(p.id)}"
                 ${isSelected ? 'checked' : ''}
                 class="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer ml-1"
-                title="Select for compare"
+                title="Select for compare / bulk actions"
               />
             </div>
           </td>
@@ -969,26 +1174,189 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     attachListeners();
   }
 
-  // ═══ Render Grid View ═══
-  function renderPins(pins: any[]) {
-    const grid = document.getElementById('winners-grid');
-    const badge = document.getElementById('winners-badge-count');
-    if (badge) badge.textContent = `${pins.length}`;
+  // ═══ Pagination Renderer ═══
+  function updatePaginationControls() {
+    const container = document.getElementById('pagination-controls-container');
+    const info = document.getElementById('pagination-info-text');
+    const rangeText = document.getElementById('winners-showing-range-text');
+    if (!container || !info) return;
 
-    if (!grid) return;
+    const total = filteredPins.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
 
-    if (pins.length === 0) {
-      grid.innerHTML = `
-        <div class="col-span-full py-16 text-center text-xs text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 opacity-40 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          No archived winning pins matched your active filters.
-        </div>
-      `;
+    const start = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+    const end = Math.min(currentPage * pageSize, total);
+
+    const txt = `Showing ${start} to ${end} of ${total} winning pins`;
+    info.textContent = txt;
+    if (rangeText) rangeText.textContent = txt;
+
+    if (totalPages <= 1) {
+      container.innerHTML = '';
       return;
     }
 
-    grid.innerHTML = pins.map((p, idx) => renderSinglePinCard(p, idx)).join('');
-    attachListeners();
+    let buttonsHtml = `
+      <button
+        type="button"
+        data-page="1"
+        ${currentPage === 1 ? 'disabled class="opacity-40 cursor-not-allowed"' : 'class="cursor-pointer hover:bg-muted"'}
+        class="px-2.5 py-1 text-xs font-bold rounded-lg border border-border bg-background transition-all"
+        title="First page"
+      >
+        «
+      </button>
+      <button
+        type="button"
+        data-page="${currentPage - 1}"
+        ${currentPage === 1 ? 'disabled class="opacity-40 cursor-not-allowed"' : 'class="cursor-pointer hover:bg-muted"'}
+        class="px-2.5 py-1 text-xs font-bold rounded-lg border border-border bg-background transition-all"
+        title="Previous page"
+      >
+        ‹
+      </button>
+    `;
+
+    // Numeric page pills
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+
+    for (let p = startPage; p <= endPage; p++) {
+      const isActive = p === currentPage;
+      buttonsHtml += `
+        <button
+          type="button"
+          data-page="${p}"
+          class="px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            isActive
+              ? 'bg-primary text-primary-foreground shadow-xs'
+              : 'border border-border bg-background text-foreground hover:bg-muted'
+          }"
+        >
+          ${p}
+        </button>
+      `;
+    }
+
+    buttonsHtml += `
+      <button
+        type="button"
+        data-page="${currentPage + 1}"
+        ${currentPage === totalPages ? 'disabled class="opacity-40 cursor-not-allowed"' : 'class="cursor-pointer hover:bg-muted"'}
+        class="px-2.5 py-1 text-xs font-bold rounded-lg border border-border bg-background transition-all"
+        title="Next page"
+      >
+        ›
+      </button>
+      <button
+        type="button"
+        data-page="${totalPages}"
+        ${currentPage === totalPages ? 'disabled class="opacity-40 cursor-not-allowed"' : 'class="cursor-pointer hover:bg-muted"'}
+        class="px-2.5 py-1 text-xs font-bold rounded-lg border border-border bg-background transition-all"
+        title="Last page"
+      >
+        »
+      </button>
+    `;
+
+    container.innerHTML = buttonsHtml;
+
+    container.querySelectorAll<HTMLButtonElement>('[data-page]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = parseInt(btn.getAttribute('data-page') || '1', 10);
+        if (p >= 1 && p <= totalPages && p !== currentPage) {
+          currentPage = p;
+          renderActiveView();
+          window.scrollTo({ top: 400, behavior: 'smooth' });
+        }
+      });
+    });
+  }
+
+  // ═══ Multi-Sort Evaluator ═══
+  function sortPins(list: any[]) {
+    return [...list].sort((a, b) => {
+      const sA = Number(a.saves || 0);
+      const sB = Number(b.saves || 0);
+      const vA = Number(a.velocity || 0);
+      const vB = Number(b.velocity || 0);
+      const rA = Number(a.repins || 0);
+      const rB = Number(b.repins || 0);
+      const vrA = sA > 0 ? (rA / sA) * 100 : 0;
+      const vrB = sB > 0 ? (rB / sB) * 100 : 0;
+      const tA = new Date(a.created_at_pinterest || 0).getTime();
+      const tB = new Date(b.created_at_pinterest || 0).getTime();
+
+      switch (currentSort) {
+        case 'saves_asc':
+          return sA - sB;
+        case 'velocity_desc':
+          return vB - vA;
+        case 'velocity_asc':
+          return vA - vB;
+        case 'repins_desc':
+          return rB - rA;
+        case 'virality_desc':
+          return vrB - vrA;
+        case 'newest':
+          return tB - tA;
+        case 'oldest':
+          return tA - tB;
+        case 'saves_desc':
+        default:
+          return sB - sA;
+      }
+    });
+  }
+
+  // ═══ Render Active View ═══
+  function renderActiveView() {
+    const total = filteredPins.length;
+    const startIdx = (currentPage - 1) * pageSize;
+    const pagePins = filteredPins.slice(startIdx, startIdx + pageSize);
+
+    const badge = document.getElementById('winners-badge-count');
+    if (badge) badge.textContent = `${total}`;
+
+    // Update Header Sort Icons
+    ['saves', 'repins', 'velocity', 'virality'].forEach((col) => {
+      const icon = document.getElementById(`sort-icon-${col}`);
+      if (icon) {
+        if (currentSort.startsWith(col)) {
+          icon.textContent = currentSort.endsWith('asc') ? '▲' : '▼';
+          icon.classList.add('text-primary');
+        } else {
+          icon.textContent = '↕';
+          icon.classList.remove('text-primary');
+        }
+      }
+    });
+
+    if (activeView === 'grid') {
+      const grid = document.getElementById('winners-grid');
+      if (grid) {
+        if (pagePins.length === 0) {
+          grid.innerHTML = `
+            <div class="col-span-full py-16 text-center text-xs text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 opacity-40 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              No archived winning pins matched your active filters.
+            </div>
+          `;
+        } else {
+          grid.innerHTML = pagePins.map((p, i) => renderSinglePinCard(p, startIdx + i)).join('');
+          attachListeners();
+        }
+      }
+    } else if (activeView === 'table') {
+      renderTableView(pagePins, startIdx);
+    } else if (activeView === 'board') {
+      renderByBoard(filteredPins);
+    } else if (activeView === 'clusters') {
+      renderCanonicalClusters(filteredPins);
+    }
+
+    updatePaginationControls();
   }
 
   // ═══ Render By Board View ═══
@@ -1128,7 +1496,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     attachListeners();
   }
 
-  // ═══ Quick-Peek Drawer Logic ═══
+  // ═══ Quick-Peek Drawer Logic & Forecast Projections ═══
   async function openQuickPeek(pinId: string) {
     const backdrop = document.getElementById('quick-peek-backdrop');
     const drawer = document.getElementById('quick-peek-drawer');
@@ -1157,17 +1525,22 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       const annotations = Array.isArray(p.annotations) ? p.annotations : [];
       const pinterestUrl = `https://www.pinterest.com/pin/${p.pin_id}/`;
       const destinationUrl = p.link || null;
-      const viralityRatio = Number(p.saves || 0) > 0 ? ((Number(p.repins || 0) / Number(p.saves)) * 100).toFixed(0) : '0';
+      const saves = Number(p.saves || 0);
+      const repins = Number(p.repins || 0);
+      const velocity = Number(p.velocity || 0);
+      const viralityRatio = saves > 0 ? ((repins / saves) * 100).toFixed(0) : '0';
+      const strategy = getPinStrategy(p);
+
+      // Forecast Calculations
+      const proj7d = Math.round(saves + velocity * 7);
+      const proj30d = Math.round(saves + velocity * 30);
 
       const tagsHtml = annotations.map((a: any) => {
         const name = typeof a === 'string' ? a : a?.name || '';
         if (!name) return '';
-        const targetUrl = typeof a === 'object' && a?.url ? `https://www.pinterest.com${a.url.startsWith('/') ? a.url : '/' + a.url}` : `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(name)}`;
         return `
           <a
-            href="${escapeHtml(targetUrl)}"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/pinarchive/topics?q=${encodeURIComponent(name)}"
             class="inline-flex items-center gap-1 text-xs bg-primary/10 hover:bg-primary/20 text-primary px-2.5 py-1 rounded-xl font-semibold transition-colors"
           >
             <span>#${escapeHtml(name)}</span>
@@ -1189,8 +1562,8 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         <!-- Badges & Title -->
         <div class="space-y-2">
           <div class="flex flex-wrap items-center gap-1.5">
+            ${renderStrategyBadge(strategy)}
             ${renderStageBadge(p.stage)}
-            ${renderAnomalyBadge(p.anomaly)}
             <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-foreground border border-border">
               @${escapeHtml(p.board_name || 'board')}
             </span>
@@ -1230,11 +1603,33 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
           </div>
           <div class="bg-muted/30 rounded-2xl p-3 border border-border text-center">
             <span class="text-[10px] font-bold text-muted-foreground uppercase block">Velocity</span>
-            <span class="text-base font-extrabold text-emerald-500 font-mono">${Number(p.velocity || 0).toFixed(1)}/d</span>
+            <span class="text-base font-extrabold text-emerald-500 font-mono">${velocity.toFixed(1)}/d</span>
           </div>
           <div class="bg-muted/30 rounded-2xl p-3 border border-border text-center">
             <span class="text-[10px] font-bold text-muted-foreground uppercase block">Virality Ratio</span>
             <span class="text-base font-extrabold text-primary font-mono">${viralityRatio}%</span>
+          </div>
+        </div>
+
+        <!-- Growth Forecasting Box -->
+        <div class="p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+              <span>📈 Growth Pace Forecast</span>
+            </span>
+            <span class="text-[10px] font-semibold text-muted-foreground">Based on ${velocity.toFixed(1)}/d current velocity</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <div class="bg-background/80 rounded-xl p-2.5 border border-border/80 text-center">
+              <span class="text-[10px] text-muted-foreground block font-semibold">Projected in 7 Days</span>
+              <span class="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">${fmtNumber(proj7d)}</span>
+              <span class="text-[9px] text-emerald-500 block font-bold mt-0.5">+${fmtNumber(Math.round(velocity * 7))} saves</span>
+            </div>
+            <div class="bg-background/80 rounded-xl p-2.5 border border-border/80 text-center">
+              <span class="text-[10px] text-muted-foreground block font-semibold">Projected in 30 Days</span>
+              <span class="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">${fmtNumber(proj30d)}</span>
+              <span class="text-[9px] text-emerald-500 block font-bold mt-0.5">+${fmtNumber(Math.round(velocity * 30))} saves</span>
+            </div>
           </div>
         </div>
 
@@ -1247,7 +1642,10 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         <!-- Annotations Tags -->
         ${tagsHtml ? `
           <div class="space-y-2">
-            <span class="text-xs font-bold text-foreground block">Pinterest SEO Annotations (${annotations.length})</span>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-foreground block">Pinterest SEO Annotations (${annotations.length})</span>
+              <a href="/pinarchive/topics" class="text-[10px] font-bold text-primary hover:underline">Explore Topics →</a>
+            </div>
             <div class="flex flex-wrap items-center gap-1.5">
               ${tagsHtml}
             </div>
@@ -1307,9 +1705,9 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         const id = cb.getAttribute('data-pin-compare');
         if (!id) return;
         if (cb.checked) {
-          if (selectedForCompare.size >= 3) {
+          if (selectedForCompare.size >= 4) {
             cb.checked = false;
-            alert('You can select a maximum of 3 pins for side-by-side comparison.');
+            alert('You can select a maximum of 4 pins simultaneously for comparison / AI prompt generation.');
             return;
           }
           selectedForCompare.add(id);
@@ -1328,7 +1726,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
 
     if (selectedForCompare.size > 0) {
       bar.classList.remove('hidden');
-      text.textContent = `${selectedForCompare.size} of 3 Pins Selected`;
+      text.textContent = `${selectedForCompare.size} of 4 Pins Selected`;
     } else {
       bar.classList.add('hidden');
     }
@@ -1429,7 +1827,54 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     `;
   }
 
-  // ═══ Compare Modal Dialog ═══
+  // ═══ AI Prompt Generation Logic ═══
+  function generateAIPrompt(pinsToUse?: any[]) {
+    const list = pinsToUse && pinsToUse.length > 0 ? pinsToUse : selectedForCompare.size > 0 ? rawPins.filter((p) => selectedForCompare.has(p.id)) : filteredPins.slice(0, 10);
+
+    if (list.length === 0) {
+      alert('No winning pins available to generate prompt.');
+      return;
+    }
+
+    const titles = list.map((p) => `- ${p.title || `Pin ${p.pin_id}`} (@${p.board_name || 'board'} | ${fmtNumber(p.saves)} saves | ${Number(p.velocity || 0).toFixed(1)} saves/day)`).join('\n');
+
+    // Extract top tags
+    const tagSet = new Set<string>();
+    list.forEach((p) => {
+      if (Array.isArray(p.annotations)) {
+        p.annotations.forEach((a: any) => {
+          const name = typeof a === 'string' ? a : a?.name || '';
+          if (name) tagSet.add(name);
+        });
+      }
+    });
+
+    const tagsStr = Array.from(tagSet).slice(0, 12).join(', ');
+
+    const promptText = `Act as an elite Pinterest growth and content strategist.
+Analyze these high-velocity winning pins from our top performing archive:
+
+TOP WINNING PINS:
+${titles}
+
+HIGH-IMPACT KEYWORDS & TOPIC CLUSTERS:
+${tagsStr || 'N/A'}
+
+TASK:
+1. Extract the core psychological hook and winning title formula behind these pins.
+2. Generate 10 brand-new viral pin title variations optimized for high CTR and saves.
+3. Write 3 high-converting Pinterest pin descriptions incorporating the top keywords naturally.
+4. Suggest 3 visual concept angles (image composition, text overlay placement, color palette) to replicate this success.`;
+
+    const modal = document.getElementById('ai-prompt-modal');
+    const textarea = document.getElementById('ai-prompt-textarea') as HTMLTextAreaElement | null;
+    if (modal && textarea) {
+      textarea.value = promptText;
+      modal.classList.remove('hidden');
+    }
+  }
+
+  // ═══ Compare Modal Dialog (Up to 4 Pins) ═══
   async function openCompareModal() {
     const modal = document.getElementById('compare-modal');
     const content = document.getElementById('compare-modal-content');
@@ -1446,22 +1891,22 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       const validPins = results.filter((r) => r.success && r.pin);
       if (validPins.length < 2) throw new Error('Could not fetch selected pins for comparison.');
 
-      const cols = validPins.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2';
+      const cols = validPins.length >= 3 ? (validPins.length === 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 md:grid-cols-3') : 'grid-cols-1 md:grid-cols-2';
 
       content.innerHTML = `
-        <div class="grid grid-cols-1 ${cols} gap-4">
+        <div class="grid ${cols} gap-4">
           ${validPins
             .map((res, i) => {
               const p = res.pin;
               const m = Array.isArray(res.metrics) ? res.metrics : [];
+              const st = getPinStrategy(p);
               return `
                 <div class="rounded-2xl border border-border bg-card p-4 space-y-3 shadow-xs">
                   <div class="flex items-center gap-3">
                     <img src="${escapeHtml(p.image_url)}" class="h-14 w-14 object-cover rounded-xl border border-border" />
                     <div class="min-w-0 flex-1">
                       <div class="flex items-center gap-1 mb-1">
-                        ${renderStageBadge(p.stage)}
-                        ${renderAnomalyBadge(p.anomaly)}
+                        ${renderStrategyBadge(st)}
                       </div>
                       <h4 class="text-xs font-bold text-foreground line-clamp-1">${escapeHtml(p.title || `Pin ${i + 1}`)}</h4>
                       <span class="text-[10px] text-muted-foreground">@${escapeHtml(p.board_name || 'board')}</span>
@@ -1496,39 +1941,33 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     }
   }
 
-  // ═══ Apply Quick Filters & Search ═══
+  // ═══ Apply Filters, Sort, and Keyword Mining ═══
   function applyActiveFilters() {
     let result = [...rawPins];
 
-    // Quick Filter Preset Slicing
-    if (activeQuickFilter === 'growing') {
-      result = result.filter((p) => p.stage === 'GROWING');
+    // Quick Matrix Slicing
+    if (activeQuickFilter === 'evergreen') {
+      result = result.filter((p) => getPinStrategy(p) === 'EVERGREEN');
+    } else if (activeQuickFilter === 'rocket') {
+      result = result.filter((p) => getPinStrategy(p) === 'ROCKET');
+    } else if (activeQuickFilter === 'high-virality') {
+      result = result.filter((p) => {
+        const saves = Number(p.saves || 0);
+        const repins = Number(p.repins || 0);
+        return saves > 0 && (repins / saves) * 100 >= 90;
+      });
     } else if (activeQuickFilter === 'spike') {
       result = result.filter((p) => p.anomaly === 'SPIKE');
-    } else if (activeQuickFilter === 'velocity-high') {
-      result = result.filter((p) => Number(p.velocity || 0) >= 20);
-    } else if (activeQuickFilter === 'fresh') {
-      result = result.filter((p) => {
-        if (!p.created_at_pinterest) return false;
-        const days = (Date.now() - new Date(p.created_at_pinterest).getTime()) / 86400000;
-        return days <= 14;
-      });
     } else if (activeQuickFilter === 'cluster') {
       result = result.filter((p) => Boolean(p.canonical_pin_id));
     }
 
-    filteredPins = result;
-    updateExecutiveKPIs(filteredPins);
+    filteredPins = sortPins(result);
+    currentPage = 1;
 
-    if (activeView === 'grid') {
-      renderPins(filteredPins);
-    } else if (activeView === 'table') {
-      renderTableView(filteredPins);
-    } else if (activeView === 'board') {
-      renderByBoard(filteredPins);
-    } else if (activeView === 'clusters') {
-      renderCanonicalClusters(filteredPins);
-    }
+    updateExecutiveKPIs(filteredPins);
+    updateKeywordMining(filteredPins);
+    renderActiveView();
   }
 
   function populateBoardFilter(pins: any[]) {
@@ -1553,8 +1992,8 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     if (boardSelect?.value) params.set('board', boardSelect.value);
     if (stageSelect?.value) params.set('stage', stageSelect.value);
     if (clusterToggle?.checked) params.set('in_cluster', '1');
-    params.set('sort', currentSort);
-    params.set('limit', String(currentLimit));
+    params.set('sort', currentSort.startsWith('velocity') ? 'velocity' : 'saves');
+    params.set('limit', '500'); // Fetch ample scope for client pagination & deep slicing
 
     try {
       const res = await fetch(`/api/pinarchive/pins?${params.toString()}`, { signal: AbortSignal.timeout(8000) });
@@ -1593,28 +2032,35 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       return;
     }
 
-    const headers = ['Pin ID', 'Title', 'Board', 'Category', 'Saves', 'Repins', 'Velocity', 'Stage', 'Anomaly', 'Canonical Cluster', 'Pinterest Link', 'Created At'];
-    const rows = filteredPins.map((p) => [
-      p.pin_id,
-      `"${(p.title || '').replace(/"/g, '""')}"`,
-      `"${(p.board_name || '').replace(/"/g, '""')}"`,
-      `"${(p.seo_category || '').replace(/"/g, '""')}"`,
-      p.saves || 0,
-      p.repins || 0,
-      p.velocity || 0,
-      p.stage || 'DORMANT',
-      p.anomaly || 'NONE',
-      p.canonical_pin_id || '',
-      `"https://www.pinterest.com/pin/${p.pin_id}/"`,
-      p.created_at_pinterest || '',
-    ]);
+    const headers = ['Pin ID', 'Title', 'Board', 'Category', 'Strategy Matrix', 'Saves', 'Repins', 'Velocity', 'Virality %', 'Stage', 'Anomaly', 'Canonical Cluster', 'Pinterest Link', 'Created At'];
+    const rows = filteredPins.map((p) => {
+      const saves = Number(p.saves || 0);
+      const repins = Number(p.repins || 0);
+      const virality = saves > 0 ? ((repins / saves) * 100).toFixed(0) : '0';
+      return [
+        p.pin_id,
+        `"${(p.title || '').replace(/"/g, '""')}"`,
+        `"${(p.board_name || '').replace(/"/g, '""')}"`,
+        `"${(p.seo_category || '').replace(/"/g, '""')}"`,
+        getPinStrategy(p),
+        saves,
+        repins,
+        p.velocity || 0,
+        virality,
+        p.stage || 'DORMANT',
+        p.anomaly || 'NONE',
+        p.canonical_pin_id || '',
+        `"https://www.pinterest.com/pin/${p.pin_id}/"`,
+        p.created_at_pinterest || '',
+      ];
+    });
 
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `pinarchive-winners-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `pinarchive-winning-intelligence-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1634,6 +2080,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     const tableContainer = document.getElementById('winners-table-container');
     const byBoardContainer = document.getElementById('by-board-container');
     const clustersContainer = document.getElementById('clusters-view-container');
+    const paginationWrapper = document.getElementById('pagination-wrapper');
 
     function setActiveView(v: 'grid' | 'table' | 'board' | 'clusters') {
       activeView = v;
@@ -1649,8 +2096,9 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       tableContainer?.classList.toggle('hidden', v !== 'table');
       byBoardContainer?.classList.toggle('hidden', v !== 'board');
       clustersContainer?.classList.toggle('hidden', v !== 'clusters');
+      paginationWrapper?.classList.toggle('hidden', v === 'board' || v === 'clusters');
 
-      applyActiveFilters();
+      renderActiveView();
     }
 
     gridBtn?.addEventListener('click', () => setActiveView('grid'));
@@ -1658,7 +2106,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     boardBtn?.addEventListener('click', () => setActiveView('board'));
     clustersBtn?.addEventListener('click', () => setActiveView('clusters'));
 
-    // Quick Filter Preset Chips
+    // Quick Matrix Slicer Pills
     document.querySelectorAll<HTMLButtonElement>('[data-quick-filter]').forEach((btn) => {
       btn.addEventListener('click', () => {
         activeQuickFilter = btn.getAttribute('data-quick-filter') || 'all';
@@ -1716,6 +2164,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       if (e.key === 'Escape') {
         closeQuickPeek();
         document.getElementById('compare-modal')?.classList.add('hidden');
+        document.getElementById('ai-prompt-modal')?.classList.add('hidden');
       }
     });
 
@@ -1724,15 +2173,18 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     if (sortSelect) {
       sortSelect.addEventListener('change', () => {
         currentSort = sortSelect.value;
-        loadPins();
+        filteredPins = sortPins(filteredPins);
+        currentPage = 1;
+        renderActiveView();
       });
     }
 
     const limitSelect = document.getElementById('pins-limit-select') as HTMLSelectElement | null;
     if (limitSelect) {
       limitSelect.addEventListener('change', () => {
-        currentLimit = parseInt(limitSelect.value, 10) || 50;
-        loadPins();
+        pageSize = parseInt(limitSelect.value, 10) || 24;
+        currentPage = 1;
+        renderActiveView();
       });
     }
 
@@ -1741,12 +2193,57 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       th.addEventListener('click', () => {
         const sortKey = th.getAttribute('data-sort');
         if (!sortKey) return;
-        if (sortSelect) {
-          sortSelect.value = sortKey;
-          currentSort = sortKey;
-          loadPins();
+        if (currentSort === `${sortKey}_desc`) {
+          currentSort = `${sortKey}_asc`;
+        } else {
+          currentSort = `${sortKey}_desc`;
+        }
+        if (sortSelect) sortSelect.value = currentSort;
+        filteredPins = sortPins(filteredPins);
+        currentPage = 1;
+        renderActiveView();
+      });
+    });
+
+    // Copy All Keywords Button
+    document.getElementById('copy-all-keywords-btn')?.addEventListener('click', () => {
+      const tagSet = new Set<string>();
+      filteredPins.forEach((p) => {
+        if (Array.isArray(p.annotations)) {
+          p.annotations.forEach((a: any) => {
+            const name = typeof a === 'string' ? a : a?.name || '';
+            if (name) tagSet.add(name);
+          });
         }
       });
+      const tagsList = Array.from(tagSet).join(', ');
+      navigator.clipboard.writeText(tagsList);
+      const btn = document.getElementById('copy-all-keywords-btn');
+      if (btn) {
+        btn.innerHTML = '<span>Copied All Tags!</span>';
+        setTimeout(() => {
+          if (btn) btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><span>Copy All Tags</span>';
+        }, 1500);
+      }
+    });
+
+    // AI Prompt Actions
+    document.getElementById('bulk-ai-prompt-btn')?.addEventListener('click', () => generateAIPrompt());
+    document.getElementById('launch-bulk-ai-btn')?.addEventListener('click', () => generateAIPrompt());
+    document.getElementById('close-ai-modal-btn')?.addEventListener('click', () => {
+      document.getElementById('ai-prompt-modal')?.classList.add('hidden');
+    });
+
+    document.getElementById('copy-ai-prompt-btn')?.addEventListener('click', () => {
+      const textarea = document.getElementById('ai-prompt-textarea') as HTMLTextAreaElement | null;
+      if (textarea) {
+        navigator.clipboard.writeText(textarea.value);
+        const textSpan = document.getElementById('copy-ai-prompt-text');
+        if (textSpan) textSpan.textContent = 'Copied to Clipboard!';
+        setTimeout(() => {
+          if (textSpan) textSpan.textContent = 'Copy Prompt to Clipboard';
+        }, 1500);
+      }
     });
 
     // CSV Export
