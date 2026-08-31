@@ -35,6 +35,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
 ---
 
 <Layout title="Competitor Intelligence Settings" description="Closed-loop control plane for Pinterest competitor ingestion, credential vault, pipeline schedules, and live job auditing.">
+  <div id="competitors-settings-root" data-workspace-id={workspaceId} data-is-master={isMasterWorkspace ? 'true' : 'false'}>
 
   <!-- ═══ Navigation & Header ═══ -->
   <div class="mb-6">
@@ -721,6 +722,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
 
   <!-- Toast Notification Anchor -->
   <div id="toast-root" aria-live="polite" class="fixed bottom-4 right-4 z-[70] flex flex-col gap-2 w-80 max-w-[calc(100vw-2rem)]"></div>
+  </div>
 </Layout>
 
 <script>
@@ -1564,13 +1566,18 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
   });
 
   $('btn-run-full-update')?.addEventListener('click', async () => {
-    if (!confirm('Trigger immediate full workspace competitor ingestion run?')) return;
+    const isMaster = document.getElementById('competitors-settings-root')?.getAttribute('data-is-master') === 'true';
+    const confirmMsg = isMaster
+      ? '👑 Master Workspace: Trigger immediate competitor ingestion run across ALL workspaces?'
+      : 'Trigger immediate full workspace competitor ingestion run?';
+    if (!confirm(confirmMsg)) return;
     try {
       const res = await fetchAPI('/api/admin/competitor-ops', {
         method: 'POST',
-        body: JSON.stringify({}),
+        body: JSON.stringify({ scope: isMaster ? 'all' : 'current' }),
       });
-      toast(`🚀 Ingestion workflow dispatched (#${res.job_id?.slice(0, 8)})`, 'success');
+      const scopeLabel = res.is_master_scope ? 'all workspaces' : 'workspace';
+      toast(`🚀 Ingestion workflow dispatched for ${scopeLabel} (#${res.job_id?.slice(0, 8)})`, 'success');
       await loadAllState();
     } catch (err: any) {
       toast(`Dispatch failed: ${err.message}`, 'error');
