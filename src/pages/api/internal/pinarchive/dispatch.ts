@@ -115,12 +115,8 @@ async function handlePinArchiveDispatch(
     );
   }
 
-  let isMasterScope =
-    payload.scope === 'all' ||
-    url.searchParams.get('scope') === 'all' ||
-    workspaceId === 'all';
-
   // 3. Verify workspace existence in Project 1 (Scheduling / Auth Authority)
+  let isMasterScope = false;
   try {
     const admin = dbClients.getSchedulingAdmin(runtimeEnv);
     const { data: ws, error: wsErr } = await admin
@@ -136,9 +132,9 @@ async function handlePinArchiveDispatch(
       );
     }
 
-    if (ws.is_master && payload.scope !== 'current') {
-      isMasterScope = true;
-    }
+    // Master Scope is strictly restricted to DB-verified master workspaces
+    const isMaster = Boolean(ws.is_master);
+    isMasterScope = isMaster && payload.scope !== 'current' && url.searchParams.get('scope') !== 'current';
   } catch {
     return new Response(
       JSON.stringify({ success: false, error: 'Workspace verification failed.' }),

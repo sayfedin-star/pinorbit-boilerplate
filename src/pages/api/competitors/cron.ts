@@ -481,7 +481,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       const isMasterScope = Boolean(wsContext.isMaster);
       const defaultPostDataStr = JSON.stringify({
-        workspace_id: isMasterScope ? 'all' : workspaceId,
+        workspace_id: workspaceId,
         pipeline: 'competitors',
         label: isMasterScope ? '👑 MASTER (All Workspaces)' : 'Default Daily',
         trigger: 'cron',
@@ -594,7 +594,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const timezone = body?.timezone || 'UTC';
     const enabled = body?.enabled !== false;
     const postDataStr = JSON.stringify({
-      workspace_id: isMasterScope ? 'all' : workspaceId,
+      workspace_id: workspaceId,
       pipeline: 'competitors',
       label,
       trigger: 'cron',

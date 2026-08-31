@@ -319,7 +319,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const { workspaceId, isMaster, competitorsClient, runtimeEnv } = auth.ok!;
 
   // 1. Resolve Target Scope & Competitor IDs
-  const isMasterScope = (isMaster && body.scope !== 'current' && !body.competitor_id && (!Array.isArray(body.ids) || body.ids.length === 0) && (!Array.isArray(body.competitor_ids) || body.competitor_ids.length === 0)) || body.scope === 'all';
+  const isMasterScope = Boolean(isMaster) && body.scope !== 'current' && !body.competitor_id && (!Array.isArray(body.ids) || body.ids.length === 0) && (!Array.isArray(body.competitor_ids) || body.competitor_ids.length === 0);
   const scope = isMasterScope ? 'all' : (body.scope || (body.competitor_id || (Array.isArray(body.ids) && body.ids.length > 0) ? 'selected' : 'all'));
   let selectedIds: string[] = [];
 

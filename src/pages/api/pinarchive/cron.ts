@@ -638,7 +638,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // ── Branch: run_now (Server-side GitHub dispatch with force=true) ───────
     if (action === 'run_now') {
-      const isMasterScope = Boolean(wsContext.isMaster) || body.scope === 'all';
+      const isMasterScope = Boolean(wsContext.isMaster) && body.scope !== 'current';
       const githubRepo =
         (runtimeEnv.GITHUB_REPO as string) ||
         (typeof process !== 'undefined' ? process.env.GITHUB_REPO : '') ||
@@ -777,7 +777,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         ? `${getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim())}&scope=all`
         : getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim());
       const postDataStr = JSON.stringify({
-        workspace_id: isMasterScope ? 'all' : workspaceId,
+        workspace_id: workspaceId,
         pipeline: 'pinarchive',
         label: isMasterScope ? '👑 MASTER (All Workspaces)' : 'Default Daily',
         scope: isMasterScope ? 'all' : 'current',
