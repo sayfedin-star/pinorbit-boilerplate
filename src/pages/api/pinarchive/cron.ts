@@ -624,7 +624,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    await assertWorkspaceAccess(schedulingClient, workspaceId, user.id);
+    const wsContext = await assertWorkspaceAccess(schedulingClient, workspaceId, user.id);
 
     const { data: ws } = await schedulingClient
       .from('workspaces')
@@ -638,6 +638,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // ── Branch: run_now (Server-side GitHub dispatch with force=true) ───────
     if (action === 'run_now') {
+      const isMasterScope = Boolean(wsContext.isMaster) || body.scope === 'all';
       const githubRepo =
         (runtimeEnv.GITHUB_REPO as string) ||
         (typeof process !== 'undefined' ? process.env.GITHUB_REPO : '') ||
@@ -669,7 +670,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         body: JSON.stringify({
           ref: 'main',
           inputs: {
-            workspace_id: workspaceId,
+            workspace_id: isMasterScope ? '' : workspaceId,
             force: 'true',
           },
         }),
@@ -678,7 +679,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (ghRes.status === 204 || (ghRes.status >= 200 && ghRes.status < 300)) {
         return new Response(
-          JSON.stringify({ success: true, message: 'Workflow run dispatched immediately with force.' }),
+          JSON.stringify({
+            success: true,
+            message: isMasterScope
+              ? '👑 Master Workspace: Workflow run dispatched across ALL workspaces.'
+              : 'Workflow run dispatched immediately with force.',
+            is_master_scope: isMasterScope,
+          }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
         );
       }
@@ -765,10 +772,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
       }
 
-      const targetDispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim());
-      const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'pinarchive', label: 'Default Daily' });
+      const isMasterScope = Boolean(wsContext.isMaster);
+      const targetDispatchUrl = isMasterScope
+        ? `${getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim())}&scope=all`
+        : getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim());
+      const postDataStr = JSON.stringify({
+        workspace_id: isMasterScope ? 'all' : workspaceId,
+        pipeline: 'pinarchive',
+        label: isMasterScope ? '👑 MASTER (All Workspaces)' : 'Default Daily',
+        scope: isMasterScope ? 'all' : 'current',
+      });
       const defaultParams = {
-        name: `PinOrbit pinarchive — ${wsName} — Default Daily — ${workspaceId.slice(0, 8)}`,
+        name: isMasterScope
+          ? `PinOrbit pinarchive — 👑 MASTER (All Workspaces) — Default Daily — ${workspaceId.slice(0, 8)}`
+          : `PinOrbit pinarchive — ${wsName} — Default Daily — ${workspaceId.slice(0, 8)}`,
         url: targetDispatchUrl,
         expression: '0 3 * * *',
         timezone: 'UTC',

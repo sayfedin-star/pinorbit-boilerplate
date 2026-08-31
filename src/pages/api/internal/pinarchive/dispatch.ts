@@ -136,7 +136,7 @@ async function handlePinArchiveDispatch(
       );
     }
 
-    if (ws.is_master && (payload.scope === 'all' || url.searchParams.get('scope') === 'all')) {
+    if (ws.is_master && payload.scope !== 'current') {
       isMasterScope = true;
     }
   } catch {
