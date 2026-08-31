@@ -30,7 +30,7 @@ const cronTitle = rawExpr ? humanCronTitle(rawExpr) : 'No schedule configured ye
 const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping schedule in Ops Console';
 ---
 
-<Layout title="Competitor Intelligence" description="Track competitor Pinterest growth, reach, views, followers, and board creation strategy over time.">
+<Layout title="Competitor Intelligence" description="Track competitor Pinterest growth, reach, views, followers, and board strategy over time.">
 
   <!-- ═══ Header & Primary Actions ═══ -->
   <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -55,17 +55,24 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
       </div>
     </div>
 
+    <!-- Top Action Group (Uniform h-9 buttons with clear hierarchy) -->
     <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
       <button id="refresh-btn" title="Refresh data table"
-        class="inline-flex items-center justify-center rounded-xl border border-border bg-card p-2.5 text-muted-foreground shadow-xs hover:bg-muted hover:text-foreground transition-all">
+        class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground shadow-xs hover:bg-muted hover:text-foreground transition-all">
         <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
       </button>
 
       <button id="export-csv-btn" title="Export all filtered profiles to CSV"
-        class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground shadow-xs hover:bg-muted transition-all">
+        class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-3.5 text-xs font-semibold text-foreground shadow-xs hover:bg-muted transition-all">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span>Export CSV</span>
       </button>
+
+      <a href="/competitors/settings"
+        class="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 text-xs font-semibold text-foreground shadow-xs hover:bg-muted transition-all" title="View Ops Console and Token Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Ops Console</span>
+      </a>
 
       <RunNowButton
         endpoint="/api/admin/competitor-ops"
@@ -79,14 +86,8 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
         scope="competitors"
       />
 
-      <a href="/competitors/settings"
-        class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground shadow-xs hover:bg-muted transition-all" title="View Ops Console and Token Settings">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        <span>Ops Console</span>
-      </a>
-
       <button id="open-add-competitor-modal"
-        class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all">
+        class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span>Track Profiles</span>
       </button>
@@ -129,14 +130,14 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
     <div class="flex flex-wrap items-center gap-2 self-start md:self-auto">
       <ProviderBadge workspaceId={Astro.locals.activeWorkspaceId || ''} />
       <button id="open-paste-payload-modal"
-        class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs"
+        class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs"
         title="Paste raw Pinterest JSON from DevTools">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-        <span>Ingest DevTools JSON</span>
+        <span>Ingest JSON</span>
       </button>
       <a
         href="/competitors/settings"
-        class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs"
+        class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs"
       >
         <span>⚙️ Token Vault</span>
       </a>
@@ -221,84 +222,92 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
   <!-- ═══ Table Workspace & Enhanced Controls ═══ -->
   <div class="rounded-2xl border border-border bg-card shadow-xs overflow-hidden mb-8">
     
-    <!-- Primary Filter Toolbar -->
-    <div class="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between border-b border-border px-5 py-3.5 bg-muted/20">
+    <!-- Tier 1: View Navigation & Display Controls (Clean 2-sided alignment) -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border px-5 py-3 bg-muted/20">
       
-      <!-- Left: Tabs & Quick Filters -->
-      <div class="flex items-center gap-2.5 flex-wrap">
-        <!-- Account Type & Hidden Tabs -->
-        <div class="flex items-center gap-1 bg-muted/70 p-1 rounded-xl border border-border/60">
-          <button data-type-tab="all" class="account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold bg-background text-foreground shadow-2xs transition-all">All Profiles</button>
-          <button data-type-tab="own" class="account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all">👤 My Accounts</button>
-          <button data-type-tab="competitor" class="account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all">🎯 Competitors</button>
-          <button data-type-tab="hidden" class="account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5">
-            <span>👁️‍🗨️ Hidden</span>
-            <span id="hidden-tab-badge" class="hidden rounded-full bg-muted-foreground/20 px-1.5 py-0.2 text-[9.5px] font-bold">0</span>
-          </button>
-        </div>
-
-        <!-- Activity Status Filter -->
-        <div class="flex items-center gap-1.5">
-          <select id="activity-filter-select" class="rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none shadow-2xs" title="Filter by profile activity state">
-            <option value="all">⚡ All Activity</option>
-            <option value="active">🟢 Active (&le; 7d)</option>
-            <option value="cooling">🟡 Cooling (7-30d)</option>
-            <option value="stale">🔴 Stale (&gt; 30d)</option>
-          </select>
-        </div>
-
-        <!-- Tag Filter -->
-        <div class="flex items-center gap-1.5">
-          <select id="tag-filter-select" class="rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none shadow-2xs">
-            <option value="all">🏷️ All Tags</option>
-          </select>
-        </div>
-
-        <!-- Search Input with Clear Button & Keyboard Shortcut -->
-        <div class="relative min-w-[220px]">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input id="competitor-search-input" type="text" placeholder="Search handle, name, tag…"
-            class="w-full rounded-xl border border-border bg-background py-1.5 pl-8 pr-12 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs" />
-          <button id="search-clear-btn" class="hidden absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs p-0.5" title="Clear search">✕</button>
-          <kbd class="absolute right-2 top-1/2 -translate-y-1/2 rounded border border-border bg-muted px-1 text-[9px] font-bold text-muted-foreground pointer-events-none">/</kbd>
-        </div>
+      <!-- Left: Segmented Tabs -->
+      <div class="flex items-center gap-1 bg-muted/70 p-1 rounded-xl border border-border/60 overflow-x-auto">
+        <button data-type-tab="all" class="account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold bg-background text-foreground shadow-2xs transition-all whitespace-nowrap">All Profiles</button>
+        <button data-type-tab="own" class="account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all whitespace-nowrap">👤 My Accounts</button>
+        <button data-type-tab="competitor" class="account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all whitespace-nowrap">🎯 Competitors</button>
+        <button data-type-tab="hidden" class="account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5 whitespace-nowrap">
+          <span>👁️‍🗨️ Hidden</span>
+          <span id="hidden-tab-badge" class="hidden rounded-full bg-muted-foreground/20 px-1.5 py-0.2 text-[9.5px] font-bold">0</span>
+        </button>
       </div>
 
-      <!-- Right: View Controls (Density, Number Format, Columns, Count) -->
-      <div class="flex items-center gap-2 flex-wrap self-start lg:self-auto">
-        <span class="text-[11px] text-muted-foreground font-mono" id="updated-at"></span>
+      <!-- Right: View Display Controls Group & Profile Count -->
+      <div class="flex items-center gap-2.5 flex-wrap self-start sm:self-auto">
+        <span class="text-[11px] text-muted-foreground font-mono hidden md:inline" id="updated-at"></span>
 
-        <!-- Number Format Switcher -->
-        <button id="num-format-toggle-btn" class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all shadow-2xs" title="Toggle Compact / Full number format">
-          <span class="text-[10px]">#</span>
-          <span id="num-format-label">Full Numbers</span>
-        </button>
-
-        <!-- Density Switcher -->
-        <button id="density-toggle-btn" class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all shadow-2xs" title="Toggle Table Density (Comfortable / Compact)">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-          <span id="density-label">Comfortable</span>
-        </button>
-
-        <!-- Column Visibility Dropdown -->
-        <div class="relative" id="col-visibility-wrapper">
-          <button id="col-visibility-btn" class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            <span>Columns</span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        <!-- Segmented Display Toolbar -->
+        <div class="flex items-center rounded-xl border border-border bg-background p-0.5 shadow-2xs">
+          <!-- Number Format Toggle -->
+          <button id="num-format-toggle-btn" class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all" title="Toggle Compact / Full number format">
+            <span class="text-[10px] font-mono">#</span>
+            <span id="num-format-label">Full</span>
           </button>
-          <div id="col-visibility-menu" class="hidden absolute right-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-border bg-card shadow-lg p-2 space-y-1">
-            <div class="flex items-center justify-between pb-1 px-1 border-b border-border/80 text-[11px] font-semibold text-muted-foreground">
-              <span>Toggle Columns</span>
-              <button id="reset-cols-btn" class="text-primary hover:underline text-[10px]">Reset</button>
+
+          <div class="h-3.5 w-px bg-border my-auto"></div>
+
+          <!-- Density Toggle -->
+          <button id="density-toggle-btn" class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all" title="Toggle Table Density (Comfortable / Compact)">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            <span id="density-label">Comfortable</span>
+          </button>
+
+          <div class="h-3.5 w-px bg-border my-auto"></div>
+
+          <!-- Column Visibility Dropdown -->
+          <div class="relative" id="col-visibility-wrapper">
+            <button id="col-visibility-btn" class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <span>Columns</span>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div id="col-visibility-menu" class="hidden absolute right-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-border bg-card shadow-lg p-2 space-y-1">
+              <div class="flex items-center justify-between pb-1 px-1 border-b border-border/80 text-[11px] font-semibold text-muted-foreground">
+                <span>Toggle Columns</span>
+                <button id="reset-cols-btn" class="text-primary hover:underline text-[10px]">Reset</button>
+              </div>
+              <div id="col-checkboxes-container" class="space-y-0.5 max-h-60 overflow-y-auto"></div>
             </div>
-            <div id="col-checkboxes-container" class="space-y-0.5 max-h-60 overflow-y-auto"></div>
           </div>
         </div>
 
-        <span class="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary border border-primary/20" id="competitor-badge-count">
+        <!-- Counter Pill -->
+        <span class="inline-flex items-center rounded-xl bg-primary/10 px-3 py-1 text-xs font-bold text-primary border border-primary/20" id="competitor-badge-count">
           0 Profiles
         </span>
+      </div>
+    </div>
+
+    <!-- Tier 2: Unified Search & Quick Filter Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 border-b border-border px-5 py-2.5 bg-background">
+      
+      <!-- Search Input (Flex-1) -->
+      <div class="relative flex-1 max-w-md">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="competitor-search-input" type="text" placeholder="Search handle, name, tag…"
+          class="w-full h-8.5 rounded-xl border border-border bg-muted/20 py-1.5 pl-8 pr-12 text-xs text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all shadow-2xs" />
+        <button id="search-clear-btn" class="hidden absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs p-0.5" title="Clear search">✕</button>
+        <kbd class="absolute right-2 top-1/2 -translate-y-1/2 rounded border border-border bg-card px-1 text-[9px] font-bold text-muted-foreground pointer-events-none">/</kbd>
+      </div>
+
+      <!-- Quick Filter Dropdowns -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <!-- Activity Status Filter -->
+        <select id="activity-filter-select" class="h-8.5 rounded-xl border border-border bg-muted/20 hover:bg-background px-3 py-1 text-xs font-medium text-foreground focus:border-primary focus:outline-none transition-colors shadow-2xs" title="Filter by profile activity state">
+          <option value="all">⚡ All Activity</option>
+          <option value="active">🟢 Active (&le; 7d)</option>
+          <option value="cooling">🟡 Cooling (7-30d)</option>
+          <option value="stale">🔴 Stale (&gt; 30d)</option>
+        </select>
+
+        <!-- Tag Filter -->
+        <select id="tag-filter-select" class="h-8.5 rounded-xl border border-border bg-muted/20 hover:bg-background px-3 py-1 text-xs font-medium text-foreground focus:border-primary focus:outline-none transition-colors shadow-2xs">
+          <option value="all">🏷️ All Tags</option>
+        </select>
       </div>
     </div>
 
@@ -318,25 +327,25 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
         </label>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
-        <button id="update-selected-btn" class="rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+        <button id="update-selected-btn" class="h-8 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
           <svg id="update-selected-icon" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           <span id="update-selected-label">⚡ Update selected</span>
         </button>
-        <button id="send-selected-to-pinarchive-btn" class="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-bold shadow-xs transition-all flex items-center gap-1.5">
+        <button id="send-selected-to-pinarchive-btn" class="h-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3 text-xs font-bold shadow-xs transition-all flex items-center gap-1.5">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
           <span>Send to PinArchive</span>
         </button>
-        <button id="hide-selected-btn" class="rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs flex items-center gap-1">
+        <button id="hide-selected-btn" class="h-8 rounded-xl border border-border bg-background px-3 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs flex items-center gap-1">
           <span id="hide-selected-icon">👁️‍🗨️</span>
           <span id="hide-selected-label">Hide selected</span>
         </button>
-        <button id="open-compare-btn" disabled class="rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+        <button id="open-compare-btn" disabled class="h-8 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
           ⚖ Compare
         </button>
-        <button id="export-selected-btn" class="rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs">
+        <button id="export-selected-btn" class="h-8 rounded-xl border border-border bg-background px-3 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs">
           Export selected
         </button>
-        <button id="clear-selection-btn" class="rounded-xl px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-all">
+        <button id="clear-selection-btn" class="h-8 rounded-xl px-3 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-all">
           Clear
         </button>
       </div>
@@ -421,7 +430,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
       <div class="flex items-center justify-between border-b border-border pb-4">
         <div class="flex items-center gap-2.5">
           <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
           </div>
           <h3 class="text-base font-bold text-foreground">Track Pinterest Profiles</h3>
         </div>
@@ -1529,7 +1538,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
   updateDensityUI();
 
   function updateNumFormatUI() {
-    numFormatLabel.textContent = isCompactNumbers ? 'Compact (#)' : 'Full Numbers';
+    numFormatLabel.textContent = isCompactNumbers ? 'Compact' : 'Full';
   }
   numFormatToggleBtn.addEventListener('click', () => {
     isCompactNumbers = !isCompactNumbers;
@@ -1571,7 +1580,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
     if (w && !w.contains(e.target as Node)) colMenu.classList.add('hidden');
   });
 
-  // ─── Tags & Activity dropdowns ────────────────────────────────────────────
+  // ─── Tags & Activity dropdowns ────────────────────────────────────
   function populateTagDropdown() {
     const s = new Set<string>();
     competitorsList.forEach(c => Array.isArray(c.tags) && c.tags.forEach(t => s.add(t)));
@@ -1604,8 +1613,8 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
       const tabKey = b.dataset.typeTab || 'all';
       const active = tabKey === activeTypeTab;
       b.className = active
-        ? 'account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold bg-background text-foreground shadow-2xs transition-all flex items-center gap-1.5'
-        : 'account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5';
+        ? 'account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold bg-background text-foreground shadow-2xs transition-all flex items-center gap-1.5 whitespace-nowrap'
+        : 'account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5 whitespace-nowrap';
     });
   }
   typeTabBtns.forEach(btn => {
