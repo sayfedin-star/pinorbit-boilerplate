@@ -207,35 +207,55 @@ import Layout from '../../layouts/Layout.astro';
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5" id="mom-comparison-grid"></div>
     </div>
 
-    <!-- ═══ Interactive Growth Trajectory & Pinning Velocity Grid ═══ -->
+    <!-- ═══ PERFORMANCE TREND (Dynamic Scaling, Rich Curves & Min/Max/Latest Stats) ═══ -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       
-      <!-- Visual Growth Chart Card (2 Cols) -->
+      <!-- Performance Trend Visual Card (2 Cols) -->
       <div class="lg:col-span-2 rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4">
         
-        <!-- Chart Header with Interactive Metric Tabs -->
+        <!-- Header: PERFORMANCE TREND + Metric Pills -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h3 class="text-xs sm:text-sm font-bold text-foreground">Historical Growth Trajectory</h3>
-            <p class="text-[11px] text-muted-foreground">Dynamic curve scaling and historical pacing analytics.</p>
+          <div class="flex items-center gap-2">
+            <h3 class="text-xs sm:text-sm font-extrabold tracking-wider uppercase text-foreground">PERFORMANCE TREND</h3>
           </div>
 
-          <!-- Chart Metric Mode Selector -->
-          <div class="flex items-center gap-1 bg-muted/60 p-0.5 rounded-xl border border-border/60 overflow-x-auto self-start sm:self-auto">
-            <button data-chart-mode="reach_views" class="chart-mode-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-background text-foreground shadow-2xs transition-all whitespace-nowrap">🔥 Reach &amp; Views</button>
-            <button data-chart-mode="followers" class="chart-mode-btn px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all whitespace-nowrap">👥 Followers</button>
-            <button data-chart-mode="pins" class="chart-mode-btn px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all whitespace-nowrap">📌 Pins</button>
+          <!-- Dynamic Metric Switcher Pills -->
+          <div class="flex items-center gap-1 bg-muted/60 p-0.5 rounded-xl border border-border/60 overflow-x-auto self-start sm:self-auto" id="chart-metric-pills">
+            <button data-chart-mode="reach" class="chart-mode-btn px-3 py-1 rounded-lg text-xs font-bold bg-primary text-primary-foreground shadow-2xs transition-all whitespace-nowrap cursor-pointer">Monthly Reach</button>
+            <button data-chart-mode="views" class="chart-mode-btn px-3 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all whitespace-nowrap cursor-pointer">Profile Views</button>
+            <button data-chart-mode="followers" class="chart-mode-btn px-3 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all whitespace-nowrap cursor-pointer">Followers</button>
+            <button data-chart-mode="pins" class="chart-mode-btn px-3 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all whitespace-nowrap cursor-pointer">Total Pins</button>
+            <button data-chart-mode="dual" class="chart-mode-btn px-3 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all whitespace-nowrap cursor-pointer">Dual View</button>
           </div>
         </div>
 
-        <!-- SVG Line Chart Canvas with Dynamic Scale -->
+        <!-- Sub-header Meta Bar: Min/Max & Latest -->
+        <div class="flex items-center justify-between text-xs border-b border-border/60 pb-2">
+          <div class="flex items-center gap-2 font-mono text-[11px] text-muted-foreground" id="chart-min-max-stats">
+            <span>Min: <strong class="text-foreground" id="chart-stat-min">—</strong></span>
+            <span>•</span>
+            <span>Max: <strong class="text-foreground" id="chart-stat-max">—</strong></span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="inline-flex items-center gap-1 rounded-xl bg-muted px-2.5 py-1 text-xs font-mono font-bold text-foreground border border-border/60 shadow-2xs">
+              <span class="text-muted-foreground font-sans text-[11px]">Latest:</span>
+              <span id="chart-stat-latest">—</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- SVG Line Chart Canvas with Area Gradient -->
         <div class="relative w-full overflow-hidden" id="chart-container">
-          <svg id="growth-chart-svg" class="w-full h-56" viewBox="0 0 800 220" preserveAspectRatio="none"></svg>
-          <div id="chart-tooltip-box" class="hidden absolute pointer-events-none z-20 rounded-xl border border-border/80 bg-card/95 backdrop-blur-sm p-2 text-xs shadow-xl transition-opacity duration-150"></div>
+          <svg id="growth-chart-svg" class="w-full h-56" viewBox="0 0 800 220" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="chart-area-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--chart-color, #e11d48)" stop-opacity="0.22" />
+                <stop offset="100%" stop-color="var(--chart-color, #e11d48)" stop-opacity="0.00" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <div id="chart-tooltip-box" class="hidden absolute pointer-events-none z-20 rounded-xl border border-border/80 bg-card/95 backdrop-blur-sm p-2 text-xs shadow-xl transition-opacity duration-150 font-sans"></div>
         </div>
-
-        <!-- Dynamic Chart Legend -->
-        <div id="chart-dynamic-legend" class="flex items-center justify-end gap-4 text-xs font-semibold pt-1 border-t border-border/60"></div>
       </div>
 
       <!-- Pinning Velocity Metric Card (1 Col) -->
@@ -329,14 +349,14 @@ import Layout from '../../layouts/Layout.astro';
       </div>
     </div>
 
-    <!-- ═══ Snapshot Import History & Log Section (With Pagination, Page Size & Columns) ═══ -->
+    <!-- ═══ Snapshot Import History & Log Section (With Exact Vertical Alignment & Clear Day Filters) ═══ -->
     <div class="rounded-2xl border border-border/80 bg-card shadow-xs overflow-hidden">
       
       <!-- Tier 1: Header & Display Controls -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/80 px-5 py-3 bg-muted/20">
         <div>
           <h2 class="text-xs sm:text-sm font-bold text-foreground">Import History &amp; Snapshot Log</h2>
-          <p class="text-[11px] text-muted-foreground">Historical snapshot log with customizable page size, column toggles, and deletion capability.</p>
+          <p class="text-[11px] text-muted-foreground">Historical snapshot log with customizable timeframe, column toggles, and deletion capability.</p>
         </div>
 
         <div class="flex items-center gap-2.5 flex-wrap self-start sm:self-auto">
@@ -350,13 +370,13 @@ import Layout from '../../layouts/Layout.astro';
 
             <div class="h-3.5 w-px bg-border my-auto"></div>
 
-            <!-- Page Size Dropdown -->
-            <div class="flex items-center px-1">
-              <label for="snapshots-page-size-select" class="sr-only">Snapshots per page</label>
+            <!-- Page Size Dropdown (7 / 14 / 30 / All) -->
+            <div class="flex items-center px-1.5">
+              <label for="snapshots-page-size-select" class="sr-only">Snapshots timeframe</label>
               <select id="snapshots-page-size-select" class="bg-transparent text-xs font-semibold text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer">
-                <option value="10">10 / page</option>
-                <option value="20" selected>20 / page</option>
-                <option value="50">50 / page</option>
+                <option value="7">7 Snapshots (7 Days)</option>
+                <option value="14">14 Snapshots (14 Days)</option>
+                <option value="30" selected>30 Snapshots (30 Days)</option>
                 <option value="all">All Snapshots</option>
               </select>
             </div>
@@ -615,11 +635,16 @@ import Layout from '../../layouts/Layout.astro';
   let activeTimeRange = 'ALL';
   let selectedMonth = 'all';
   let isComparisonMode = false;
-  let activeChartMode: 'reach_views' | 'followers' | 'pins' = 'reach_views';
+  let activeChartMode: 'reach' | 'views' | 'followers' | 'pins' | 'dual' = 'reach';
 
   // Snapshot Table State
   let isCompactNumbers = localStorage.getItem('cd_snap_num_fmt') === 'compact';
-  let snapshotPageSize: number | 'all' = 20;
+  let snapshotPageSize: number | 'all' = (() => {
+    const saved = localStorage.getItem('cd_snap_page_size');
+    if (saved === 'all') return 'all';
+    const num = parseInt(saved || '30', 10);
+    return isNaN(num) ? 30 : num;
+  })();
   let currentSnapshotPage = 1;
 
   // Snapshot Columns Visibility State
@@ -677,15 +702,26 @@ import Layout from '../../layouts/Layout.astro';
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
-  function formatDeltaSpan(diff: number | null): string {
-    if (diff === null || diff === 0) return '';
-    const isPositive = diff > 0;
-    const label = `${isPositive ? 'increased by' : 'decreased by'} ${Math.abs(diff)}`;
-    return `<span 
-      class="ml-1.5 text-[10px] font-bold ${isPositive ? 'text-emerald-500' : 'text-rose-500'}"
-      role="status"
-      aria-label="${label}"
-    >${isPositive ? `(+${fmtSnapMetric(Math.abs(diff))})` : `(−${fmtSnapMetric(Math.abs(diff))})`}</span>`;
+  // ─── Pixel-Perfect Cell Formatter with Dedicated Right Delta Slot ───
+  function renderMetricWithDelta(val: number | null | undefined, diff: number | null | undefined, customColor = 'text-foreground'): string {
+    const isPos = typeof diff === 'number' && diff > 0;
+    const isNeg = typeof diff === 'number' && diff < 0;
+    const deltaStr = isPos 
+      ? `(+${fmtSnapMetric(Math.abs(diff))})` 
+      : isNeg 
+      ? `(−${fmtSnapMetric(Math.abs(diff))})` 
+      : '';
+
+    return `
+      <div class="inline-flex items-center justify-end gap-1.5 w-full">
+        <span class="font-bold ${customColor} font-mono tabular-nums">${fmtSnapMetric(val || 0)}</span>
+        <span class="inline-block w-16 text-right font-bold text-[10px] font-mono tabular-nums ${
+          isPos ? 'text-emerald-500' : isNeg ? 'text-rose-500' : 'invisible'
+        }">
+          ${deltaStr || '—'}
+        </span>
+      </div>
+    `;
   }
 
   function renderDeltaBadge(element: HTMLElement, subElement: HTMLElement, change: number, percent: number) {
@@ -753,10 +789,12 @@ import Layout from '../../layouts/Layout.astro';
     return filtered.length > 0 ? filtered : sorted;
   }
 
-  // ─── Ultra-Precise Auto-Scaled SVG Growth Chart ───
+  // ─── PERFORMANCE TREND (Smooth Cubic Bezier Curves, Gradient Fill & Min/Max Stats) ───
   function renderVisualGrowthChart(snapshots: CompetitorSnapshot[]) {
     const growthChartSvg = document.getElementById('growth-chart-svg');
-    const dynamicLegend = document.getElementById('chart-dynamic-legend');
+    const statMin = document.getElementById('chart-stat-min');
+    const statMax = document.getElementById('chart-stat-max');
+    const statLatest = document.getElementById('chart-stat-latest');
     if (!growthChartSvg) return;
 
     if (!snapshots || snapshots.length === 0) {
@@ -765,147 +803,178 @@ import Layout from '../../layouts/Layout.astro';
           No historical snapshot data recorded yet.
         </text>
       `;
-      if (dynamicLegend) dynamicLegend.innerHTML = '';
+      if (statMin) statMin.textContent = '—';
+      if (statMax) statMax.textContent = '—';
+      if (statLatest) statLatest.textContent = '—';
       return;
     }
 
     const width = 800;
     const height = 220;
-    const paddingLeft = 70;
+    const paddingLeft = 60;
     const paddingRight = 30;
-    const paddingTop = 20;
+    const paddingTop = 25;
     const paddingBottom = 35;
 
     const chartWidth = width - paddingLeft - paddingRight;
     const chartHeight = height - paddingTop - paddingBottom;
 
-    // Collect values depending on activeChartMode
+    // Determine series values & style
     let valuesA: number[] = [];
     let valuesB: number[] = [];
     let labelA = 'Monthly Reach';
     let labelB = 'Profile Views';
-    let colorA = '#10b981'; // emerald
-    let colorB = '#0284c7'; // sky
+    let strokeColorA = '#f43f5e'; // rose-500
+    let strokeColorB = '#0ea5e9'; // sky-500
+    let isDual = activeChartMode === 'dual';
 
-    if (activeChartMode === 'reach_views') {
+    if (activeChartMode === 'reach') {
+      valuesA = snapshots.map(s => s.profile_reach || 0);
+      labelA = 'Monthly Reach';
+      strokeColorA = '#f43f5e'; // vibrant pink/rose
+    } else if (activeChartMode === 'views') {
+      valuesA = snapshots.map(s => s.profile_views || 0);
+      labelA = 'Profile Views';
+      strokeColorA = '#0ea5e9'; // sky
+    } else if (activeChartMode === 'followers') {
+      valuesA = snapshots.map(s => s.follower_count || 0);
+      labelA = 'Followers';
+      strokeColorA = '#a855f7'; // purple
+    } else if (activeChartMode === 'pins') {
+      valuesA = snapshots.map(s => s.pin_count || 0);
+      labelA = 'Total Pins';
+      strokeColorA = '#10b981'; // emerald
+    } else if (activeChartMode === 'dual') {
       valuesA = snapshots.map(s => s.profile_reach || 0);
       valuesB = snapshots.map(s => s.profile_views || 0);
       labelA = 'Monthly Reach';
       labelB = 'Profile Views';
-    } else if (activeChartMode === 'followers') {
-      valuesA = snapshots.map(s => s.follower_count || 0);
-      labelA = 'Followers';
-      colorA = '#a855f7'; // purple
-    } else if (activeChartMode === 'pins') {
-      valuesA = snapshots.map(s => s.pin_count || 0);
-      labelA = 'Total Pins';
-      colorA = '#e11d48'; // rose/primary
+      strokeColorA = '#f43f5e';
+      strokeColorB = '#0ea5e9';
     }
 
-    // Compute dynamic min/max with padding
+    // Auto-scale range calculation with generous 15% breathing room
     const allVals = [...valuesA, ...(valuesB.length > 0 ? valuesB : [])].filter(v => typeof v === 'number');
-    let maxVal = Math.max(...allVals, 10);
-    let minVal = Math.min(...allVals, 0);
+    let rawMax = Math.max(...allVals, 10);
+    let rawMin = Math.min(...allVals, 0);
 
-    if (activeChartMode === 'followers' || activeChartMode === 'pins') {
-      // Auto-scale to emphasize delta
-      const range = maxVal - minVal;
-      const pad = range > 0 ? range * 0.15 : maxVal * 0.1;
-      maxVal = Math.ceil(maxVal + pad);
-      minVal = Math.max(0, Math.floor(minVal - pad));
+    let minVal: number;
+    let maxVal: number;
+
+    if (rawMax === rawMin) {
+      minVal = Math.max(0, Math.floor(rawMin * 0.9));
+      maxVal = Math.ceil(rawMax * 1.1) || 10;
     } else {
-      minVal = 0;
-      maxVal = Math.ceil(maxVal * 1.05);
+      const span = rawMax - rawMin;
+      const pad = span * 0.15;
+      minVal = Math.max(0, Math.floor(rawMin - pad));
+      maxVal = Math.ceil(rawMax + pad);
     }
 
     const valSpan = maxVal - minVal || 1;
 
-    // Build SVG points
-    const points = snapshots.map((s, idx) => {
+    // Update Stats Sub-bar
+    if (statMin) statMin.textContent = formatNumber(rawMin);
+    if (statMax) statMax.textContent = formatNumber(rawMax);
+    if (statLatest) statLatest.textContent = formatNumber(valuesA[valuesA.length - 1] || 0);
+
+    // Map points
+    const pointsA = snapshots.map((s, idx) => {
       const x = paddingLeft + (snapshots.length === 1 ? chartWidth / 2 : (idx / (snapshots.length - 1)) * chartWidth);
-      const valA = valuesA[idx] || 0;
-      const yA = paddingTop + chartHeight - ((valA - minVal) / valSpan) * chartHeight;
-      let yB: number | null = null;
-      if (valuesB.length > 0) {
-        const valB = valuesB[idx] || 0;
-        yB = paddingTop + chartHeight - ((valB - minVal) / valSpan) * chartHeight;
-      }
+      const val = valuesA[idx] || 0;
+      const y = paddingTop + chartHeight - ((val - minVal) / valSpan) * chartHeight;
       const dateObj = new Date(s.recorded_at);
       const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      return { x, yA, yB, s, dateLabel, valA, valB: valuesB[idx] };
+      return { x, y, val, s, dateLabel };
     });
 
-    let pathA = '';
-    let pathB = '';
+    const pointsB = isDual ? snapshots.map((s, idx) => {
+      const x = paddingLeft + (snapshots.length === 1 ? chartWidth / 2 : (idx / (snapshots.length - 1)) * chartWidth);
+      const val = valuesB[idx] || 0;
+      const y = paddingTop + chartHeight - ((val - minVal) / valSpan) * chartHeight;
+      const dateObj = new Date(s.recorded_at);
+      const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return { x, y, val, s, dateLabel };
+    }) : [];
 
-    if (points.length === 1) {
-      pathA = `M ${paddingLeft} ${points[0].yA} L ${width - paddingRight} ${points[0].yA}`;
-      if (points[0].yB !== null) pathB = `M ${paddingLeft} ${points[0].yB} L ${width - paddingRight} ${points[0].yB}`;
-    } else {
-      pathA = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.yA.toFixed(1)}`).join(' ');
-      if (valuesB.length > 0) {
-        pathB = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.yB!.toFixed(1)}`).join(' ');
+    // Helper: Build smooth curve path
+    function buildPath(pts: typeof pointsA): { linePath: string; areaPath: string } {
+      if (pts.length === 1) {
+        const line = `M ${paddingLeft} ${pts[0].y} L ${width - paddingRight} ${pts[0].y}`;
+        const area = `M ${paddingLeft} ${pts[0].y} L ${width - paddingRight} ${pts[0].y} L ${width - paddingRight} ${paddingTop + chartHeight} L ${paddingLeft} ${paddingTop + chartHeight} Z`;
+        return { linePath: line, areaPath: area };
       }
+
+      let line = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[i];
+        const p1 = pts[i + 1];
+        const mx = (p0.x + p1.x) / 2;
+        line += ` C ${mx.toFixed(1)} ${p0.y.toFixed(1)}, ${mx.toFixed(1)} ${p1.y.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+      }
+
+      const area = `${line} L ${pts[pts.length - 1].x.toFixed(1)} ${(paddingTop + chartHeight).toFixed(1)} L ${pts[0].x.toFixed(1)} ${(paddingTop + chartHeight).toFixed(1)} Z`;
+      return { linePath: line, areaPath: area };
     }
 
-    // Grid lines with 4 tiers
-    const gridLines = [0, 0.33, 0.66, 1].map(ratio => {
+    const pathDataA = buildPath(pointsA);
+    const pathDataB = isDual ? buildPath(pointsB) : null;
+
+    // Grid lines (subtle & elegant)
+    const gridLines = [0, 0.5, 1].map(ratio => {
       const y = paddingTop + chartHeight * (1 - ratio);
       const val = Math.round(minVal + ratio * valSpan);
       return `
-        <line x1="${paddingLeft}" y1="${y}" x2="${width - paddingRight}" y2="${y}" stroke="currentColor" class="text-border" stroke-dasharray="3,3" stroke-opacity="0.6"/>
-        <text x="${paddingLeft - 10}" y="${y + 3.5}" text-anchor="end" font-size="9.5" font-family="monospace" fill="currentColor" class="text-muted-foreground font-semibold">${fmtNumberCompact(val)}</text>
+        <line x1="${paddingLeft}" y1="${y.toFixed(1)}" x2="${(width - paddingRight).toFixed(1)}" y2="${y.toFixed(1)}" stroke="currentColor" class="text-border/60" stroke-dasharray="4,4" stroke-opacity="0.5"/>
       `;
     }).join('');
 
     // Sample X-axis labels
-    const maxLabels = 7;
-    const step = Math.max(1, Math.ceil(points.length / maxLabels));
-    const sampledPoints = points.filter((_, idx) => idx === 0 || idx === points.length - 1 || idx % step === 0);
+    const maxLabels = 6;
+    const step = Math.max(1, Math.ceil(pointsA.length / maxLabels));
+    const sampledPoints = pointsA.filter((_, idx) => idx === 0 || idx === pointsA.length - 1 || idx % step === 0);
 
     const xLabels = sampledPoints.map(p => `
       <text x="${p.x.toFixed(1)}" y="${height - 10}" text-anchor="middle" font-size="9.5" font-weight="500" fill="currentColor" class="text-muted-foreground">${p.dateLabel}</text>
     `).join('');
 
-    // Interactive Points
-    const circlesA = points.map(p => `
-      <circle cx="${p.x.toFixed(1)}" cy="${p.yA.toFixed(1)}" r="3.5" fill="${colorA}" class="stroke-card stroke-2 hover:scale-125 transition-transform cursor-pointer">
-        <title>Date: ${p.dateLabel}&#10;${labelA}: ${formatNumber(p.valA)}</title>
+    // Glowing Circular Points
+    const circlesA = pointsA.map(p => `
+      <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${strokeColorA}" class="stroke-card stroke-2 hover:scale-150 transition-transform cursor-pointer">
+        <title>${p.dateLabel} • ${labelA}: ${formatNumber(p.val)}</title>
       </circle>
     `).join('');
 
-    const circlesB = valuesB.length > 0 ? points.map(p => `
-      <circle cx="${p.x.toFixed(1)}" cy="${p.yB!.toFixed(1)}" r="3.5" fill="${colorB}" class="stroke-card stroke-2 hover:scale-125 transition-transform cursor-pointer">
-        <title>Date: ${p.dateLabel}&#10;${labelB}: ${formatNumber(p.valB)}</title>
+    const circlesB = isDual ? pointsB.map(p => `
+      <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${strokeColorB}" class="stroke-card stroke-2 hover:scale-150 transition-transform cursor-pointer">
+        <title>${p.dateLabel} • ${labelB}: ${formatNumber(p.val)}</title>
       </circle>
     `).join('') : '';
 
     growthChartSvg.innerHTML = `
+      <defs>
+        <linearGradient id="chart-area-grad-a" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${strokeColorA}" stop-opacity="0.18" />
+          <stop offset="100%" stop-color="${strokeColorA}" stop-opacity="0.00" />
+        </linearGradient>
+        ${isDual ? `
+        <linearGradient id="chart-area-grad-b" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${strokeColorB}" stop-opacity="0.14" />
+          <stop offset="100%" stop-color="${strokeColorB}" stop-opacity="0.00" />
+        </linearGradient>
+        ` : ''}
+      </defs>
       ${gridLines}
-      <path d="${pathA}" fill="none" stroke="${colorA}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      ${pathB ? `<path d="${pathB}" fill="none" stroke="${colorB}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4,4"/>` : ''}
+      <path d="${pathDataA.areaPath}" fill="url(#chart-area-grad-a)"/>
+      <path d="${pathDataA.linePath}" fill="none" stroke="${strokeColorA}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${pathDataB ? `
+        <path d="${pathDataB.areaPath}" fill="url(#chart-area-grad-b)"/>
+        <path d="${pathDataB.linePath}" fill="none" stroke="${strokeColorB}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4,4"/>
+      ` : ''}
       ${circlesA}
       ${circlesB}
       ${xLabels}
     `;
-
-    // Dynamic Legend update
-    if (dynamicLegend) {
-      if (activeChartMode === 'reach_views') {
-        dynamicLegend.innerHTML = `
-          <div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span><span class="text-foreground">Monthly Reach</span></div>
-          <div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-sky-500"></span><span class="text-foreground">Profile Views</span></div>
-        `;
-      } else if (activeChartMode === 'followers') {
-        dynamicLegend.innerHTML = `
-          <div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-purple-500"></span><span class="text-foreground">Followers Trajectory</span></div>
-        `;
-      } else if (activeChartMode === 'pins') {
-        dynamicLegend.innerHTML = `
-          <div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-rose-500"></span><span class="text-foreground">Pin Output Growth</span></div>
-        `;
-      }
-    }
   }
 
   // ─── Chart Mode Switchers ───
@@ -913,10 +982,10 @@ import Layout from '../../layouts/Layout.astro';
   chartModeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       chartModeBtns.forEach(b => {
-        b.className = 'chart-mode-btn px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all whitespace-nowrap cursor-pointer';
+        b.className = 'chart-mode-btn px-3 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all whitespace-nowrap cursor-pointer';
       });
-      btn.className = 'chart-mode-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-background text-foreground shadow-2xs transition-all whitespace-nowrap cursor-pointer';
-      activeChartMode = (btn.dataset.chartMode as any) || 'reach_views';
+      btn.className = 'chart-mode-btn px-3 py-1 rounded-lg text-xs font-bold bg-primary text-primary-foreground shadow-2xs transition-all whitespace-nowrap cursor-pointer';
+      activeChartMode = (btn.dataset.chartMode as any) || 'reach';
       const filtered = getFilteredSnapshots();
       renderVisualGrowthChart(filtered);
     });
@@ -1137,7 +1206,7 @@ import Layout from '../../layouts/Layout.astro';
     thead.innerHTML = headersHtml;
   }
 
-  // ─── Snapshots Log Table & Pagination Renderer ───
+  // ─── Snapshots Log Table & Pagination Renderer (With Clean Vertical Alignment) ───
   function renderSnapshotsLogTable() {
     const snapshotsTableBody = document.getElementById('snapshots-table-body');
     const snapshotsCountBadge = document.getElementById('snapshots-count-badge');
@@ -1207,16 +1276,16 @@ import Layout from '../../layouts/Layout.astro';
         let cellsHtml = `<td class="py-3 px-5 font-semibold text-foreground whitespace-nowrap">${formatDate(s.recorded_at, true)}</td>`;
 
         if (snapColVisible.monthly_reach) {
-          cellsHtml += `<td class="py-3 px-4 text-right font-bold text-foreground font-mono tabular-nums whitespace-nowrap">${fmtSnapMetric(s.profile_reach || 0)}${formatDeltaSpan(reachDiff)}</td>`;
+          cellsHtml += `<td class="py-3 px-4 text-right whitespace-nowrap">${renderMetricWithDelta(s.profile_reach, reachDiff)}</td>`;
         }
         if (snapColVisible.profile_views) {
-          cellsHtml += `<td class="py-3 px-4 text-right font-semibold text-foreground font-mono tabular-nums whitespace-nowrap">${fmtSnapMetric(s.profile_views || 0)}${formatDeltaSpan(viewsDiff)}</td>`;
+          cellsHtml += `<td class="py-3 px-4 text-right whitespace-nowrap">${renderMetricWithDelta(s.profile_views, viewsDiff)}</td>`;
         }
         if (snapColVisible.followers) {
-          cellsHtml += `<td class="py-3 px-4 text-right text-foreground font-semibold font-mono tabular-nums whitespace-nowrap">${fmtSnapMetric(s.follower_count || 0)}${formatDeltaSpan(followersDiff)}</td>`;
+          cellsHtml += `<td class="py-3 px-4 text-right whitespace-nowrap">${renderMetricWithDelta(s.follower_count, followersDiff)}</td>`;
         }
         if (snapColVisible.total_pins) {
-          cellsHtml += `<td class="py-3 px-4 text-right font-bold text-primary font-mono tabular-nums whitespace-nowrap">${fmtSnapMetric(s.pin_count || 0)}${formatDeltaSpan(pinsDiff)}</td>`;
+          cellsHtml += `<td class="py-3 px-4 text-right whitespace-nowrap">${renderMetricWithDelta(s.pin_count, pinsDiff, 'text-primary')}</td>`;
         }
         if (snapColVisible.actions) {
           cellsHtml += `
@@ -1237,11 +1306,23 @@ import Layout from '../../layouts/Layout.astro';
       .join('');
 
     // Summary totals row
+    function formatTotalDeltaSlot(diff: number, customClass = '') {
+      if (diff === 0) return '<div class="inline-flex items-center justify-end w-full"><span class="font-mono text-muted-foreground text-xs">—</span></div>';
+      const isPos = diff > 0;
+      return `
+        <div class="inline-flex items-center justify-end gap-1.5 w-full">
+          <span class="font-bold text-xs font-mono tabular-nums ${customClass || (isPos ? 'text-emerald-500' : 'text-rose-500')}">
+            (${isPos ? '+' : '−'}${fmtSnapMetric(Math.abs(diff))})
+          </span>
+        </div>
+      `;
+    }
+
     let totalsCells = `<th scope="row" class="py-2.5 px-5 text-xs text-foreground text-left">∑ Net Change</th>`;
-    if (snapColVisible.monthly_reach) totalsCells += `<td class="py-2.5 px-4 text-right font-mono tabular-nums">${sumReachDiff !== 0 ? `<span class="font-bold text-[11px] ${sumReachDiff > 0 ? 'text-emerald-500' : 'text-rose-500'}">(${sumReachDiff > 0 ? '+' : '−'}${fmtSnapMetric(Math.abs(sumReachDiff))})</span>` : '<span class="text-muted-foreground">—</span>'}</td>`;
-    if (snapColVisible.profile_views) totalsCells += `<td class="py-2.5 px-4 text-right font-mono tabular-nums">${sumViewsDiff !== 0 ? `<span class="font-bold text-[11px] ${sumViewsDiff > 0 ? 'text-emerald-500' : 'text-rose-500'}">(${sumViewsDiff > 0 ? '+' : '−'}${fmtSnapMetric(Math.abs(sumViewsDiff))})</span>` : '<span class="text-muted-foreground">—</span>'}</td>`;
-    if (snapColVisible.followers)     totalsCells += `<td class="py-2.5 px-4 text-right font-mono tabular-nums">${sumFollowersDiff !== 0 ? `<span class="font-bold text-[11px] ${sumFollowersDiff > 0 ? 'text-emerald-500' : 'text-rose-500'}">(${sumFollowersDiff > 0 ? '+' : '−'}${fmtSnapMetric(Math.abs(sumFollowersDiff))})</span>` : '<span class="text-muted-foreground">—</span>'}</td>`;
-    if (snapColVisible.total_pins)    totalsCells += `<td class="py-2.5 px-4 text-right font-mono tabular-nums text-primary">${sumPinsDiff !== 0 ? `<span class="font-bold text-[11px] ${sumPinsDiff > 0 ? 'text-emerald-500' : 'text-rose-500'}">(${sumPinsDiff > 0 ? '+' : '−'}${fmtSnapMetric(Math.abs(sumPinsDiff))})</span>` : '<span class="text-muted-foreground">—</span>'}</td>`;
+    if (snapColVisible.monthly_reach) totalsCells += `<td class="py-2.5 px-4 text-right">${formatTotalDeltaSlot(sumReachDiff)}</td>`;
+    if (snapColVisible.profile_views) totalsCells += `<td class="py-2.5 px-4 text-right">${formatTotalDeltaSlot(sumViewsDiff)}</td>`;
+    if (snapColVisible.followers)     totalsCells += `<td class="py-2.5 px-4 text-right">${formatTotalDeltaSlot(sumFollowersDiff)}</td>`;
+    if (snapColVisible.total_pins)    totalsCells += `<td class="py-2.5 px-4 text-right">${formatTotalDeltaSlot(sumPinsDiff, 'text-primary')}</td>`;
     if (snapColVisible.actions)       totalsCells += `<td class="py-2.5 px-5 text-right"></td>`;
 
     const totalsRowHtml = `<tr class="bg-muted/30 font-bold border-b border-border/80">${totalsCells}</tr>`;
@@ -1291,12 +1372,16 @@ import Layout from '../../layouts/Layout.astro';
   });
   updateSnapNumFormatUI();
 
-  snapshotsPageSizeSelect?.addEventListener('change', () => {
-    const val = snapshotsPageSizeSelect.value;
-    snapshotPageSize = val === 'all' ? 'all' : parseInt(val, 10) || 20;
-    currentSnapshotPage = 1;
-    renderSnapshotsLogTable();
-  });
+  if (snapshotsPageSizeSelect) {
+    snapshotsPageSizeSelect.value = String(snapshotPageSize);
+    snapshotsPageSizeSelect.addEventListener('change', () => {
+      const val = snapshotsPageSizeSelect.value;
+      snapshotPageSize = val === 'all' ? 'all' : parseInt(val, 10) || 30;
+      localStorage.setItem('cd_snap_page_size', String(snapshotPageSize));
+      currentSnapshotPage = 1;
+      renderSnapshotsLogTable();
+    });
+  }
 
   snapshotsPrevPageBtn?.addEventListener('click', () => {
     if (currentSnapshotPage > 1) {
