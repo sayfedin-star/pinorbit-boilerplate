@@ -1,6 +1,8 @@
 name: Update Pinterest Competitors
 
 on:
+  schedule:
+    - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       workspace_id:
@@ -56,6 +58,7 @@ jobs:
       FORCE_RUN: ${{ (github.event.inputs.force_run == true || github.event.inputs.force_run == 'true') && 'true' || '' }}
       RUN_TRIGGER: ${{ github.event.inputs.trigger || github.event.inputs.run_trigger || '' }}
       EVENT_NAME: ${{ github.event_name }}
+      GITHUB_EVENT_NAME: ${{ github.event_name }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
