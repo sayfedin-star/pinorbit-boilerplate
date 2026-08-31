@@ -86,6 +86,7 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(json.discovery_stop_pages).toBe(3);
       expect(json.audit_sweep_enabled).toBe(true);
       expect(json.daily_sheet_sync_enabled).toBe(false);
+      expect(json.github_schedule_enabled).toBe(true);
       expect(json.pin_filter_max_age_days).toBeUndefined();
       expect(json.is_default).toBe(true);
     });
@@ -107,6 +108,7 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
                 discovery_stop_pages: 5,
                 audit_sweep_enabled: true,
                 daily_sheet_sync_enabled: true,
+                github_schedule_enabled: false,
                 updated_at: '2026-08-23T12:00:00Z',
               },
               error: null,
@@ -135,6 +137,7 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(json.discovery_stop_pages).toBe(5);
       expect(json.audit_sweep_enabled).toBe(true);
       expect(json.daily_sheet_sync_enabled).toBe(true);
+      expect(json.github_schedule_enabled).toBe(false);
       expect(json.is_default).toBe(false);
     });
   });
@@ -305,6 +308,7 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
           discovery_stop_pages: 5,
           audit_sweep_enabled: true,
           daily_sheet_sync_enabled: true,
+          github_schedule_enabled: false,
         }),
       });
 
@@ -326,6 +330,7 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(json.discovery_stop_pages).toBe(5);
       expect(json.audit_sweep_enabled).toBe(true);
       expect(json.daily_sheet_sync_enabled).toBe(true);
+      expect(json.github_schedule_enabled).toBe(false);
       expect(savedPayload.workspace_id).toBe(mockWsId);
       expect(savedPayload.default_interval_days).toBeUndefined();
       expect(savedPayload.pin_filter_rising_age_days).toBe(10);

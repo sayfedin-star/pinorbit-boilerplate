@@ -420,7 +420,7 @@ async function main() {
   // Load workspace settings to map gating controls
   const settingsMap = new Map();
   try {
-    const wsSettings = await supaQuery('pa_workspace_settings', 'select=workspace_id,ingest_enabled,paused_account_policy,refresh_max_pins,discovery_stop_pages,audit_sweep_enabled,daily_sheet_sync_enabled');
+    const wsSettings = await supaQuery('pa_workspace_settings', 'select=workspace_id,ingest_enabled,paused_account_policy,refresh_max_pins,discovery_stop_pages,audit_sweep_enabled,daily_sheet_sync_enabled,github_schedule_enabled');
     if (Array.isArray(wsSettings)) {
       for (const s of wsSettings) {
         settingsMap.set(s.workspace_id, s);
@@ -428,6 +428,24 @@ async function main() {
     }
   } catch (e) {
     console.warn('Could not query pa_workspace_settings (using defaults):', e.message);
+  }
+
+  // Check Master Workspace Global Kill-Switch for scheduled pipeline runs
+  const isGhScheduled = (process.env.EVENT_NAME || process.env.GITHUB_EVENT_NAME || '').trim().toLowerCase() === 'schedule';
+  if (isGhScheduled) {
+    try {
+      const masterWorkspaces = await supaQuery('workspaces', 'select=id,is_master&is_master=eq.true&limit=1', DB_CONFIG);
+      if (Array.isArray(masterWorkspaces) && masterWorkspaces.length > 0) {
+        const masterId = masterWorkspaces[0].id;
+        const masterSetting = settingsMap.get(masterId);
+        if (masterSetting && masterSetting.github_schedule_enabled === false) {
+          console.log(`[GLOBAL SKIP] GitHub Actions 07:00 UTC schedule is globally disabled by Master Workspace (${masterId.slice(0, 8)}). Exiting immediately.`);
+          return;
+        }
+      }
+    } catch (err) {
+      // Non-blocking fallback
+    }
   }
 
   let accounts = await supaQuery('pa_accounts', 'select=id,workspace_id,username,follower_count,status,ingest_enabled,last_run_at&order=username.asc');
@@ -449,7 +467,15 @@ async function main() {
   for (const acc of accounts) {
     const wsSetting = settingsMap.get(acc.workspace_id);
     const wsIngestEnabled = wsSetting ? wsSetting.ingest_enabled : true;
+    const wsGhScheduleEnabled = wsSetting?.github_schedule_enabled ?? true;
+    const isGhScheduledEvent = (process.env.GITHUB_EVENT_NAME || '').trim().toLowerCase() === 'schedule';
     const pausedPolicy = wsSetting ? wsSetting.paused_account_policy : 'reject';
+
+    // Check GitHub schedule gate
+    if (isGhScheduledEvent && !wsGhScheduleEnabled) {
+      console.log(`[SKIP] Workspace ${acc.workspace_id.slice(0, 8)} GitHub Actions 07:00 UTC schedule is disabled (delegated to FastCron).`);
+      continue;
+    }
 
     // Check workspace-level ingest gate
     if (wsIngestEnabled === false) {

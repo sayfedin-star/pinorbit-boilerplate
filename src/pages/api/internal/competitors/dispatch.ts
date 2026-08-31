@@ -116,12 +116,17 @@ async function handleCompetitorsDispatch(
     );
   }
 
+  let isMasterScope =
+    payload.scope === 'all' ||
+    url.searchParams.get('scope') === 'all' ||
+    workspaceId === 'all';
+
   // 3. Verify workspace existence in Project 1
   try {
     const admin = dbClients.getSchedulingAdmin(runtimeEnv);
     const { data: ws, error: wsErr } = await admin
       .from('workspaces')
-      .select('id')
+      .select('id, is_master')
       .eq('id', workspaceId)
       .maybeSingle();
 
@@ -130,6 +135,10 @@ async function handleCompetitorsDispatch(
         JSON.stringify({ success: false, error: 'Workspace not found or unauthorized.' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    if (ws.is_master && (payload.scope === 'all' || url.searchParams.get('scope') === 'all')) {
+      isMasterScope = true;
     }
   } catch {
     return new Response(
@@ -197,7 +206,7 @@ async function handleCompetitorsDispatch(
       body: JSON.stringify({
         ref: 'main',
         inputs: {
-          workspace_id: workspaceId,
+          workspace_id: isMasterScope ? '' : workspaceId,
           target_scope: targetScope,
           competitor_ids: competitorIds,
           target_username: targetUsername,
@@ -215,7 +224,8 @@ async function handleCompetitorsDispatch(
         JSON.stringify({
           success: true,
           dispatched: true,
-          workspace_id: workspaceId,
+          workspace_id: isMasterScope ? 'all' : workspaceId,
+          is_master_scope: isMasterScope,
           target_scope: targetScope,
           competitor_ids: competitorIds || undefined,
           trigger: resolvedTrigger,

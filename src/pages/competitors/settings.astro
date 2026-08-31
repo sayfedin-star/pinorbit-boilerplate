@@ -5,9 +5,13 @@ import ProviderBadge from '../../components/cron/ProviderBadge.astro';
 import RunNowButton from '../../components/cron/RunNowButton.astro';
 import { humanCron, humanCronTitle } from '../../lib/cron-helper';
 import { dbClients } from '../../server/db/clients';
+import { getWorkspaces } from '../../lib/workspaces';
 
 const workspaceId = Astro.locals.activeWorkspaceId || '';
 const runtimeEnv = (Astro.locals as any)?.runtime?.env || (Astro.locals as any)?.runtimeEnv;
+const workspaces = await getWorkspaces(Astro.cookies, Astro.request, Astro.response?.headers);
+const currentWorkspace = workspaces.find((w) => w.id === workspaceId) || workspaces[0];
+const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
 
 let competitor_pipeline_settings: { cron_expression?: string | null } | null = null;
 if (workspaceId) {
@@ -53,6 +57,26 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
       </div>
     </div>
   </div>
+
+  {isMasterWorkspace && (
+    <!-- ═══ 👑 Master Workspace (Global Orchestrator) Banner ═══ -->
+    <div class="mb-6 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-xs">
+      <div class="flex items-center gap-3.5">
+        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xl shadow-2xs">
+          👑
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 class="text-sm font-bold text-foreground">Master Workspace (Global Competitor Orchestrator)</h3>
+            <span class="rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 px-2.5 py-0.5 text-[10px] font-bold">ALL-WORKSPACES MODE</span>
+          </div>
+          <p class="text-xs text-muted-foreground mt-0.5">
+            This workspace acts as the central orchestrator. Competitor sync pipelines and FastCron schedules configured here run across <strong>all active workspaces</strong> simultaneously.
+          </p>
+        </div>
+      </div>
+    </div>
+  )}
 
   <div class="space-y-8">
     <!-- ═══ SECTION 0: Automation Schedules & Cron Provider ═══ -->
@@ -313,7 +337,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         </div>
       </div>
 
-      <form id="pipeline-settings-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <form id="pipeline-settings-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Pipeline Switch -->
         <div class="flex flex-col justify-between rounded-xl border border-border bg-background p-4">
           <div>
@@ -344,6 +368,21 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
           <div class="mt-4 flex items-center gap-2">
             <input type="checkbox" id="pipe-dry-run" class="h-4 w-4 rounded accent-amber-500 cursor-pointer" />
             <label for="pipe-dry-run" class="text-xs font-semibold text-foreground cursor-pointer">Enable Dry-Run Mode</label>
+          </div>
+        </div>
+
+        <!-- GitHub Actions Daily Schedule (02:00 UTC) -->
+        <div class="flex flex-col justify-between rounded-xl border border-border bg-background p-4">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-foreground">GitHub Actions Cron</span>
+              <span id="gh-schedule-status-badge" class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500">Active</span>
+            </div>
+            <p class="text-[11px] text-muted-foreground mt-1">Built-in Daily @ 02:00 UTC workflow trigger. Leave unchecked to use FastCron only.</p>
+          </div>
+          <div class="mt-4 flex items-center gap-2">
+            <input type="checkbox" id="pipe-github-schedule" class="h-4 w-4 rounded accent-primary cursor-pointer" checked />
+            <label for="pipe-github-schedule" class="text-xs font-semibold text-foreground cursor-pointer">Enable Daily @ 02:00 UTC</label>
           </div>
         </div>
 
@@ -1244,10 +1283,25 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     const isEnabled = settings?.is_enabled ?? true;
     const dryRun = settings?.dry_run ?? false;
     const maxRetries = settings?.max_retries ?? 3;
+    const githubScheduleEnabled = settings?.github_schedule_enabled ?? true;
 
     ( $('pipe-is-enabled') as HTMLInputElement ).checked = isEnabled;
     ( $('pipe-dry-run') as HTMLInputElement ).checked = dryRun;
     ( $('pipe-max-retries') as HTMLInputElement ).value = String(maxRetries);
+    if ($('pipe-github-schedule')) {
+      ( $('pipe-github-schedule') as HTMLInputElement ).checked = githubScheduleEnabled;
+    }
+
+    const ghBadge = $('gh-schedule-status-badge');
+    if (ghBadge) {
+      if (githubScheduleEnabled) {
+        ghBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500';
+        ghBadge.textContent = 'Active';
+      } else {
+        ghBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground';
+        ghBadge.textContent = 'Off';
+      }
+    }
 
     const kekBadge = $('kek-badge');
     if (kekActive) {
@@ -1492,12 +1546,13 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     e.preventDefault();
     const is_enabled = ( $('pipe-is-enabled') as HTMLInputElement ).checked;
     const dry_run = ( $('pipe-dry-run') as HTMLInputElement ).checked;
+    const github_schedule_enabled = $('pipe-github-schedule') ? ( $('pipe-github-schedule') as HTMLInputElement ).checked : true;
     const max_retries = Number(( $('pipe-max-retries') as HTMLInputElement ).value || 3);
 
     try {
       const res = await fetchAPI('/api/admin/competitor-ops', {
         method: 'PUT',
-        body: JSON.stringify({ is_enabled, dry_run, max_retries }),
+        body: JSON.stringify({ is_enabled, dry_run, github_schedule_enabled, max_retries }),
       });
       if (res.success) {
         toast('Pipeline settings updated successfully', 'success');

@@ -25,6 +25,7 @@ const DEFAULT_SETTINGS = {
   discovery_stop_pages: 3,
   audit_sweep_enabled: true,
   daily_sheet_sync_enabled: false,
+  github_schedule_enabled: true,
 };
 
 const ALLOWED_PATCH_KEYS = new Set([
@@ -40,6 +41,7 @@ const ALLOWED_PATCH_KEYS = new Set([
   'discovery_stop_pages',
   'audit_sweep_enabled',
   'daily_sheet_sync_enabled',
+  'github_schedule_enabled',
 ]);
 
 export const GET: APIRoute = async ({ request, locals }) => {
@@ -101,6 +103,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       discovery_stop_pages: Number(settings.discovery_stop_pages ?? DEFAULT_SETTINGS.discovery_stop_pages),
       audit_sweep_enabled: settings.audit_sweep_enabled ?? DEFAULT_SETTINGS.audit_sweep_enabled,
       daily_sheet_sync_enabled: settings.daily_sheet_sync_enabled ?? DEFAULT_SETTINGS.daily_sheet_sync_enabled,
+      github_schedule_enabled: settings.github_schedule_enabled ?? DEFAULT_SETTINGS.github_schedule_enabled,
       is_default: false,
       updated_at: settings.updated_at,
     });
@@ -226,6 +229,11 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
     return json({ success: false, error: 'daily_sheet_sync_enabled must be a boolean.' }, 422);
   }
 
+  // Validate github_schedule_enabled
+  if (body.github_schedule_enabled !== undefined && typeof body.github_schedule_enabled !== 'boolean') {
+    return json({ success: false, error: 'github_schedule_enabled must be a boolean.' }, 422);
+  }
+
   let wsCtx;
   try {
     wsCtx = await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
@@ -289,6 +297,10 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
         body.daily_sheet_sync_enabled !== undefined
           ? body.daily_sheet_sync_enabled
           : (existing?.daily_sheet_sync_enabled ?? DEFAULT_SETTINGS.daily_sheet_sync_enabled),
+      github_schedule_enabled:
+        body.github_schedule_enabled !== undefined
+          ? body.github_schedule_enabled
+          : (existing?.github_schedule_enabled ?? DEFAULT_SETTINGS.github_schedule_enabled),
       updated_at: new Date().toISOString(),
     };
 
@@ -316,6 +328,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
       discovery_stop_pages: Number(saved.discovery_stop_pages ?? DEFAULT_SETTINGS.discovery_stop_pages),
       audit_sweep_enabled: saved.audit_sweep_enabled ?? DEFAULT_SETTINGS.audit_sweep_enabled,
       daily_sheet_sync_enabled: saved.daily_sheet_sync_enabled ?? DEFAULT_SETTINGS.daily_sheet_sync_enabled,
+      github_schedule_enabled: saved.github_schedule_enabled ?? DEFAULT_SETTINGS.github_schedule_enabled,
       is_default: false,
       updated_at: saved.updated_at,
     });

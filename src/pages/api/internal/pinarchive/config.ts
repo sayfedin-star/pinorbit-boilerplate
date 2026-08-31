@@ -55,7 +55,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const pinArchive = dbClients.getPinArchive(runtimeEnv);
     const { data: settings, error } = await pinArchive
       .from('pa_workspace_settings')
-      .select('pin_filter_min_saves, pin_filter_min_repins, pin_filter_rising_age_days, pin_filter_rising_saves, refresh_max_pins, discovery_stop_pages, audit_sweep_enabled, daily_sheet_sync_enabled')
+      .select('pin_filter_min_saves, pin_filter_min_repins, pin_filter_rising_age_days, pin_filter_rising_saves, refresh_max_pins, discovery_stop_pages, audit_sweep_enabled, daily_sheet_sync_enabled, github_schedule_enabled')
       .eq('workspace_id', workspaceId)
       .maybeSingle();
 
@@ -71,6 +71,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           discovery_stop_pages: 3,
           audit_sweep_enabled: true,
           daily_sheet_sync_enabled: false,
+          github_schedule_enabled: true,
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
@@ -87,6 +88,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         discovery_stop_pages: Number(settings.discovery_stop_pages ?? 3),
         audit_sweep_enabled: settings.audit_sweep_enabled ?? true,
         daily_sheet_sync_enabled: settings.daily_sheet_sync_enabled ?? false,
+        github_schedule_enabled: settings.github_schedule_enabled ?? true,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
@@ -103,6 +105,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         discovery_stop_pages: 3,
         audit_sweep_enabled: true,
         daily_sheet_sync_enabled: false,
+        github_schedule_enabled: true,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
