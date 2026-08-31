@@ -429,7 +429,7 @@ async function main() {
   try {
     const wsSettings = await supaQuery(
       'pa_workspace_settings',
-      'select=workspace_id,ingest_enabled,paused_account_policy,pin_filter_min_saves,pin_filter_min_repins,pin_filter_rising_age_days,pin_filter_rising_saves,max_batch_pins,discovery_stop_pages,audit_sweep_enabled,daily_sheet_sync_enabled'
+      'select=workspace_id,ingest_enabled,paused_account_policy,pin_filter_min_saves,pin_filter_min_repins,pin_filter_rising_age_days,pin_filter_rising_saves,max_batch_pins,discovery_stop_pages,audit_sweep_enabled,daily_sheet_sync_enabled,github_schedule_enabled'
     );
     if (Array.isArray(wsSettings)) {
       for (const s of wsSettings) {
@@ -479,11 +479,17 @@ async function main() {
   for (const acc of shardedAccounts) {
     const wsSetting = settingsMap.get(acc.workspace_id) || {};
     const wsIngestEnabled = wsSetting.ingest_enabled ?? true;
+    const wsGhScheduleEnabled = wsSetting.github_schedule_enabled ?? true;
+    const isGhScheduledEvent = (process.env.GITHUB_EVENT_NAME || '').trim().toLowerCase() === 'schedule';
     const pausedPolicy = wsSetting.paused_account_policy ?? 'reject';
     const discoveryStopPages = Number(wsSetting.discovery_stop_pages ?? 3);
     const maxBatchPins = Math.min(Number(wsSetting.max_batch_pins || CFG.MAX_BATCH_PINS), 500);
 
     // Gating checks
+    if (isGhScheduledEvent && !wsGhScheduleEnabled) {
+      console.log(`[SKIP] Workspace ${acc.workspace_id.slice(0, 8)} GitHub Actions 07:00 UTC schedule is disabled (delegated to FastCron).`);
+      continue;
+    }
     if (!wsIngestEnabled) {
       console.log(`[SKIP] Workspace ${acc.workspace_id} ingest is disabled.`);
       continue;

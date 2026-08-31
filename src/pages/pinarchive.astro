@@ -344,7 +344,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           <span class="text-[11px] text-muted-foreground">Governs discovery heuristics, candidate storage, and Google Sheets sync.</span>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <!-- Card 1: Discovery Stop Pages -->
           <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
             <label for="setting-discovery-stop-pages" class="text-xs font-bold text-foreground">Discovery Stop</label>
@@ -362,7 +362,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
             <span class="text-[10px] text-muted-foreground mt-1">Stop after K all-known pages</span>
           </div>
 
-          <!-- Card 1.3: Audit Sweep Enabled -->
+          <!-- Card 2: Monthly Sweep -->
           <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
             <div class="flex items-center justify-between">
               <label for="setting-audit-sweep-enabled" class="text-xs font-bold text-foreground">Monthly Sweep</label>
@@ -378,7 +378,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
             <span class="text-[10px] text-muted-foreground mt-1">Audit sweep enabled</span>
           </div>
 
-          <!-- Card 5.2: Daily Sheet Sync -->
+          <!-- Card 3: Daily Sheet Sync -->
           <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
             <div class="flex items-center justify-between">
               <label for="setting-daily-sheet-sync" class="text-xs font-bold text-foreground">Daily Sheet Sync</label>
@@ -393,6 +393,22 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
             </div>
             <span class="text-[10px] text-muted-foreground mt-1">Sync manually edited rows</span>
           </div>
+
+          <!-- Card 4: GitHub Actions Daily Schedule (07:00 UTC) -->
+          <div class="rounded-xl border border-border bg-background p-3 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <label for="setting-github-schedule" class="text-xs font-bold text-foreground">GitHub Daily Cron</label>
+              <span id="setting-github-schedule-label" class="text-xs font-bold text-emerald-500">Active</span>
+            </div>
+            <div class="mt-2 flex items-center justify-between">
+              <span class="text-[11px] text-muted-foreground">Daily @ 07:00 UTC trigger</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input id="setting-github-schedule" type="checkbox" checked class="sr-only peer" />
+                <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+            <span class="text-[10px] text-muted-foreground mt-1">Toggle off to use FastCron only</span>
+          </div>
         </div>
       </div>
 
@@ -405,8 +421,8 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs text-muted-foreground">
             <div class="flex items-center gap-2">
-              <span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
-              <span>Daily Pipeline: <strong class="text-foreground">Daily @ 07:00 UTC</strong></span>
+              <span id="pipeline-gh-status-dot" class="h-1.5 w-1.5 rounded-full bg-primary"></span>
+              <span id="pipeline-gh-status-text">Daily Pipeline: <strong class="text-foreground">Daily @ 07:00 UTC</strong></span>
             </div>
             <div class="flex items-center gap-2">
               <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
@@ -973,6 +989,28 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           auditSweepLabel.className = `text-xs font-bold ${auditSweepCb.checked ? 'text-emerald-500' : 'text-muted-foreground'}`;
         }
       }
+      const githubScheduleCb = document.getElementById('setting-github-schedule') as HTMLInputElement | null;
+      const githubScheduleLabel = document.getElementById('setting-github-schedule-label');
+      const ghStatusDot = document.getElementById('pipeline-gh-status-dot');
+      const ghStatusText = document.getElementById('pipeline-gh-status-text');
+
+      if (githubScheduleCb) {
+        githubScheduleCb.checked = json.github_schedule_enabled !== false;
+        if (githubScheduleLabel) {
+          githubScheduleLabel.textContent = githubScheduleCb.checked ? 'Active' : 'Off';
+          githubScheduleLabel.className = `text-xs font-bold ${githubScheduleCb.checked ? 'text-emerald-500' : 'text-muted-foreground'}`;
+        }
+        if (ghStatusDot && ghStatusText) {
+          if (githubScheduleCb.checked) {
+            ghStatusDot.className = 'h-1.5 w-1.5 rounded-full bg-primary';
+            ghStatusText.innerHTML = 'Daily Pipeline: <strong class="text-foreground">Daily @ 07:00 UTC</strong>';
+          } else {
+            ghStatusDot.className = 'h-1.5 w-1.5 rounded-full bg-amber-500';
+            ghStatusText.innerHTML = 'Daily Pipeline: <strong class="text-amber-500">07:00 UTC (Off · FastCron Only)</strong>';
+          }
+        }
+      }
+
       if (dailySheetSyncCb) {
         dailySheetSyncCb.checked = Boolean(json.daily_sheet_sync_enabled);
         if (dailySheetSyncLabel) {
@@ -1026,7 +1064,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     const reevaluateBtn = document.getElementById('reevaluate-candidates-btn') as HTMLButtonElement | null;
     const roleBadge = document.getElementById('settings-role-badge');
     const inputs = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
-      '#setting-ingest-enabled, #setting-paused-policy, #setting-max-batch, #setting-refresh-max-pins, #setting-min-saves, #setting-min-repins, #setting-rising-age, #setting-rising-saves, #setting-discovery-stop-pages, #setting-audit-sweep-enabled, #setting-daily-sheet-sync'
+      '#setting-ingest-enabled, #setting-paused-policy, #setting-max-batch, #setting-refresh-max-pins, #setting-min-saves, #setting-min-repins, #setting-rising-age, #setting-rising-saves, #setting-discovery-stop-pages, #setting-audit-sweep-enabled, #setting-daily-sheet-sync, #setting-github-schedule'
     );
     inputs.forEach((el) => {
       el.disabled = true;
@@ -1054,6 +1092,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     const discoveryStopInp = document.getElementById('setting-discovery-stop-pages') as HTMLInputElement | null;
     const auditSweepCb = document.getElementById('setting-audit-sweep-enabled') as HTMLInputElement | null;
     const dailySheetSyncCb = document.getElementById('setting-daily-sheet-sync') as HTMLInputElement | null;
+    const githubScheduleCb = document.getElementById('setting-github-schedule') as HTMLInputElement | null;
     const statusMsg = document.getElementById('settings-status-msg');
     const saveBtn = document.getElementById('save-ingest-settings-btn') as HTMLButtonElement | null;
     const summaryBadge = document.getElementById('settings-summary-badge');
@@ -1082,6 +1121,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
           discovery_stop_pages: parseInt(discoveryStopInp?.value || '3', 10) || 3,
           audit_sweep_enabled: auditSweepCb ? auditSweepCb.checked : true,
           daily_sheet_sync_enabled: dailySheetSyncCb ? dailySheetSyncCb.checked : false,
+          github_schedule_enabled: githubScheduleCb ? githubScheduleCb.checked : true,
         }),
       });
 

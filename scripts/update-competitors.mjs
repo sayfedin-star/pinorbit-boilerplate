@@ -288,6 +288,20 @@ async function main() {
   let grandProcessed = 0;
 
   for (const wsId of workspaces) {
+    // Check per-workspace pipeline settings
+    const { data: wsPipe } = await db.from('competitor_pipeline_settings').select('is_enabled, github_schedule_enabled, dry_run').eq('workspace_id', wsId).maybeSingle();
+    const isGhScheduled = (process.env.EVENT_NAME || process.env.GITHUB_EVENT_NAME || '').trim().toLowerCase() === 'schedule';
+
+    if (isGhScheduled && wsPipe && wsPipe.github_schedule_enabled === false) {
+      console.log(`[SKIP] Workspace ${wsId.slice(0, 8)} GitHub Actions 02:00 UTC schedule is disabled (delegated to FastCron).`);
+      continue;
+    }
+
+    if (wsPipe && wsPipe.is_enabled === false && !forceRun) {
+      console.log(`[SKIP] Workspace ${wsId.slice(0, 8)} pipeline is disabled.`);
+      continue;
+    }
+
     let jobId = inputJobId;
 
     if (!jobId) {

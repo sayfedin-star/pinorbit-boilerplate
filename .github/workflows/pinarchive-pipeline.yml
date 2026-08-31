@@ -93,6 +93,7 @@ jobs:
           FORCE_RUN: ${{ github.event.inputs.force || '' }}
           DISCOVERY_SHARD: ${{ matrix.shard }}
           SHARD_COUNT: 4
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: node scripts/pinarchive-discovery.mjs
 
   # ── STAGE 2: Rotation (Metrics & Enrichment Refresh) ──
@@ -128,4 +129,5 @@ jobs:
           REFRESH_SHARD: ${{ matrix.shard }}
           SHARD_COUNT: 4
           REFRESH_MAX_PINS: '0'
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: node scripts/pinarchive-refresh.mjs

@@ -74,7 +74,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // 2. Full Ops State: Pipeline Settings, Competitors, and Recent Jobs
     const { data: pipelineSettings } = await competitorsClient
       .from('competitor_pipeline_settings')
-      .select('workspace_id, is_enabled, dry_run, max_retries, updated_at, cron_expression, fastcron_job_id, cron_provider, schedule_status, timezone')
+      .select('workspace_id, is_enabled, dry_run, max_retries, updated_at, cron_expression, fastcron_job_id, cron_provider, schedule_status, timezone, github_schedule_enabled')
       .eq('workspace_id', workspaceId)
       .maybeSingle();
 
@@ -83,6 +83,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       is_enabled: true,
       dry_run: false,
       max_retries: 3,
+      github_schedule_enabled: true,
       updated_at: null,
       cron_provider: 'fastcron',
       schedule_status: 'pending',
@@ -149,6 +150,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
       updated_at: new Date().toISOString(),
     };
 
+    if (body.github_schedule_enabled !== undefined) updatePayload.github_schedule_enabled = Boolean(body.github_schedule_enabled);
     if (body.cron_provider !== undefined) updatePayload.cron_provider = body.cron_provider;
     if (body.cron_expression !== undefined) updatePayload.cron_expression = body.cron_expression;
     if (body.timezone !== undefined) updatePayload.timezone = body.timezone;
