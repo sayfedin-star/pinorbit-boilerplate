@@ -39,7 +39,7 @@ async function authenticateAdmin(request: Request, locals: any, explicitWorkspac
   try {
     const wsCtx = await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
     const competitorsClient = dbClients.getCompetitors(runtimeEnv);
-    return { ok: { user, workspaceId: wsCtx.workspaceId, competitorsClient, runtimeEnv } };
+    return { ok: { user, workspaceId: wsCtx.workspaceId, isMaster: Boolean(wsCtx.isMaster), competitorsClient, runtimeEnv } };
   } catch (err: any) {
     const status = errorStatus(err);
     return { error: jsonResponse({ success: false, error: err.message || 'Forbidden: Access Denied' }, status) };
@@ -316,10 +316,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const auth = await authenticateAdmin(request, locals, body.workspace_id);
   if (auth.error) return auth.error;
 
-  const { workspaceId, competitorsClient, runtimeEnv } = auth.ok!;
+  const { workspaceId, isMaster, competitorsClient, runtimeEnv } = auth.ok!;
 
   // 1. Resolve Target Scope & Competitor IDs
-  const scope = body.scope || (body.competitor_id || (Array.isArray(body.ids) && body.ids.length > 0) ? 'selected' : 'all');
+  const isMasterScope = (isMaster && !body.competitor_id && (!Array.isArray(body.ids) || body.ids.length === 0) && (!Array.isArray(body.competitor_ids) || body.competitor_ids.length === 0)) || body.scope === 'all';
+  const scope = isMasterScope ? 'all' : (body.scope || (body.competitor_id || (Array.isArray(body.ids) && body.ids.length > 0) ? 'selected' : 'all'));
   let selectedIds: string[] = [];
 
   if (Array.isArray(body.ids) && body.ids.length > 0) {
@@ -388,7 +389,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       body: JSON.stringify({
         ref: 'main',
         inputs: {
-          workspace_id: workspaceId,
+          workspace_id: isMasterScope ? '' : workspaceId,
           target_scope: targetScope,
           competitor_ids: selectedIds.join(','),
           target_username: targetUsername,
@@ -406,6 +407,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           dispatched: true,
           job_id: job.id,
           scope,
+          is_master_scope: isMasterScope,
           target_scope: targetScope,
           count: selectedIds.length > 0 ? selectedIds.length : 'all',
           force: forceRun,
