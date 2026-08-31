@@ -81,20 +81,36 @@ export const GET: APIRoute = async ({ request, locals }) => {
       a.archived_count = archivedMap.has(a.id) ? archivedMap.get(a.id) : (a.db_pins_count ?? a.pins_count ?? 0);
     }
 
-    // Last full Refresh = 4 shards of the newest run. They start within ~2 minutes.
+    // Compute Recent Δ per account from its latest refresh run session (preserves delta without 5m global cutoff)
     let changedMap = new Map<string, number>();
     try {
-      const { data: maxRow } = await db.from('pa_runs')
-        .select('started_at').eq('workspace_id', ws).eq('trigger','refresh')
-        .order('started_at', {ascending:false}).limit(1).maybeSingle();
-      if (maxRow?.started_at) {
-        const since = new Date(new Date(maxRow.started_at).getTime() - 5*60*1000).toISOString();
-        const { data: rows } = await db.from('pa_runs')
-          .select('account_id, pins_updated, started_at')
-          .eq('workspace_id', ws).eq('trigger','refresh').gte('started_at', since);
-        for (const r of rows||[]) {
-          if (!r.account_id) continue;
-          changedMap.set(r.account_id, (changedMap.get(r.account_id)||0) + Number(r.pins_updated||0));
+      const { data: recentRuns } = await db
+        .from('pa_runs')
+        .select('account_id, pins_updated, started_at')
+        .eq('workspace_id', ws)
+        .eq('trigger', 'refresh')
+        .order('started_at', { ascending: false })
+        .limit(300);
+
+      if (Array.isArray(recentRuns) && recentRuns.length > 0) {
+        const accountLatestTime = new Map<string, number>();
+        for (const r of recentRuns) {
+          if (!r.account_id || !r.started_at) continue;
+          const t = new Date(r.started_at).getTime();
+          if (!accountLatestTime.has(r.account_id) || t > accountLatestTime.get(r.account_id)!) {
+            accountLatestTime.set(r.account_id, t);
+          }
+        }
+
+        for (const r of recentRuns) {
+          if (!r.account_id || !r.started_at) continue;
+          const latestT = accountLatestTime.get(r.account_id);
+          if (!latestT) continue;
+          const t = new Date(r.started_at).getTime();
+          // Aggregate batches from the same run session (within 45 minutes of account's latest run)
+          if (latestT - t <= 45 * 60 * 1000) {
+            changedMap.set(r.account_id, (changedMap.get(r.account_id) || 0) + Number(r.pins_updated || 0));
+          }
         }
       }
     } catch (err) {
