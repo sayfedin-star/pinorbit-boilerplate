@@ -207,32 +207,35 @@ import Layout from '../../layouts/Layout.astro';
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5" id="mom-comparison-grid"></div>
     </div>
 
-    <!-- ═══ Growth Chart & Pinning Velocity Grid ═══ -->
+    <!-- ═══ Interactive Growth Trajectory & Pinning Velocity Grid ═══ -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       
       <!-- Visual Growth Chart Card (2 Cols) -->
       <div class="lg:col-span-2 rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        
+        <!-- Chart Header with Interactive Metric Tabs -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 class="text-xs sm:text-sm font-bold text-foreground">Historical Growth Trajectory</h3>
-            <p class="text-[11px] text-muted-foreground">Line chart of Monthly Reach &amp; Profile Views over time.</p>
+            <p class="text-[11px] text-muted-foreground">Dynamic curve scaling and historical pacing analytics.</p>
           </div>
-          <div class="flex items-center gap-3 text-xs font-semibold">
-            <div class="flex items-center gap-1.5">
-              <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-              <span class="text-foreground">Monthly Reach</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span class="h-2 w-2 rounded-full bg-sky-500"></span>
-              <span class="text-foreground">Profile Views</span>
-            </div>
+
+          <!-- Chart Metric Mode Selector -->
+          <div class="flex items-center gap-1 bg-muted/60 p-0.5 rounded-xl border border-border/60 overflow-x-auto self-start sm:self-auto">
+            <button data-chart-mode="reach_views" class="chart-mode-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-background text-foreground shadow-2xs transition-all whitespace-nowrap">🔥 Reach &amp; Views</button>
+            <button data-chart-mode="followers" class="chart-mode-btn px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all whitespace-nowrap">👥 Followers</button>
+            <button data-chart-mode="pins" class="chart-mode-btn px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all whitespace-nowrap">📌 Pins</button>
           </div>
         </div>
 
-        <!-- SVG Line Chart Canvas -->
+        <!-- SVG Line Chart Canvas with Dynamic Scale -->
         <div class="relative w-full overflow-hidden" id="chart-container">
           <svg id="growth-chart-svg" class="w-full h-56" viewBox="0 0 800 220" preserveAspectRatio="none"></svg>
+          <div id="chart-tooltip-box" class="hidden absolute pointer-events-none z-20 rounded-xl border border-border/80 bg-card/95 backdrop-blur-sm p-2 text-xs shadow-xl transition-opacity duration-150"></div>
         </div>
+
+        <!-- Dynamic Chart Legend -->
+        <div id="chart-dynamic-legend" class="flex items-center justify-end gap-4 text-xs font-semibold pt-1 border-t border-border/60"></div>
       </div>
 
       <!-- Pinning Velocity Metric Card (1 Col) -->
@@ -326,15 +329,51 @@ import Layout from '../../layouts/Layout.astro';
       </div>
     </div>
 
-    <!-- ═══ Snapshot Import History & Log Section ═══ -->
+    <!-- ═══ Snapshot Import History & Log Section (With Pagination, Page Size & Columns) ═══ -->
     <div class="rounded-2xl border border-border/80 bg-card shadow-xs overflow-hidden">
-      <!-- Section Header -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/80 px-5 py-3.5 bg-muted/20">
+      
+      <!-- Tier 1: Header & Display Controls -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/80 px-5 py-3 bg-muted/20">
         <div>
           <h2 class="text-xs sm:text-sm font-bold text-foreground">Import History &amp; Snapshot Log</h2>
-          <p class="text-[11px] text-muted-foreground">All historical snapshot records logged for this profile with snapshot deletion capability.</p>
+          <p class="text-[11px] text-muted-foreground">Historical snapshot log with customizable page size, column toggles, and deletion capability.</p>
         </div>
-        <div class="flex items-center gap-2.5 self-start sm:self-auto">
+
+        <div class="flex items-center gap-2.5 flex-wrap self-start sm:self-auto">
+          <!-- Segmented Display Toolbar -->
+          <div class="flex items-center rounded-xl border border-border bg-background p-0.5 shadow-2xs">
+            <!-- Number Format Toggle -->
+            <button id="snap-num-format-toggle-btn" class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all" title="Toggle Compact / Full number format">
+              <span class="text-[10px] font-mono">#</span>
+              <span id="snap-num-format-label">Full</span>
+            </button>
+
+            <div class="h-3.5 w-px bg-border my-auto"></div>
+
+            <!-- Page Size Dropdown -->
+            <div class="flex items-center px-1">
+              <label for="snapshots-page-size-select" class="sr-only">Snapshots per page</label>
+              <select id="snapshots-page-size-select" class="bg-transparent text-xs font-semibold text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer">
+                <option value="10">10 / page</option>
+                <option value="20" selected>20 / page</option>
+                <option value="50">50 / page</option>
+                <option value="all">All Snapshots</option>
+              </select>
+            </div>
+
+            <div class="h-3.5 w-px bg-border my-auto"></div>
+
+            <!-- Columns Dropdown -->
+            <div class="relative" id="snap-col-visibility-wrapper">
+              <button id="snap-col-visibility-btn" type="button" class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span>Columns</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div id="snap-col-visibility-menu" class="hidden absolute right-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-border bg-card shadow-lg p-2 space-y-0.5"></div>
+            </div>
+          </div>
+
           <span class="inline-flex items-center rounded-xl bg-primary/10 px-3 py-1 text-xs font-bold text-primary border border-primary/20" id="snapshots-count-badge">
             0 Snapshots
           </span>
@@ -343,17 +382,8 @@ import Layout from '../../layouts/Layout.astro';
 
       <!-- Snapshots Table -->
       <div class="overflow-x-auto min-w-full">
-        <table class="w-full text-left text-xs border-collapse">
-          <thead class="sticky top-0 z-10 border-b border-border/80 bg-card/95 backdrop-blur-sm text-foreground font-semibold">
-            <tr>
-              <th scope="col" class="py-3 px-5">Recorded Date &amp; Time</th>
-              <th scope="col" class="py-3 px-4 text-right">Monthly Reach</th>
-              <th scope="col" class="py-3 px-4 text-right">Profile Views</th>
-              <th scope="col" class="py-3 px-4 text-right">Followers</th>
-              <th scope="col" class="py-3 px-4 text-right">Total Pins</th>
-              <th scope="col" class="py-3 px-5 text-right">Actions</th>
-            </tr>
-          </thead>
+        <table class="w-full text-left text-xs border-collapse" id="competitor-snapshots-table">
+          <thead class="sticky top-0 z-10 border-b border-border/80 bg-card/95 backdrop-blur-sm text-foreground font-semibold"></thead>
           <tbody id="snapshots-table-body" class="divide-y divide-border/70 bg-card">
             <tr>
               <td colspan="6" class="p-8 text-center text-xs text-muted-foreground animate-pulse">Loading snapshot import log…</td>
@@ -361,9 +391,31 @@ import Layout from '../../layouts/Layout.astro';
           </tbody>
         </table>
       </div>
+
+      <!-- Snapshots Pagination Controls Bar -->
+      <div id="snapshots-pagination-bar" class="flex items-center justify-between border-t border-border/80 px-5 py-3 bg-muted/10 text-xs text-muted-foreground">
+        <span id="snapshots-pagination-info" class="font-medium">Showing 0 of 0 snapshots</span>
+        <div class="flex items-center gap-2">
+          <button
+            id="snapshots-prev-page-btn"
+            disabled
+            class="rounded-xl border border-border bg-background px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs cursor-pointer"
+          >
+            Previous
+          </button>
+          <span id="snapshots-page-indicator" class="font-bold text-foreground">Page 1 of 1</span>
+          <button
+            id="snapshots-next-page-btn"
+            disabled
+            class="rounded-xl border border-border bg-background px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs cursor-pointer"
+          >
+            Next
+          </button>
+        </div>
+      </div>
     </div>
 
-    <!-- ═══ Pinterest Board Strategy & Timeline Table ═══ -->
+    <!-- ═══ Pinterest Board Strategy & Timeline Table (With On-Demand Fast Load) ═══ -->
     <div class="rounded-2xl border border-border/80 bg-card shadow-xs overflow-hidden">
       <!-- Table Header Bar -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 px-5 py-3.5 bg-muted/20">
@@ -414,14 +466,23 @@ import Layout from '../../layouts/Layout.astro';
           </thead>
           <tbody id="boards-table-body" class="divide-y divide-border/70 bg-card">
             <tr>
-              <td colspan="6" class="p-8 text-center text-xs text-muted-foreground animate-pulse">Loading competitor boards…</td>
+              <td colspan="6" class="p-10 text-center">
+                <button
+                  id="load-boards-btn"
+                  type="button"
+                  class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all cursor-pointer"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>Load Boards</span>
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <!-- Boards Pagination Controls Bar -->
-      <div id="boards-pagination-bar" class="flex items-center justify-between border-t border-border/80 px-5 py-3 bg-muted/10 text-xs text-muted-foreground">
+      <div id="boards-pagination-bar" class="hidden flex items-center justify-between border-t border-border/80 px-5 py-3 bg-muted/10 text-xs text-muted-foreground">
         <span id="boards-pagination-info" class="font-medium">Showing 0 of 0 boards</span>
         <div class="flex items-center gap-2">
           <button
@@ -544,20 +605,6 @@ import Layout from '../../layouts/Layout.astro';
   const urlParams = new URLSearchParams(window.location.search);
   const competitorId = urlParams.get('id') || 'comp-1';
 
-  const deleteDeepdiveBtn = document.getElementById('delete-competitor-deepdive-btn');
-  if (deleteDeepdiveBtn) {
-    deleteDeepdiveBtn.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to remove this competitor from tracking? This will delete all snapshots and board history.')) {
-        try {
-          await deleteCompetitor(competitorId);
-          window.location.href = '/competitors';
-        } catch (err: any) {
-          showStatus(`Failed to delete: ${err.message}`, true);
-        }
-      }
-    });
-  }
-
   let competitorData: Competitor | null = null;
   let boardsList: CompetitorBoard[] = [];
   let boardsLoaded = false;
@@ -568,6 +615,36 @@ import Layout from '../../layouts/Layout.astro';
   let activeTimeRange = 'ALL';
   let selectedMonth = 'all';
   let isComparisonMode = false;
+  let activeChartMode: 'reach_views' | 'followers' | 'pins' = 'reach_views';
+
+  // Snapshot Table State
+  let isCompactNumbers = localStorage.getItem('cd_snap_num_fmt') === 'compact';
+  let snapshotPageSize: number | 'all' = 20;
+  let currentSnapshotPage = 1;
+
+  // Snapshot Columns Visibility State
+  interface SnapColDef {
+    key: string;
+    label: string;
+    defaultVisible: boolean;
+  }
+  const SNAP_COLUMN_DEFS: SnapColDef[] = [
+    { key: 'monthly_reach', label: 'Monthly Reach', defaultVisible: true },
+    { key: 'profile_views', label: 'Profile Views', defaultVisible: true },
+    { key: 'followers',     label: 'Followers',     defaultVisible: true },
+    { key: 'total_pins',    label: 'Total Pins',    defaultVisible: true },
+    { key: 'actions',       label: 'Actions',       defaultVisible: true },
+  ];
+
+  let snapColVisible: Record<string, boolean> = (() => {
+    try {
+      const saved = localStorage.getItem('cd_snap_cols_v1');
+      if (saved) {
+        return { monthly_reach: true, profile_views: true, followers: true, total_pins: true, actions: true, ...JSON.parse(saved) };
+      }
+    } catch {}
+    return { monthly_reach: true, profile_views: true, followers: true, total_pins: true, actions: true };
+  })();
 
   // Boards Pagination & Search State
   let boardSearchQuery = '';
@@ -575,82 +652,20 @@ import Layout from '../../layouts/Layout.astro';
   let currentBoardPage = 1;
   const boardsPageSize = 10;
 
-  // DOM Elements - Profile Header
-  const competitorAvatar = document.getElementById('competitor-avatar') as HTMLImageElement;
-  const competitorFullname = document.getElementById('competitor-fullname') as HTMLElement;
-  const competitorHandle = document.getElementById('competitor-handle') as HTMLElement;
-  const competitorNicheBadge = document.getElementById('competitor-niche-badge') as HTMLElement;
-  const competitorPinterestLink = document.getElementById('competitor-pinterest-link') as HTMLAnchorElement;
-  const competitorNotes = document.getElementById('competitor-notes') as HTMLElement;
-  const strategyAgeVal = document.getElementById('strategy-age-val') as HTMLElement;
-  const oldestBoardDateStr = document.getElementById('oldest-board-date-str') as HTMLElement;
+  // Number Formatters
+  function fmtNumberFull(n: number | string | null | undefined): string {
+    const num = Number(n) || 0;
+    return num.toLocaleString('en-US');
+  }
 
-  const competitorWebsiteContainer = document.getElementById('competitor-website-container') as HTMLElement;
-  const competitorWebsiteLink = document.getElementById('competitor-website-link') as HTMLAnchorElement;
-  const competitorWebsiteText = document.getElementById('competitor-website-text') as HTMLElement;
-  const competitorVerifiedBadge = document.getElementById('competitor-verified-badge') as HTMLElement;
-  const competitorLastPinStr = document.getElementById('competitor-last-pin-str') as HTMLElement;
+  function fmtNumberCompact(n: number | string | null | undefined): string {
+    const num = Number(n) || 0;
+    return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(num);
+  }
 
-  // DOM Elements - Primary Deltas
-  const currentReach = document.getElementById('current-reach') as HTMLElement;
-  const currentViews = document.getElementById('current-views') as HTMLElement;
-  const currentFollowers = document.getElementById('current-followers') as HTMLElement;
-  const currentPins = document.getElementById('current-pins') as HTMLElement;
-
-  const deltaReachBadge = document.getElementById('delta-reach-badge') as HTMLElement;
-  const deltaViewsBadge = document.getElementById('delta-views-badge') as HTMLElement;
-  const deltaFollowersBadge = document.getElementById('delta-followers-badge') as HTMLElement;
-  const deltaPinsBadge = document.getElementById('delta-pins-badge') as HTMLElement;
-
-  const deltaReachSub = document.getElementById('delta-reach-sub') as HTMLElement;
-  const deltaViewsSub = document.getElementById('delta-views-sub') as HTMLElement;
-  const deltaFollowersSub = document.getElementById('delta-followers-sub') as HTMLElement;
-  const deltaPinsSub = document.getElementById('delta-pins-sub') as HTMLElement;
-
-  // DOM Elements - Analytics Controls & Velocity
-  const rangeBtns = document.querySelectorAll<HTMLButtonElement>('.time-range-btn');
-  const snapshotMonthSelect = document.getElementById('snapshot-month-select') as HTMLSelectElement;
-  const toggleComparisonBtn = document.getElementById('toggle-comparison-mode-btn') as HTMLButtonElement;
-  const momComparisonPanel = document.getElementById('mom-comparison-panel') as HTMLElement;
-  const momMonthASelect = document.getElementById('mom-month-a') as HTMLSelectElement;
-  const momMonthBSelect = document.getElementById('mom-month-b') as HTMLSelectElement;
-  const momComparisonGrid = document.getElementById('mom-comparison-grid') as HTMLElement;
-
-  const pinningVelocityVal = document.getElementById('pinning-velocity-val') as HTMLElement;
-  const pinningVelocitySub = document.getElementById('pinning-velocity-sub') as HTMLElement;
-  const velocityPinsAdded = document.getElementById('velocity-pins-added') as HTMLElement;
-  const velocityDaysSpan = document.getElementById('velocity-days-span') as HTMLElement;
-  const velocityMonthlyRate = document.getElementById('velocity-monthly-rate') as HTMLElement;
-
-  // DOM Elements - Chart & Boards table
-  const growthChartSvg = document.getElementById('growth-chart-svg') as unknown as SVGElement;
-  const boardsTableBody = document.getElementById('boards-table-body') as HTMLElement;
-  const boardsCountBadge = document.getElementById('boards-count-badge') as HTMLElement;
-
-  const boardSearchInput = document.getElementById('board-search-input') as HTMLInputElement;
-  const boardSortSelect = document.getElementById('board-sort-select') as HTMLSelectElement;
-  const boardsPaginationInfo = document.getElementById('boards-pagination-info') as HTMLElement;
-  const boardsPrevPageBtn = document.getElementById('boards-prev-page-btn') as HTMLButtonElement;
-  const boardsNextPageBtn = document.getElementById('boards-next-page-btn') as HTMLButtonElement;
-  const boardsPageIndicator = document.getElementById('boards-page-indicator') as HTMLElement;
-
-  // DOM Elements - Snapshots Log Table
-  const snapshotsTableBody = document.getElementById('snapshots-table-body') as HTMLElement;
-  const snapshotsCountBadge = document.getElementById('snapshots-count-badge') as HTMLElement;
-
-  // DOM Elements - Status & Modal
-  const statusBanner = document.getElementById('deepdive-status-banner') as HTMLElement;
-  const statusText = document.getElementById('deepdive-status-text') as HTMLElement;
-  const dismissStatusBtn = document.getElementById('dismiss-deepdive-status') as HTMLElement;
-
-  const modal = document.getElementById('deepdive-payload-modal') as HTMLElement;
-  const openModalBtn = document.getElementById('open-deepdive-paste-modal') as HTMLElement;
-  const closeModalBtn = document.getElementById('close-deepdive-modal') as HTMLElement;
-  const cancelModalBtn = document.getElementById('cancel-deepdive-modal') as HTMLElement;
-  const modalForm = document.getElementById('deepdive-payload-form') as HTMLFormElement;
-  const modalError = document.getElementById('deepdive-modal-error') as HTMLElement;
-  const modalTextarea = document.getElementById('deepdive-payload-textarea') as HTMLTextAreaElement;
-  const modalDetectedSpan = document.getElementById('deepdive-detected-type') as HTMLElement;
+  function fmtSnapMetric(n: number | string | null | undefined): string {
+    return isCompactNumbers ? fmtNumberCompact(n) : fmtNumberFull(n);
+  }
 
   function formatDate(isoStr?: string | null, includeTime = false): string {
     if (!isoStr) return 'N/A';
@@ -670,7 +685,7 @@ import Layout from '../../layouts/Layout.astro';
       class="ml-1.5 text-[10px] font-bold ${isPositive ? 'text-emerald-500' : 'text-rose-500'}"
       role="status"
       aria-label="${label}"
-    >${isPositive ? `(+${formatNumber(Math.abs(diff))})` : `(−${formatNumber(Math.abs(diff))})`}</span>`;
+    >${isPositive ? `(+${fmtSnapMetric(Math.abs(diff))})` : `(−${fmtSnapMetric(Math.abs(diff))})`}</span>`;
   }
 
   function renderDeltaBadge(element: HTMLElement, subElement: HTMLElement, change: number, percent: number) {
@@ -691,6 +706,8 @@ import Layout from '../../layouts/Layout.astro';
   }
 
   function showStatus(msg: string, isError = false) {
+    const statusBanner = document.getElementById('deepdive-status-banner');
+    const statusText = document.getElementById('deepdive-status-text');
     if (!statusBanner || !statusText) return;
     statusText.textContent = msg;
     statusBanner.classList.remove('hidden');
@@ -701,15 +718,14 @@ import Layout from '../../layouts/Layout.astro';
     }
   }
 
-  if (dismissStatusBtn) {
-    dismissStatusBtn.addEventListener('click', () => statusBanner.classList.add('hidden'));
-  }
+  document.getElementById('dismiss-deepdive-status')?.addEventListener('click', () => {
+    document.getElementById('deepdive-status-banner')?.classList.add('hidden');
+  });
 
-  // ─── Core Analytics Logic ───
+  // ─── Filtered Snapshots ───
   function getFilteredSnapshots(): CompetitorSnapshot[] {
     if (!snapshotsList || snapshotsList.length === 0) return [];
     
-    // Sort chronologically
     const sorted = [...snapshotsList].sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
     const now = Date.now();
 
@@ -737,8 +753,10 @@ import Layout from '../../layouts/Layout.astro';
     return filtered.length > 0 ? filtered : sorted;
   }
 
-  // ─── Smooth SVG Growth Chart with Smart Label Sampling ───
+  // ─── Ultra-Precise Auto-Scaled SVG Growth Chart ───
   function renderVisualGrowthChart(snapshots: CompetitorSnapshot[]) {
+    const growthChartSvg = document.getElementById('growth-chart-svg');
+    const dynamicLegend = document.getElementById('chart-dynamic-legend');
     if (!growthChartSvg) return;
 
     if (!snapshots || snapshots.length === 0) {
@@ -747,12 +765,13 @@ import Layout from '../../layouts/Layout.astro';
           No historical snapshot data recorded yet.
         </text>
       `;
+      if (dynamicLegend) dynamicLegend.innerHTML = '';
       return;
     }
 
     const width = 800;
     const height = 220;
-    const paddingLeft = 65;
+    const paddingLeft = 70;
     const paddingRight = 30;
     const paddingTop = 20;
     const paddingBottom = 35;
@@ -760,43 +779,86 @@ import Layout from '../../layouts/Layout.astro';
     const chartWidth = width - paddingLeft - paddingRight;
     const chartHeight = height - paddingTop - paddingBottom;
 
-    const reaches = snapshots.map(s => s.profile_reach || 0);
-    const views = snapshots.map(s => s.profile_views || 0);
+    // Collect values depending on activeChartMode
+    let valuesA: number[] = [];
+    let valuesB: number[] = [];
+    let labelA = 'Monthly Reach';
+    let labelB = 'Profile Views';
+    let colorA = '#10b981'; // emerald
+    let colorB = '#0284c7'; // sky
 
-    const maxReach = Math.max(...reaches, ...views, 100);
-    const minReach = 0;
-
-    const points = snapshots.map((s, idx) => {
-      const x = paddingLeft + (snapshots.length === 1 ? chartWidth / 2 : (idx / (snapshots.length - 1)) * chartWidth);
-      const reachY = paddingTop + chartHeight - (((s.profile_reach || 0) - minReach) / (maxReach - minReach)) * chartHeight;
-      const viewsY = paddingTop + chartHeight - (((s.profile_views || 0) - minReach) / (maxReach - minReach)) * chartHeight;
-      const dateObj = new Date(s.recorded_at);
-      const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      return { x, reachY, viewsY, s, dateLabel };
-    });
-
-    let reachPathStr = '';
-    let viewsPathStr = '';
-
-    if (points.length === 1) {
-      reachPathStr = `M ${paddingLeft} ${points[0].reachY} L ${width - paddingRight} ${points[0].reachY}`;
-      viewsPathStr = `M ${paddingLeft} ${points[0].viewsY} L ${width - paddingRight} ${points[0].viewsY}`;
-    } else {
-      reachPathStr = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.reachY.toFixed(1)}`).join(' ');
-      viewsPathStr = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.viewsY.toFixed(1)}`).join(' ');
+    if (activeChartMode === 'reach_views') {
+      valuesA = snapshots.map(s => s.profile_reach || 0);
+      valuesB = snapshots.map(s => s.profile_views || 0);
+      labelA = 'Monthly Reach';
+      labelB = 'Profile Views';
+    } else if (activeChartMode === 'followers') {
+      valuesA = snapshots.map(s => s.follower_count || 0);
+      labelA = 'Followers';
+      colorA = '#a855f7'; // purple
+    } else if (activeChartMode === 'pins') {
+      valuesA = snapshots.map(s => s.pin_count || 0);
+      labelA = 'Total Pins';
+      colorA = '#e11d48'; // rose/primary
     }
 
-    // Grid lines
+    // Compute dynamic min/max with padding
+    const allVals = [...valuesA, ...(valuesB.length > 0 ? valuesB : [])].filter(v => typeof v === 'number');
+    let maxVal = Math.max(...allVals, 10);
+    let minVal = Math.min(...allVals, 0);
+
+    if (activeChartMode === 'followers' || activeChartMode === 'pins') {
+      // Auto-scale to emphasize delta
+      const range = maxVal - minVal;
+      const pad = range > 0 ? range * 0.15 : maxVal * 0.1;
+      maxVal = Math.ceil(maxVal + pad);
+      minVal = Math.max(0, Math.floor(minVal - pad));
+    } else {
+      minVal = 0;
+      maxVal = Math.ceil(maxVal * 1.05);
+    }
+
+    const valSpan = maxVal - minVal || 1;
+
+    // Build SVG points
+    const points = snapshots.map((s, idx) => {
+      const x = paddingLeft + (snapshots.length === 1 ? chartWidth / 2 : (idx / (snapshots.length - 1)) * chartWidth);
+      const valA = valuesA[idx] || 0;
+      const yA = paddingTop + chartHeight - ((valA - minVal) / valSpan) * chartHeight;
+      let yB: number | null = null;
+      if (valuesB.length > 0) {
+        const valB = valuesB[idx] || 0;
+        yB = paddingTop + chartHeight - ((valB - minVal) / valSpan) * chartHeight;
+      }
+      const dateObj = new Date(s.recorded_at);
+      const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return { x, yA, yB, s, dateLabel, valA, valB: valuesB[idx] };
+    });
+
+    let pathA = '';
+    let pathB = '';
+
+    if (points.length === 1) {
+      pathA = `M ${paddingLeft} ${points[0].yA} L ${width - paddingRight} ${points[0].yA}`;
+      if (points[0].yB !== null) pathB = `M ${paddingLeft} ${points[0].yB} L ${width - paddingRight} ${points[0].yB}`;
+    } else {
+      pathA = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.yA.toFixed(1)}`).join(' ');
+      if (valuesB.length > 0) {
+        pathB = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.yB!.toFixed(1)}`).join(' ');
+      }
+    }
+
+    // Grid lines with 4 tiers
     const gridLines = [0, 0.33, 0.66, 1].map(ratio => {
       const y = paddingTop + chartHeight * (1 - ratio);
-      const val = Math.round(minReach + ratio * (maxReach - minReach));
+      const val = Math.round(minVal + ratio * valSpan);
       return `
         <line x1="${paddingLeft}" y1="${y}" x2="${width - paddingRight}" y2="${y}" stroke="currentColor" class="text-border" stroke-dasharray="3,3" stroke-opacity="0.6"/>
-        <text x="${paddingLeft - 10}" y="${y + 3.5}" text-anchor="end" font-size="9" font-family="monospace" fill="currentColor" class="text-muted-foreground">${formatNumber(val)}</text>
+        <text x="${paddingLeft - 10}" y="${y + 3.5}" text-anchor="end" font-size="9.5" font-family="monospace" fill="currentColor" class="text-muted-foreground font-semibold">${fmtNumberCompact(val)}</text>
       `;
     }).join('');
 
-    // Sample X-axis labels to prevent label overlap
+    // Sample X-axis labels
     const maxLabels = 7;
     const step = Math.max(1, Math.ceil(points.length / maxLabels));
     const sampledPoints = points.filter((_, idx) => idx === 0 || idx === points.length - 1 || idx % step === 0);
@@ -805,26 +867,69 @@ import Layout from '../../layouts/Layout.astro';
       <text x="${p.x.toFixed(1)}" y="${height - 10}" text-anchor="middle" font-size="9.5" font-weight="500" fill="currentColor" class="text-muted-foreground">${p.dateLabel}</text>
     `).join('');
 
-    // Data point dots
-    const circles = points.map(p => `
-      <circle cx="${p.x.toFixed(1)}" cy="${p.reachY.toFixed(1)}" r="3.5" class="fill-emerald-500 stroke-card stroke-2 hover:scale-125 transition-transform cursor-pointer">
-        <title>Date: ${p.dateLabel}&#10;Monthly Reach: ${formatNumber(p.s.profile_reach)}</title>
-      </circle>
-      <circle cx="${p.x.toFixed(1)}" cy="${p.viewsY.toFixed(1)}" r="3.5" class="fill-sky-500 stroke-card stroke-2 hover:scale-125 transition-transform cursor-pointer">
-        <title>Date: ${p.dateLabel}&#10;Profile Views: ${formatNumber(p.s.profile_views)}</title>
+    // Interactive Points
+    const circlesA = points.map(p => `
+      <circle cx="${p.x.toFixed(1)}" cy="${p.yA.toFixed(1)}" r="3.5" fill="${colorA}" class="stroke-card stroke-2 hover:scale-125 transition-transform cursor-pointer">
+        <title>Date: ${p.dateLabel}&#10;${labelA}: ${formatNumber(p.valA)}</title>
       </circle>
     `).join('');
 
+    const circlesB = valuesB.length > 0 ? points.map(p => `
+      <circle cx="${p.x.toFixed(1)}" cy="${p.yB!.toFixed(1)}" r="3.5" fill="${colorB}" class="stroke-card stroke-2 hover:scale-125 transition-transform cursor-pointer">
+        <title>Date: ${p.dateLabel}&#10;${labelB}: ${formatNumber(p.valB)}</title>
+      </circle>
+    `).join('') : '';
+
     growthChartSvg.innerHTML = `
       ${gridLines}
-      <path d="${reachPathStr}" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="${viewsPathStr}" fill="none" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4,4"/>
-      ${circles}
+      <path d="${pathA}" fill="none" stroke="${colorA}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${pathB ? `<path d="${pathB}" fill="none" stroke="${colorB}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4,4"/>` : ''}
+      ${circlesA}
+      ${circlesB}
       ${xLabels}
     `;
+
+    // Dynamic Legend update
+    if (dynamicLegend) {
+      if (activeChartMode === 'reach_views') {
+        dynamicLegend.innerHTML = `
+          <div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span><span class="text-foreground">Monthly Reach</span></div>
+          <div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-sky-500"></span><span class="text-foreground">Profile Views</span></div>
+        `;
+      } else if (activeChartMode === 'followers') {
+        dynamicLegend.innerHTML = `
+          <div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-purple-500"></span><span class="text-foreground">Followers Trajectory</span></div>
+        `;
+      } else if (activeChartMode === 'pins') {
+        dynamicLegend.innerHTML = `
+          <div class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-rose-500"></span><span class="text-foreground">Pin Output Growth</span></div>
+        `;
+      }
+    }
   }
 
+  // ─── Chart Mode Switchers ───
+  const chartModeBtns = document.querySelectorAll<HTMLButtonElement>('.chart-mode-btn');
+  chartModeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      chartModeBtns.forEach(b => {
+        b.className = 'chart-mode-btn px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all whitespace-nowrap cursor-pointer';
+      });
+      btn.className = 'chart-mode-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-background text-foreground shadow-2xs transition-all whitespace-nowrap cursor-pointer';
+      activeChartMode = (btn.dataset.chartMode as any) || 'reach_views';
+      const filtered = getFilteredSnapshots();
+      renderVisualGrowthChart(filtered);
+    });
+  });
+
+  // ─── Pinning Velocity Calculator ───
   function calculatePinningVelocity(snapshots: CompetitorSnapshot[]) {
+    const pinningVelocityVal = document.getElementById('pinning-velocity-val');
+    const pinningVelocitySub = document.getElementById('pinning-velocity-sub');
+    const velocityPinsAdded = document.getElementById('velocity-pins-added');
+    const velocityDaysSpan = document.getElementById('velocity-days-span');
+    const velocityMonthlyRate = document.getElementById('velocity-monthly-rate');
+
     if (!pinningVelocityVal || !pinningVelocitySub) return;
 
     if (!snapshots || snapshots.length < 2) {
@@ -856,6 +961,7 @@ import Layout from '../../layouts/Layout.astro';
     if (velocityMonthlyRate) velocityMonthlyRate.textContent = `~${formatNumber(estimatedMonthly)} pins/mo`;
   }
 
+  // ─── Month Dropdown Populator ───
   function populateMonthDropdowns() {
     if (!snapshotsList || snapshotsList.length === 0) return;
 
@@ -870,6 +976,9 @@ import Layout from '../../layouts/Layout.astro';
     });
 
     const monthsArr = Array.from(monthsMap.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+    const snapshotMonthSelect = document.getElementById('snapshot-month-select') as HTMLSelectElement | null;
+    const momMonthASelect = document.getElementById('mom-month-a') as HTMLSelectElement | null;
+    const momMonthBSelect = document.getElementById('mom-month-b') as HTMLSelectElement | null;
 
     if (snapshotMonthSelect) {
       snapshotMonthSelect.innerHTML = `<option value="all">All Months</option>` +
@@ -888,12 +997,15 @@ import Layout from '../../layouts/Layout.astro';
     }
   }
 
+  // ─── MoM Comparison Engine ───
   function renderMoMComparison() {
+    const momComparisonGrid = document.getElementById('mom-comparison-grid');
+    const momMonthASelect = document.getElementById('mom-month-a') as HTMLSelectElement | null;
+    const momMonthBSelect = document.getElementById('mom-month-b') as HTMLSelectElement | null;
     if (!momComparisonGrid || !snapshotsList || snapshotsList.length === 0) return;
 
     const monthAKey = momMonthASelect?.value;
     const monthBKey = momMonthBSelect?.value;
-
     if (!monthAKey || !monthBKey) return;
 
     const snapshotsA = snapshotsList.filter(s => {
@@ -950,19 +1062,285 @@ import Layout from '../../layouts/Layout.astro';
     `;
   }
 
-  // ─── Boards Table & Pagination ───
-  async function loadBoardsData() {
+  // ─── Snapshot Table Column Visibility & Number Format ───
+  function buildSnapColVisibilityMenu() {
+    const colMenu = document.getElementById('snap-col-visibility-menu');
+    if (!colMenu) return;
+    colMenu.innerHTML = `
+      <div class="flex items-center justify-between pb-1 px-1 border-b border-border/80 text-[11px] font-semibold text-muted-foreground">
+        <span>Toggle Columns</span>
+        <button id="reset-snap-cols-btn" class="text-primary hover:underline text-[10px]">Reset</button>
+      </div>
+      <div class="space-y-0.5 max-h-60 overflow-y-auto pt-1">
+        ${SNAP_COLUMN_DEFS.map(
+          (c) => `
+          <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-muted/60 transition-colors text-xs font-medium text-foreground">
+            <input type="checkbox" class="rounded accent-primary h-3.5 w-3.5" data-snap-col-key="${c.key}" ${snapColVisible[c.key] ? 'checked' : ''} />
+            <span>${c.label}</span>
+          </label>`
+        ).join('')}
+      </div>`;
+
+    document.getElementById('reset-snap-cols-btn')?.addEventListener('click', () => {
+      SNAP_COLUMN_DEFS.forEach(c => { snapColVisible[c.key] = c.defaultVisible; });
+      localStorage.removeItem('cd_snap_cols_v1');
+      buildSnapColVisibilityMenu();
+      renderSnapshotsTableHeader();
+      renderSnapshotsLogTable();
+    });
+
+    colMenu.querySelectorAll<HTMLInputElement>('input[data-snap-col-key]').forEach((cb) => {
+      cb.addEventListener('change', () => {
+        const key = cb.dataset.snapColKey!;
+        snapColVisible[key] = cb.checked;
+        localStorage.setItem('cd_snap_cols_v1', JSON.stringify(snapColVisible));
+        renderSnapshotsTableHeader();
+        renderSnapshotsLogTable();
+      });
+    });
+  }
+
+  function setupSnapColVisibilityToggle() {
+    const btn = document.getElementById('snap-col-visibility-btn');
+    const colMenu = document.getElementById('snap-col-visibility-menu');
+    const wrapper = document.getElementById('snap-col-visibility-wrapper');
+    if (!btn || !colMenu) return;
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      colMenu.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (wrapper && !wrapper.contains(e.target as Node)) {
+        colMenu.classList.add('hidden');
+      }
+    });
+  }
+
+  function renderSnapshotsTableHeader() {
+    const thead = document.querySelector('#competitor-snapshots-table thead');
+    if (!thead) return;
+
+    let headersHtml = `
+      <tr>
+        <th scope="col" class="py-3 px-5">Recorded Date &amp; Time</th>
+    `;
+
+    if (snapColVisible.monthly_reach) headersHtml += `<th scope="col" class="py-3 px-4 text-right">Monthly Reach</th>`;
+    if (snapColVisible.profile_views) headersHtml += `<th scope="col" class="py-3 px-4 text-right">Profile Views</th>`;
+    if (snapColVisible.followers)     headersHtml += `<th scope="col" class="py-3 px-4 text-right">Followers</th>`;
+    if (snapColVisible.total_pins)    headersHtml += `<th scope="col" class="py-3 px-4 text-right">Total Pins</th>`;
+    if (snapColVisible.actions)       headersHtml += `<th scope="col" class="py-3 px-5 text-right">Actions</th>`;
+
+    headersHtml += `</tr>`;
+    thead.innerHTML = headersHtml;
+  }
+
+  // ─── Snapshots Log Table & Pagination Renderer ───
+  function renderSnapshotsLogTable() {
+    const snapshotsTableBody = document.getElementById('snapshots-table-body');
+    const snapshotsCountBadge = document.getElementById('snapshots-count-badge');
+    const paginationInfo = document.getElementById('snapshots-pagination-info');
+    const pageIndicator = document.getElementById('snapshots-page-indicator');
+    const prevBtn = document.getElementById('snapshots-prev-page-btn') as HTMLButtonElement | null;
+    const nextBtn = document.getElementById('snapshots-next-page-btn') as HTMLButtonElement | null;
+
+    if (!snapshotsTableBody) return;
+    if (snapshotsCountBadge) snapshotsCountBadge.textContent = `${snapshotsList.length} ${snapshotsList.length === 1 ? 'Snapshot' : 'Snapshots'}`;
+
+    if (!snapshotsList || snapshotsList.length === 0) {
+      snapshotsTableBody.innerHTML = `
+        <tr>
+          <td colspan="6" class="p-12 text-center text-xs text-muted-foreground bg-muted/10">
+            No historical snapshots recorded yet for this competitor.
+          </td>
+        </tr>
+      `;
+      if (paginationInfo) paginationInfo.textContent = 'Showing 0 of 0 snapshots';
+      if (pageIndicator) pageIndicator.textContent = 'Page 1 of 1';
+      if (prevBtn) prevBtn.disabled = true;
+      if (nextBtn) nextBtn.disabled = true;
+      return;
+    }
+
+    const chronoSorted = [...snapshotsList].sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
+    const displayList = [...chronoSorted].reverse();
+
+    // Compute Totals
+    let sumReachDiff = 0;
+    let sumViewsDiff = 0;
+    let sumFollowersDiff = 0;
+    let sumPinsDiff = 0;
+
+    chronoSorted.forEach((s, idx) => {
+      const prevSnap = idx > 0 ? chronoSorted[idx - 1] : null;
+      if (prevSnap) {
+        sumReachDiff += (s.profile_reach || 0) - (prevSnap.profile_reach || 0);
+        sumViewsDiff += (s.profile_views || 0) - (prevSnap.profile_views || 0);
+        sumFollowersDiff += (s.follower_count || 0) - (prevSnap.follower_count || 0);
+        sumPinsDiff += (s.pin_count || 0) - (prevSnap.pin_count || 0);
+      }
+    });
+
+    // Pagination slice
+    const totalItems = displayList.length;
+    const pageSize = snapshotPageSize === 'all' ? totalItems : snapshotPageSize;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    if (currentSnapshotPage > totalPages) currentSnapshotPage = totalPages;
+    if (currentSnapshotPage < 1) currentSnapshotPage = 1;
+
+    const startIdx = (currentSnapshotPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalItems);
+    const paginatedSlice = displayList.slice(startIdx, endIdx);
+
+    const rowsHtml = paginatedSlice
+      .map((s) => {
+        const chronoIdx = chronoSorted.findIndex(item => item.id === s.id);
+        const prevSnap = chronoIdx > 0 ? chronoSorted[chronoIdx - 1] : null;
+
+        const reachDiff = prevSnap ? (s.profile_reach || 0) - (prevSnap.profile_reach || 0) : 0;
+        const viewsDiff = prevSnap ? (s.profile_views || 0) - (prevSnap.profile_views || 0) : 0;
+        const followersDiff = prevSnap ? (s.follower_count || 0) - (prevSnap.follower_count || 0) : 0;
+        const pinsDiff = prevSnap ? (s.pin_count || 0) - (prevSnap.pin_count || 0) : 0;
+
+        let cellsHtml = `<td class="py-3 px-5 font-semibold text-foreground whitespace-nowrap">${formatDate(s.recorded_at, true)}</td>`;
+
+        if (snapColVisible.monthly_reach) {
+          cellsHtml += `<td class="py-3 px-4 text-right font-bold text-foreground font-mono tabular-nums whitespace-nowrap">${fmtSnapMetric(s.profile_reach || 0)}${formatDeltaSpan(reachDiff)}</td>`;
+        }
+        if (snapColVisible.profile_views) {
+          cellsHtml += `<td class="py-3 px-4 text-right font-semibold text-foreground font-mono tabular-nums whitespace-nowrap">${fmtSnapMetric(s.profile_views || 0)}${formatDeltaSpan(viewsDiff)}</td>`;
+        }
+        if (snapColVisible.followers) {
+          cellsHtml += `<td class="py-3 px-4 text-right text-foreground font-semibold font-mono tabular-nums whitespace-nowrap">${fmtSnapMetric(s.follower_count || 0)}${formatDeltaSpan(followersDiff)}</td>`;
+        }
+        if (snapColVisible.total_pins) {
+          cellsHtml += `<td class="py-3 px-4 text-right font-bold text-primary font-mono tabular-nums whitespace-nowrap">${fmtSnapMetric(s.pin_count || 0)}${formatDeltaSpan(pinsDiff)}</td>`;
+        }
+        if (snapColVisible.actions) {
+          cellsHtml += `
+            <td class="py-3 px-5 text-right">
+              <button
+                data-delete-snapshot-id="${s.id}"
+                class="delete-snapshot-btn inline-flex items-center justify-center h-7 w-7 rounded-xl border border-border bg-background hover:border-rose-500/50 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 transition-colors cursor-pointer shadow-2xs"
+                title="Delete Snapshot Record"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+              </button>
+            </td>
+          `;
+        }
+
+        return `<tr class="hover:bg-muted/40 transition-colors group">${cellsHtml}</tr>`;
+      })
+      .join('');
+
+    // Summary totals row
+    let totalsCells = `<th scope="row" class="py-2.5 px-5 text-xs text-foreground text-left">∑ Net Change</th>`;
+    if (snapColVisible.monthly_reach) totalsCells += `<td class="py-2.5 px-4 text-right font-mono tabular-nums">${sumReachDiff !== 0 ? `<span class="font-bold text-[11px] ${sumReachDiff > 0 ? 'text-emerald-500' : 'text-rose-500'}">(${sumReachDiff > 0 ? '+' : '−'}${fmtSnapMetric(Math.abs(sumReachDiff))})</span>` : '<span class="text-muted-foreground">—</span>'}</td>`;
+    if (snapColVisible.profile_views) totalsCells += `<td class="py-2.5 px-4 text-right font-mono tabular-nums">${sumViewsDiff !== 0 ? `<span class="font-bold text-[11px] ${sumViewsDiff > 0 ? 'text-emerald-500' : 'text-rose-500'}">(${sumViewsDiff > 0 ? '+' : '−'}${fmtSnapMetric(Math.abs(sumViewsDiff))})</span>` : '<span class="text-muted-foreground">—</span>'}</td>`;
+    if (snapColVisible.followers)     totalsCells += `<td class="py-2.5 px-4 text-right font-mono tabular-nums">${sumFollowersDiff !== 0 ? `<span class="font-bold text-[11px] ${sumFollowersDiff > 0 ? 'text-emerald-500' : 'text-rose-500'}">(${sumFollowersDiff > 0 ? '+' : '−'}${fmtSnapMetric(Math.abs(sumFollowersDiff))})</span>` : '<span class="text-muted-foreground">—</span>'}</td>`;
+    if (snapColVisible.total_pins)    totalsCells += `<td class="py-2.5 px-4 text-right font-mono tabular-nums text-primary">${sumPinsDiff !== 0 ? `<span class="font-bold text-[11px] ${sumPinsDiff > 0 ? 'text-emerald-500' : 'text-rose-500'}">(${sumPinsDiff > 0 ? '+' : '−'}${fmtSnapMetric(Math.abs(sumPinsDiff))})</span>` : '<span class="text-muted-foreground">—</span>'}</td>`;
+    if (snapColVisible.actions)       totalsCells += `<td class="py-2.5 px-5 text-right"></td>`;
+
+    const totalsRowHtml = `<tr class="bg-muted/30 font-bold border-b border-border/80">${totalsCells}</tr>`;
+
+    snapshotsTableBody.innerHTML = totalsRowHtml + rowsHtml;
+
+    // Pagination info
+    if (paginationInfo) paginationInfo.textContent = `Showing ${startIdx + 1}–${endIdx} of ${totalItems} snapshots`;
+    if (pageIndicator) pageIndicator.textContent = `Page ${currentSnapshotPage} of ${totalPages}`;
+    if (prevBtn) prevBtn.disabled = currentSnapshotPage <= 1;
+    if (nextBtn) nextBtn.disabled = currentSnapshotPage >= totalPages;
+
+    // Delete snapshot listeners
+    document.querySelectorAll('.delete-snapshot-btn').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        const snapId = (e.currentTarget as HTMLElement).getAttribute('data-delete-snapshot-id');
+        if (!snapId) return;
+
+        if (confirm('Are you sure you want to delete this snapshot entry from history?')) {
+          try {
+            await deleteCompetitorSnapshot(snapId);
+            showStatus('Snapshot record deleted successfully.');
+            await loadDetails();
+          } catch (err: any) {
+            showStatus(`Failed to delete snapshot: ${err.message}`, true);
+          }
+        }
+      });
+    });
+  }
+
+  // ─── Snapshots Number Format & Page Size Controls ───
+  const snapNumFormatToggleBtn = document.getElementById('snap-num-format-toggle-btn');
+  const snapNumFormatLabel = document.getElementById('snap-num-format-label');
+  const snapshotsPageSizeSelect = document.getElementById('snapshots-page-size-select') as HTMLSelectElement | null;
+  const snapshotsPrevPageBtn = document.getElementById('snapshots-prev-page-btn');
+  const snapshotsNextPageBtn = document.getElementById('snapshots-next-page-btn');
+
+  function updateSnapNumFormatUI() {
+    if (snapNumFormatLabel) snapNumFormatLabel.textContent = isCompactNumbers ? 'Compact' : 'Full';
+  }
+  snapNumFormatToggleBtn?.addEventListener('click', () => {
+    isCompactNumbers = !isCompactNumbers;
+    localStorage.setItem('cd_snap_num_fmt', isCompactNumbers ? 'compact' : 'full');
+    updateSnapNumFormatUI();
+    renderSnapshotsLogTable();
+  });
+  updateSnapNumFormatUI();
+
+  snapshotsPageSizeSelect?.addEventListener('change', () => {
+    const val = snapshotsPageSizeSelect.value;
+    snapshotPageSize = val === 'all' ? 'all' : parseInt(val, 10) || 20;
+    currentSnapshotPage = 1;
+    renderSnapshotsLogTable();
+  });
+
+  snapshotsPrevPageBtn?.addEventListener('click', () => {
+    if (currentSnapshotPage > 1) {
+      currentSnapshotPage--;
+      renderSnapshotsLogTable();
+    }
+  });
+
+  snapshotsNextPageBtn?.addEventListener('click', () => {
+    currentSnapshotPage++;
+    renderSnapshotsLogTable();
+  });
+
+  // ─── Fast-Loading Lazy Boards Engine ───
+  function attachLoadBoardsBtnHandler() {
+    const loadBtn = document.getElementById('load-boards-btn');
+    if (!loadBtn) return;
+    loadBtn.addEventListener('click', handleLoadBoards);
+  }
+
+  async function handleLoadBoards() {
+    const boardsTableBody = document.getElementById('boards-table-body');
+    const boardsPaginationBar = document.getElementById('boards-pagination-bar');
     if (!boardsTableBody) return;
+
     boardsTableBody.innerHTML = `
       <tr>
-        <td colspan="6" class="p-8 text-center text-xs text-muted-foreground animate-pulse">Loading competitor boards…</td>
+        <td colspan="6" class="p-8 text-center text-xs text-muted-foreground animate-pulse">
+          <div class="max-w-md mx-auto space-y-2.5">
+            <div class="h-3.5 bg-muted rounded w-3/4 mx-auto animate-pulse"></div>
+            <div class="h-3.5 bg-muted rounded w-1/2 mx-auto animate-pulse"></div>
+          </div>
+          <p class="mt-3 text-xs text-muted-foreground font-medium">Fetching Pinterest board strategy timeline…</p>
+        </td>
       </tr>
     `;
+
     try {
       const res = await getCompetitorBoardsOnly(competitorId);
       boardsList = res.boards || [];
       boardsLoaded = true;
+      const boardsCountBadge = document.getElementById('boards-count-badge');
       if (boardsCountBadge) boardsCountBadge.textContent = `${boardsList.length} ${boardsList.length === 1 ? 'Board' : 'Boards'}`;
+      if (boardsPaginationBar) boardsPaginationBar.classList.remove('hidden');
       currentBoardPage = 1;
       renderBoardsTable();
     } catch (err: any) {
@@ -974,11 +1352,18 @@ import Layout from '../../layouts/Layout.astro';
           </td>
         </tr>
       `;
-      document.getElementById('retry-boards-btn')?.addEventListener('click', loadBoardsData);
+      document.getElementById('retry-boards-btn')?.addEventListener('click', handleLoadBoards);
     }
   }
 
   function renderBoardsTable() {
+    const boardsTableBody = document.getElementById('boards-table-body');
+    const boardsCountBadge = document.getElementById('boards-count-badge');
+    const boardsPaginationInfo = document.getElementById('boards-pagination-info');
+    const boardsPageIndicator = document.getElementById('boards-page-indicator');
+    const boardsPrevPageBtn = document.getElementById('boards-prev-page-btn') as HTMLButtonElement | null;
+    const boardsNextPageBtn = document.getElementById('boards-next-page-btn') as HTMLButtonElement | null;
+
     if (!boardsTableBody) return;
 
     // Filter by search query
@@ -1021,7 +1406,6 @@ import Layout from '../../layouts/Layout.astro';
       return;
     }
 
-    // Pagination math
     const totalPages = Math.ceil(filtered.length / boardsPageSize);
     if (currentBoardPage > totalPages) currentBoardPage = totalPages;
     if (currentBoardPage < 1) currentBoardPage = 1;
@@ -1076,124 +1460,8 @@ import Layout from '../../layouts/Layout.astro';
     if (boardsNextPageBtn) boardsNextPageBtn.disabled = currentBoardPage >= totalPages;
   }
 
-  // ─── Snapshot History Log Table Renderer ───
-  const formatTotalDeltaSpan = (diff: number) => {
-    if (diff === 0) return '<span class="font-semibold text-[11px] text-muted-foreground">—</span>';
-    const isPos = diff > 0;
-    return `<span class="font-bold text-[11px] ${isPos ? 'text-emerald-500' : 'text-rose-500'}">(${isPos ? '+' : '−'}${formatNumber(Math.abs(diff))})</span>`;
-  };
-
-  function renderSnapshotsLogTable() {
-    if (!snapshotsTableBody) return;
-    if (snapshotsCountBadge) snapshotsCountBadge.textContent = `${snapshotsList.length} ${snapshotsList.length === 1 ? 'Snapshot' : 'Snapshots'}`;
-
-    if (!snapshotsList || snapshotsList.length === 0) {
-      snapshotsTableBody.innerHTML = `
-        <tr>
-          <td colspan="6" class="p-12 text-center text-xs text-muted-foreground bg-muted/10">
-            No historical snapshots recorded yet for this competitor.
-          </td>
-        </tr>
-      `;
-      return;
-    }
-
-    const chronoSorted = [...snapshotsList].sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
-    const displayList = [...chronoSorted].reverse();
-
-    let sumReachDiff = 0;
-    let sumViewsDiff = 0;
-    let sumFollowersDiff = 0;
-    let sumPinsDiff = 0;
-
-    const rowsHtml = displayList
-      .map((s) => {
-        const chronoIdx = chronoSorted.findIndex(item => item.id === s.id);
-        const prevSnap = chronoIdx > 0 ? chronoSorted[chronoIdx - 1] : null;
-
-        const reachDiff = prevSnap ? (s.profile_reach || 0) - (prevSnap.profile_reach || 0) : 0;
-        const viewsDiff = prevSnap ? (s.profile_views || 0) - (prevSnap.profile_views || 0) : 0;
-        const followersDiff = prevSnap ? (s.follower_count || 0) - (prevSnap.follower_count || 0) : 0;
-        const pinsDiff = prevSnap ? (s.pin_count || 0) - (prevSnap.pin_count || 0) : 0;
-
-        sumReachDiff += reachDiff;
-        sumViewsDiff += viewsDiff;
-        sumFollowersDiff += followersDiff;
-        sumPinsDiff += pinsDiff;
-
-        return `
-          <tr class="hover:bg-muted/40 transition-colors group">
-            <td class="py-3 px-5 font-semibold text-foreground whitespace-nowrap">
-              ${formatDate(s.recorded_at, true)}
-            </td>
-            <td class="py-3 px-4 text-right font-bold text-foreground font-mono tabular-nums whitespace-nowrap">
-              ${formatNumber(s.profile_reach || 0)}${formatDeltaSpan(reachDiff)}
-            </td>
-            <td class="py-3 px-4 text-right font-semibold text-foreground font-mono tabular-nums whitespace-nowrap">
-              ${formatNumber(s.profile_views || 0)}${formatDeltaSpan(viewsDiff)}
-            </td>
-            <td class="py-3 px-4 text-right text-foreground font-semibold font-mono tabular-nums whitespace-nowrap">
-              ${formatNumber(s.follower_count || 0)}${formatDeltaSpan(followersDiff)}
-            </td>
-            <td class="py-3 px-4 text-right font-bold text-primary font-mono tabular-nums whitespace-nowrap">
-              ${formatNumber(s.pin_count || 0)}${formatDeltaSpan(pinsDiff)}
-            </td>
-            <td class="py-3 px-5 text-right">
-              <button
-                data-delete-snapshot-id="${s.id}"
-                class="delete-snapshot-btn inline-flex items-center justify-center h-7 w-7 rounded-xl border border-border bg-background hover:border-rose-500/50 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 transition-colors cursor-pointer shadow-2xs"
-                title="Delete Snapshot Record"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-              </button>
-            </td>
-          </tr>
-        `;
-      })
-      .join('');
-
-    const totalsRowHtml = `
-      <tr class="bg-muted/30 font-bold border-b border-border/80">
-        <th scope="row" class="py-2.5 px-5 text-xs text-foreground text-left">
-          ∑ Net Change
-        </th>
-        <td class="py-2.5 px-4 text-right font-mono tabular-nums">
-          ${formatTotalDeltaSpan(sumReachDiff)}
-        </td>
-        <td class="py-2.5 px-4 text-right font-mono tabular-nums">
-          ${formatTotalDeltaSpan(sumViewsDiff)}
-        </td>
-        <td class="py-2.5 px-4 text-right font-mono tabular-nums">
-          ${formatTotalDeltaSpan(sumFollowersDiff)}
-        </td>
-        <td class="py-2.5 px-4 text-right font-mono tabular-nums text-primary">
-          ${formatTotalDeltaSpan(sumPinsDiff)}
-        </td>
-        <td class="py-2.5 px-5 text-right"></td>
-      </tr>
-    `;
-
-    snapshotsTableBody.innerHTML = totalsRowHtml + rowsHtml;
-
-    document.querySelectorAll('.delete-snapshot-btn').forEach((btn) => {
-      btn.addEventListener('click', async (e) => {
-        const snapId = (e.currentTarget as HTMLElement).getAttribute('data-delete-snapshot-id');
-        if (!snapId) return;
-
-        if (confirm('Are you sure you want to delete this snapshot entry from history?')) {
-          try {
-            await deleteCompetitorSnapshot(snapId);
-            showStatus('Snapshot record deleted successfully.');
-            await loadDetails();
-          } catch (err: any) {
-            showStatus(`Failed to delete snapshot: ${err.message}`, true);
-          }
-        }
-      });
-    });
-  }
-
   // ─── Filter & Control Event Listeners ───
+  const rangeBtns = document.querySelectorAll<HTMLButtonElement>('.time-range-btn');
   rangeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       rangeBtns.forEach(b => {
@@ -1208,65 +1476,56 @@ import Layout from '../../layouts/Layout.astro';
     });
   });
 
-  if (snapshotMonthSelect) {
-    snapshotMonthSelect.addEventListener('change', () => {
-      selectedMonth = snapshotMonthSelect.value;
-      const filtered = getFilteredSnapshots();
-      renderVisualGrowthChart(filtered);
-      calculatePinningVelocity(filtered);
-    });
-  }
+  const snapshotMonthSelect = document.getElementById('snapshot-month-select');
+  snapshotMonthSelect?.addEventListener('change', () => {
+    selectedMonth = (snapshotMonthSelect as HTMLSelectElement).value;
+    const filtered = getFilteredSnapshots();
+    renderVisualGrowthChart(filtered);
+    calculatePinningVelocity(filtered);
+  });
 
-  if (toggleComparisonBtn && momComparisonPanel) {
-    toggleComparisonBtn.addEventListener('click', () => {
-      isComparisonMode = !isComparisonMode;
-      if (isComparisonMode) {
-        momComparisonPanel.classList.remove('hidden');
-        toggleComparisonBtn.className = 'inline-flex h-8 items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 text-primary px-3 text-xs font-bold transition-all shadow-2xs cursor-pointer';
-        renderMoMComparison();
-      } else {
-        momComparisonPanel.classList.add('hidden');
-        toggleComparisonBtn.className = 'inline-flex h-8 items-center gap-1.5 rounded-xl border border-border/80 bg-muted/40 hover:bg-muted px-3 text-xs font-semibold text-foreground shadow-2xs transition-all cursor-pointer';
-      }
-    });
-  }
+  const toggleComparisonBtn = document.getElementById('toggle-comparison-mode-btn');
+  const momComparisonPanel = document.getElementById('mom-comparison-panel');
+  toggleComparisonBtn?.addEventListener('click', () => {
+    isComparisonMode = !isComparisonMode;
+    if (isComparisonMode) {
+      momComparisonPanel?.classList.remove('hidden');
+      toggleComparisonBtn.className = 'inline-flex h-8 items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 text-primary px-3 text-xs font-bold transition-all shadow-2xs cursor-pointer';
+      renderMoMComparison();
+    } else {
+      momComparisonPanel?.classList.add('hidden');
+      toggleComparisonBtn.className = 'inline-flex h-8 items-center gap-1.5 rounded-xl border border-border/80 bg-muted/40 hover:bg-muted px-3 text-xs font-semibold text-foreground shadow-2xs transition-all cursor-pointer';
+    }
+  });
 
-  if (momMonthASelect && momMonthBSelect) {
-    momMonthASelect.addEventListener('change', renderMoMComparison);
-    momMonthBSelect.addEventListener('change', renderMoMComparison);
-  }
+  document.getElementById('mom-month-a')?.addEventListener('change', renderMoMComparison);
+  document.getElementById('mom-month-b')?.addEventListener('change', renderMoMComparison);
 
-  if (boardSearchInput) {
-    boardSearchInput.addEventListener('input', () => {
-      boardSearchQuery = boardSearchInput.value.trim();
-      currentBoardPage = 1;
+  const boardSearchInput = document.getElementById('board-search-input');
+  boardSearchInput?.addEventListener('input', () => {
+    boardSearchQuery = (boardSearchInput as HTMLInputElement).value.trim();
+    currentBoardPage = 1;
+    renderBoardsTable();
+  });
+
+  const boardSortSelect = document.getElementById('board-sort-select');
+  boardSortSelect?.addEventListener('change', () => {
+    boardSortKey = (boardSortSelect as HTMLSelectElement).value;
+    currentBoardPage = 1;
+    renderBoardsTable();
+  });
+
+  document.getElementById('boards-prev-page-btn')?.addEventListener('click', () => {
+    if (currentBoardPage > 1) {
+      currentBoardPage--;
       renderBoardsTable();
-    });
-  }
+    }
+  });
 
-  if (boardSortSelect) {
-    boardSortSelect.addEventListener('change', () => {
-      boardSortKey = boardSortSelect.value;
-      currentBoardPage = 1;
-      renderBoardsTable();
-    });
-  }
-
-  if (boardsPrevPageBtn) {
-    boardsPrevPageBtn.addEventListener('click', () => {
-      if (currentBoardPage > 1) {
-        currentBoardPage--;
-        renderBoardsTable();
-      }
-    });
-  }
-
-  if (boardsNextPageBtn) {
-    boardsNextPageBtn.addEventListener('click', () => {
-      currentBoardPage++;
-      renderBoardsTable();
-    });
-  }
+  document.getElementById('boards-next-page-btn')?.addEventListener('click', () => {
+    currentBoardPage++;
+    renderBoardsTable();
+  });
 
   // ─── Main Details Loader ───
   async function loadDetails() {
@@ -1275,6 +1534,35 @@ import Layout from '../../layouts/Layout.astro';
       competitorData = details.competitor;
       snapshotsList = details.snapshots || [];
       deltasData = details.deltas;
+
+      const competitorAvatar = document.getElementById('competitor-avatar') as HTMLImageElement | null;
+      const competitorFullname = document.getElementById('competitor-fullname');
+      const competitorHandle = document.getElementById('competitor-handle');
+      const competitorNicheBadge = document.getElementById('competitor-niche-badge');
+      const competitorNotes = document.getElementById('competitor-notes');
+      const strategyAgeVal = document.getElementById('strategy-age-val');
+      const oldestBoardDateStr = document.getElementById('oldest-board-date-str');
+      const competitorPinterestLink = document.getElementById('competitor-pinterest-link') as HTMLAnchorElement | null;
+      const competitorWebsiteContainer = document.getElementById('competitor-website-container');
+      const competitorWebsiteLink = document.getElementById('competitor-website-link') as HTMLAnchorElement | null;
+      const competitorWebsiteText = document.getElementById('competitor-website-text');
+      const competitorVerifiedBadge = document.getElementById('competitor-verified-badge');
+      const competitorLastPinStr = document.getElementById('competitor-last-pin-str');
+
+      const currentReach = document.getElementById('current-reach');
+      const currentViews = document.getElementById('current-views');
+      const currentFollowers = document.getElementById('current-followers');
+      const currentPins = document.getElementById('current-pins');
+
+      const deltaReachBadge = document.getElementById('delta-reach-badge');
+      const deltaViewsBadge = document.getElementById('delta-views-badge');
+      const deltaFollowersBadge = document.getElementById('delta-followers-badge');
+      const deltaPinsBadge = document.getElementById('delta-pins-badge');
+
+      const deltaReachSub = document.getElementById('delta-reach-sub');
+      const deltaViewsSub = document.getElementById('delta-views-sub');
+      const deltaFollowersSub = document.getElementById('delta-followers-sub');
+      const deltaPinsSub = document.getElementById('delta-pins-sub');
 
       if (!competitorData) {
         if (competitorFullname) competitorFullname.textContent = 'Competitor Not Found';
@@ -1288,8 +1576,8 @@ import Layout from '../../layouts/Layout.astro';
       if (competitorNicheBadge) competitorNicheBadge.textContent = competitorData.niche || 'General';
       if (competitorNotes) competitorNotes.textContent = competitorData.notes || 'No internal notes set for this competitor.';
 
-      const typeBadge = document.getElementById('competitor-type-badge') as HTMLElement;
-      const tagsContainer = document.getElementById('competitor-tags-container') as HTMLElement;
+      const typeBadge = document.getElementById('competitor-type-badge');
+      const tagsContainer = document.getElementById('competitor-tags-container');
 
       if (typeBadge) {
         if (competitorData.account_type === 'own') {
@@ -1347,10 +1635,10 @@ import Layout from '../../layouts/Layout.astro';
       if (currentPins) currentPins.textContent = formatNumber(competitorData.pin_count || 0);
 
       if (deltasData) {
-        renderDeltaBadge(deltaReachBadge, deltaReachSub, deltasData.reachChange, deltasData.reachPercent);
-        renderDeltaBadge(deltaViewsBadge, deltaViewsSub, deltasData.viewsChange, deltasData.viewsPercent);
-        renderDeltaBadge(deltaFollowersBadge, deltaFollowersSub, deltasData.followersChange, deltasData.followersPercent);
-        renderDeltaBadge(deltaPinsBadge, deltaPinsSub, deltasData.pinsChange, deltasData.pinsPercent);
+        if (deltaReachBadge && deltaReachSub) renderDeltaBadge(deltaReachBadge, deltaReachSub, deltasData.reachChange, deltasData.reachPercent);
+        if (deltaViewsBadge && deltaViewsSub) renderDeltaBadge(deltaViewsBadge, deltaViewsSub, deltasData.viewsChange, deltasData.viewsPercent);
+        if (deltaFollowersBadge && deltaFollowersSub) renderDeltaBadge(deltaFollowersBadge, deltaFollowersSub, deltasData.followersChange, deltasData.followersPercent);
+        if (deltaPinsBadge && deltaPinsSub) renderDeltaBadge(deltaPinsBadge, deltaPinsSub, deltasData.pinsChange, deltasData.pinsPercent);
       }
 
       populateMonthDropdowns();
@@ -1362,6 +1650,7 @@ import Layout from '../../layouts/Layout.astro';
         renderMoMComparison();
       }
 
+      renderSnapshotsTableHeader();
       renderSnapshotsLogTable();
     } catch (e: any) {
       console.error('Error loading competitor details:', e);
@@ -1373,12 +1662,30 @@ import Layout from '../../layouts/Layout.astro';
   document.getElementById('refresh-competitor-btn')?.addEventListener('click', () => {
     const icon = document.getElementById('refresh-competitor-icon');
     icon?.classList.add('animate-spin');
-    Promise.all([loadDetails(), loadBoardsData()]).finally(() => {
+    loadDetails().finally(() => {
       setTimeout(() => icon?.classList.remove('animate-spin'), 400);
     });
   });
 
+  // Delete Competitor listener
+  document.getElementById('delete-competitor-deepdive-btn')?.addEventListener('click', async () => {
+    if (confirm('Are you sure you want to remove this competitor from tracking? This will delete all snapshots and board history.')) {
+      try {
+        await deleteCompetitor(competitorId);
+        window.location.href = '/competitors';
+      } catch (err: any) {
+        showStatus(`Failed to delete: ${err.message}`, true);
+      }
+    }
+  });
+
   // Modal Handlers
+  const modal = document.getElementById('deepdive-payload-modal');
+  const modalForm = document.getElementById('deepdive-payload-form') as HTMLFormElement | null;
+  const modalError = document.getElementById('deepdive-modal-error');
+  const modalTextarea = document.getElementById('deepdive-payload-textarea') as HTMLTextAreaElement | null;
+  const modalDetectedSpan = document.getElementById('deepdive-detected-type');
+
   function openModal() {
     if (modalError) modalError.classList.add('hidden');
     if (modalForm) modalForm.reset();
@@ -1399,9 +1706,9 @@ import Layout from '../../layouts/Layout.astro';
     }
   }
 
-  if (openModalBtn) openModalBtn.addEventListener('click', openModal);
-  if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
-  if (cancelModalBtn) cancelModalBtn.addEventListener('click', closeModal);
+  document.getElementById('open-deepdive-paste-modal')?.addEventListener('click', openModal);
+  document.getElementById('close-deepdive-modal')?.addEventListener('click', closeModal);
+  document.getElementById('cancel-deepdive-modal')?.addEventListener('click', closeModal);
 
   if (modalTextarea) {
     modalTextarea.addEventListener('input', () => {
@@ -1437,14 +1744,14 @@ import Layout from '../../layouts/Layout.astro';
   if (modalForm) {
     modalForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const payloadText = modalTextarea.value.trim();
+      const payloadText = modalTextarea?.value.trim() || '';
       try {
         const res = await ingestDevToolsPayload(competitorId, payloadText);
         if (res.success) {
           closeModal();
           showStatus(res.message);
           await loadDetails();
-          await loadBoardsData();
+          if (boardsLoaded) await handleLoadBoards();
         } else {
           if (modalError) {
             modalError.textContent = res.message;
@@ -1460,7 +1767,11 @@ import Layout from '../../layouts/Layout.astro';
     });
   }
 
-  // Load details & boards on start
-  loadDetails();
-  loadBoardsData();
+  // ─── Initialization ───
+  document.addEventListener('DOMContentLoaded', () => {
+    buildSnapColVisibilityMenu();
+    setupSnapColVisibilityToggle();
+    attachLoadBoardsBtnHandler();
+    loadDetails();
+  });
 </script>
