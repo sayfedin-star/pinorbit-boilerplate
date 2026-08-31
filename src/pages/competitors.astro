@@ -698,7 +698,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
   let page = 1;
   let rowsPerPage = Number(localStorage.getItem('po_comp_rows') || 10);
   let isCompactNumbers = localStorage.getItem('po_comp_num_fmt') === 'compact';
-  let isCompactDensity = localStorage.getItem('po_comp_density') === 'compact';
+  let isCompactDensity = localStorage.getItem('po_comp_density') !== 'comfortable';
   let archivedUsernames = new Set<string>();
   let hiddenProfileIds = new Set<string>();
 
@@ -1085,11 +1085,21 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
         return `<th scope="col" class="py-3 px-4 w-10 text-center"><input type="checkbox" id="select-all-cb" ${isAllSelected ? 'checked' : ''} class="rounded accent-primary h-3.5 w-3.5" title="Select all filtered profiles"/></th>`;
       }
       
+      const isMetricWithDelta = ['reach', 'views', 'followers', 'pins'].includes(c.key);
       const alignClass = c.align === 'right' ? 'text-right' : (c.align === 'center' ? 'text-center' : 'text-left');
       const sortClass = sortable ? 'cursor-pointer select-none hover:text-primary transition-colors' : '';
       const activeSortStyle = sk && sortKey === sk ? 'text-primary font-bold' : 'text-muted-foreground';
 
-      return `<th scope="col" ${ariaSort} class="py-3 px-4 text-xs font-semibold ${alignClass} ${sortClass} ${activeSortStyle}" ${sortable ? `data-sort-col="${c.key}"` : ''}>${c.label}${arrow}</th>`;
+      if (isMetricWithDelta) {
+        return `<th scope="col" ${ariaSort} class="py-2.5 px-4 text-xs font-semibold ${sortClass} ${activeSortStyle}" ${sortable ? `data-sort-col="${c.key}"` : ''}>
+          <div class="flex items-center justify-end gap-1.5 w-full">
+            <span>${c.label}${arrow}</span>
+            <span class="inline-block w-[72px] invisible text-[10px] select-none">—</span>
+          </div>
+        </th>`;
+      }
+
+      return `<th scope="col" ${ariaSort} class="py-2.5 px-4 text-xs font-semibold ${alignClass} ${sortClass} ${activeSortStyle}" ${sortable ? `data-sort-col="${c.key}"` : ''}>${c.label}${arrow}</th>`;
     }).join('')}</tr>`;
 
     thead.querySelectorAll<HTMLElement>('[data-sort-col]').forEach(th => {

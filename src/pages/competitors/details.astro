@@ -366,7 +366,7 @@ import Layout from '../../layouts/Layout.astro';
             <!-- Table Density Toggle (Comfortable / Compact) -->
             <button id="snap-density-toggle-btn" class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer" title="Toggle Comfortable / Compact row spacing">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-              <span id="snap-density-label">Comfortable</span>
+              <span id="snap-density-label">Compact</span>
             </button>
 
             <div class="h-3.5 w-px bg-border my-auto"></div>
@@ -375,9 +375,9 @@ import Layout from '../../layouts/Layout.astro';
             <div class="flex items-center px-1.5">
               <label for="snapshots-page-size-select" class="sr-only">Snapshots timeframe</label>
               <select id="snapshots-page-size-select" class="bg-transparent text-xs font-semibold text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer">
-                <option value="7">7 Snapshots (7 Days)</option>
+                <option value="7" selected>7 Snapshots (7 Days)</option>
                 <option value="14">14 Snapshots (14 Days)</option>
-                <option value="30" selected>30 Snapshots (30 Days)</option>
+                <option value="30">30 Snapshots (30 Days)</option>
                 <option value="all">All Snapshots</option>
               </select>
             </div>
@@ -638,14 +638,14 @@ import Layout from '../../layouts/Layout.astro';
   let isComparisonMode = false;
   let activeChartMode: 'reach' | 'views' | 'followers' | 'pins' | 'dual' = 'reach';
 
-  // Snapshot Table Density & Number Format State
-  let isComfortableDensity = localStorage.getItem('cd_table_density') !== 'compact';
+  // Snapshot Table Density & Number Format State (Defaults: Compact density, Full numbers, 7 Snapshots)
+  let isComfortableDensity = localStorage.getItem('cd_table_density') === 'comfortable';
   let isCompactNumbers = localStorage.getItem('cd_snap_num_fmt') === 'compact';
   let snapshotPageSize: number | 'all' = (() => {
     const saved = localStorage.getItem('cd_snap_page_size');
     if (saved === 'all') return 'all';
-    const num = parseInt(saved || '30', 10);
-    return isNaN(num) ? 30 : num;
+    const num = parseInt(saved || '7', 10);
+    return isNaN(num) ? 7 : num;
   })();
   let currentSnapshotPage = 1;
 
@@ -1250,11 +1250,35 @@ import Layout from '../../layouts/Layout.astro';
         <th scope="col" class="${padClass} px-5 text-foreground font-semibold">Recorded Date &amp; Time</th>
     `;
 
-    if (snapColVisible.monthly_reach) headersHtml += `<th scope="col" class="${padClass} px-4 text-right min-w-[160px] text-foreground font-semibold">Monthly Reach</th>`;
-    if (snapColVisible.profile_views) headersHtml += `<th scope="col" class="${padClass} px-4 text-right min-w-[160px] text-foreground font-semibold">Profile Views</th>`;
-    if (snapColVisible.followers)     headersHtml += `<th scope="col" class="${padClass} px-4 text-right min-w-[160px] text-foreground font-semibold">Followers</th>`;
-    if (snapColVisible.total_pins)    headersHtml += `<th scope="col" class="${padClass} px-4 text-right min-w-[160px] text-foreground font-semibold">Total Pins</th>`;
-    if (snapColVisible.actions)       headersHtml += `<th scope="col" class="${padClass} px-5 text-right text-foreground font-semibold">Actions</th>`;
+    if (snapColVisible.monthly_reach) headersHtml += `
+      <th scope="col" class="${padClass} px-4 min-w-[160px] text-foreground font-semibold">
+        <div class="flex items-center justify-end gap-1.5 w-full">
+          <span>Monthly Reach</span>
+          <span class="inline-block w-[72px] invisible text-[10px] select-none">—</span>
+        </div>
+      </th>`;
+    if (snapColVisible.profile_views) headersHtml += `
+      <th scope="col" class="${padClass} px-4 min-w-[160px] text-foreground font-semibold">
+        <div class="flex items-center justify-end gap-1.5 w-full">
+          <span>Profile Views</span>
+          <span class="inline-block w-[72px] invisible text-[10px] select-none">—</span>
+        </div>
+      </th>`;
+    if (snapColVisible.followers) headersHtml += `
+      <th scope="col" class="${padClass} px-4 min-w-[160px] text-foreground font-semibold">
+        <div class="flex items-center justify-end gap-1.5 w-full">
+          <span>Followers</span>
+          <span class="inline-block w-[72px] invisible text-[10px] select-none">—</span>
+        </div>
+      </th>`;
+    if (snapColVisible.total_pins) headersHtml += `
+      <th scope="col" class="${padClass} px-4 min-w-[160px] text-foreground font-semibold">
+        <div class="flex items-center justify-end gap-1.5 w-full">
+          <span>Total Pins</span>
+          <span class="inline-block w-[72px] invisible text-[10px] select-none">—</span>
+        </div>
+      </th>`;
+    if (snapColVisible.actions) headersHtml += `<th scope="col" class="${padClass} px-5 text-right text-foreground font-semibold">Actions</th>`;
 
     headersHtml += `</tr>`;
     thead.innerHTML = headersHtml;
@@ -1364,13 +1388,19 @@ import Layout from '../../layouts/Layout.astro';
 
     // Summary totals row (Accurately computed for the selected slice)
     function formatTotalDeltaSlot(diff: number) {
-      if (diff === 0) return '<div class="flex items-center justify-end w-full text-right"><span class="font-mono text-muted-foreground text-xs">—</span></div>';
+      if (diff === 0) return `
+        <div class="flex items-center justify-end gap-1.5 w-full">
+          <span class="font-mono text-muted-foreground text-xs">—</span>
+          <span class="inline-block w-[72px] invisible text-[10px] select-none">—</span>
+        </div>
+      `;
       const isPos = diff > 0;
       return `
-        <div class="flex items-center justify-end w-full text-right">
+        <div class="flex items-center justify-end gap-1.5 w-full text-right">
           <span class="font-extrabold text-xs font-mono tabular-nums ${isPos ? 'text-emerald-500' : 'text-rose-500'}">
             (${isPos ? '+' : '−'}${fmtSnapMetric(Math.abs(diff))})
           </span>
+          <span class="inline-block w-[72px] invisible text-[10px] select-none">—</span>
         </div>
       `;
     }
