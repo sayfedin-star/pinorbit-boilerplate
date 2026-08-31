@@ -133,12 +133,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   // 4. GitHub Relay
-  const tok = runtimeEnv.GH_REFRESH_TOKEN || (typeof process !== 'undefined' ? process.env.GH_REFRESH_TOKEN : '');
+  const tok =
+    runtimeEnv.GH_REFRESH_TOKEN ||
+    runtimeEnv.GITHUB_DISPATCH_TOKEN ||
+    (typeof process !== 'undefined' ? process.env.GH_REFRESH_TOKEN || process.env.GITHUB_DISPATCH_TOKEN : '');
   if (!tok || !String(tok).trim()) {
     return json({ success: false, error: 'refresh_not_configured' }, 503);
   }
 
-  const dispatchUrl = 'https://api.github.com/repos/sayfedin-star/pinorbit-v2/actions/workflows/pinarchive-pipeline.yml/dispatches';
+  const githubRepo =
+    (runtimeEnv.GITHUB_REPO as string) ||
+    (typeof process !== 'undefined' ? process.env.GITHUB_REPO : '') ||
+    'sayfedin-star/pinorbit-v2';
+
+  const dispatchUrl = `https://api.github.com/repos/${githubRepo}/actions/workflows/pinarchive-pipeline.yml/dispatches`;
   const dispatchPayload = {
     ref: 'main',
     inputs: {
