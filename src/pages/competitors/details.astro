@@ -1,492 +1,608 @@
 ---
+export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 ---
 
 <Layout title="Competitor Deep-Dive & Analytics Engine" description="Historical growth trajectory, Month-over-Month comparisons, pinning velocity, and board timeline analytics.">
-  <!-- Back Button & Action Controls Header -->
-  <div class="mb-4 flex items-center justify-between">
-    <a href="/competitors" class="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-      <span>Back to Competitors Workspace</span>
-    </a>
+  <div id="competitor-details-page-root" class="space-y-6">
+    
+    <!-- ═══ Top Navigation & Primary Action Controls ═══ -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <a href="/competitors" class="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors group">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-muted-foreground group-hover:-translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        <span>Back to Competitors Workspace</span>
+      </a>
 
-    <div class="flex items-center gap-2.5">
-      <button
-        id="delete-competitor-deepdive-btn"
-        class="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3.5 py-2 text-xs font-semibold text-rose-500 hover:bg-rose-500/20 transition-all"
-        title="Delete Competitor"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-        <span>Delete Competitor</span>
-      </button>
+      <!-- Action Toolbar -->
+      <div class="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+        <button
+          id="refresh-competitor-btn"
+          type="button"
+          class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border/80 bg-card px-3 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/80 shadow-2xs transition-all cursor-pointer"
+          title="Refresh competitor analytics"
+        >
+          <svg id="refresh-competitor-icon" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+          <span class="hidden sm:inline">Refresh</span>
+        </button>
 
-      <button
-        id="open-deepdive-paste-modal"
-        class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500 transition-all"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+        <button
+          id="delete-competitor-deepdive-btn"
+          type="button"
+          class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 shadow-2xs transition-all cursor-pointer"
+          title="Delete Competitor"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          <span>Delete</span>
+        </button>
+
+        <button
+          id="open-deepdive-paste-modal"
+          type="button"
+          class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all cursor-pointer"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+          </svg>
+          <span>Paste DevTools Payload</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══ Status Notification Banner ═══ -->
+    <div id="deepdive-status-banner" class="hidden rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-600 dark:text-emerald-400 flex items-center justify-between shadow-2xs animate-in fade-in duration-200">
+      <div class="flex items-center gap-2.5">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
         </svg>
-        <span>Paste DevTools Payload</span>
+        <span id="deepdive-status-text" class="font-medium">Competitor data updated successfully.</span>
+      </div>
+      <button id="dismiss-deepdive-status" class="text-emerald-500 hover:text-emerald-400 cursor-pointer p-1">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-  </div>
 
-  <!-- Status Notification Banner -->
-  <div id="deepdive-status-banner" class="hidden mb-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs text-emerald-600 dark:text-emerald-400 flex items-center justify-between shadow-sm">
-    <div class="flex items-center gap-2.5">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-      </svg>
-      <span id="deepdive-status-text">Competitor data updated successfully.</span>
-    </div>
-    <button id="dismiss-deepdive-status" class="text-emerald-500 hover:text-emerald-400">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-  </div>
-
-  <!-- Profile Header Card -->
-  <div class="rounded-2xl border border-border bg-card p-6 shadow-sm mb-6 relative overflow-hidden" id="profile-header-card">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-      <div class="flex items-start gap-4">
-        <img
-          id="competitor-avatar"
-          src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80"
-          alt="Avatar"
-          class="h-16 w-16 rounded-2xl object-cover border-2 border-border shadow-md flex-shrink-0"
-        />
-        <div class="space-y-1">
-          <div class="flex flex-wrap items-center gap-3">
-            <h1 class="text-xl font-bold tracking-tight text-foreground" id="competitor-fullname">Loading...</h1>
-            <span id="competitor-type-badge" class="rounded-full bg-purple-500/10 px-2.5 py-0.5 text-xs font-bold text-purple-500 border border-purple-500/20">🎯 Competitor</span>
-            <span class="rounded-full bg-primary/10 px-3 py-0.5 text-xs font-semibold text-primary" id="competitor-niche-badge">General</span>
-            <div id="competitor-tags-container" class="flex flex-wrap items-center gap-1"></div>
+    <!-- ═══ Profile Hero Card ═══ -->
+    <div class="rounded-2xl border border-border/80 bg-card/60 backdrop-blur-sm p-5 sm:p-6 shadow-xs relative overflow-hidden" id="profile-header-card">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        
+        <!-- Left: Avatar & Meta -->
+        <div class="flex items-start gap-4">
+          <div class="relative">
+            <img
+              id="competitor-avatar"
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80"
+              alt="Avatar"
+              class="h-16 w-16 rounded-2xl object-cover border border-border/80 shadow-2xs flex-shrink-0 bg-muted"
+            />
           </div>
-          <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span id="competitor-handle">@username</span>
-            <span>•</span>
-            <a
-              id="competitor-pinterest-link"
-              href="#"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-            >
-              <span>View on Pinterest</span>
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </a>
-            <span id="competitor-website-container" class="hidden flex items-center gap-2">
+
+          <div class="space-y-1.5 min-w-0">
+            <div class="flex flex-wrap items-center gap-2.5">
+              <h1 class="text-lg sm:text-xl font-bold tracking-tight text-foreground" id="competitor-fullname">Loading…</h1>
+              <span id="competitor-type-badge" class="rounded-full bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-bold text-purple-600 dark:text-purple-400 border border-purple-500/20">🎯 Competitor</span>
+              <span class="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary border border-primary/20" id="competitor-niche-badge">General</span>
+              <div id="competitor-tags-container" class="flex flex-wrap items-center gap-1"></div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span id="competitor-handle" class="font-medium text-foreground">@username</span>
               <span>•</span>
               <a
-                id="competitor-website-link"
+                id="competitor-pinterest-link"
                 href="#"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="inline-flex items-center gap-1 font-medium text-foreground hover:text-primary hover:underline"
+                class="inline-flex items-center gap-1 font-medium text-primary hover:underline"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                <span id="competitor-website-text">website.com</span>
+                <span>View on Pinterest</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               </a>
-              <span id="competitor-verified-badge" class="hidden rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500 border border-emerald-500/20">✓ Verified Domain</span>
-            </span>
-          </div>
-          <div class="flex items-center gap-2 text-[11px] text-muted-foreground pt-0.5">
-            <span id="competitor-last-pin-str">Last Pin: N/A</span>
-          </div>
-          <p class="text-xs text-muted-foreground pt-1 max-w-2xl" id="competitor-notes">No notes provided.</p>
-        </div>
-      </div>
+              <span id="competitor-website-container" class="hidden flex items-center gap-2">
+                <span>•</span>
+                <a
+                  id="competitor-website-link"
+                  href="#"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-1 font-medium text-foreground hover:text-primary hover:underline"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  <span id="competitor-website-text">website.com</span>
+                </a>
+                <span id="competitor-verified-badge" class="hidden rounded-full bg-emerald-500/10 px-2 py-0.2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">✓ Verified Domain</span>
+              </span>
+              <span>•</span>
+              <span id="competitor-last-pin-str" class="text-[11px] text-muted-foreground">Last Pin: N/A</span>
+            </div>
 
-      <!-- Strategy Age Metric Badge -->
-      <div class="flex items-center gap-4 bg-muted/30 rounded-xl p-4 border border-border/50 self-start md:self-auto">
-        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-        </div>
-        <div>
-          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Strategy Age (Oldest Board)</span>
-          <div class="text-base font-bold text-foreground" id="strategy-age-val">0 Days</div>
-          <span class="text-[10px] text-muted-foreground" id="oldest-board-date-str">Oldest board date</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Analytics Engine Filter & Controls Bar -->
-  <div class="rounded-2xl border border-border bg-card p-4 shadow-sm mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-    <!-- Quick Time Range Filter Buttons -->
-    <div class="flex items-center gap-1.5 flex-wrap">
-      <span class="text-xs font-semibold text-muted-foreground mr-2 flex items-center gap-1">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span>Time Range:</span>
-      </span>
-      <button data-range="7D" class="time-range-btn rounded-lg px-3 py-1.5 text-xs font-semibold bg-muted text-muted-foreground hover:text-foreground transition-all">7D</button>
-      <button data-range="30D" class="time-range-btn rounded-lg px-3 py-1.5 text-xs font-semibold bg-muted text-muted-foreground hover:text-foreground transition-all">30D</button>
-      <button data-range="90D" class="time-range-btn rounded-lg px-3 py-1.5 text-xs font-semibold bg-muted text-muted-foreground hover:text-foreground transition-all">90D</button>
-      <button data-range="YTD" class="time-range-btn rounded-lg px-3 py-1.5 text-xs font-semibold bg-muted text-muted-foreground hover:text-foreground transition-all">YTD</button>
-      <button data-range="ALL" class="time-range-btn rounded-lg px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground transition-all shadow-xs">ALL</button>
-    </div>
-
-    <!-- Month Picker & MoM Comparison Toggle -->
-    <div class="flex items-center gap-3 flex-wrap">
-      <div class="flex items-center gap-1.5">
-        <label for="snapshot-month-select" class="text-xs font-semibold text-muted-foreground">Month:</label>
-        <select id="snapshot-month-select" class="rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none">
-          <option value="all">All Months</option>
-        </select>
-      </div>
-
-      <button
-        id="toggle-comparison-mode-btn"
-        class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-muted/50 px-3.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-        <span>Compare Months</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Month-over-Month Comparison Panel (Toggleable) -->
-  <div id="mom-comparison-panel" class="hidden rounded-2xl border border-primary/30 bg-primary/5 p-6 shadow-sm mb-6 space-y-4">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-primary/15 pb-4">
-      <div class="flex items-center gap-2">
-        <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-        </div>
-        <div>
-          <h3 class="text-sm font-bold text-foreground">Month-over-Month Comparison Engine</h3>
-          <p class="text-xs text-muted-foreground">Select two distinct months to compute exact growth deltas and percentage shifts.</p>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-3 flex-wrap">
-        <div class="flex items-center gap-1.5">
-          <label for="mom-month-a" class="text-xs font-semibold text-muted-foreground">Base Month (A):</label>
-          <select id="mom-month-a" class="rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none"></select>
-        </div>
-        <span class="text-xs font-bold text-muted-foreground">vs</span>
-        <div class="flex items-center gap-1.5">
-          <label for="mom-month-b" class="text-xs font-semibold text-muted-foreground">Target Month (B):</label>
-          <select id="mom-month-b" class="rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none"></select>
-        </div>
-      </div>
-    </div>
-
-    <!-- MoM Results Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="mom-comparison-grid">
-      <!-- Populated via Client JS -->
-    </div>
-  </div>
-
-  <!-- Growth Chart & Pinning Velocity Grid -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-    <!-- Visual Growth Chart Card (2 Cols) -->
-    <div class="lg:col-span-2 rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <h3 class="text-sm font-bold text-foreground">Historical Growth Trajectory</h3>
-          <p class="text-xs text-muted-foreground">Line chart of Monthly Reach & Profile Views over time.</p>
-        </div>
-        <div class="flex items-center gap-4 text-xs font-medium">
-          <div class="flex items-center gap-1.5">
-            <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-            <span class="text-foreground font-semibold">Monthly Reach</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span class="h-2.5 w-2.5 rounded-full bg-sky-500"></span>
-            <span class="text-foreground font-semibold">Profile Views</span>
+            <p class="text-xs text-muted-foreground pt-0.5 max-w-2xl" id="competitor-notes">No internal notes set for this competitor.</p>
           </div>
         </div>
-      </div>
 
-      <!-- SVG Line Chart Canvas -->
-      <div class="relative w-full overflow-hidden" id="chart-container">
-        <svg id="growth-chart-svg" class="w-full h-56" viewBox="0 0 800 220" preserveAspectRatio="none">
-          <!-- Rendered via JavaScript -->
-        </svg>
-      </div>
-    </div>
-
-    <!-- Pinning Velocity Metric Card (1 Col) -->
-    <div class="rounded-2xl border border-border bg-card p-6 shadow-sm flex flex-col justify-between space-y-4">
-      <div>
-        <div class="flex items-center justify-between mb-1">
-          <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pinning Velocity</span>
-          <span class="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-bold text-amber-600 dark:text-amber-400">⚡ Output Speed</span>
-        </div>
-        <div class="text-3xl font-extrabold text-foreground tracking-tight" id="pinning-velocity-val">0.0 Pins/Day</div>
-        <p class="text-xs text-muted-foreground mt-1" id="pinning-velocity-sub">Average daily pin creation rate based on snapshot deltas.</p>
-      </div>
-
-      <div class="border-t border-border pt-4 space-y-3">
-        <div class="flex items-center justify-between text-xs">
-          <span class="text-muted-foreground">Pins Added (Selected Range):</span>
-          <span class="font-bold text-foreground" id="velocity-pins-added">+0</span>
-        </div>
-        <div class="flex items-center justify-between text-xs">
-          <span class="text-muted-foreground">Time Horizon Evaluated:</span>
-          <span class="font-bold text-foreground" id="velocity-days-span">0 days</span>
-        </div>
-        <div class="flex items-center justify-between text-xs">
-          <span class="text-muted-foreground">Pacing Estimate:</span>
-          <span class="font-bold text-primary" id="velocity-monthly-rate">~0 pins/mo</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Primary Metric Stat Cards -->
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-    <div class="rounded-xl border border-border bg-card p-5 shadow-sm space-y-2">
-      <div class="flex items-center justify-between">
-        <span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Monthly Reach</span>
-        <span id="delta-reach-badge" class="rounded px-2 py-0.5 text-[11px] font-bold">0%</span>
-      </div>
-      <div class="text-2xl font-bold tracking-tight text-foreground" id="current-reach">0</div>
-      <p class="text-[11px] text-muted-foreground" id="delta-reach-sub">vs previous snapshot</p>
-    </div>
-
-    <div class="rounded-xl border border-border bg-card p-5 shadow-sm space-y-2">
-      <div class="flex items-center justify-between">
-        <span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Profile Views</span>
-        <span id="delta-views-badge" class="rounded px-2 py-0.5 text-[11px] font-bold">0%</span>
-      </div>
-      <div class="text-2xl font-bold tracking-tight text-foreground" id="current-views">0</div>
-      <p class="text-[11px] text-muted-foreground" id="delta-views-sub">vs previous snapshot</p>
-    </div>
-
-    <div class="rounded-xl border border-border bg-card p-5 shadow-sm space-y-2">
-      <div class="flex items-center justify-between">
-        <span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Followers</span>
-        <span id="delta-followers-badge" class="rounded px-2 py-0.5 text-[11px] font-bold">0%</span>
-      </div>
-      <div class="text-2xl font-bold tracking-tight text-foreground" id="current-followers">0</div>
-      <p class="text-[11px] text-muted-foreground" id="delta-followers-sub">vs previous snapshot</p>
-    </div>
-
-    <div class="rounded-xl border border-border bg-card p-5 shadow-sm space-y-2">
-      <div class="flex items-center justify-between">
-        <span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Pins</span>
-        <span id="delta-pins-badge" class="rounded px-2 py-0.5 text-[11px] font-bold">0%</span>
-      </div>
-      <div class="text-2xl font-bold tracking-tight text-foreground" id="current-pins">0</div>
-      <p class="text-[11px] text-muted-foreground" id="delta-pins-sub">vs previous snapshot</p>
-    </div>
-  </div>
-
-  <!-- Snapshot Import History & Snapshot Log Section -->
-  <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden mb-8">
-    <div class="flex items-center justify-between border-b border-border px-6 py-4 bg-muted/30">
-      <div>
-        <h2 class="text-sm font-bold text-foreground">Import History & Snapshot Log</h2>
-        <p class="text-xs text-muted-foreground">All historical snapshot records logged for this profile with snapshot deletion capability.</p>
-      </div>
-      <span class="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary" id="snapshots-count-badge">
-        0 Snapshots
-      </span>
-    </div>
-
-    <div class="overflow-x-auto">
-      <table class="w-full text-left text-xs text-muted-foreground">
-        <thead class="border-b border-border bg-muted/40 text-foreground font-semibold">
-          <tr>
-            <th scope="col" class="py-3.5 px-6">Recorded Date & Time</th>
-            <th scope="col" class="py-3.5 px-4">Monthly Reach</th>
-            <th scope="col" class="py-3.5 px-4">Profile Views</th>
-            <th scope="col" class="py-3.5 px-4">Followers</th>
-            <th scope="col" class="py-3.5 px-4">Total Pins</th>
-            <th scope="col" class="py-3.5 px-6 text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="snapshots-table-body" class="divide-y divide-border">
-          <tr>
-            <td colspan="6" class="py-12 text-center">
-              <div class="max-w-md mx-auto space-y-3">
-                <div class="h-4 bg-muted skeleton-shimmer w-3/4"></div>
-                <div class="h-4 bg-muted skeleton-shimmer w-1/2"></div>
-                <div class="h-4 bg-muted skeleton-shimmer w-5/6"></div>
-                <div class="h-4 bg-muted skeleton-shimmer w-2/3"></div>
-              </div>
-              <p class="mt-4 text-xs text-muted-foreground">Loading snapshot import log...</p>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Board Strategy History Table & Controls -->
-  <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden mb-8">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border px-6 py-4 bg-muted/30">
-      <div>
-        <h2 class="text-sm font-bold text-foreground">Pinterest Board Strategy & Timeline</h2>
-        <p class="text-xs text-muted-foreground">Search, filter, and sort competitor boards with pagination.</p>
-      </div>
-
-      <!-- Board Search & Sort Controls -->
-      <div class="flex items-center gap-3 flex-wrap">
-        <!-- Quick Search -->
-        <div class="relative">
-          <input
-            type="text"
-            id="board-search-input"
-            placeholder="Search boards..."
-            class="h-8 rounded-lg border border-border bg-background pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-          />
-          <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        </div>
-
-        <!-- Sort Select -->
-        <select id="board-sort-select" class="h-8 rounded-lg border border-border bg-background px-2.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none">
-          <option value="most_pins">Sort by: Most Pins</option>
-          <option value="most_followers">Sort by: Most Followers</option>
-          <option value="recent_activity">Sort by: Recent Activity</option>
-          <option value="creation_date">Sort by: Creation Date</option>
-        </select>
-
-        <span class="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary" id="boards-count-badge">
-          0 Boards
-        </span>
-      </div>
-    </div>
-
-    <div class="overflow-x-auto">
-      <table class="w-full text-left text-xs text-muted-foreground">
-        <thead class="border-b border-border bg-muted/40 text-foreground font-semibold">
-          <tr>
-            <th scope="col" class="py-3.5 px-6">Board Name & Description</th>
-            <th scope="col" class="py-3.5 px-4">Creation Date (`created_at`)</th>
-            <th scope="col" class="py-3.5 px-4">Last Activity (`last_pinned_at`)</th>
-            <th scope="col" class="py-3.5 px-4">Pin Count</th>
-            <th scope="col" class="py-3.5 px-4">Followers</th>
-            <th scope="col" class="py-3.5 px-6 text-right">Link</th>
-          </tr>
-        </thead>
-        <tbody id="boards-table-body" class="divide-y divide-border">
-          <tr>
-            <td colspan="6" class="py-12 text-center">
-              <button
-                id="load-boards-btn"
-                aria-label="Load competitor boards data"
-                aria-describedby="boards-loading-status"
-                class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all cursor-pointer"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                <span>Load Boards</span>
-              </button>
-              <div id="boards-loading-status" class="sr-only">Click to load board strategy timeline</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Boards Pagination Controls Bar -->
-    <div id="boards-pagination-bar" class="flex items-center justify-between border-t border-border px-6 py-3 bg-muted/20 text-xs text-muted-foreground">
-      <span id="boards-pagination-info">Showing 0 of 0 boards</span>
-      <div class="flex items-center gap-2">
-        <button
-          id="boards-prev-page-btn"
-          disabled
-          class="rounded-lg border border-border bg-background px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-        >
-          Previous
-        </button>
-        <span id="boards-page-indicator" class="font-medium text-foreground">Page 1 of 1</span>
-        <button
-          id="boards-next-page-btn"
-          disabled
-          class="rounded-lg border border-border bg-background px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  </div>
-  <!-- DevTools JSON Payload Modal Integration -->
-  <div id="deepdive-payload-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4" aria-modal="true" role="dialog">
-    <div id="deepdive-payload-backdrop" class="fixed inset-0"></div>
-    <div class="relative w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 z-10">
-      <div class="flex items-center justify-between border-b border-border pb-4">
-        <div class="flex items-center gap-2.5">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+        <!-- Right: Strategy Age Metric Badge -->
+        <div class="flex items-center gap-3 bg-muted/40 rounded-2xl p-3.5 sm:p-4 border border-border/80 self-start lg:self-auto shadow-2xs">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
           </div>
           <div>
-            <h3 class="text-base font-bold text-foreground">Paste DevTools Payload for Competitor</h3>
-            <p class="text-[11px] text-muted-foreground">Auto-parse User Profile or Boards data for this competitor.</p>
+            <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Strategy Age (Oldest Board)</span>
+            <div class="text-base font-extrabold text-foreground font-mono tabular-nums" id="strategy-age-val">0 Days</div>
+            <span class="text-[10px] text-muted-foreground" id="oldest-board-date-str">Oldest board date</span>
           </div>
         </div>
-        <button id="close-deepdive-modal" class="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
+      </div>
+    </div>
+
+    <!-- ═══ Analytics Engine Filter & Controls Bar (Default: 7D) ═══ -->
+    <div class="rounded-2xl border border-border/80 bg-card p-3.5 sm:px-5 sm:py-3 shadow-xs flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      
+      <!-- Quick Time Range Filter Segmented Buttons (Default 7D) -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-xs font-bold text-muted-foreground mr-1 flex items-center gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>Time Range:</span>
+        </span>
+        <div class="flex items-center bg-muted/60 p-0.5 rounded-xl border border-border/60">
+          <button data-range="7D" class="time-range-btn rounded-lg px-2.5 py-1 text-xs font-bold bg-background text-foreground shadow-2xs transition-all cursor-pointer">7D</button>
+          <button data-range="30D" class="time-range-btn rounded-lg px-2.5 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer">30D</button>
+          <button data-range="90D" class="time-range-btn rounded-lg px-2.5 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer">90D</button>
+          <button data-range="YTD" class="time-range-btn rounded-lg px-2.5 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer">YTD</button>
+          <button data-range="ALL" class="time-range-btn rounded-lg px-2.5 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer">ALL</button>
+        </div>
       </div>
 
-      <div id="deepdive-modal-error" class="hidden rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-500"></div>
+      <!-- Month Picker & MoM Comparison Toggle -->
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <div class="flex items-center gap-1.5">
+          <label for="snapshot-month-select" class="text-xs font-bold text-muted-foreground">Month:</label>
+          <select id="snapshot-month-select" class="h-8 rounded-xl border border-border/80 bg-background px-3 text-xs font-medium text-foreground focus:border-primary focus:outline-none transition-colors shadow-2xs cursor-pointer">
+            <option value="all">All Months</option>
+          </select>
+        </div>
 
-      <form id="deepdive-payload-form" class="space-y-4">
-        <div class="space-y-1.5">
-          <label class="block text-xs font-semibold text-foreground">Payload Detection Badge</label>
-          <div class="flex h-10 items-center justify-between rounded-xl border border-border bg-muted/40 px-3 text-xs font-medium text-muted-foreground">
-            <span>Detected Endpoint:</span>
-            <span id="deepdive-detected-type" class="rounded bg-muted px-2 py-0.5 text-[10px] font-semibold text-foreground">Waiting for paste...</span>
+        <button
+          id="toggle-comparison-mode-btn"
+          type="button"
+          class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-border/80 bg-muted/40 hover:bg-muted px-3 text-xs font-semibold text-foreground shadow-2xs transition-all cursor-pointer"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Compare Months</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══ Month-over-Month Comparison Panel (Toggleable) ═══ -->
+    <div id="mom-comparison-panel" class="hidden rounded-2xl border border-primary/30 bg-primary/5 p-5 shadow-xs space-y-4 animate-in fade-in duration-200">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-primary/20 pb-3.5">
+        <div class="flex items-center gap-2.5">
+          <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <div>
+            <h3 class="text-xs sm:text-sm font-bold text-foreground">Month-over-Month Comparison Engine</h3>
+            <p class="text-[11px] text-muted-foreground">Select two distinct months to compute exact growth deltas and percentage shifts.</p>
           </div>
         </div>
 
-        <div class="space-y-1.5">
-          <label for="deepdive-payload-textarea" class="block text-xs font-semibold text-foreground">Raw Pinterest DevTools JSON Response *</label>
-          <textarea
-            id="deepdive-payload-textarea"
-            rows="8"
-            required
-            placeholder='Paste JSON response from UserResource or BoardsResource network requests...'
-            class="w-full rounded-xl border border-border bg-background py-2.5 px-3 font-mono text-[11px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          ></textarea>
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <div class="flex items-center gap-1.5">
+            <label for="mom-month-a" class="text-xs font-semibold text-muted-foreground">Base (A):</label>
+            <select id="mom-month-a" class="h-8 rounded-xl border border-border bg-background px-2.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none"></select>
+          </div>
+          <span class="text-xs font-bold text-muted-foreground">vs</span>
+          <div class="flex items-center gap-1.5">
+            <label for="mom-month-b" class="text-xs font-semibold text-muted-foreground">Target (B):</label>
+            <select id="mom-month-b" class="h-8 rounded-xl border border-border bg-background px-2.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- MoM Results Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5" id="mom-comparison-grid"></div>
+    </div>
+
+    <!-- ═══ PERFORMANCE TREND (Dynamic Scaling, Rich Curves & Min/Max/Latest Stats) ═══ -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Performance Trend Visual Card (2 Cols) -->
+      <div class="lg:col-span-2 rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4">
+        
+        <!-- Header: PERFORMANCE TREND + Metric Pills -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <h3 class="text-xs sm:text-sm font-extrabold tracking-wider uppercase text-foreground">PERFORMANCE TREND</h3>
+          </div>
+
+          <!-- Dynamic Metric Switcher Pills -->
+          <div class="flex items-center gap-1 bg-muted/60 p-0.5 rounded-xl border border-border/60 overflow-x-auto self-start sm:self-auto" id="chart-metric-pills">
+            <button data-chart-mode="reach" class="chart-mode-btn px-3 py-1 rounded-lg text-xs font-bold bg-primary text-primary-foreground shadow-2xs transition-all whitespace-nowrap cursor-pointer">Monthly Reach</button>
+            <button data-chart-mode="views" class="chart-mode-btn px-3 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all whitespace-nowrap cursor-pointer">Profile Views</button>
+            <button data-chart-mode="followers" class="chart-mode-btn px-3 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all whitespace-nowrap cursor-pointer">Followers</button>
+            <button data-chart-mode="pins" class="chart-mode-btn px-3 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all whitespace-nowrap cursor-pointer">Total Pins</button>
+            <button data-chart-mode="dual" class="chart-mode-btn px-3 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all whitespace-nowrap cursor-pointer">Dual View</button>
+          </div>
         </div>
 
-        <div class="flex items-center justify-end gap-3 border-t border-border pt-4">
+        <!-- Sub-header Meta Bar: Accurate Min/Max & Latest -->
+        <div class="flex items-center justify-between text-xs border-b border-border/60 pb-2">
+          <div class="flex items-center gap-2 font-mono text-[11px] text-muted-foreground" id="chart-min-max-stats">
+            <span>Min: <strong class="text-foreground font-bold" id="chart-stat-min">—</strong></span>
+            <span>•</span>
+            <span>Max: <strong class="text-foreground font-bold" id="chart-stat-max">—</strong></span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="inline-flex items-center gap-1 rounded-xl bg-muted px-2.5 py-1 text-xs font-mono font-bold text-foreground border border-border/60 shadow-2xs">
+              <span class="text-muted-foreground font-sans text-[11px]">Latest:</span>
+              <span id="chart-stat-latest">—</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- SVG Line Chart Canvas with Stable Interactive Tooltip Overlay -->
+        <div class="relative w-full overflow-hidden" id="chart-container">
+          <svg id="growth-chart-svg" class="w-full h-56" viewBox="0 0 800 220" preserveAspectRatio="none"></svg>
+          <div id="chart-tooltip-box" class="hidden absolute pointer-events-none z-30 rounded-xl border border-border/80 bg-card/95 backdrop-blur-md px-3 py-2 text-xs shadow-2xl transition-all duration-75 font-sans"></div>
+        </div>
+      </div>
+
+      <!-- Pinning Velocity Metric Card (1 Col) -->
+      <div class="rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4">
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[10.5px] font-semibold text-muted-foreground uppercase tracking-wider">Pinning Velocity</span>
+            <span class="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 border border-amber-500/20">⚡ Output Speed</span>
+          </div>
+          <div class="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight font-mono tabular-nums" id="pinning-velocity-val">0.0 Pins/Day</div>
+          <p class="text-xs text-muted-foreground mt-1" id="pinning-velocity-sub">Average daily pin creation rate based on snapshot deltas.</p>
+        </div>
+
+        <div class="border-t border-border/70 pt-4 space-y-2.5">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted-foreground">Pins Added (Selected Range):</span>
+            <span class="font-bold text-foreground font-mono tabular-nums" id="velocity-pins-added">+0</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted-foreground">Time Horizon Evaluated:</span>
+            <span class="font-bold text-foreground" id="velocity-days-span">0 days</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted-foreground">Pacing Estimate:</span>
+            <span class="font-bold text-primary font-mono tabular-nums" id="velocity-monthly-rate">~0 pins/mo</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ 4 Primary Metric Stat Cards ═══ -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <!-- Card 1: Reach -->
+      <div class="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs hover:border-emerald-500/30 transition-all flex flex-col justify-between group">
+        <div class="flex items-center justify-between">
+          <span class="text-[10.5px] font-semibold text-muted-foreground uppercase tracking-wider">Monthly Reach</span>
+          <span id="delta-reach-badge" class="rounded-full px-2 py-0.5 text-[10px] font-bold">0%</span>
+        </div>
+        <div>
+          <div class="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-100 mt-2 font-mono tabular-nums" id="current-reach">0</div>
+          <div class="mt-2 text-[11px] text-muted-foreground flex items-center gap-1.5" id="delta-reach-sub">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            <span>vs previous snapshot</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Views -->
+      <div class="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs hover:border-sky-500/30 transition-all flex flex-col justify-between group">
+        <div class="flex items-center justify-between">
+          <span class="text-[10.5px] font-semibold text-muted-foreground uppercase tracking-wider">Profile Views</span>
+          <span id="delta-views-badge" class="rounded-full px-2 py-0.5 text-[10px] font-bold">0%</span>
+        </div>
+        <div>
+          <div class="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-100 mt-2 font-mono tabular-nums" id="current-views">0</div>
+          <div class="mt-2 text-[11px] text-muted-foreground flex items-center gap-1.5" id="delta-views-sub">
+            <span class="h-1.5 w-1.5 rounded-full bg-sky-500"></span>
+            <span>vs previous snapshot</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Followers -->
+      <div class="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs hover:border-purple-500/30 transition-all flex flex-col justify-between group">
+        <div class="flex items-center justify-between">
+          <span class="text-[10.5px] font-semibold text-muted-foreground uppercase tracking-wider">Followers</span>
+          <span id="delta-followers-badge" class="rounded-full px-2 py-0.5 text-[10px] font-bold">0%</span>
+        </div>
+        <div>
+          <div class="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-100 mt-2 font-mono tabular-nums" id="current-followers">0</div>
+          <div class="mt-2 text-[11px] text-muted-foreground flex items-center gap-1.5" id="delta-followers-sub">
+            <span class="h-1.5 w-1.5 rounded-full bg-purple-500"></span>
+            <span>vs previous snapshot</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Total Pins -->
+      <div class="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs hover:border-primary/30 transition-all flex flex-col justify-between group">
+        <div class="flex items-center justify-between">
+          <span class="text-[10.5px] font-semibold text-muted-foreground uppercase tracking-wider">Total Pins</span>
+          <span id="delta-pins-badge" class="rounded-full px-2 py-0.5 text-[10px] font-bold">0%</span>
+        </div>
+        <div>
+          <div class="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-100 mt-2 font-mono tabular-nums" id="current-pins">0</div>
+          <div class="mt-2 text-[11px] text-muted-foreground flex items-center gap-1.5" id="delta-pins-sub">
+            <span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
+            <span>vs previous snapshot</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Snapshot Import History & Log Section (With Comfortable Toggle, Exact Alignment & Slice Net Change) ═══ -->
+    <div class="rounded-2xl border border-border/80 bg-card shadow-xs overflow-hidden">
+      
+      <!-- Tier 1: Header & Display Controls -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/80 px-5 py-3 bg-muted/20">
+        <div>
+          <h2 class="text-xs sm:text-sm font-bold text-foreground">Import History &amp; Snapshot Log</h2>
+          <p class="text-[11px] text-muted-foreground">Historical snapshot log with customizable timeframe, comfortable density, and column toggles.</p>
+        </div>
+
+        <div class="flex items-center gap-2.5 flex-wrap self-start sm:self-auto">
+          <!-- Segmented Display Toolbar -->
+          <div class="flex items-center rounded-xl border border-border bg-background p-0.5 shadow-2xs">
+            <!-- Number Format Toggle -->
+            <button id="snap-num-format-toggle-btn" class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer" title="Toggle Compact / Full number format">
+              <span class="text-[10px] font-mono">#</span>
+              <span id="snap-num-format-label">Full</span>
+            </button>
+
+            <div class="h-3.5 w-px bg-border my-auto"></div>
+
+            <!-- Table Density Toggle (Comfortable / Compact) -->
+            <button id="snap-density-toggle-btn" class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer" title="Toggle Comfortable / Compact row spacing">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+              <span id="snap-density-label">Compact</span>
+            </button>
+
+            <div class="h-3.5 w-px bg-border my-auto"></div>
+
+            <!-- Page Size Dropdown (7 / 14 / 30 / All) -->
+            <div class="flex items-center px-1.5">
+              <label for="snapshots-page-size-select" class="sr-only">Snapshots timeframe</label>
+              <select id="snapshots-page-size-select" class="bg-transparent text-xs font-semibold text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer">
+                <option value="7" selected>7 Snapshots (7 Days)</option>
+                <option value="14">14 Snapshots (14 Days)</option>
+                <option value="30">30 Snapshots (30 Days)</option>
+                <option value="all">All Snapshots</option>
+              </select>
+            </div>
+
+            <div class="h-3.5 w-px bg-border my-auto"></div>
+
+            <!-- Columns Dropdown -->
+            <div class="relative" id="snap-col-visibility-wrapper">
+              <button id="snap-col-visibility-btn" type="button" class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span>Columns</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div id="snap-col-visibility-menu" class="hidden absolute right-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-border bg-card shadow-lg p-2 space-y-0.5"></div>
+            </div>
+          </div>
+
+          <span class="inline-flex items-center rounded-xl bg-primary/10 px-3 py-1 text-xs font-bold text-primary border border-primary/20" id="snapshots-count-badge">
+            0 Snapshots
+          </span>
+        </div>
+      </div>
+
+      <!-- Snapshots Table -->
+      <div class="overflow-x-auto min-w-full">
+        <table class="w-full text-left text-xs border-collapse" id="competitor-snapshots-table">
+          <thead class="sticky top-0 z-10 border-b border-border/80 bg-card/95 backdrop-blur-sm text-foreground font-semibold"></thead>
+          <tbody id="snapshots-table-body" class="divide-y divide-border/70 bg-card">
+            <tr>
+              <td colspan="6" class="p-8 text-center text-xs text-muted-foreground animate-pulse">Loading snapshot import log…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Snapshots Pagination Controls Bar -->
+      <div id="snapshots-pagination-bar" class="flex items-center justify-between border-t border-border/80 px-5 py-3 bg-muted/10 text-xs text-muted-foreground">
+        <span id="snapshots-pagination-info" class="font-medium">Showing 0 of 0 snapshots</span>
+        <div class="flex items-center gap-2">
           <button
-            type="button"
-            id="cancel-deepdive-modal"
-            class="rounded-xl border border-border px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+            id="snapshots-prev-page-btn"
+            disabled
+            class="rounded-xl border border-border bg-background px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs cursor-pointer"
           >
-            Cancel
+            Previous
           </button>
+          <span id="snapshots-page-indicator" class="font-bold text-foreground">Page 1 of 1</span>
           <button
-            type="submit"
-            class="rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-semibold text-white shadow-md hover:bg-emerald-500 transition-all"
+            id="snapshots-next-page-btn"
+            disabled
+            class="rounded-xl border border-border bg-background px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs cursor-pointer"
           >
-            Parse & Ingest Payload
+            Next
           </button>
         </div>
-      </form>
+      </div>
+    </div>
+
+    <!-- ═══ Pinterest Board Strategy & Timeline Table (With On-Demand Fast Load) ═══ -->
+    <div class="rounded-2xl border border-border/80 bg-card shadow-xs overflow-hidden">
+      <!-- Table Header Bar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 px-5 py-3.5 bg-muted/20">
+        <div>
+          <h2 class="text-xs sm:text-sm font-bold text-foreground">Pinterest Board Strategy &amp; Timeline</h2>
+          <p class="text-[11px] text-muted-foreground">Search, filter, and sort competitor boards with pagination.</p>
+        </div>
+
+        <!-- Board Search & Sort Controls -->
+        <div class="flex items-center gap-2.5 flex-wrap self-start sm:self-auto">
+          <!-- Quick Search -->
+          <div class="relative">
+            <input
+              type="text"
+              id="board-search-input"
+              placeholder="Search boards…"
+              class="h-8.5 w-48 sm:w-56 rounded-xl border border-border/80 bg-background pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none transition-colors shadow-2xs"
+            />
+            <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+
+          <!-- Sort Select -->
+          <select id="board-sort-select" class="h-8.5 rounded-xl border border-border/80 bg-background px-3 text-xs font-medium text-foreground focus:border-primary focus:outline-none transition-colors shadow-2xs cursor-pointer">
+            <option value="most_pins">Sort by: Most Pins</option>
+            <option value="most_followers">Sort by: Most Followers</option>
+            <option value="recent_activity">Sort by: Recent Activity</option>
+            <option value="creation_date">Sort by: Creation Date</option>
+          </select>
+
+          <span class="inline-flex items-center rounded-xl bg-primary/10 px-3 py-1 text-xs font-bold text-primary border border-primary/20" id="boards-count-badge">
+            0 Boards
+          </span>
+        </div>
+      </div>
+
+      <!-- Boards Table Container -->
+      <div class="overflow-x-auto min-w-full">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead class="sticky top-0 z-10 border-b border-border/80 bg-card/95 backdrop-blur-sm text-foreground font-semibold">
+            <tr>
+              <th scope="col" class="py-3 px-5">Board Name &amp; Description</th>
+              <th scope="col" class="py-3 px-4">Created Date</th>
+              <th scope="col" class="py-3 px-4">Last Activity</th>
+              <th scope="col" class="py-3 px-4 text-right">Pin Count</th>
+              <th scope="col" class="py-3 px-4 text-right">Followers</th>
+              <th scope="col" class="py-3 px-5 text-right">Link</th>
+            </tr>
+          </thead>
+          <tbody id="boards-table-body" class="divide-y divide-border/70 bg-card">
+            <tr>
+              <td colspan="6" class="p-10 text-center">
+                <button
+                  id="load-boards-btn"
+                  type="button"
+                  class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all cursor-pointer"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>Load Boards</span>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Boards Pagination Controls Bar -->
+      <div id="boards-pagination-bar" class="hidden flex items-center justify-between border-t border-border/80 px-5 py-3 bg-muted/10 text-xs text-muted-foreground">
+        <span id="boards-pagination-info" class="font-medium">Showing 0 of 0 boards</span>
+        <div class="flex items-center gap-2">
+          <button
+            id="boards-prev-page-btn"
+            disabled
+            class="rounded-xl border border-border bg-background px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs cursor-pointer"
+          >
+            Previous
+          </button>
+          <span id="boards-page-indicator" class="font-bold text-foreground">Page 1 of 1</span>
+          <button
+            id="boards-next-page-btn"
+            disabled
+            class="rounded-xl border border-border bg-background px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs cursor-pointer"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ DevTools JSON Payload Modal Integration ═══ -->
+    <div id="deepdive-payload-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4" aria-modal="true" role="dialog">
+      <div id="deepdive-payload-backdrop" class="fixed inset-0"></div>
+      <div class="relative w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 z-10 animate-in fade-in zoom-in-95 duration-150">
+        <div class="flex items-center justify-between border-b border-border/80 pb-4">
+          <div class="flex items-center gap-3">
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-foreground">Paste DevTools Payload for Competitor</h3>
+              <p class="text-xs text-muted-foreground">Auto-parse User Profile or Boards network response for this competitor.</p>
+            </div>
+          </div>
+          <button id="close-deepdive-modal" class="rounded-xl p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div id="deepdive-modal-error" class="hidden rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-500 font-semibold"></div>
+
+        <form id="deepdive-payload-form" class="space-y-4">
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-foreground">Payload Detection Badge</label>
+            <div class="flex h-10 items-center justify-between rounded-xl border border-border bg-muted/40 px-3 text-xs font-medium text-muted-foreground">
+              <span>Detected Endpoint:</span>
+              <span id="deepdive-detected-type" class="rounded-lg bg-muted px-2.5 py-0.5 text-[11px] font-semibold text-foreground">Waiting for paste…</span>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="deepdive-payload-textarea" class="block text-xs font-semibold text-foreground">Raw Pinterest DevTools JSON Response *</label>
+            <textarea
+              id="deepdive-payload-textarea"
+              rows="8"
+              required
+              placeholder='Paste JSON response from UserResource or BoardsResource network requests…'
+              class="w-full rounded-xl border border-border bg-background py-2.5 px-3 font-mono text-[11px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
+            ></textarea>
+          </div>
+
+          <div class="flex items-center justify-end gap-2.5 border-t border-border/80 pt-4">
+            <button
+              type="button"
+              id="cancel-deepdive-modal"
+              class="rounded-xl border border-border bg-background px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="rounded-xl bg-primary px-5 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all cursor-pointer"
+            >
+              Parse &amp; Ingest Payload
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </Layout>
 
 <script>
   import { parsePinterestPayload } from '../../lib/competitors';
+  import type { Competitor, CompetitorBoard, CompetitorSnapshot, CompetitorDeltaStats } from '../../lib/types';
+  import { formatNumber } from '../../lib/ui-helpers';
 
   const escHtml = (s: any) => String(s ?? '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m] as string));
 
-  // ─── Server-only data access for Project 2 ───
+  // ─── Server-only data access ───
   async function apiJSON(url: string, opts: RequestInit = {}) {
     const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error((d as any).error || `HTTP ${r.status}`);
     return d as any;
-  }
-  async function getCompetitorDetails(id: string, lite = false, boardsOnly = false) {
-    const flags = boardsOnly ? '&boards_only=1' : (lite ? '&lite=1' : '');
-    return apiJSON(`/api/admin/competitors?id=${encodeURIComponent(id)}${flags}`);
   }
   async function getCompetitorLite(id: string) {
     return apiJSON(`/api/admin/competitors?id=${encodeURIComponent(id)}&lite=1`);
@@ -505,26 +621,10 @@ import Layout from '../../layouts/Layout.astro';
   async function ingestDevToolsPayload(competitorId: string, payloadText: string) {
     return apiJSON('/api/admin/competitors/ingest', { method: 'POST', body: JSON.stringify({ competitor_id: competitorId, payload: payloadText }) });
   }
-  import type { Competitor, CompetitorBoard, CompetitorSnapshot, CompetitorDeltaStats } from '../../lib/types';
-  import { formatNumber } from '../../lib/ui-helpers';
 
   // Get Competitor ID from URL Search Params
   const urlParams = new URLSearchParams(window.location.search);
   const competitorId = urlParams.get('id') || 'comp-1';
-
-  const deleteDeepdiveBtn = document.getElementById('delete-competitor-deepdive-btn');
-  if (deleteDeepdiveBtn) {
-    deleteDeepdiveBtn.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to remove this competitor from tracking? This will delete all snapshots and board history.')) {
-        try {
-          await deleteCompetitor(competitorId);
-          window.location.href = '/competitors';
-        } catch (err: any) {
-          showStatus(`Failed to delete: ${err.message}`, true);
-        }
-      }
-    });
-  }
 
   let competitorData: Competitor | null = null;
   let boardsList: CompetitorBoard[] = [];
@@ -532,10 +632,46 @@ import Layout from '../../layouts/Layout.astro';
   let snapshotsList: CompetitorSnapshot[] = [];
   let deltasData: CompetitorDeltaStats | null = null;
 
-  // Analytics Engine State
-  let activeTimeRange = 'ALL';
+  // Analytics Engine State (Default: 7D)
+  let activeTimeRange = '7D';
   let selectedMonth = 'all';
   let isComparisonMode = false;
+  let activeChartMode: 'reach' | 'views' | 'followers' | 'pins' | 'dual' = 'reach';
+
+  // Snapshot Table Density & Number Format State (Defaults: Compact density, Full numbers, 7 Snapshots)
+  let isComfortableDensity = localStorage.getItem('cd_table_density') === 'comfortable';
+  let isCompactNumbers = localStorage.getItem('cd_snap_num_fmt') === 'compact';
+  let snapshotPageSize: number | 'all' = (() => {
+    const saved = localStorage.getItem('cd_snap_page_size');
+    if (saved === 'all') return 'all';
+    const num = parseInt(saved || '7', 10);
+    return isNaN(num) ? 7 : num;
+  })();
+  let currentSnapshotPage = 1;
+
+  // Snapshot Columns Visibility State
+  interface SnapColDef {
+    key: string;
+    label: string;
+    defaultVisible: boolean;
+  }
+  const SNAP_COLUMN_DEFS: SnapColDef[] = [
+    { key: 'monthly_reach', label: 'Monthly Reach', defaultVisible: true },
+    { key: 'profile_views', label: 'Profile Views', defaultVisible: true },
+    { key: 'followers',     label: 'Followers',     defaultVisible: true },
+    { key: 'total_pins',    label: 'Total Pins',    defaultVisible: true },
+    { key: 'actions',       label: 'Actions',       defaultVisible: true },
+  ];
+
+  let snapColVisible: Record<string, boolean> = (() => {
+    try {
+      const saved = localStorage.getItem('cd_snap_cols_v1');
+      if (saved) {
+        return { monthly_reach: true, profile_views: true, followers: true, total_pins: true, actions: true, ...JSON.parse(saved) };
+      }
+    } catch {}
+    return { monthly_reach: true, profile_views: true, followers: true, total_pins: true, actions: true };
+  })();
 
   // Boards Pagination & Search State
   let boardSearchQuery = '';
@@ -543,82 +679,20 @@ import Layout from '../../layouts/Layout.astro';
   let currentBoardPage = 1;
   const boardsPageSize = 10;
 
-  // DOM Elements - Profile Header
-  const competitorAvatar = document.getElementById('competitor-avatar') as HTMLImageElement;
-  const competitorFullname = document.getElementById('competitor-fullname') as HTMLElement;
-  const competitorHandle = document.getElementById('competitor-handle') as HTMLElement;
-  const competitorNicheBadge = document.getElementById('competitor-niche-badge') as HTMLElement;
-  const competitorPinterestLink = document.getElementById('competitor-pinterest-link') as HTMLAnchorElement;
-  const competitorNotes = document.getElementById('competitor-notes') as HTMLElement;
-  const strategyAgeVal = document.getElementById('strategy-age-val') as HTMLElement;
-  const oldestBoardDateStr = document.getElementById('oldest-board-date-str') as HTMLElement;
+  // Number Formatters
+  function fmtNumberFull(n: number | string | null | undefined): string {
+    const num = Number(n) || 0;
+    return num.toLocaleString('en-US');
+  }
 
-  const competitorWebsiteContainer = document.getElementById('competitor-website-container') as HTMLElement;
-  const competitorWebsiteLink = document.getElementById('competitor-website-link') as HTMLAnchorElement;
-  const competitorWebsiteText = document.getElementById('competitor-website-text') as HTMLElement;
-  const competitorVerifiedBadge = document.getElementById('competitor-verified-badge') as HTMLElement;
-  const competitorLastPinStr = document.getElementById('competitor-last-pin-str') as HTMLElement;
+  function fmtNumberCompact(n: number | string | null | undefined): string {
+    const num = Number(n) || 0;
+    return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(num);
+  }
 
-  // DOM Elements - Primary Deltas
-  const currentReach = document.getElementById('current-reach') as HTMLElement;
-  const currentViews = document.getElementById('current-views') as HTMLElement;
-  const currentFollowers = document.getElementById('current-followers') as HTMLElement;
-  const currentPins = document.getElementById('current-pins') as HTMLElement;
-
-  const deltaReachBadge = document.getElementById('delta-reach-badge') as HTMLElement;
-  const deltaViewsBadge = document.getElementById('delta-views-badge') as HTMLElement;
-  const deltaFollowersBadge = document.getElementById('delta-followers-badge') as HTMLElement;
-  const deltaPinsBadge = document.getElementById('delta-pins-badge') as HTMLElement;
-
-  const deltaReachSub = document.getElementById('delta-reach-sub') as HTMLElement;
-  const deltaViewsSub = document.getElementById('delta-views-sub') as HTMLElement;
-  const deltaFollowersSub = document.getElementById('delta-followers-sub') as HTMLElement;
-  const deltaPinsSub = document.getElementById('delta-pins-sub') as HTMLElement;
-
-  // DOM Elements - Analytics Controls & Velocity
-  const rangeBtns = document.querySelectorAll<HTMLButtonElement>('.time-range-btn');
-  const snapshotMonthSelect = document.getElementById('snapshot-month-select') as HTMLSelectElement;
-  const toggleComparisonBtn = document.getElementById('toggle-comparison-mode-btn') as HTMLButtonElement;
-  const momComparisonPanel = document.getElementById('mom-comparison-panel') as HTMLElement;
-  const momMonthASelect = document.getElementById('mom-month-a') as HTMLSelectElement;
-  const momMonthBSelect = document.getElementById('mom-month-b') as HTMLSelectElement;
-  const momComparisonGrid = document.getElementById('mom-comparison-grid') as HTMLElement;
-
-  const pinningVelocityVal = document.getElementById('pinning-velocity-val') as HTMLElement;
-  const pinningVelocitySub = document.getElementById('pinning-velocity-sub') as HTMLElement;
-  const velocityPinsAdded = document.getElementById('velocity-pins-added') as HTMLElement;
-  const velocityDaysSpan = document.getElementById('velocity-days-span') as HTMLElement;
-  const velocityMonthlyRate = document.getElementById('velocity-monthly-rate') as HTMLElement;
-
-  // DOM Elements - Chart & Boards table
-  const growthChartSvg = document.getElementById('growth-chart-svg') as unknown as SVGElement;
-  const boardsTableBody = document.getElementById('boards-table-body') as HTMLElement;
-  const boardsCountBadge = document.getElementById('boards-count-badge') as HTMLElement;
-
-  const boardSearchInput = document.getElementById('board-search-input') as HTMLInputElement;
-  const boardSortSelect = document.getElementById('board-sort-select') as HTMLSelectElement;
-  const boardsPaginationInfo = document.getElementById('boards-pagination-info') as HTMLElement;
-  const boardsPrevPageBtn = document.getElementById('boards-prev-page-btn') as HTMLButtonElement;
-  const boardsNextPageBtn = document.getElementById('boards-next-page-btn') as HTMLButtonElement;
-  const boardsPageIndicator = document.getElementById('boards-page-indicator') as HTMLElement;
-
-  // DOM Elements - Snapshots Log Table
-  const snapshotsTableBody = document.getElementById('snapshots-table-body') as HTMLElement;
-  const snapshotsCountBadge = document.getElementById('snapshots-count-badge') as HTMLElement;
-
-  // DOM Elements - Status & Modal
-  const statusBanner = document.getElementById('deepdive-status-banner') as HTMLElement;
-  const statusText = document.getElementById('deepdive-status-text') as HTMLElement;
-  const dismissStatusBtn = document.getElementById('dismiss-deepdive-status') as HTMLElement;
-
-  const modal = document.getElementById('deepdive-payload-modal') as HTMLElement;
-  const openModalBtn = document.getElementById('open-deepdive-paste-modal') as HTMLElement;
-  const closeModalBtn = document.getElementById('close-deepdive-modal') as HTMLElement;
-  const cancelModalBtn = document.getElementById('cancel-deepdive-modal') as HTMLElement;
-  const modalForm = document.getElementById('deepdive-payload-form') as HTMLFormElement;
-  const modalError = document.getElementById('deepdive-modal-error') as HTMLElement;
-  const modalTextarea = document.getElementById('deepdive-payload-textarea') as HTMLTextAreaElement;
-  const modalDetectedSpan = document.getElementById('deepdive-detected-type') as HTMLElement;
+  function fmtSnapMetric(n: number | string | null | undefined): string {
+    return isCompactNumbers ? fmtNumberCompact(n) : fmtNumberFull(n);
+  }
 
   function formatDate(isoStr?: string | null, includeTime = false): string {
     if (!isoStr) return 'N/A';
@@ -630,15 +704,26 @@ import Layout from '../../layouts/Layout.astro';
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
-  function formatDeltaSpan(diff: number | null): string {
-    if (diff === null || diff === 0) return '';
-    const isPositive = diff > 0;
-    const label = `${isPositive ? 'increased by' : 'decreased by'} ${Math.abs(diff)}`;
-    return `<span 
-      class="ml-2 text-[10px] font-semibold ${isPositive ? 'text-emerald-500' : 'text-rose-500'}"
-      role="status"
-      aria-label="${label}"
-    >${isPositive ? `(+${formatNumber(Math.abs(diff))})` : `(−${formatNumber(Math.abs(diff))})`}</span>`;
+  // ─── Pixel-Perfect Primary Number Alignment with Deep Black Text ───
+  function renderMetricWithDelta(val: number | null | undefined, diff: number | null | undefined): string {
+    const isPos = typeof diff === 'number' && diff > 0;
+    const isNeg = typeof diff === 'number' && diff < 0;
+    const deltaStr = isPos 
+      ? `(+${fmtSnapMetric(Math.abs(diff))})` 
+      : isNeg 
+      ? `(−${fmtSnapMetric(Math.abs(diff))})` 
+      : '';
+
+    return `
+      <div class="flex items-center justify-end gap-2 w-full text-right">
+        <span class="font-extrabold text-neutral-900 dark:text-neutral-100 font-mono tabular-nums text-xs">${fmtSnapMetric(val || 0)}</span>
+        <span class="inline-block w-[72px] text-right font-bold text-[10.5px] font-mono tabular-nums ${
+          isPos ? 'text-emerald-500' : isNeg ? 'text-rose-500' : 'invisible'
+        }">
+          ${deltaStr || '—'}
+        </span>
+      </div>
+    `;
   }
 
   function renderDeltaBadge(element: HTMLElement, subElement: HTMLElement, change: number, percent: number) {
@@ -647,38 +732,38 @@ import Layout from '../../layouts/Layout.astro';
     element.textContent = `${sign}${percent}%`;
 
     if (change > 0) {
-      element.className = 'rounded bg-emerald-500/15 text-emerald-500 px-2 py-0.5 text-[11px] font-bold';
-      subElement.textContent = `+${formatNumber(change)} vs previous snapshot`;
+      element.className = 'rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-bold';
+      subElement.innerHTML = `<span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span><span>+${formatNumber(change)} vs previous snapshot</span>`;
     } else if (change < 0) {
-      element.className = 'rounded bg-rose-500/15 text-rose-500 px-2 py-0.5 text-[11px] font-bold';
-      subElement.textContent = `${formatNumber(change)} vs previous snapshot`;
+      element.className = 'rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 px-2 py-0.5 text-[10px] font-bold';
+      subElement.innerHTML = `<span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span><span>${formatNumber(change)} vs previous snapshot</span>`;
     } else {
-      element.className = 'rounded bg-muted text-muted-foreground px-2 py-0.5 text-[11px] font-bold';
-      subElement.textContent = `No change vs previous snapshot`;
+      element.className = 'rounded-full bg-muted text-muted-foreground border border-border px-2 py-0.5 text-[10px] font-bold';
+      subElement.innerHTML = `<span class="h-1.5 w-1.5 rounded-full bg-muted-foreground"></span><span>No change vs previous snapshot</span>`;
     }
   }
 
   function showStatus(msg: string, isError = false) {
+    const statusBanner = document.getElementById('deepdive-status-banner');
+    const statusText = document.getElementById('deepdive-status-text');
     if (!statusBanner || !statusText) return;
     statusText.textContent = msg;
     statusBanner.classList.remove('hidden');
     if (isError) {
-      statusBanner.className = 'mb-6 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-600 flex items-center justify-between shadow-sm';
+      statusBanner.className = 'rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs text-rose-600 dark:text-rose-400 flex items-center justify-between shadow-2xs animate-in fade-in duration-200';
     } else {
-      statusBanner.className = 'mb-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs text-emerald-600 flex items-center justify-between shadow-sm';
+      statusBanner.className = 'rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-600 dark:text-emerald-400 flex items-center justify-between shadow-2xs animate-in fade-in duration-200';
     }
   }
 
-  if (dismissStatusBtn) {
-    dismissStatusBtn.addEventListener('click', () => statusBanner.classList.add('hidden'));
-  }
+  document.getElementById('dismiss-deepdive-status')?.addEventListener('click', () => {
+    document.getElementById('deepdive-status-banner')?.classList.add('hidden');
+  });
 
-  // --- Core Analytics Logic ---
-
+  // ─── Filtered Snapshots (Defaults to 7D) ───
   function getFilteredSnapshots(): CompetitorSnapshot[] {
     if (!snapshotsList || snapshotsList.length === 0) return [];
     
-    // Sort chronologically
     const sorted = [...snapshotsList].sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
     const now = Date.now();
 
@@ -706,7 +791,13 @@ import Layout from '../../layouts/Layout.astro';
     return filtered.length > 0 ? filtered : sorted;
   }
 
+  // ─── PERFORMANCE TREND (Accurate Min/Max, Smooth Spline & Stable Tooltip Overlay) ───
   function renderVisualGrowthChart(snapshots: CompetitorSnapshot[]) {
+    const growthChartSvg = document.getElementById('growth-chart-svg');
+    const statMin = document.getElementById('chart-stat-min');
+    const statMax = document.getElementById('chart-stat-max');
+    const statLatest = document.getElementById('chart-stat-latest');
+    const tooltipBox = document.getElementById('chart-tooltip-box');
     if (!growthChartSvg) return;
 
     if (!snapshots || snapshots.length === 0) {
@@ -715,88 +806,251 @@ import Layout from '../../layouts/Layout.astro';
           No historical snapshot data recorded yet.
         </text>
       `;
+      if (statMin) statMin.textContent = '—';
+      if (statMax) statMax.textContent = '—';
+      if (statLatest) statLatest.textContent = '—';
       return;
     }
 
     const width = 800;
     const height = 220;
-    const paddingLeft = 60;
+    const paddingLeft = 55;
     const paddingRight = 30;
-    const paddingTop = 20;
-    const paddingBottom = 40;
+    const paddingTop = 25;
+    const paddingBottom = 35;
 
     const chartWidth = width - paddingLeft - paddingRight;
     const chartHeight = height - paddingTop - paddingBottom;
 
-    const reaches = snapshots.map(s => s.profile_reach || 0);
-    const views = snapshots.map(s => s.profile_views || 0);
+    // Determine series values & style
+    let valuesA: number[] = [];
+    let valuesB: number[] = [];
+    let labelA = 'Monthly Reach';
+    let labelB = 'Profile Views';
+    let strokeColorA = '#f43f5e'; // rose-500
+    let strokeColorB = '#0ea5e9'; // sky-500
+    let isDual = activeChartMode === 'dual';
 
-    const maxReach = Math.max(...reaches, ...views, 100);
-    const minReach = 0;
-
-    // Check if multiple snapshots exist on the same day to format time string
-    const points = snapshots.map((s, idx) => {
-      const x = paddingLeft + (snapshots.length === 1 ? chartWidth / 2 : (idx / (snapshots.length - 1)) * chartWidth);
-      const reachY = paddingTop + chartHeight - (((s.profile_reach || 0) - minReach) / (maxReach - minReach)) * chartHeight;
-      const viewsY = paddingTop + chartHeight - (((s.profile_views || 0) - minReach) / (maxReach - minReach)) * chartHeight;
-
-      const dateObj = new Date(s.recorded_at);
-      const hasSameDaySibling = snapshots.some((other, oIdx) => {
-        if (oIdx === idx) return false;
-        const od = new Date(other.recorded_at);
-        return od.toDateString() === dateObj.toDateString();
-      });
-
-      const dateLabel = hasSameDaySibling
-        ? dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-        : dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-      return { x, reachY, viewsY, s, dateLabel };
-    });
-
-    let reachPathStr = '';
-    let viewsPathStr = '';
-
-    if (points.length === 1) {
-      reachPathStr = `M ${paddingLeft} ${points[0].reachY} L ${width - paddingRight} ${points[0].reachY}`;
-      viewsPathStr = `M ${paddingLeft} ${points[0].viewsY} L ${width - paddingRight} ${points[0].viewsY}`;
-    } else {
-      reachPathStr = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.reachY}`).join(' ');
-      viewsPathStr = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.viewsY}`).join(' ');
+    if (activeChartMode === 'reach') {
+      valuesA = snapshots.map(s => s.profile_reach || 0);
+      labelA = 'Monthly Reach';
+      strokeColorA = '#f43f5e';
+    } else if (activeChartMode === 'views') {
+      valuesA = snapshots.map(s => s.profile_views || 0);
+      labelA = 'Profile Views';
+      strokeColorA = '#0ea5e9';
+    } else if (activeChartMode === 'followers') {
+      valuesA = snapshots.map(s => s.follower_count || 0);
+      labelA = 'Followers';
+      strokeColorA = '#a855f7';
+    } else if (activeChartMode === 'pins') {
+      valuesA = snapshots.map(s => s.pin_count || 0);
+      labelA = 'Total Pins';
+      strokeColorA = '#10b981';
+    } else if (activeChartMode === 'dual') {
+      valuesA = snapshots.map(s => s.profile_reach || 0);
+      valuesB = snapshots.map(s => s.profile_views || 0);
+      labelA = 'Monthly Reach';
+      labelB = 'Profile Views';
+      strokeColorA = '#f43f5e';
+      strokeColorB = '#0ea5e9';
     }
 
-    const gridLines = [0, 0.33, 0.66, 1].map(ratio => {
+    // Accurate calculation of real Min & Max (without hardcoded 0!)
+    const allVals = [...valuesA, ...(valuesB.length > 0 ? valuesB : [])].filter(v => typeof v === 'number');
+    if (allVals.length === 0) allVals.push(0);
+    const rawMax = Math.max(...allVals);
+    const rawMin = Math.min(...allVals);
+
+    let minVal: number;
+    let maxVal: number;
+
+    if (rawMax === rawMin) {
+      minVal = Math.max(0, Math.floor(rawMin * 0.9));
+      maxVal = Math.ceil(rawMax * 1.1) || 10;
+    } else {
+      const span = rawMax - rawMin;
+      const pad = span * 0.15;
+      minVal = Math.max(0, Math.floor(rawMin - pad));
+      maxVal = Math.ceil(rawMax + pad);
+    }
+
+    const valSpan = maxVal - minVal || 1;
+
+    // Update Stats Sub-bar with real values
+    if (statMin) statMin.textContent = formatNumber(rawMin);
+    if (statMax) statMax.textContent = formatNumber(rawMax);
+    if (statLatest) statLatest.textContent = formatNumber(valuesA[valuesA.length - 1] || 0);
+
+    // Map points
+    const pointsA = snapshots.map((s, idx) => {
+      const x = paddingLeft + (snapshots.length === 1 ? chartWidth / 2 : (idx / (snapshots.length - 1)) * chartWidth);
+      const val = valuesA[idx] || 0;
+      const y = paddingTop + chartHeight - ((val - minVal) / valSpan) * chartHeight;
+      const dateObj = new Date(s.recorded_at);
+      const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return { x, y, val, s, dateLabel };
+    });
+
+    const pointsB = isDual ? snapshots.map((s, idx) => {
+      const x = paddingLeft + (snapshots.length === 1 ? chartWidth / 2 : (idx / (snapshots.length - 1)) * chartWidth);
+      const val = valuesB[idx] || 0;
+      const y = paddingTop + chartHeight - ((val - minVal) / valSpan) * chartHeight;
+      const dateObj = new Date(s.recorded_at);
+      const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return { x, y, val, s, dateLabel };
+    }) : [];
+
+    // Helper: Build smooth curve path
+    function buildPath(pts: typeof pointsA): { linePath: string; areaPath: string } {
+      if (pts.length === 1) {
+        const line = `M ${paddingLeft} ${pts[0].y} L ${width - paddingRight} ${pts[0].y}`;
+        const area = `M ${paddingLeft} ${pts[0].y} L ${width - paddingRight} ${pts[0].y} L ${width - paddingRight} ${paddingTop + chartHeight} L ${paddingLeft} ${paddingTop + chartHeight} Z`;
+        return { linePath: line, areaPath: area };
+      }
+
+      let line = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[i];
+        const p1 = pts[i + 1];
+        const mx = (p0.x + p1.x) / 2;
+        line += ` C ${mx.toFixed(1)} ${p0.y.toFixed(1)}, ${mx.toFixed(1)} ${p1.y.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+      }
+
+      const area = `${line} L ${pts[pts.length - 1].x.toFixed(1)} ${(paddingTop + chartHeight).toFixed(1)} L ${pts[0].x.toFixed(1)} ${(paddingTop + chartHeight).toFixed(1)} Z`;
+      return { linePath: line, areaPath: area };
+    }
+
+    const pathDataA = buildPath(pointsA);
+    const pathDataB = isDual ? buildPath(pointsB) : null;
+
+    // Grid lines (subtle & elegant)
+    const gridLines = [0, 0.5, 1].map(ratio => {
       const y = paddingTop + chartHeight * (1 - ratio);
-      const val = Math.round(minReach + ratio * (maxReach - minReach));
       return `
-        <line x1="${paddingLeft}" y1="${y}" x2="${width - paddingRight}" y2="${y}" stroke="currentColor" class="text-border" stroke-dasharray="3,3" stroke-opacity="0.6"/>
-        <text x="${paddingLeft - 8}" y="${y + 4}" text-anchor="end" font-size="9" fill="currentColor" class="text-muted-foreground">${formatNumber(val)}</text>
+        <line x1="${paddingLeft}" y1="${y.toFixed(1)}" x2="${(width - paddingRight).toFixed(1)}" y2="${y.toFixed(1)}" stroke="currentColor" class="text-border/60" stroke-dasharray="4,4" stroke-opacity="0.5"/>
       `;
     }).join('');
 
-    const xLabels = points.map(p => `
-      <text x="${p.x}" y="${height - 12}" text-anchor="middle" font-size="9" fill="currentColor" class="text-muted-foreground">${p.dateLabel}</text>
+    // Sample X-axis labels
+    const maxLabels = 6;
+    const step = Math.max(1, Math.ceil(pointsA.length / maxLabels));
+    const sampledPoints = pointsA.filter((_, idx) => idx === 0 || idx === pointsA.length - 1 || idx % step === 0);
+
+    const xLabels = sampledPoints.map(p => `
+      <text x="${p.x.toFixed(1)}" y="${height - 10}" text-anchor="middle" font-size="9.5" font-weight="500" fill="currentColor" class="text-muted-foreground">${p.dateLabel}</text>
     `).join('');
 
-    const circles = points.map(p => `
-      <circle cx="${p.x}" cy="${p.reachY}" r="4" class="fill-emerald-500 stroke-card stroke-2">
-        <title>Date: ${p.dateLabel}&#10;Reach: ${formatNumber(p.s.profile_reach)}</title>
-      </circle>
-      <circle cx="${p.x}" cy="${p.viewsY}" r="4" class="fill-sky-500 stroke-card stroke-2">
-        <title>Date: ${p.dateLabel}&#10;Views: ${formatNumber(p.s.profile_views)}</title>
-      </circle>
+    // Stable Circular Points (Fixed radius without CSS layout scale-hopping to prevent flicker)
+    const circlesA = pointsA.map((p, idx) => `
+      <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${strokeColorA}" stroke="white" stroke-width="2" class="chart-interactive-dot cursor-pointer" data-point-idx="${idx}" data-series="A"></circle>
     `).join('');
+
+    const circlesB = isDual ? pointsB.map((p, idx) => `
+      <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${strokeColorB}" stroke="white" stroke-width="2" class="chart-interactive-dot cursor-pointer" data-point-idx="${idx}" data-series="B"></circle>
+    `).join('') : '';
 
     growthChartSvg.innerHTML = `
+      <defs>
+        <linearGradient id="chart-area-grad-a" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${strokeColorA}" stop-opacity="0.18" />
+          <stop offset="100%" stop-color="${strokeColorA}" stop-opacity="0.00" />
+        </linearGradient>
+        ${isDual ? `
+        <linearGradient id="chart-area-grad-b" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${strokeColorB}" stop-opacity="0.14" />
+          <stop offset="100%" stop-color="${strokeColorB}" stop-opacity="0.00" />
+        </linearGradient>
+        ` : ''}
+      </defs>
       ${gridLines}
-      <path d="${reachPathStr}" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="${viewsPathStr}" fill="none" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4,4"/>
-      ${circles}
+      <path d="${pathDataA.areaPath}" fill="url(#chart-area-grad-a)"/>
+      <path d="${pathDataA.linePath}" fill="none" stroke="${strokeColorA}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${pathDataB ? `
+        <path d="${pathDataB.areaPath}" fill="url(#chart-area-grad-b)"/>
+        <path d="${pathDataB.linePath}" fill="none" stroke="${strokeColorB}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4,4"/>
+      ` : ''}
+      ${circlesA}
+      ${circlesB}
       ${xLabels}
     `;
+
+    // ─── Rock-Solid Tooltip Hover Handler (No Reflow/Flicker) ───
+    const dots = growthChartSvg.querySelectorAll<SVGCircleElement>('.chart-interactive-dot');
+    const container = document.getElementById('chart-container');
+
+    dots.forEach(dot => {
+      dot.addEventListener('mouseenter', (e) => {
+        if (!tooltipBox || !container) return;
+        const idx = parseInt(dot.getAttribute('data-point-idx') || '0', 10);
+        const pA = pointsA[idx];
+        const pB = isDual ? pointsB[idx] : null;
+
+        if (!pA) return;
+
+        let content = `
+          <div class="font-bold text-foreground pb-0.5 border-b border-border/60">${pA.dateLabel}</div>
+          <div class="pt-1 space-y-1">
+            <div class="flex items-center gap-1.5">
+              <span class="h-2 w-2 rounded-full flex-shrink-0" style="background:${strokeColorA}"></span>
+              <span class="text-[11px] text-muted-foreground">${labelA}:</span>
+              <strong class="text-neutral-900 dark:text-neutral-100 font-mono font-bold ml-auto">${formatNumber(pA.val)}</strong>
+            </div>
+            ${pB ? `
+            <div class="flex items-center gap-1.5">
+              <span class="h-2 w-2 rounded-full flex-shrink-0" style="background:${strokeColorB}"></span>
+              <span class="text-[11px] text-muted-foreground">${labelB}:</span>
+              <strong class="text-neutral-900 dark:text-neutral-100 font-mono font-bold ml-auto">${formatNumber(pB.val)}</strong>
+            </div>
+            ` : ''}
+          </div>
+        `;
+
+        tooltipBox.innerHTML = content;
+        tooltipBox.classList.remove('hidden');
+
+        // Position tooltip accurately
+        const containerRect = container.getBoundingClientRect();
+        const dotRect = dot.getBoundingClientRect();
+
+        const relX = dotRect.left - containerRect.left + dotRect.width / 2;
+        const relY = dotRect.top - containerRect.top;
+
+        const leftPos = Math.max(10, Math.min(relX - 70, containerRect.width - 150));
+        const topPos = Math.max(5, relY - 65);
+
+        tooltipBox.style.left = `${leftPos}px`;
+        tooltipBox.style.top = `${topPos}px`;
+      });
+
+      dot.addEventListener('mouseleave', () => {
+        tooltipBox?.classList.add('hidden');
+      });
+    });
   }
 
+  // ─── Chart Mode Switchers ───
+  const chartModeBtns = document.querySelectorAll<HTMLButtonElement>('.chart-mode-btn');
+  chartModeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      chartModeBtns.forEach(b => {
+        b.className = 'chart-mode-btn px-3 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-all whitespace-nowrap cursor-pointer';
+      });
+      btn.className = 'chart-mode-btn px-3 py-1 rounded-lg text-xs font-bold bg-primary text-primary-foreground shadow-2xs transition-all whitespace-nowrap cursor-pointer';
+      activeChartMode = (btn.dataset.chartMode as any) || 'reach';
+      const filtered = getFilteredSnapshots();
+      renderVisualGrowthChart(filtered);
+    });
+  });
+
+  // ─── Pinning Velocity Calculator ───
   function calculatePinningVelocity(snapshots: CompetitorSnapshot[]) {
+    const pinningVelocityVal = document.getElementById('pinning-velocity-val');
+    const pinningVelocitySub = document.getElementById('pinning-velocity-sub');
+    const velocityPinsAdded = document.getElementById('velocity-pins-added');
+    const velocityDaysSpan = document.getElementById('velocity-days-span');
+    const velocityMonthlyRate = document.getElementById('velocity-monthly-rate');
+
     if (!pinningVelocityVal || !pinningVelocitySub) return;
 
     if (!snapshots || snapshots.length < 2) {
@@ -828,6 +1082,7 @@ import Layout from '../../layouts/Layout.astro';
     if (velocityMonthlyRate) velocityMonthlyRate.textContent = `~${formatNumber(estimatedMonthly)} pins/mo`;
   }
 
+  // ─── Month Dropdown Populator ───
   function populateMonthDropdowns() {
     if (!snapshotsList || snapshotsList.length === 0) return;
 
@@ -842,6 +1097,9 @@ import Layout from '../../layouts/Layout.astro';
     });
 
     const monthsArr = Array.from(monthsMap.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+    const snapshotMonthSelect = document.getElementById('snapshot-month-select') as HTMLSelectElement | null;
+    const momMonthASelect = document.getElementById('mom-month-a') as HTMLSelectElement | null;
+    const momMonthBSelect = document.getElementById('mom-month-b') as HTMLSelectElement | null;
 
     if (snapshotMonthSelect) {
       snapshotMonthSelect.innerHTML = `<option value="all">All Months</option>` +
@@ -860,12 +1118,15 @@ import Layout from '../../layouts/Layout.astro';
     }
   }
 
+  // ─── MoM Comparison Engine ───
   function renderMoMComparison() {
+    const momComparisonGrid = document.getElementById('mom-comparison-grid');
+    const momMonthASelect = document.getElementById('mom-month-a') as HTMLSelectElement | null;
+    const momMonthBSelect = document.getElementById('mom-month-b') as HTMLSelectElement | null;
     if (!momComparisonGrid || !snapshotsList || snapshotsList.length === 0) return;
 
     const monthAKey = momMonthASelect?.value;
     const monthBKey = momMonthBSelect?.value;
-
     if (!monthAKey || !monthBKey) return;
 
     const snapshotsA = snapshotsList.filter(s => {
@@ -896,19 +1157,19 @@ import Layout from '../../layouts/Layout.astro';
     const createMetricCard = (title: string, valA: number, valB: number, change: number, pct: number) => {
       const isPos = change > 0;
       const badgeStyle = isPos 
-        ? 'bg-emerald-500/15 text-emerald-500' 
-        : change < 0 ? 'bg-rose-500/15 text-rose-500' : 'bg-muted text-muted-foreground';
+        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+        : change < 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20' : 'bg-muted text-muted-foreground border border-border';
 
       return `
-        <div class="rounded-xl border border-border bg-card p-4 shadow-sm space-y-2">
+        <div class="rounded-xl border border-border/80 bg-card p-3.5 shadow-2xs space-y-2">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">${title}</span>
-            <span class="rounded px-2 py-0.5 text-[11px] font-bold ${badgeStyle}">${change >= 0 ? '+' : ''}${pct.toFixed(1)}%</span>
+            <span class="text-[10.5px] font-semibold text-muted-foreground uppercase tracking-wider">${title}</span>
+            <span class="rounded-full px-2 py-0.5 text-[10px] font-bold ${badgeStyle}">${change >= 0 ? '+' : ''}${pct.toFixed(1)}%</span>
           </div>
-          <div class="text-xl font-bold text-foreground">${formatNumber(valB)}</div>
-          <div class="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border/50">
+          <div class="text-xl font-bold text-foreground font-mono tabular-nums">${formatNumber(valB)}</div>
+          <div class="flex items-center justify-between text-[11px] text-muted-foreground pt-1.5 border-t border-border/60">
             <span>Base (${monthAKey}): ${formatNumber(valA)}</span>
-            <span class="font-semibold ${isPos ? 'text-emerald-500' : change < 0 ? 'text-rose-500' : ''}">${change >= 0 ? '+' : ''}${formatNumber(change)}</span>
+            <span class="font-bold font-mono tabular-nums ${isPos ? 'text-emerald-500' : change < 0 ? 'text-rose-500' : ''}">${change >= 0 ? '+' : ''}${formatNumber(change)}</span>
           </div>
         </div>
       `;
@@ -922,88 +1183,374 @@ import Layout from '../../layouts/Layout.astro';
     `;
   }
 
-  // --- Boards Pagination, Search & Sorting Engine ---
+  // ─── Snapshot Table Density, Columns & Number Format ───
+  function buildSnapColVisibilityMenu() {
+    const colMenu = document.getElementById('snap-col-visibility-menu');
+    if (!colMenu) return;
+    colMenu.innerHTML = `
+      <div class="flex items-center justify-between pb-1 px-1 border-b border-border/80 text-[11px] font-semibold text-muted-foreground">
+        <span>Toggle Columns</span>
+        <button id="reset-snap-cols-btn" class="text-primary hover:underline text-[10px] cursor-pointer">Reset</button>
+      </div>
+      <div class="space-y-0.5 max-h-60 overflow-y-auto pt-1">
+        ${SNAP_COLUMN_DEFS.map(
+          (c) => `
+          <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-muted/60 transition-colors text-xs font-medium text-foreground">
+            <input type="checkbox" class="rounded accent-primary h-3.5 w-3.5" data-snap-col-key="${c.key}" ${snapColVisible[c.key] ? 'checked' : ''} />
+            <span>${c.label}</span>
+          </label>`
+        ).join('')}
+      </div>`;
 
-  function renderInitialBoardsPlaceholder() {
-    if (!boardsTableBody) return;
-    if (boardsCountBadge) boardsCountBadge.textContent = '0 Boards';
-    boardsTableBody.innerHTML = `
-      <tr>
-        <td colspan="6" class="py-12 text-center">
-          <button
-            id="load-boards-btn"
-            aria-label="Load competitor boards data"
-            aria-describedby="boards-loading-status"
-            class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all cursor-pointer"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            <span>Load Boards</span>
-          </button>
-          <div id="boards-loading-status" class="sr-only">Click to load board strategy timeline</div>
-        </td>
-      </tr>
-    `;
-    attachLoadBoardsHandler();
+    document.getElementById('reset-snap-cols-btn')?.addEventListener('click', () => {
+      SNAP_COLUMN_DEFS.forEach(c => { snapColVisible[c.key] = c.defaultVisible; });
+      localStorage.removeItem('cd_snap_cols_v1');
+      buildSnapColVisibilityMenu();
+      renderSnapshotsTableHeader();
+      renderSnapshotsLogTable();
+    });
+
+    colMenu.querySelectorAll<HTMLInputElement>('input[data-snap-col-key]').forEach((cb) => {
+      cb.addEventListener('change', () => {
+        const key = cb.dataset.snapColKey!;
+        snapColVisible[key] = cb.checked;
+        localStorage.setItem('cd_snap_cols_v1', JSON.stringify(snapColVisible));
+        renderSnapshotsTableHeader();
+        renderSnapshotsLogTable();
+      });
+    });
   }
 
-  function attachLoadBoardsHandler() {
-    const loadBoardsBtn = document.getElementById('load-boards-btn');
-    if (!loadBoardsBtn) return;
+  function setupSnapColVisibilityToggle() {
+    const btn = document.getElementById('snap-col-visibility-btn');
+    const colMenu = document.getElementById('snap-col-visibility-menu');
+    const wrapper = document.getElementById('snap-col-visibility-wrapper');
+    if (!btn || !colMenu) return;
 
-    loadBoardsBtn.addEventListener('click', handleLoadBoards);
-    loadBoardsBtn.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        handleLoadBoards();
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      colMenu.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (wrapper && !wrapper.contains(e.target as Node)) {
+        colMenu.classList.add('hidden');
       }
-    }); // keydown Enter Space load-boards-btn
+    });
+  }
+
+  function renderSnapshotsTableHeader() {
+    const thead = document.querySelector('#competitor-snapshots-table thead');
+    if (!thead) return;
+
+    const padClass = isComfortableDensity ? 'py-3.5' : 'py-2';
+
+    let headersHtml = `
+      <tr>
+        <th scope="col" class="${padClass} px-5 text-foreground font-semibold">Recorded Date &amp; Time</th>
+    `;
+
+    if (snapColVisible.monthly_reach) headersHtml += `
+      <th scope="col" class="${padClass} px-4 min-w-[160px] text-foreground font-semibold">
+        <div class="flex items-center justify-end gap-1.5 w-full">
+          <span>Monthly Reach</span>
+          <span class="inline-block w-[72px] invisible text-[10px] select-none">—</span>
+        </div>
+      </th>`;
+    if (snapColVisible.profile_views) headersHtml += `
+      <th scope="col" class="${padClass} px-4 min-w-[160px] text-foreground font-semibold">
+        <div class="flex items-center justify-end gap-1.5 w-full">
+          <span>Profile Views</span>
+          <span class="inline-block w-[72px] invisible text-[10px] select-none">—</span>
+        </div>
+      </th>`;
+    if (snapColVisible.followers) headersHtml += `
+      <th scope="col" class="${padClass} px-4 min-w-[160px] text-foreground font-semibold">
+        <div class="flex items-center justify-end gap-1.5 w-full">
+          <span>Followers</span>
+          <span class="inline-block w-[72px] invisible text-[10px] select-none">—</span>
+        </div>
+      </th>`;
+    if (snapColVisible.total_pins) headersHtml += `
+      <th scope="col" class="${padClass} px-4 min-w-[160px] text-foreground font-semibold">
+        <div class="flex items-center justify-end gap-1.5 w-full">
+          <span>Total Pins</span>
+          <span class="inline-block w-[72px] invisible text-[10px] select-none">—</span>
+        </div>
+      </th>`;
+    if (snapColVisible.actions) headersHtml += `<th scope="col" class="${padClass} px-5 text-right text-foreground font-semibold">Actions</th>`;
+
+    headersHtml += `</tr>`;
+    thead.innerHTML = headersHtml;
+  }
+
+  // ─── Snapshots Log Table & Slice Net Change Renderer ───
+  function renderSnapshotsLogTable() {
+    const snapshotsTableBody = document.getElementById('snapshots-table-body');
+    const snapshotsCountBadge = document.getElementById('snapshots-count-badge');
+    const paginationInfo = document.getElementById('snapshots-pagination-info');
+    const pageIndicator = document.getElementById('snapshots-page-indicator');
+    const prevBtn = document.getElementById('snapshots-prev-page-btn') as HTMLButtonElement | null;
+    const nextBtn = document.getElementById('snapshots-next-page-btn') as HTMLButtonElement | null;
+
+    if (!snapshotsTableBody) return;
+    if (snapshotsCountBadge) snapshotsCountBadge.textContent = `${snapshotsList.length} ${snapshotsList.length === 1 ? 'Snapshot' : 'Snapshots'}`;
+
+    if (!snapshotsList || snapshotsList.length === 0) {
+      snapshotsTableBody.innerHTML = `
+        <tr>
+          <td colspan="6" class="p-12 text-center text-xs text-muted-foreground bg-muted/10">
+            No historical snapshots recorded yet for this competitor.
+          </td>
+        </tr>
+      `;
+      if (paginationInfo) paginationInfo.textContent = 'Showing 0 of 0 snapshots';
+      if (pageIndicator) pageIndicator.textContent = 'Page 1 of 1';
+      if (prevBtn) prevBtn.disabled = true;
+      if (nextBtn) nextBtn.disabled = true;
+      return;
+    }
+
+    const chronoSorted = [...snapshotsList].sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
+    const displayList = [...chronoSorted].reverse();
+
+    // Pagination slice
+    const totalItems = displayList.length;
+    const pageSize = snapshotPageSize === 'all' ? totalItems : snapshotPageSize;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    if (currentSnapshotPage > totalPages) currentSnapshotPage = totalPages;
+    if (currentSnapshotPage < 1) currentSnapshotPage = 1;
+
+    const startIdx = (currentSnapshotPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalItems);
+    const paginatedSlice = displayList.slice(startIdx, endIdx);
+
+    // Compute Net Change ONLY for the currently displayed time horizon/slice (e.g. 7 or 14 days)
+    let sumReachDiff = 0;
+    let sumViewsDiff = 0;
+    let sumFollowersDiff = 0;
+    let sumPinsDiff = 0;
+
+    paginatedSlice.forEach((s) => {
+      const chronoIdx = chronoSorted.findIndex(item => item.id === s.id);
+      const prevSnap = chronoIdx > 0 ? chronoSorted[chronoIdx - 1] : null;
+      if (prevSnap) {
+        sumReachDiff += (s.profile_reach || 0) - (prevSnap.profile_reach || 0);
+        sumViewsDiff += (s.profile_views || 0) - (prevSnap.profile_views || 0);
+        sumFollowersDiff += (s.follower_count || 0) - (prevSnap.follower_count || 0);
+        sumPinsDiff += (s.pin_count || 0) - (prevSnap.pin_count || 0);
+      }
+    });
+
+    const padClass = isComfortableDensity ? 'py-3.5' : 'py-2';
+
+    const rowsHtml = paginatedSlice
+      .map((s) => {
+        const chronoIdx = chronoSorted.findIndex(item => item.id === s.id);
+        const prevSnap = chronoIdx > 0 ? chronoSorted[chronoIdx - 1] : null;
+
+        const reachDiff = prevSnap ? (s.profile_reach || 0) - (prevSnap.profile_reach || 0) : 0;
+        const viewsDiff = prevSnap ? (s.profile_views || 0) - (prevSnap.profile_views || 0) : 0;
+        const followersDiff = prevSnap ? (s.follower_count || 0) - (prevSnap.follower_count || 0) : 0;
+        const pinsDiff = prevSnap ? (s.pin_count || 0) - (prevSnap.pin_count || 0) : 0;
+
+        let cellsHtml = `<td class="${padClass} px-5 font-semibold text-foreground whitespace-nowrap">${formatDate(s.recorded_at, true)}</td>`;
+
+        if (snapColVisible.monthly_reach) {
+          cellsHtml += `<td class="${padClass} px-4 text-right whitespace-nowrap min-w-[160px]">${renderMetricWithDelta(s.profile_reach, reachDiff)}</td>`;
+        }
+        if (snapColVisible.profile_views) {
+          cellsHtml += `<td class="${padClass} px-4 text-right whitespace-nowrap min-w-[160px]">${renderMetricWithDelta(s.profile_views, viewsDiff)}</td>`;
+        }
+        if (snapColVisible.followers) {
+          cellsHtml += `<td class="${padClass} px-4 text-right whitespace-nowrap min-w-[160px]">${renderMetricWithDelta(s.follower_count, followersDiff)}</td>`;
+        }
+        if (snapColVisible.total_pins) {
+          cellsHtml += `<td class="${padClass} px-4 text-right whitespace-nowrap min-w-[160px]">${renderMetricWithDelta(s.pin_count, pinsDiff)}</td>`;
+        }
+        if (snapColVisible.actions) {
+          cellsHtml += `
+            <td class="${padClass} px-5 text-right">
+              <button
+                data-delete-snapshot-id="${s.id}"
+                class="delete-snapshot-btn inline-flex items-center justify-center h-7 w-7 rounded-xl border border-border bg-background hover:border-rose-500/50 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 transition-colors cursor-pointer shadow-2xs"
+                title="Delete Snapshot Record"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+              </button>
+            </td>
+          `;
+        }
+
+        return `<tr class="hover:bg-muted/40 transition-colors group">${cellsHtml}</tr>`;
+      })
+      .join('');
+
+    // Summary totals row (Accurately computed for the selected slice)
+    function formatTotalDeltaSlot(diff: number) {
+      if (diff === 0) return `
+        <div class="flex items-center justify-end gap-1.5 w-full">
+          <span class="font-mono text-muted-foreground text-xs">—</span>
+          <span class="inline-block w-[72px] invisible text-[10px] select-none">—</span>
+        </div>
+      `;
+      const isPos = diff > 0;
+      return `
+        <div class="flex items-center justify-end gap-1.5 w-full text-right">
+          <span class="font-extrabold text-xs font-mono tabular-nums ${isPos ? 'text-emerald-500' : 'text-rose-500'}">
+            (${isPos ? '+' : '−'}${fmtSnapMetric(Math.abs(diff))})
+          </span>
+          <span class="inline-block w-[72px] invisible text-[10px] select-none">—</span>
+        </div>
+      `;
+    }
+
+    let totalsCells = `<th scope="row" class="py-2.5 px-5 text-xs text-foreground text-left">∑ Net Change</th>`;
+    if (snapColVisible.monthly_reach) totalsCells += `<td class="py-2.5 px-4 text-right min-w-[160px]">${formatTotalDeltaSlot(sumReachDiff)}</td>`;
+    if (snapColVisible.profile_views) totalsCells += `<td class="py-2.5 px-4 text-right min-w-[160px]">${formatTotalDeltaSlot(sumViewsDiff)}</td>`;
+    if (snapColVisible.followers)     totalsCells += `<td class="py-2.5 px-4 text-right min-w-[160px]">${formatTotalDeltaSlot(sumFollowersDiff)}</td>`;
+    if (snapColVisible.total_pins)    totalsCells += `<td class="py-2.5 px-4 text-right min-w-[160px]">${formatTotalDeltaSlot(sumPinsDiff)}</td>`;
+    if (snapColVisible.actions)       totalsCells += `<td class="py-2.5 px-5 text-right"></td>`;
+
+    const totalsRowHtml = `<tr class="bg-muted/30 font-bold border-b border-border/80">${totalsCells}</tr>`;
+
+    snapshotsTableBody.innerHTML = totalsRowHtml + rowsHtml;
+
+    // Pagination info
+    if (paginationInfo) paginationInfo.textContent = `Showing ${startIdx + 1}–${endIdx} of ${totalItems} snapshots`;
+    if (pageIndicator) pageIndicator.textContent = `Page ${currentSnapshotPage} of ${totalPages}`;
+    if (prevBtn) prevBtn.disabled = currentSnapshotPage <= 1;
+    if (nextBtn) nextBtn.disabled = currentSnapshotPage >= totalPages;
+
+    // Delete snapshot listeners
+    document.querySelectorAll('.delete-snapshot-btn').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        const snapId = (e.currentTarget as HTMLElement).getAttribute('data-delete-snapshot-id');
+        if (!snapId) return;
+
+        if (confirm('Are you sure you want to delete this snapshot entry from history?')) {
+          try {
+            await deleteCompetitorSnapshot(snapId);
+            showStatus('Snapshot record deleted successfully.');
+            await loadDetails();
+          } catch (err: any) {
+            showStatus(`Failed to delete snapshot: ${err.message}`, true);
+          }
+        }
+      });
+    });
+  }
+
+  // ─── Density, Number Format & Page Size Controls ───
+  const snapDensityToggleBtn = document.getElementById('snap-density-toggle-btn');
+  const snapDensityLabel = document.getElementById('snap-density-label');
+  const snapNumFormatToggleBtn = document.getElementById('snap-num-format-toggle-btn');
+  const snapNumFormatLabel = document.getElementById('snap-num-format-label');
+  const snapshotsPageSizeSelect = document.getElementById('snapshots-page-size-select') as HTMLSelectElement | null;
+  const snapshotsPrevPageBtn = document.getElementById('snapshots-prev-page-btn');
+  const snapshotsNextPageBtn = document.getElementById('snapshots-next-page-btn');
+
+  function updateSnapDensityUI() {
+    if (snapDensityLabel) snapDensityLabel.textContent = isComfortableDensity ? 'Comfortable' : 'Compact';
+  }
+  snapDensityToggleBtn?.addEventListener('click', () => {
+    isComfortableDensity = !isComfortableDensity;
+    localStorage.setItem('cd_table_density', isComfortableDensity ? 'comfortable' : 'compact');
+    updateSnapDensityUI();
+    renderSnapshotsTableHeader();
+    renderSnapshotsLogTable();
+    renderBoardsTable();
+  });
+  updateSnapDensityUI();
+
+  function updateSnapNumFormatUI() {
+    if (snapNumFormatLabel) snapNumFormatLabel.textContent = isCompactNumbers ? 'Compact' : 'Full';
+  }
+  snapNumFormatToggleBtn?.addEventListener('click', () => {
+    isCompactNumbers = !isCompactNumbers;
+    localStorage.setItem('cd_snap_num_fmt', isCompactNumbers ? 'compact' : 'full');
+    updateSnapNumFormatUI();
+    renderSnapshotsLogTable();
+  });
+  updateSnapNumFormatUI();
+
+  if (snapshotsPageSizeSelect) {
+    snapshotsPageSizeSelect.value = String(snapshotPageSize);
+    snapshotsPageSizeSelect.addEventListener('change', () => {
+      const val = snapshotsPageSizeSelect.value;
+      snapshotPageSize = val === 'all' ? 'all' : parseInt(val, 10) || 30;
+      localStorage.setItem('cd_snap_page_size', String(snapshotPageSize));
+      currentSnapshotPage = 1;
+      renderSnapshotsLogTable();
+    });
+  }
+
+  snapshotsPrevPageBtn?.addEventListener('click', () => {
+    if (currentSnapshotPage > 1) {
+      currentSnapshotPage--;
+      renderSnapshotsLogTable();
+    }
+  });
+
+  snapshotsNextPageBtn?.addEventListener('click', () => {
+    currentSnapshotPage++;
+    renderSnapshotsLogTable();
+  });
+
+  // ─── Fast-Loading Lazy Boards Engine ───
+  function attachLoadBoardsBtnHandler() {
+    const loadBtn = document.getElementById('load-boards-btn');
+    if (!loadBtn) return;
+    loadBtn.addEventListener('click', handleLoadBoards);
   }
 
   async function handleLoadBoards() {
+    const boardsTableBody = document.getElementById('boards-table-body');
+    const boardsPaginationBar = document.getElementById('boards-pagination-bar');
     if (!boardsTableBody) return;
+
     boardsTableBody.innerHTML = `
       <tr>
-        <td colspan="6" class="py-12 text-center">
-          <div class="max-w-md mx-auto space-y-3">
-            <div class="h-4 bg-muted skeleton-shimmer w-3/4"></div>
-            <div class="h-4 bg-muted skeleton-shimmer w-1/2"></div>
-            <div class="h-4 bg-muted skeleton-shimmer w-5/6"></div>
-            <div class="h-4 bg-muted skeleton-shimmer w-2/3"></div>
+        <td colspan="6" class="p-8 text-center text-xs text-muted-foreground animate-pulse">
+          <div class="max-w-md mx-auto space-y-2.5">
+            <div class="h-3.5 bg-muted rounded w-3/4 mx-auto animate-pulse"></div>
+            <div class="h-3.5 bg-muted rounded w-1/2 mx-auto animate-pulse"></div>
           </div>
-          <p class="mt-4 text-xs text-muted-foreground">Preparing board strategy timeline...</p>
+          <p class="mt-3 text-xs text-muted-foreground font-medium">Fetching Pinterest board strategy timeline…</p>
         </td>
       </tr>
     `;
+
     try {
       const res = await getCompetitorBoardsOnly(competitorId);
       boardsList = res.boards || [];
       boardsLoaded = true;
+      const boardsCountBadge = document.getElementById('boards-count-badge');
       if (boardsCountBadge) boardsCountBadge.textContent = `${boardsList.length} ${boardsList.length === 1 ? 'Board' : 'Boards'}`;
+      if (boardsPaginationBar) boardsPaginationBar.classList.remove('hidden');
       currentBoardPage = 1;
       renderBoardsTable();
     } catch (err: any) {
       boardsTableBody.innerHTML = `
         <tr>
-          <td colspan="6" class="py-8 text-center text-xs text-rose-500">
+          <td colspan="6" class="p-8 text-center text-xs text-rose-500">
             <span>Failed to load boards: ${err.message || 'Network error'}</span>
             <button id="retry-boards-btn" class="ml-3 font-bold underline hover:text-rose-600 cursor-pointer">Retry</button>
           </td>
         </tr>
       `;
-      const retryBtn = document.getElementById('retry-boards-btn');
-      if (retryBtn) {
-        retryBtn.addEventListener('click', handleLoadBoards);
-        retryBtn.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleLoadBoards();
-          }
-        });
-      }
+      document.getElementById('retry-boards-btn')?.addEventListener('click', handleLoadBoards);
     }
   }
 
   function renderBoardsTable() {
+    const boardsTableBody = document.getElementById('boards-table-body');
+    const boardsCountBadge = document.getElementById('boards-count-badge');
+    const boardsPaginationInfo = document.getElementById('boards-pagination-info');
+    const boardsPageIndicator = document.getElementById('boards-page-indicator');
+    const boardsPrevPageBtn = document.getElementById('boards-prev-page-btn') as HTMLButtonElement | null;
+    const boardsNextPageBtn = document.getElementById('boards-next-page-btn') as HTMLButtonElement | null;
+
     if (!boardsTableBody) return;
 
     // Filter by search query
@@ -1034,7 +1581,7 @@ import Layout from '../../layouts/Layout.astro';
     if (filtered.length === 0) {
       boardsTableBody.innerHTML = `
         <tr>
-          <td colspan="6" class="py-12 text-center text-xs text-muted-foreground">
+          <td colspan="6" class="p-12 text-center text-xs text-muted-foreground bg-muted/10">
             ${boardsList.length === 0 ? 'No Pinterest boards recorded yet for this competitor. Click <span class="font-semibold text-foreground">Paste DevTools Payload</span> to ingest boards!' : 'No boards match your search query.'}
           </td>
         </tr>
@@ -1046,7 +1593,6 @@ import Layout from '../../layouts/Layout.astro';
       return;
     }
 
-    // Pagination math
     const totalPages = Math.ceil(filtered.length / boardsPageSize);
     if (currentBoardPage > totalPages) currentBoardPage = totalPages;
     if (currentBoardPage < 1) currentBoardPage = 1;
@@ -1055,40 +1601,41 @@ import Layout from '../../layouts/Layout.astro';
     const endIdx = Math.min(startIdx + boardsPageSize, filtered.length);
     const paginatedSlice = filtered.slice(startIdx, endIdx);
 
-    // Render table rows
+    const padClass = isComfortableDensity ? 'py-3.5' : 'py-2';
+
     boardsTableBody.innerHTML = paginatedSlice
       .map((b) => {
         const rawBoardUrl = b.url ? (b.url.startsWith('http') ? b.url : `https://www.pinterest.com${b.url}`) : `https://www.pinterest.com/${competitorData?.username}/`;
         const boardUrl = /^https?:\/\//i.test(rawBoardUrl) ? rawBoardUrl : '#';
         return `
-          <tr class="hover:bg-muted/30 transition-colors">
-            <td class="py-4 px-6">
+          <tr class="hover:bg-muted/40 transition-colors group">
+            <td class="${padClass} px-5">
               <div class="flex flex-col min-w-0">
-                <span class="text-xs font-bold text-foreground truncate">${escHtml(b.name)}</span>
-                <p class="text-[11px] text-muted-foreground line-clamp-2 max-w-md">${escHtml(b.description || 'No description')}</p>
+                <span class="text-xs font-bold text-neutral-900 dark:text-neutral-100 truncate">${escHtml(b.name)}</span>
+                <p class="text-[11px] text-muted-foreground line-clamp-1 max-w-md mt-0.5">${escHtml(b.description || 'No description provided')}</p>
               </div>
             </td>
-            <td class="py-4 px-4 font-semibold text-foreground">
+            <td class="${padClass} px-4 font-semibold text-foreground whitespace-nowrap">
               ${formatDate(b.board_created_at)}
             </td>
-            <td class="py-4 px-4 text-muted-foreground">
+            <td class="${padClass} px-4 text-muted-foreground whitespace-nowrap">
               ${formatDate(b.last_pinned_at)}
             </td>
-            <td class="py-4 px-4 font-bold text-primary">
+            <td class="${padClass} px-4 text-right font-bold text-neutral-900 dark:text-neutral-100 font-mono tabular-nums">
               ${formatNumber(b.pin_count || 0)}
             </td>
-            <td class="py-4 px-4 font-semibold text-foreground">
+            <td class="${padClass} px-4 text-right font-semibold text-neutral-900 dark:text-neutral-100 font-mono tabular-nums">
               ${formatNumber(b.follower_count || 0)}
             </td>
-            <td class="py-4 px-6 text-right">
+            <td class="${padClass} px-5 text-right">
               <a
                 href="${escHtml(boardUrl)}"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted hover:text-primary transition-all"
+                class="inline-flex items-center gap-1 rounded-xl border border-border/80 bg-background px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted hover:text-primary transition-all shadow-2xs"
               >
                 <span>Board</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               </a>
             </td>
           </tr>
@@ -1096,328 +1643,244 @@ import Layout from '../../layouts/Layout.astro';
       })
       .join('');
 
-    // Update Pagination UI
     if (boardsPaginationInfo) boardsPaginationInfo.textContent = `Showing ${startIdx + 1}–${endIdx} of ${filtered.length} boards`;
     if (boardsPageIndicator) boardsPageIndicator.textContent = `Page ${currentBoardPage} of ${totalPages}`;
     if (boardsPrevPageBtn) boardsPrevPageBtn.disabled = currentBoardPage <= 1;
     if (boardsNextPageBtn) boardsNextPageBtn.disabled = currentBoardPage >= totalPages;
   }
 
-  // --- Snapshot History Log Table Renderer ---
-
-  const formatTotalDeltaSpan = (diff: number) => {
-    if (diff === 0) return '<span class="font-semibold text-[10px] text-muted-foreground" role="status" aria-label="net change zero">—</span>';
-    const isPos = diff > 0;
-    const label = `net change ${isPos ? 'increased by' : 'decreased by'} ${Math.abs(diff)}`;
-    return `<span class="font-semibold text-[10px] ${isPos ? 'text-emerald-500' : 'text-rose-500'}" role="status" aria-label="${label}">(${isPos ? '+' : '−'}${formatNumber(Math.abs(diff))})</span>`;
-  };
-
-  function renderSnapshotsLogTable() {
-    if (!snapshotsTableBody) return;
-    if (snapshotsCountBadge) snapshotsCountBadge.textContent = `${snapshotsList.length} ${snapshotsList.length === 1 ? 'Snapshot' : 'Snapshots'}`;
-
-    if (!snapshotsList || snapshotsList.length === 0) {
-      snapshotsTableBody.innerHTML = `
-        <tr>
-          <td colspan="6" class="py-12 text-center text-xs text-muted-foreground">
-            No historical snapshots recorded yet for this competitor.
-          </td>
-        </tr>
-      `;
-      return;
-    }
-
-    // Sort chronologically ascending to calculate deltas
-    const chronoSorted = [...snapshotsList].sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
-
-    // Build display list descending (newest first)
-    const displayList = [...chronoSorted].reverse();
-
-    let sumReachDiff = 0;
-    let sumViewsDiff = 0;
-    let sumFollowersDiff = 0;
-    let sumPinsDiff = 0;
-
-    const rowsHtml = displayList
-      .map((s) => {
-        const chronoIdx = chronoSorted.findIndex(item => item.id === s.id);
-        const prevSnap = chronoIdx > 0 ? chronoSorted[chronoIdx - 1] : null;
-
-        const reachDiff = prevSnap ? (s.profile_reach || 0) - (prevSnap.profile_reach || 0) : 0;
-        const viewsDiff = prevSnap ? (s.profile_views || 0) - (prevSnap.profile_views || 0) : 0;
-        const followersDiff = prevSnap ? (s.follower_count || 0) - (prevSnap.follower_count || 0) : 0;
-        const pinsDiff = prevSnap ? (s.pin_count || 0) - (prevSnap.pin_count || 0) : 0;
-
-        sumReachDiff += reachDiff;
-        sumViewsDiff += viewsDiff;
-        sumFollowersDiff += followersDiff;
-        sumPinsDiff += pinsDiff;
-
-        return `
-          <tr class="hover:bg-muted/30 transition-colors">
-            <td class="py-4 px-6 font-medium text-foreground">
-              ${formatDate(s.recorded_at, true)}
-            </td>
-            <td class="py-4 px-4 font-bold text-foreground">
-              ${formatNumber(s.profile_reach || 0)}${formatDeltaSpan(reachDiff)}
-            </td>
-            <td class="py-4 px-4 font-semibold text-foreground">
-              ${formatNumber(s.profile_views || 0)}${formatDeltaSpan(viewsDiff)}
-            </td>
-            <td class="py-4 px-4 text-foreground font-medium">
-              ${formatNumber(s.follower_count || 0)}${formatDeltaSpan(followersDiff)}
-            </td>
-            <td class="py-4 px-4 font-bold text-primary">
-              ${formatNumber(s.pin_count || 0)}${formatDeltaSpan(pinsDiff)}
-            </td>
-            <td class="py-4 px-6 text-right">
-              <button
-                data-delete-snapshot-id="${s.id}"
-                class="delete-snapshot-btn inline-flex items-center gap-1 rounded-lg border border-rose-500/20 bg-rose-500/10 px-2.5 py-1 text-[11px] font-semibold text-rose-500 hover:bg-rose-500/20 transition-all"
-                title="Delete Snapshot Record"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                <span>Delete</span>
-              </button>
-            </td>
-          </tr>
-        `;
-      })
-      .join('');
-
-    const totalsRowHtml = `
-      <tr role="row" aria-label="Totals row showing net metric changes" class="bg-muted/40 font-semibold border-b-2 border-border">
-        <th scope="row" class="py-3 px-6 font-bold text-xs text-foreground text-left" aria-label="Net Change summary">
-          ∑ Net Change
-        </th>
-        <td class="py-3 px-4 font-bold text-xs text-foreground" aria-label="Net reach change: ${sumReachDiff}">
-          ${formatTotalDeltaSpan(sumReachDiff)}
-        </td>
-        <td class="py-3 px-4 font-bold text-xs text-foreground" aria-label="Net views change: ${sumViewsDiff}">
-          ${formatTotalDeltaSpan(sumViewsDiff)}
-        </td>
-        <td class="py-3 px-4 font-bold text-xs text-foreground" aria-label="Net followers change: ${sumFollowersDiff}">
-          ${formatTotalDeltaSpan(sumFollowersDiff)}
-        </td>
-        <td class="py-3 px-4 font-bold text-xs text-primary" aria-label="Net pins change: ${sumPinsDiff}">
-          ${formatTotalDeltaSpan(sumPinsDiff)}
-        </td>
-        <td class="py-3 px-6 text-right" aria-label="No actions for totals row"></td>
-      </tr>
-    `;
-
-    snapshotsTableBody.innerHTML = totalsRowHtml + rowsHtml;
-
-    // Attach event listeners to delete snapshot buttons
-    document.querySelectorAll('.delete-snapshot-btn').forEach((btn) => {
-      btn.addEventListener('click', async (e) => {
-        const snapId = (e.currentTarget as HTMLElement).getAttribute('data-delete-snapshot-id');
-        if (!snapId) return;
-
-        if (confirm('Are you sure you want to delete this snapshot entry from history?')) {
-          try {
-            await deleteCompetitorSnapshot(snapId);
-            showStatus('Snapshot record deleted successfully.');
-            await loadDetails();
-          } catch (err: any) {
-            showStatus(`Failed to delete snapshot: ${err.message}`, true);
-          }
-        }
-      });
-    });
-  }
-
-  // --- Event Listeners for Filter & Pagination Controls ---
-
+  // ─── Filter & Control Event Listeners ───
+  const rangeBtns = document.querySelectorAll<HTMLButtonElement>('.time-range-btn');
   rangeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       rangeBtns.forEach(b => {
-        b.className = 'time-range-btn rounded-lg px-3 py-1.5 text-xs font-semibold bg-muted text-muted-foreground hover:text-foreground transition-all';
+        b.className = 'time-range-btn rounded-lg px-2.5 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer';
       });
-      btn.className = 'time-range-btn rounded-lg px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground transition-all shadow-xs';
+      btn.className = 'time-range-btn rounded-lg px-2.5 py-1 text-xs font-bold bg-background text-foreground shadow-2xs transition-all cursor-pointer';
       
-      activeTimeRange = btn.dataset.range || 'ALL';
+      activeTimeRange = btn.dataset.range || '7D';
       const filtered = getFilteredSnapshots();
       renderVisualGrowthChart(filtered);
       calculatePinningVelocity(filtered);
     });
   });
 
-  if (snapshotMonthSelect) {
-    snapshotMonthSelect.addEventListener('change', () => {
-      selectedMonth = snapshotMonthSelect.value;
-      const filtered = getFilteredSnapshots();
-      renderVisualGrowthChart(filtered);
-      calculatePinningVelocity(filtered);
-    });
-  }
+  const snapshotMonthSelect = document.getElementById('snapshot-month-select');
+  snapshotMonthSelect?.addEventListener('change', () => {
+    selectedMonth = (snapshotMonthSelect as HTMLSelectElement).value;
+    const filtered = getFilteredSnapshots();
+    renderVisualGrowthChart(filtered);
+    calculatePinningVelocity(filtered);
+  });
 
-  if (toggleComparisonBtn && momComparisonPanel) {
-    toggleComparisonBtn.addEventListener('click', () => {
-      isComparisonMode = !isComparisonMode;
-      if (isComparisonMode) {
-        momComparisonPanel.classList.remove('hidden');
-        toggleComparisonBtn.className = 'inline-flex items-center gap-1.5 rounded-xl border border-primary bg-primary text-primary-foreground px-3.5 py-1.5 text-xs font-semibold transition-all shadow-sm';
-        renderMoMComparison();
-      } else {
-        momComparisonPanel.classList.add('hidden');
-        toggleComparisonBtn.className = 'inline-flex items-center gap-1.5 rounded-xl border border-border bg-muted/50 px-3.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all';
-      }
-    });
-  }
+  const toggleComparisonBtn = document.getElementById('toggle-comparison-mode-btn');
+  const momComparisonPanel = document.getElementById('mom-comparison-panel');
+  toggleComparisonBtn?.addEventListener('click', () => {
+    isComparisonMode = !isComparisonMode;
+    if (isComparisonMode) {
+      momComparisonPanel?.classList.remove('hidden');
+      toggleComparisonBtn.className = 'inline-flex h-8 items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 text-primary px-3 text-xs font-bold transition-all shadow-2xs cursor-pointer';
+      renderMoMComparison();
+    } else {
+      momComparisonPanel?.classList.add('hidden');
+      toggleComparisonBtn.className = 'inline-flex h-8 items-center gap-1.5 rounded-xl border border-border/80 bg-muted/40 hover:bg-muted px-3 text-xs font-semibold text-foreground shadow-2xs transition-all cursor-pointer';
+    }
+  });
 
-  if (momMonthASelect && momMonthBSelect) {
-    momMonthASelect.addEventListener('change', renderMoMComparison);
-    momMonthBSelect.addEventListener('change', renderMoMComparison);
-  }
+  document.getElementById('mom-month-a')?.addEventListener('change', renderMoMComparison);
+  document.getElementById('mom-month-b')?.addEventListener('change', renderMoMComparison);
 
-  // Boards Search & Sort Listeners
-  if (boardSearchInput) {
-    boardSearchInput.addEventListener('input', () => {
-      boardSearchQuery = boardSearchInput.value.trim();
-      currentBoardPage = 1;
+  const boardSearchInput = document.getElementById('board-search-input');
+  boardSearchInput?.addEventListener('input', () => {
+    boardSearchQuery = (boardSearchInput as HTMLInputElement).value.trim();
+    currentBoardPage = 1;
+    renderBoardsTable();
+  });
+
+  const boardSortSelect = document.getElementById('board-sort-select');
+  boardSortSelect?.addEventListener('change', () => {
+    boardSortKey = (boardSortSelect as HTMLSelectElement).value;
+    currentBoardPage = 1;
+    renderBoardsTable();
+  });
+
+  document.getElementById('boards-prev-page-btn')?.addEventListener('click', () => {
+    if (currentBoardPage > 1) {
+      currentBoardPage--;
       renderBoardsTable();
-    });
-  }
+    }
+  });
 
-  if (boardSortSelect) {
-    boardSortSelect.addEventListener('change', () => {
-      boardSortKey = boardSortSelect.value;
-      currentBoardPage = 1;
-      renderBoardsTable();
-    });
-  }
+  document.getElementById('boards-next-page-btn')?.addEventListener('click', () => {
+    currentBoardPage++;
+    renderBoardsTable();
+  });
 
-  if (boardsPrevPageBtn) {
-    boardsPrevPageBtn.addEventListener('click', () => {
-      if (currentBoardPage > 1) {
-        currentBoardPage--;
-        renderBoardsTable();
-      }
-    });
-  }
-
-  if (boardsNextPageBtn) {
-    boardsNextPageBtn.addEventListener('click', () => {
-      currentBoardPage++;
-      renderBoardsTable();
-    });
-  }
-
-  // --- Main Data Loader ---
-
+  // ─── Main Details Loader ───
   async function loadDetails() {
-    const details = await getCompetitorLite(competitorId);
-    competitorData = details.competitor;
-    if (boardsLoaded && details.boards && details.boards.length > 0) {
-      boardsList = details.boards;
-    }
-    snapshotsList = details.snapshots || [];
-    deltasData = details.deltas;
+    try {
+      const details = await getCompetitorLite(competitorId);
+      competitorData = details.competitor;
+      snapshotsList = details.snapshots || [];
+      deltasData = details.deltas;
 
-    if (!competitorData) {
-      if (competitorFullname) competitorFullname.textContent = 'Competitor Not Found';
-      return;
-    }
+      const competitorAvatar = document.getElementById('competitor-avatar') as HTMLImageElement | null;
+      const competitorFullname = document.getElementById('competitor-fullname');
+      const competitorHandle = document.getElementById('competitor-handle');
+      const competitorNicheBadge = document.getElementById('competitor-niche-badge');
+      const competitorNotes = document.getElementById('competitor-notes');
+      const strategyAgeVal = document.getElementById('strategy-age-val');
+      const oldestBoardDateStr = document.getElementById('oldest-board-date-str');
+      const competitorPinterestLink = document.getElementById('competitor-pinterest-link') as HTMLAnchorElement | null;
+      const competitorWebsiteContainer = document.getElementById('competitor-website-container');
+      const competitorWebsiteLink = document.getElementById('competitor-website-link') as HTMLAnchorElement | null;
+      const competitorWebsiteText = document.getElementById('competitor-website-text');
+      const competitorVerifiedBadge = document.getElementById('competitor-verified-badge');
+      const competitorLastPinStr = document.getElementById('competitor-last-pin-str');
 
-    // Populate Header
-    if (competitorAvatar) competitorAvatar.src = competitorData.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80';
-    if (competitorFullname) competitorFullname.textContent = competitorData.full_name || competitorData.username;
-    if (competitorHandle) competitorHandle.textContent = `@${competitorData.username}`;
-    if (competitorNicheBadge) competitorNicheBadge.textContent = competitorData.niche || 'General';
-    if (competitorNotes) competitorNotes.textContent = competitorData.notes || 'No internal notes set for this competitor.';
+      const currentReach = document.getElementById('current-reach');
+      const currentViews = document.getElementById('current-views');
+      const currentFollowers = document.getElementById('current-followers');
+      const currentPins = document.getElementById('current-pins');
 
-    const typeBadge = document.getElementById('competitor-type-badge') as HTMLElement;
-    const tagsContainer = document.getElementById('competitor-tags-container') as HTMLElement;
+      const deltaReachBadge = document.getElementById('delta-reach-badge');
+      const deltaViewsBadge = document.getElementById('delta-views-badge');
+      const deltaFollowersBadge = document.getElementById('delta-followers-badge');
+      const deltaPinsBadge = document.getElementById('delta-pins-badge');
 
-    if (typeBadge) {
-      if (competitorData.account_type === 'own') {
-        typeBadge.textContent = '👤 My Account';
-        typeBadge.className = 'rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-bold text-blue-500 border border-blue-500/20';
-      } else {
-        typeBadge.textContent = '🎯 Competitor';
-        typeBadge.className = 'rounded-full bg-purple-500/10 px-2.5 py-0.5 text-xs font-bold text-purple-500 border border-purple-500/20';
+      const deltaReachSub = document.getElementById('delta-reach-sub');
+      const deltaViewsSub = document.getElementById('delta-views-sub');
+      const deltaFollowersSub = document.getElementById('delta-followers-sub');
+      const deltaPinsSub = document.getElementById('delta-pins-sub');
+
+      if (!competitorData) {
+        if (competitorFullname) competitorFullname.textContent = 'Competitor Not Found';
+        return;
       }
-    }
 
-    if (tagsContainer) {
-      if (Array.isArray(competitorData.tags) && competitorData.tags.length > 0) {
-        tagsContainer.innerHTML = competitorData.tags
-          .map((t) => `<span class="rounded bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground border border-border/50">#${escHtml(t)}</span>`)
-          .join('');
-      } else {
-        tagsContainer.innerHTML = '';
-      }
-    }
+      // Populate Header
+      if (competitorAvatar) competitorAvatar.src = competitorData.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80';
+      if (competitorFullname) competitorFullname.textContent = competitorData.full_name || competitorData.username;
+      if (competitorHandle) competitorHandle.textContent = `@${competitorData.username}`;
+      if (competitorNicheBadge) competitorNicheBadge.textContent = competitorData.niche || 'General';
+      if (competitorNotes) competitorNotes.textContent = competitorData.notes || 'No internal notes set for this competitor.';
 
-    if (competitorPinterestLink) {
-      competitorPinterestLink.href = `https://www.pinterest.com/${encodeURIComponent(competitorData.username)}/`;
-    }
+      const typeBadge = document.getElementById('competitor-type-badge');
+      const tagsContainer = document.getElementById('competitor-tags-container');
 
-    // Website & Domain Verified Status
-    if (competitorData.website_url && /^https?:\/\//i.test(competitorData.website_url)) {
-      if (competitorWebsiteContainer) competitorWebsiteContainer.classList.remove('hidden');
-      if (competitorWebsiteLink) competitorWebsiteLink.href = competitorData.website_url;
-      if (competitorWebsiteText) competitorWebsiteText.textContent = competitorData.website_url.replace(/^https?:\/\//, '').replace(/\/$/, '');
-      if (competitorVerifiedBadge) {
-        if (competitorData.domain_verified) {
-          competitorVerifiedBadge.classList.remove('hidden');
+      if (typeBadge) {
+        if (competitorData.account_type === 'own') {
+          typeBadge.textContent = '👤 My Account';
+          typeBadge.className = 'rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 border border-blue-500/20';
         } else {
-          competitorVerifiedBadge.classList.add('hidden');
+          typeBadge.textContent = '🎯 Competitor';
+          typeBadge.className = 'rounded-full bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-bold text-purple-600 dark:text-purple-400 border border-purple-500/20';
         }
       }
-    } else {
-      if (competitorWebsiteContainer) competitorWebsiteContainer.classList.add('hidden');
+
+      if (tagsContainer) {
+        if (Array.isArray(competitorData.tags) && competitorData.tags.length > 0) {
+          tagsContainer.innerHTML = competitorData.tags
+            .map((t) => `<span class="rounded-lg bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground border border-border/50">#${escHtml(t)}</span>`)
+            .join('');
+        } else {
+          tagsContainer.innerHTML = '';
+        }
+      }
+
+      if (competitorPinterestLink) {
+        competitorPinterestLink.href = `https://www.pinterest.com/${encodeURIComponent(competitorData.username)}/`;
+      }
+
+      // Website & Domain Verified Status
+      if (competitorData.website_url && /^https?:\/\//i.test(competitorData.website_url)) {
+        if (competitorWebsiteContainer) competitorWebsiteContainer.classList.remove('hidden');
+        if (competitorWebsiteLink) competitorWebsiteLink.href = competitorData.website_url;
+        if (competitorWebsiteText) competitorWebsiteText.textContent = competitorData.website_url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+        if (competitorVerifiedBadge) {
+          if (competitorData.domain_verified) {
+            competitorVerifiedBadge.classList.remove('hidden');
+          } else {
+            competitorVerifiedBadge.classList.add('hidden');
+          }
+        }
+      } else {
+        if (competitorWebsiteContainer) competitorWebsiteContainer.classList.add('hidden');
+      }
+
+      // Last Pin Timestamp
+      if (competitorLastPinStr) {
+        competitorLastPinStr.textContent = competitorData.last_pin_at ? `Last Pin: ${formatDate(competitorData.last_pin_at)}` : 'Last Pin: N/A';
+      }
+
+      // Strategy Age
+      if (strategyAgeVal) strategyAgeVal.textContent = competitorData.strategy_age_days ? `${competitorData.strategy_age_days} Days` : 'Unknown';
+      if (oldestBoardDateStr) oldestBoardDateStr.textContent = competitorData.oldest_board_date ? `Oldest board: ${formatDate(competitorData.oldest_board_date)}` : 'No boards recorded yet';
+
+      // Primary Metrics
+      if (currentReach) currentReach.textContent = formatNumber(competitorData.profile_reach || 0);
+      if (currentViews) currentViews.textContent = formatNumber(competitorData.profile_views || 0);
+      if (currentFollowers) currentFollowers.textContent = formatNumber(competitorData.follower_count || 0);
+      if (currentPins) currentPins.textContent = formatNumber(competitorData.pin_count || 0);
+
+      if (deltasData) {
+        if (deltaReachBadge && deltaReachSub) renderDeltaBadge(deltaReachBadge, deltaReachSub, deltasData.reachChange, deltasData.reachPercent);
+        if (deltaViewsBadge && deltaViewsSub) renderDeltaBadge(deltaViewsBadge, deltaViewsSub, deltasData.viewsChange, deltasData.viewsPercent);
+        if (deltaFollowersBadge && deltaFollowersSub) renderDeltaBadge(deltaFollowersBadge, deltaFollowersSub, deltasData.followersChange, deltasData.followersPercent);
+        if (deltaPinsBadge && deltaPinsSub) renderDeltaBadge(deltaPinsBadge, deltaPinsSub, deltasData.pinsChange, deltasData.pinsPercent);
+      }
+
+      populateMonthDropdowns();
+      const filteredSnapshots = getFilteredSnapshots();
+      renderVisualGrowthChart(filteredSnapshots);
+      calculatePinningVelocity(filteredSnapshots);
+
+      if (isComparisonMode) {
+        renderMoMComparison();
+      }
+
+      renderSnapshotsTableHeader();
+      renderSnapshotsLogTable();
+    } catch (e: any) {
+      console.error('Error loading competitor details:', e);
+      showStatus(`Error loading competitor: ${e.message}`, true);
     }
-
-    // Last Pin Timestamp
-    if (competitorLastPinStr) {
-      competitorLastPinStr.textContent = competitorData.last_pin_at ? `Last Pin: ${formatDate(competitorData.last_pin_at)}` : 'Last Pin: N/A';
-    }
-
-    // Strategy Age
-    if (strategyAgeVal) strategyAgeVal.textContent = competitorData.strategy_age_days ? `${competitorData.strategy_age_days} Days` : 'Unknown';
-    if (oldestBoardDateStr) oldestBoardDateStr.textContent = competitorData.oldest_board_date ? `Oldest board: ${formatDate(competitorData.oldest_board_date)}` : 'No boards recorded yet';
-
-    // Primary Metrics & Deltas (Full Number Formatting)
-    if (currentReach) currentReach.textContent = formatNumber(competitorData.profile_reach || 0);
-    if (currentViews) currentViews.textContent = formatNumber(competitorData.profile_views || 0);
-    if (currentFollowers) currentFollowers.textContent = formatNumber(competitorData.follower_count || 0);
-    if (currentPins) currentPins.textContent = formatNumber(competitorData.pin_count || 0);
-
-    if (deltasData) {
-      renderDeltaBadge(deltaReachBadge, deltaReachSub, deltasData.reachChange, deltasData.reachPercent);
-      renderDeltaBadge(deltaViewsBadge, deltaViewsSub, deltasData.viewsChange, deltasData.viewsPercent);
-      renderDeltaBadge(deltaFollowersBadge, deltaFollowersSub, deltasData.followersChange, deltasData.followersPercent);
-      renderDeltaBadge(deltaPinsBadge, deltaPinsSub, deltasData.pinsChange, deltasData.pinsPercent);
-    }
-
-    // Populate Dropdowns & Render Analytics Engine Cards
-    populateMonthDropdowns();
-    const filteredSnapshots = getFilteredSnapshots();
-    renderVisualGrowthChart(filteredSnapshots);
-    calculatePinningVelocity(filteredSnapshots);
-
-    if (isComparisonMode) {
-      renderMoMComparison();
-    }
-
-    // Render Boards Table & Snapshots Log Table
-    if (boardsLoaded) {
-      renderBoardsTable();
-    } else {
-      renderInitialBoardsPlaceholder();
-    }
-    renderSnapshotsLogTable();
   }
 
+  // Refresh button listener
+  document.getElementById('refresh-competitor-btn')?.addEventListener('click', () => {
+    const icon = document.getElementById('refresh-competitor-icon');
+    icon?.classList.add('animate-spin');
+    loadDetails().finally(() => {
+      setTimeout(() => icon?.classList.remove('animate-spin'), 400);
+    });
+  });
+
+  // Delete Competitor listener
+  document.getElementById('delete-competitor-deepdive-btn')?.addEventListener('click', async () => {
+    if (confirm('Are you sure you want to remove this competitor from tracking? This will delete all snapshots and board history.')) {
+      try {
+        await deleteCompetitor(competitorId);
+        window.location.href = '/competitors';
+      } catch (err: any) {
+        showStatus(`Failed to delete: ${err.message}`, true);
+      }
+    }
+  });
+
   // Modal Handlers
+  const modal = document.getElementById('deepdive-payload-modal');
+  const modalForm = document.getElementById('deepdive-payload-form') as HTMLFormElement | null;
+  const modalError = document.getElementById('deepdive-modal-error');
+  const modalTextarea = document.getElementById('deepdive-payload-textarea') as HTMLTextAreaElement | null;
+  const modalDetectedSpan = document.getElementById('deepdive-detected-type');
+
   function openModal() {
     if (modalError) modalError.classList.add('hidden');
     if (modalForm) modalForm.reset();
     if (modalDetectedSpan) {
-      modalDetectedSpan.textContent = 'Waiting for paste...';
-      modalDetectedSpan.className = 'rounded bg-muted px-2 py-0.5 text-[10px] font-semibold text-foreground';
+      modalDetectedSpan.textContent = 'Waiting for paste…';
+      modalDetectedSpan.className = 'rounded-lg bg-muted px-2.5 py-0.5 text-[11px] font-semibold text-foreground';
     }
     if (modal) {
       modal.classList.remove('hidden');
@@ -1432,17 +1895,17 @@ import Layout from '../../layouts/Layout.astro';
     }
   }
 
-  if (openModalBtn) openModalBtn.addEventListener('click', openModal);
-  if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
-  if (cancelModalBtn) cancelModalBtn.addEventListener('click', closeModal);
+  document.getElementById('open-deepdive-paste-modal')?.addEventListener('click', openModal);
+  document.getElementById('close-deepdive-modal')?.addEventListener('click', closeModal);
+  document.getElementById('cancel-deepdive-modal')?.addEventListener('click', closeModal);
 
   if (modalTextarea) {
     modalTextarea.addEventListener('input', () => {
       const text = modalTextarea.value.trim();
       if (!text) {
         if (modalDetectedSpan) {
-          modalDetectedSpan.textContent = 'Waiting for paste...';
-          modalDetectedSpan.className = 'rounded bg-muted px-2 py-0.5 text-[10px] font-semibold text-foreground';
+          modalDetectedSpan.textContent = 'Waiting for paste…';
+          modalDetectedSpan.className = 'rounded-lg bg-muted px-2.5 py-0.5 text-[11px] font-semibold text-foreground';
         }
         return;
       }
@@ -1451,17 +1914,17 @@ import Layout from '../../layouts/Layout.astro';
       if (parsed.type === 'user_profile') {
         if (modalDetectedSpan) {
           modalDetectedSpan.textContent = '✓ User Profile (UserResource)';
-          modalDetectedSpan.className = 'rounded bg-emerald-500/20 text-emerald-500 px-2 py-0.5 text-[10px] font-bold';
+          modalDetectedSpan.className = 'rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 text-[11px] font-bold border border-emerald-500/30';
         }
       } else if (parsed.type === 'user_boards') {
         if (modalDetectedSpan) {
           modalDetectedSpan.textContent = '✓ User Boards (BoardsResource)';
-          modalDetectedSpan.className = 'rounded bg-primary/20 text-primary px-2 py-0.5 text-[10px] font-bold';
+          modalDetectedSpan.className = 'rounded-lg bg-primary/20 text-primary px-2.5 py-0.5 text-[11px] font-bold border border-primary/30';
         }
       } else {
         if (modalDetectedSpan) {
           modalDetectedSpan.textContent = '✕ Unknown Payload';
-          modalDetectedSpan.className = 'rounded bg-rose-500/20 text-rose-500 px-2 py-0.5 text-[10px] font-bold';
+          modalDetectedSpan.className = 'rounded-lg bg-rose-500/20 text-rose-500 px-2.5 py-0.5 text-[11px] font-bold border border-rose-500/30';
         }
       }
     });
@@ -1470,21 +1933,34 @@ import Layout from '../../layouts/Layout.astro';
   if (modalForm) {
     modalForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const payloadText = modalTextarea.value.trim();
-      const res = await ingestDevToolsPayload(competitorId, payloadText);
-
-      if (res.success) {
-        closeModal();
-        showStatus(res.message);
-        await loadDetails();
-      } else {
+      const payloadText = modalTextarea?.value.trim() || '';
+      try {
+        const res = await ingestDevToolsPayload(competitorId, payloadText);
+        if (res.success) {
+          closeModal();
+          showStatus(res.message);
+          await loadDetails();
+          if (boardsLoaded) await handleLoadBoards();
+        } else {
+          if (modalError) {
+            modalError.textContent = res.message;
+            modalError.classList.remove('hidden');
+          }
+        }
+      } catch (err: any) {
         if (modalError) {
-          modalError.textContent = res.message;
+          modalError.textContent = err.message || 'Ingestion failed';
           modalError.classList.remove('hidden');
         }
       }
     });
   }
 
-  loadDetails();
+  // ─── Initialization ───
+  document.addEventListener('DOMContentLoaded', () => {
+    buildSnapColVisibilityMenu();
+    setupSnapColVisibilityToggle();
+    attachLoadBoardsBtnHandler();
+    loadDetails();
+  });
 </script>
