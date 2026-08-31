@@ -178,10 +178,38 @@ export const GET: APIRoute = async ({ request, locals }) => {
   return json({ success: true, competitor, snapshots: snapsList, boards: boardsList, topPins: topPinsList, deltas });
 };
 
-// POST: add new competitor to Competitors DB
+// POST: add new competitor(s) to Competitors DB (single or bulk)
 export const POST: APIRoute = async ({ request, locals }) => {
   let body: any = {}; try { body = JSON.parse(await request.text() || '{}'); } catch { return json({ error: 'Invalid JSON' }, 400); }
   const g = await guard(locals, body.workspace_id); if (g.err) return g.err;
+
+  // Bulk creation support
+  if (Array.isArray(body.competitors) && body.competitors.length > 0) {
+    const rawTags = Array.isArray(body.tags) ? body.tags : String(body.tags || '').split(',').map((t: string) => t.trim()).filter(Boolean);
+    const rows = body.competitors.map((item: any) => {
+      const u = typeof item === 'string' ? item : item.username;
+      const username = String(u || '').trim().replace(/^@/, '');
+      if (!username) return null;
+      return {
+        workspace_id: g.ok!.ws,
+        username,
+        full_name: (typeof item === 'object' && item.full_name) ? item.full_name : username,
+        niche: (typeof item === 'object' && item.niche) ? item.niche : (body.niche || null),
+        notes: (typeof item === 'object' && item.notes) ? item.notes : (body.notes || null),
+        tags: (typeof item === 'object' && Array.isArray(item.tags)) ? item.tags : rawTags,
+        account_type: (typeof item === 'object' && item.account_type) ? item.account_type : (body.account_type || 'competitor'),
+        is_active: true,
+      };
+    }).filter(Boolean);
+
+    if (rows.length === 0) return json({ error: 'No valid usernames provided' }, 400);
+
+    const { data, error } = await g.ok!.db.from('competitors').insert(rows).select();
+    if (error) return json({ error: error.message }, 500);
+    return json({ success: true, count: data?.length || 0, competitors: data }, 201);
+  }
+
+  // Single creation
   const username = String(body.username || '').trim().replace(/^@/, '');
   if (!username) return json({ error: 'username required' }, 400);
   const { data, error } = await g.ok!.db.from('competitors').insert({
