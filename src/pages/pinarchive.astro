@@ -534,27 +534,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       <!-- Data Table Container -->
       <div class="overflow-x-auto min-w-full">
         <table class="w-full text-left text-xs border-collapse" id="pinarchive-accounts-table">
-          <thead class="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur-sm text-foreground font-semibold">
-            <tr>
-              <th class="py-3 px-4 w-10 text-center">
-                <input
-                  type="checkbox"
-                  id="select-all-accounts-cb"
-                  class="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer accent-primary"
-                  title="Select all accounts"
-                />
-              </th>
-              <th class="py-3 px-4 font-semibold text-foreground">Creator Account</th>
-              <th class="py-3 px-4 font-semibold text-right">Followers</th>
-              <th class="py-3 px-4 font-semibold text-right">Pins Total</th>
-              <th class="py-3 px-4 font-semibold">Interval</th>
-              <th class="py-3 px-4 font-semibold text-right">Archived Pins</th>
-              <th class="py-3 px-4 font-semibold text-right">Δ Changed</th>
-              <th class="py-3 px-4 font-semibold">Last / Next Run</th>
-              <th class="py-3 px-4 font-semibold text-center">Ingest Active</th>
-              <th class="py-3 px-4 text-right font-semibold">Actions</th>
-            </tr>
-          </thead>
+          <thead class="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur-sm text-foreground font-semibold"></thead>
           <tbody id="accounts-table-body" class="divide-y divide-border/70 bg-card">
             <tr>
               <td colspan="10" class="p-8 text-center text-xs text-muted-foreground animate-pulse">Loading tracked accounts…</td>
@@ -623,8 +603,6 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
 </Layout>
 
 <script>
-  import { fmtAuditTimestamp } from '../lib/format-audit';
-
   let rawAccounts: any[] = [];
   const selectedAccounts = new Set<string>();
 
@@ -772,25 +750,25 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
   }
 
   const COLUMN_DEFS: ColDef[] = [
-    { key: 'interval_days', label: 'Interval (Days)', defaultVisible: true, align: 'left' },
+    { key: 'interval_days', label: 'Sync Interval', defaultVisible: true, align: 'left' },
+    { key: 'delta_changed', label: 'Recent Δ', defaultVisible: true, align: 'right' },
     { key: 'backfill_status', label: 'Backfill Status', defaultVisible: false, align: 'left' },
     { key: 'backfill_cursor', label: 'Backfill Cursor', defaultVisible: false, align: 'left' },
     { key: 'last_result', label: 'Last Result', defaultVisible: false, align: 'left' },
-    { key: 'archived_count', label: 'Archived Pins', defaultVisible: true, align: 'right' },
   ];
 
   let colVisible: Record<string, boolean> = (() => {
     try {
-      const saved = localStorage.getItem('po_pa_cols_v2');
+      const saved = localStorage.getItem('po_pa_cols_v3');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
           return {
             interval_days: true,
+            delta_changed: true,
             backfill_status: false,
             backfill_cursor: false,
             last_result: false,
-            archived_count: true,
             ...parsed,
           };
         }
@@ -798,10 +776,10 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     } catch {}
     return {
       interval_days: true,
+      delta_changed: true,
       backfill_status: false,
       backfill_cursor: false,
       last_result: false,
-      archived_count: true,
     };
   })();
 
@@ -820,7 +798,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       cb.addEventListener('change', () => {
         const key = cb.dataset.paColKey!;
         colVisible[key] = cb.checked;
-        localStorage.setItem('po_pa_cols_v2', JSON.stringify(colVisible));
+        localStorage.setItem('po_pa_cols_v3', JSON.stringify(colVisible));
         renderTableHeader();
         filterAndRenderAccounts();
       });
@@ -854,7 +832,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
     if (colVisible.backfill_status) optHeaders += `<th class="py-3 px-4 font-semibold">Backfill</th>`;
     if (colVisible.backfill_cursor) optHeaders += `<th class="py-3 px-4 font-semibold">Cursor</th>`;
     if (colVisible.last_result) optHeaders += `<th class="py-3 px-4 font-semibold">Last Result</th>`;
-    if (colVisible.archived_count) optHeaders += `<th class="py-3 px-4 font-semibold text-right">Archived Pins</th>`;
+    if (colVisible.delta_changed) optHeaders += `<th class="py-3 px-4 font-semibold text-right">Recent Δ</th>`;
 
     thead.innerHTML = `
       <tr>
@@ -868,10 +846,9 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         </th>
         <th class="py-3 px-4 font-semibold text-foreground">Creator Account</th>
         <th class="py-3 px-4 font-semibold text-right">Followers</th>
-        <th class="py-3 px-4 font-semibold text-right">Pins Total</th>
+        <th class="py-3 px-4 font-semibold text-right">Archived Pins</th>
         ${optHeaders}
-        <th class="py-3 px-4 font-semibold text-right">Δ Changed</th>
-        <th class="py-3 px-4 font-semibold">Last / Next Run</th>
+        <th class="py-3 px-4 font-semibold">Last Sync</th>
         <th class="py-3 px-4 font-semibold text-center">Ingest Active</th>
         <th class="py-3 px-4 text-right font-semibold">Actions</th>
       </tr>
@@ -925,6 +902,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         const { bg: avatarBg, initial } = getAvatarStyle(acc.username || '');
         const changed = Number(acc.changed_last_refresh ?? 0);
         const total = Number(acc.checked_last_refresh ?? (acc.db_pins_count !== undefined ? acc.db_pins_count : (acc.pins_count ?? 0)));
+        const archCount = acc.db_pins_count !== undefined ? acc.db_pins_count : (acc.pins_count ?? 0);
 
         let optCells = '';
         if (colVisible.interval_days) {
@@ -977,15 +955,11 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         if (colVisible.last_result) {
           optCells += `<td class="${padClass} text-[11px] text-muted-foreground max-w-[180px] truncate" title="${escapeHtml(acc.last_result || '')}">${escapeHtml(acc.last_result || '—')}</td>`;
         }
-        if (colVisible.archived_count) {
-          const archCount = acc.archived_count !== undefined ? acc.archived_count : (acc.db_pins_count ?? acc.pins_count ?? 0);
-          optCells += `
-            <td class="${padClass} text-right font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
-              <span class="inline-flex items-center gap-1 font-bold">
-                ${fmtMetric(archCount)}
-              </span>
-            </td>
-          `;
+        if (colVisible.delta_changed) {
+          const deltaBadge = changed > 0
+            ? `<span class="inline-flex items-center gap-1 font-bold text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="${changed} of ${total} pins updated in last refresh">+${fmtMetric(changed)} pins</span>`
+            : `<span class="text-[11px] text-muted-foreground" title="No pins changed in last refresh">0 change</span>`;
+          optCells += `<td class="${padClass} text-right font-mono tabular-nums">${deltaBadge}</td>`;
         }
 
         return `
@@ -1031,22 +1005,18 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
             <td class="${padClass} text-right font-semibold text-foreground font-mono tabular-nums">
               ${fmtMetric(acc.follower_count)}
             </td>
-            <td class="${padClass} text-right font-semibold text-foreground font-mono tabular-nums">
-              <span title="Total pins recorded in archive">
-                ${fmtMetric(acc.db_pins_count !== undefined ? acc.db_pins_count : acc.pins_count)}
+            <td class="${padClass} text-right font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
+              <span title="Total archived pins with verified metrics">
+                ${fmtMetric(archCount)}
               </span>
             </td>
             ${optCells}
-            <td class="${padClass} text-right font-mono tabular-nums" title="Last refresh: ${changed} of ${total} checked">
-              <span class="font-bold ${changed>0?'text-emerald-500':'text-muted-foreground'}">${changed}/${total}</span>
-            </td>
             <td class="${padClass} whitespace-nowrap">
               <div class="text-[11px] font-medium text-foreground">
                 ${acc.last_run_at ? timeAgo(acc.last_run_at) : '<span class="text-muted-foreground/60">Never</span>'}
               </div>
-              <div class="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5">
-                <span class="${changed>0?'text-emerald-500 font-bold':'text-muted-foreground'}">+${changed} today</span>
-                ${acc.next_run_at ? `<span class="opacity-40">•</span><span>Next: ${timeAgo(acc.next_run_at)}</span>` : ''}
+              <div class="text-[10px] text-muted-foreground mt-0.5">
+                ${acc.next_run_at ? `<span>Next in ${timeAgo(acc.next_run_at).replace(' ago', '')}</span>` : '<span>Schedule pending</span>'}
               </div>
             </td>
             <td class="${padClass} text-center">
@@ -1208,6 +1178,7 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         }
       }
 
+      renderTableHeader();
       filterAndRenderAccounts();
       updateCostEstimate();
     } catch (e: any) {
