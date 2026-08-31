@@ -69,21 +69,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Check P4 tables (PinArchive)
     let paAccCount = 0;
     let paPinCount = 0;
+    let paRunCount = 0;
     try {
       const p4Admin = dbClients.getPinArchive(runtimeEnv);
       if (p4Admin && typeof p4Admin.from === 'function') {
-        const [paAccRes, paPinRes] = await Promise.all([
+        const [paAccRes, paPinRes, paRunRes] = await Promise.all([
           p4Admin.from('pa_accounts').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
           p4Admin.from('pa_pins').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
+          p4Admin.from('pa_runs').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
         ]);
         paAccCount = paAccRes?.count || 0;
         paPinCount = paPinRes?.count || 0;
+        paRunCount = paRunRes?.count || 0;
       }
     } catch {}
 
     const total = (accRes.count || 0) + (boardRes.count || 0) + (pinRes.count || 0) +
                   (compRes.count || 0) + (compBoardRes.count || 0) + (connRes.count || 0) +
-                  paAccCount + paPinCount;
+                  paAccCount + paPinCount + paRunCount;
 
     if (total > 0) {
       return new Response(JSON.stringify({
@@ -95,11 +98,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Clean up cross-project settings before deleting workspace
+    // Clean up cross-project settings and runs before deleting workspace
     try {
       const p4Admin = dbClients.getPinArchive(runtimeEnv);
       await Promise.allSettled([
         p4Admin?.from?.('pa_workspace_settings')?.delete?.()?.eq?.('workspace_id', workspaceId),
+        p4Admin?.from?.('pa_runs')?.delete?.()?.eq?.('workspace_id', workspaceId),
         p3Admin?.from?.('workspace_analytics_settings')?.delete?.()?.eq?.('workspace_id', workspaceId),
         p1Admin?.from?.('workspace_retention_settings')?.delete?.()?.eq?.('workspace_id', workspaceId),
       ]);

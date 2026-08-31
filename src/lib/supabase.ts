@@ -1256,14 +1256,19 @@ export async function toggleAccountWebhookActive(
 }
 
 export async function deleteAccountWebhook(
-  id: string
+  id: string,
+  workspaceId?: string
 ): Promise<{ success: boolean; error: string | null }> {
   if (!supabase) {
     mockWebhooks = mockWebhooks.filter((w) => w.id !== id);
     return { success: true, error: null };
   }
   try {
-    const { error } = await supabase.from('account_webhooks').delete().eq('id', id);
+    let query = supabase.from('account_webhooks').delete().eq('id', id);
+    if (workspaceId) {
+      query = query.eq('workspace_id', workspaceId);
+    }
+    const { error } = await query;
     if (error) return { success: false, error: error.message };
     return { success: true, error: null };
   } catch (err: any) {
