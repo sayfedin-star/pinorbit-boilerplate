@@ -434,13 +434,22 @@ async function main() {
   const isGhScheduled = (process.env.EVENT_NAME || process.env.GITHUB_EVENT_NAME || '').trim().toLowerCase() === 'schedule';
   if (isGhScheduled) {
     try {
-      const masterWorkspaces = await supaQuery('workspaces', 'select=id,is_master&is_master=eq.true&limit=1', DB_CONFIG);
-      if (Array.isArray(masterWorkspaces) && masterWorkspaces.length > 0) {
-        const masterId = masterWorkspaces[0].id;
-        const masterSetting = settingsMap.get(masterId);
-        if (masterSetting && masterSetting.github_schedule_enabled === false) {
-          console.log(`[GLOBAL SKIP] GitHub Actions 07:00 UTC schedule is globally disabled by Master Workspace (${masterId.slice(0, 8)}). Exiting immediately.`);
-          return;
+      const p1Url = process.env.SUPABASE_URL || process.env.PUBLIC_SUPABASE_URL || process.env.PINORBIT_SUPABASE_URL || '';
+      const p1Key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+      if (p1Url && p1Key) {
+        const p1Res = await fetch(`${p1Url}/rest/v1/workspaces?select=id,is_master&is_master=eq.true&limit=1`, {
+          headers: { apikey: p1Key, Authorization: `Bearer ${p1Key}`, Accept: 'application/json' },
+        });
+        if (p1Res.ok) {
+          const masterWorkspaces = await p1Res.json();
+          if (Array.isArray(masterWorkspaces) && masterWorkspaces.length > 0) {
+            const masterId = masterWorkspaces[0].id;
+            const masterSetting = settingsMap.get(masterId);
+            if (masterSetting && masterSetting.github_schedule_enabled === false) {
+              console.log(`[GLOBAL SKIP] GitHub Actions schedule is globally disabled by Master Workspace (${masterId.slice(0, 8)}). Exiting immediately.`);
+              return;
+            }
+          }
         }
       }
     } catch (err) {
