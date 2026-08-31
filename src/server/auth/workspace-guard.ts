@@ -22,9 +22,17 @@ export async function assertWorkspaceAccess(
     throw new HttpError(400, 'Invalid workspace or user identifier format.');
   }
 
-  const { data, error } = await schedulingClient.from('workspace_memberships')
-    .select('id, workspace_id, user_id, role, created_at, workspaces(id, is_master)').eq('workspace_id', workspaceId).eq('user_id', userId).single();
-  if (error || !data) throw new HttpError(403, 'Forbidden: Access Denied.');
+  const { data, error } = await schedulingClient
+    .from('workspace_memberships')
+    .select('id, workspace_id, user_id, role, created_at, workspaces(id, is_master)')
+    .eq('workspace_id', workspaceId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error || !data) {
+    throw new HttpError(403, 'Forbidden: Access Denied.');
+  }
+
   const role = data.role as 'owner' | 'admin' | 'member';
   const roleOk = requiredRole === 'member' ? true : requiredRole === 'admin' ? (role === 'admin' || role === 'owner') : role === 'owner';
   if (!roleOk) throw new HttpError(403, 'Forbidden: insufficient workspace role.');
@@ -37,6 +45,12 @@ export async function getUserWorkspaces(schedulingClient: SupabaseClient, userId
     throw new HttpError(400, 'Invalid user ID format.');
   }
   const { data, error } = await schedulingClient.from('workspace_memberships').select('workspace_id, role, workspaces(id, name, slug, is_master)').eq('user_id', userId);
-  if (error || !data) return [];
+  if (error || !data) {
+    const fallback = await schedulingClient.from('workspace_memberships').select('workspace_id, role, workspaces(id, name, slug)').eq('user_id', userId);
+    if (fallback.data) {
+      return fallback.data.filter((item: any) => item.workspaces).map((item: any) => ({ id: item.workspaces.id, name: item.workspaces.name, slug: item.workspaces.slug, role: item.role, is_master: false }));
+    }
+    return [];
+  }
   return data.filter((item: any) => item.workspaces).map((item: any) => ({ id: item.workspaces.id, name: item.workspaces.name, slug: item.workspaces.slug, role: item.role, is_master: Boolean(item.workspaces.is_master) }));
 }

@@ -36,7 +36,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const schedulingAdmin = dbClients.getSchedulingAdmin();
+    const runtimeEnv = (locals as any)?.runtime?.env || (locals as any)?.runtimeEnv;
+    const schedulingAdmin = dbClients.getSchedulingAdmin(runtimeEnv);
     await assertWorkspaceAccess(schedulingAdmin, workspace_id, user.id, 'admin');
 
     if (is_master) {
