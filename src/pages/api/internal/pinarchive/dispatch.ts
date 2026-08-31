@@ -92,7 +92,9 @@ async function handlePinArchiveDispatch(
       request.headers.get('x-ingest-secret') ||
       request.headers.get('x-dispatch-secret') ||
       (typeof payload.ingest_secret === 'string' ? payload.ingest_secret : null) ||
-      (typeof payload.secret === 'string' ? payload.secret : null);
+      (typeof payload.secret === 'string' ? payload.secret : null) ||
+      url.searchParams.get('secret') ||
+      url.searchParams.get('ingest_secret');
 
     // Candidate-set verification across all valid sources (workspace, workspace:prev, global, global:prev, env)
     const verification = await verifyIngestSecret(providedSecret, workspaceId, runtimeEnv);
