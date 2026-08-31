@@ -26,45 +26,67 @@ if (workspaceId) {
 
 const rawExpr = competitor_pipeline_settings?.cron_expression || null;
 const cronExpr = rawExpr || '—';
-const cronTitle = rawExpr ? humanCronTitle(rawExpr) : 'No schedule yet';
-const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure Schedule';
+const cronTitle = rawExpr ? humanCronTitle(rawExpr) : 'No schedule configured yet';
+const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping schedule in Ops Console';
 ---
 
 <Layout title="Competitor Intelligence" description="Track competitor Pinterest growth, reach, views, followers, and board creation strategy over time.">
 
   <!-- ═══ Header & Primary Actions ═══ -->
   <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-    <SectionHeader
-      title="Competitor Intelligence"
-      description="Monitor competitor profile reach, follower velocity, and Pinterest board strategy timeline."
-    />
-    <div class="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
-      <button id="refresh-btn" title="Refresh data"
-        class="inline-flex items-center justify-center rounded-xl border border-border bg-card p-2.5 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-all">
+    <div>
+      <div class="flex items-center gap-2.5">
+        <span class="inline-flex items-center justify-center rounded-xl bg-primary/10 p-2 text-primary border border-primary/20">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </span>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-bold tracking-tight text-foreground">Competitor Intelligence</h1>
+            <span class="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary border border-primary/20">
+              Live Monitor
+            </span>
+          </div>
+          <p class="text-xs text-muted-foreground mt-0.5">
+            Monitor profile reach, follower velocity, and board strategy timeline.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+      <button id="refresh-btn" title="Refresh data table"
+        class="inline-flex items-center justify-center rounded-xl border border-border bg-card p-2.5 text-muted-foreground shadow-xs hover:bg-muted hover:text-foreground transition-all">
         <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
       </button>
-      <button id="export-csv-btn"
-        class="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition-all">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+
+      <button id="export-csv-btn" title="Export all filtered profiles to CSV"
+        class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground shadow-xs hover:bg-muted transition-all">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span>Export CSV</span>
       </button>
+
       <RunNowButton
         endpoint="/api/admin/competitor-ops"
         payload={{ scope: 'all' }}
         forcePayload={{ scope: 'all', force: true }}
-        label="Run Full Update Now"
+        label="Run Full Update"
         forceLabel="⚡ Force Run"
         size="md"
         variant="primary"
         buttonId="run-full-update-btn-unified"
         scope="competitors"
       />
+
       <a href="/competitors/settings"
-        class="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition-all">
-        <span>⚙️ Ops Console</span>
+        class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground shadow-xs hover:bg-muted transition-all" title="View Ops Console and Token Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Ops Console</span>
       </a>
+
       <button id="open-add-competitor-modal"
-        class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary/90 transition-all">
+        class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span>Track Profile</span>
       </button>
@@ -74,171 +96,285 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
   <!-- ═══ Automation & Ingestion Scheduler Bar ═══ -->
   <div class="mb-6 rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
     <div class="flex items-center gap-3.5">
-      <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+      <div class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
         </svg>
+        <span class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+        </span>
       </div>
       <div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
           <h2 class="text-sm font-bold text-foreground">Automated Ingestion Pipeline</h2>
           <span id="comp-pipeline-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
             Active
           </span>
           <span
             id="comp-cron-badge"
-            class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border cursor-help"
+            class="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border cursor-help"
             title={cronTitle}
             data-tooltip={cronDesc}
           >
-            {rawExpr ? cronExpr : 'No schedule — Configure Schedule →'}
+            {rawExpr ? cronExpr : 'No schedule — Configure in Settings →'}
           </span>
         </div>
         <p class="text-xs text-muted-foreground mt-0.5">
-          Automatic background profile ingestion & follower velocity syncs via FastCron / cron-job.org.
+          Background profile syncs & follower velocity tracking via FastCron / cron-job.org.
         </p>
       </div>
     </div>
 
-
     <div class="flex flex-wrap items-center gap-2 self-start md:self-auto">
       <ProviderBadge workspaceId={Astro.locals.activeWorkspaceId || ''} />
+      <button id="open-paste-payload-modal"
+        class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs"
+        title="Paste raw Pinterest JSON from DevTools">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+        <span>Ingest DevTools JSON</span>
+      </button>
       <a
         href="/competitors/settings"
-        class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs"
+        class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs"
       >
-        <span>⚙️ Ops Console & Token Vault</span>
+        <span>⚙️ Token Vault</span>
       </a>
     </div>
   </div>
 
   <!-- ═══ KPI Dashboard (4 cards) ═══ -->
   <div class="mb-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-    <div class="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+    <!-- Card 1: Tracked Profiles -->
+    <div class="rounded-2xl border border-border bg-card p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tracked Profiles</span>
-        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+        <span class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Tracked Profiles</span>
+        <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 group-hover:scale-105 transition-transform">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </span>
       </div>
-      <div class="text-2xl font-bold tracking-tight text-foreground mt-1" id="kpi-total">-</div>
-      <div class="mt-2 h-1 rounded-full bg-muted overflow-hidden flex" id="kpi-split-bar"><div class="bg-blue-500 h-full" style="width:0%"></div><div class="bg-purple-500 h-full" style="width:0%"></div></div>
-      <div class="mt-1.5 text-[11px] text-muted-foreground" id="kpi-split-label">0 own • 0 competitors</div>
+      <div>
+        <div class="text-3xl font-bold tracking-tight text-foreground mt-2" id="kpi-total">-</div>
+        <div class="mt-2 h-1.5 rounded-full bg-muted overflow-hidden flex" id="kpi-split-bar">
+          <div class="bg-blue-500 h-full transition-all duration-300" style="width:0%"></div>
+          <div class="bg-purple-500 h-full transition-all duration-300" style="width:0%"></div>
+        </div>
+        <div class="mt-2 text-[11px] font-medium text-muted-foreground flex items-center justify-between" id="kpi-split-label">
+          <span>0 own</span>
+          <span>0 competitors</span>
+        </div>
+      </div>
     </div>
-    <div class="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+
+    <!-- Card 2: Combined Reach -->
+    <div class="rounded-2xl border border-border bg-card p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Combined Reach</span>
-        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>
+        <span class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Combined Reach</span>
+        <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 group-hover:scale-105 transition-transform">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </span>
       </div>
-      <div class="text-2xl font-bold tracking-tight text-emerald-500 mt-1" id="kpi-reach">-</div>
-      <div class="mt-1.5 text-[11px] text-muted-foreground truncate" id="kpi-reach-sub">monthly profile reach</div>
+      <div>
+        <div class="text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 mt-2 font-mono tabular-nums" id="kpi-reach">-</div>
+        <div class="mt-2 text-[11px] text-muted-foreground truncate flex items-center gap-1.5">
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+          <span id="kpi-reach-sub" class="truncate">monthly profile reach</span>
+        </div>
+      </div>
     </div>
-    <div class="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+
+    <!-- Card 3: Total Audience -->
+    <div class="rounded-2xl border border-border bg-card p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Audience</span>
-        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>
+        <span class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Total Audience</span>
+        <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 group-hover:scale-105 transition-transform">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </span>
       </div>
-      <div class="text-2xl font-bold tracking-tight text-foreground mt-1" id="kpi-followers">-</div>
-      <div class="mt-1.5 text-[11px] text-muted-foreground" id="kpi-followers-sub">avg — / profile</div>
+      <div>
+        <div class="text-3xl font-bold tracking-tight text-foreground mt-2 font-mono tabular-nums" id="kpi-followers">-</div>
+        <div class="mt-2 text-[11px] text-muted-foreground flex items-center gap-1.5">
+          <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+          <span id="kpi-followers-sub">avg — / profile</span>
+        </div>
+      </div>
     </div>
-    <div class="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+
+    <!-- Card 4: Pins Tracked -->
+    <div class="rounded-2xl border border-border bg-card p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pins Tracked</span>
-        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+        <span class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Pins Tracked</span>
+        <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 group-hover:scale-105 transition-transform">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </span>
       </div>
-      <div class="text-2xl font-bold tracking-tight text-foreground mt-1" id="kpi-pins">-</div>
-      <div class="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span><span id="kpi-active-sub">0 active this week</span></div>
+      <div>
+        <div class="text-3xl font-bold tracking-tight text-foreground mt-2 font-mono tabular-nums" id="kpi-pins">-</div>
+        <div class="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+          <span id="kpi-active-sub">0 active this week</span>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- ═══ Table Workspace ═══ -->
-  <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden mb-8">
-    <!-- Toolbar -->
-    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-b border-border px-6 py-4 bg-muted/30">
-      <div class="flex items-center gap-3 flex-wrap">
-        <div class="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/60">
-          <button data-type-tab="all" class="account-type-tab-btn rounded-lg px-3.5 py-1.5 text-xs font-semibold bg-background text-foreground shadow-xs transition-all">All Profiles</button>
-          <button data-type-tab="own" class="account-type-tab-btn rounded-lg px-3.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all">👤 My Accounts</button>
-          <button data-type-tab="competitor" class="account-type-tab-btn rounded-lg px-3.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all">🎯 Competitors</button>
+  <!-- ═══ Table Workspace & Enhanced Controls ═══ -->
+  <div class="rounded-2xl border border-border bg-card shadow-xs overflow-hidden mb-8">
+    
+    <!-- Primary Filter Toolbar -->
+    <div class="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between border-b border-border px-5 py-3.5 bg-muted/20">
+      
+      <!-- Left: Tabs & Quick Filters -->
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <!-- Account Type Tabs -->
+        <div class="flex items-center gap-1 bg-muted/70 p-1 rounded-xl border border-border/60">
+          <button data-type-tab="all" class="account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold bg-background text-foreground shadow-2xs transition-all">All Profiles</button>
+          <button data-type-tab="own" class="account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all">👤 My Accounts</button>
+          <button data-type-tab="competitor" class="account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all">🎯 Competitors</button>
         </div>
+
+        <!-- Activity Status Filter -->
         <div class="flex items-center gap-1.5">
-          <label for="tag-filter-select" class="text-xs font-semibold text-muted-foreground">Tag:</label>
-          <select id="tag-filter-select" class="rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none">
-            <option value="all">All Tags</option>
+          <select id="activity-filter-select" class="rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none shadow-2xs" title="Filter by profile activity state">
+            <option value="all">⚡ All Activity</option>
+            <option value="active">🟢 Active (&le; 7d)</option>
+            <option value="cooling">🟡 Cooling (7-30d)</option>
+            <option value="stale">🔴 Stale (&gt; 30d)</option>
           </select>
         </div>
-        <div class="relative">
+
+        <!-- Tag Filter -->
+        <div class="flex items-center gap-1.5">
+          <select id="tag-filter-select" class="rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none shadow-2xs">
+            <option value="all">🏷️ All Tags</option>
+          </select>
+        </div>
+
+        <!-- Search Input with Clear Button & Keyboard Shortcut -->
+        <div class="relative min-w-[220px]">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input id="competitor-search-input" type="text" placeholder="Search username, name, niche…"
-            class="w-56 rounded-xl border border-border bg-background py-1.5 pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
-          <kbd class="absolute right-2 top-1/2 -translate-y-1/2 rounded border border-border bg-muted px-1 text-[9px] font-bold text-muted-foreground">/</kbd>
+          <input id="competitor-search-input" type="text" placeholder="Search handle, name, tag…"
+            class="w-full rounded-xl border border-border bg-background py-1.5 pl-8 pr-12 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs" />
+          <button id="search-clear-btn" class="hidden absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs p-0.5" title="Clear search">✕</button>
+          <kbd class="absolute right-2 top-1/2 -translate-y-1/2 rounded border border-border bg-muted px-1 text-[9px] font-bold text-muted-foreground pointer-events-none">/</kbd>
         </div>
       </div>
-      <div class="flex items-center gap-2.5 flex-wrap">
-        <span class="text-[10px] text-muted-foreground" id="updated-at"></span>
+
+      <!-- Right: View Controls (Density, Number Format, Columns, Count) -->
+      <div class="flex items-center gap-2 flex-wrap self-start lg:self-auto">
+        <span class="text-[11px] text-muted-foreground font-mono" id="updated-at"></span>
+
+        <!-- Number Format Switcher -->
+        <button id="num-format-toggle-btn" class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all shadow-2xs" title="Toggle Compact / Full number format">
+          <span class="text-[10px]">#</span>
+          <span id="num-format-label">Full Numbers</span>
+        </button>
+
+        <!-- Density Switcher -->
+        <button id="density-toggle-btn" class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all shadow-2xs" title="Toggle Table Density (Comfortable / Compact)">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          <span id="density-label">Comfortable</span>
+        </button>
+
+        <!-- Column Visibility Dropdown -->
         <div class="relative" id="col-visibility-wrapper">
-          <button id="col-visibility-btn" class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all">
+          <button id="col-visibility-btn" class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             <span>Columns</span>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
-          <div id="col-visibility-menu" class="hidden absolute right-0 top-full mt-1.5 z-30 w-48 rounded-xl border border-border bg-card shadow-lg p-2 space-y-0.5"></div>
+          <div id="col-visibility-menu" class="hidden absolute right-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-border bg-card shadow-lg p-2 space-y-1">
+            <div class="flex items-center justify-between pb-1 px-1 border-b border-border/80 text-[11px] font-semibold text-muted-foreground">
+              <span>Toggle Columns</span>
+              <button id="reset-cols-btn" class="text-primary hover:underline text-[10px]">Reset</button>
+            </div>
+            <div id="col-checkboxes-container" class="space-y-0.5 max-h-60 overflow-y-auto"></div>
+          </div>
         </div>
-        <span class="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary" id="competitor-badge-count">0 Profiles</span>
+
+        <span class="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary border border-primary/20" id="competitor-badge-count">
+          0 Profiles
+        </span>
       </div>
     </div>
 
-    <!-- Selection action bar -->
-    <div id="selection-bar" class="hidden items-center justify-between gap-3 border-b border-border bg-primary/5 px-6 py-2.5 flex-wrap">
+    <!-- Active Filters Strip (Visible when filtered) -->
+    <div id="active-filters-bar" class="hidden items-center justify-between gap-2 border-b border-border bg-muted/40 px-5 py-2 text-xs">
+      <div class="flex items-center gap-2 flex-wrap" id="active-filter-chips"></div>
+      <button id="reset-all-filters-btn" class="text-[11px] font-semibold text-primary hover:underline">Reset all filters</button>
+    </div>
+
+    <!-- Selection / Batch Action Bar -->
+    <div id="selection-bar" class="hidden items-center justify-between gap-3 border-b border-border bg-primary/10 px-5 py-2.5 flex-wrap">
       <div class="flex items-center gap-3">
-        <span class="text-xs font-semibold text-primary" id="selection-count">0 selected</span>
+        <span class="text-xs font-bold text-primary" id="selection-count">0 selected</span>
         <label class="inline-flex items-center gap-1.5 text-[11px] text-foreground font-medium cursor-pointer">
-          <input type="checkbox" id="bulk-dispatch" class="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5" />
-          <span>Fetch now (dispatch)</span>
+          <input type="checkbox" id="bulk-dispatch" class="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 accent-primary" />
+          <span>Dispatch fetch now</span>
         </label>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
-        <button id="update-selected-btn" class="rounded-lg bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+        <button id="update-selected-btn" class="rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
           <svg id="update-selected-icon" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           <span id="update-selected-label">⚡ Update selected</span>
         </button>
-        <button id="send-selected-to-pinarchive-btn" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-[11px] font-bold shadow-sm transition-all flex items-center gap-1">
+        <button id="send-selected-to-pinarchive-btn" class="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-bold shadow-xs transition-all flex items-center gap-1.5">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
           <span>Send to PinArchive</span>
         </button>
-        <button id="open-compare-btn" disabled class="rounded-lg bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed">⚖ Compare</button>
-        <button id="export-selected-btn" class="rounded-lg border border-border bg-background px-3 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted transition-all">Export selected</button>
-        <button id="clear-selection-btn" class="rounded-lg px-3 py-1.5 text-[11px] font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-all">Clear</button>
+        <button id="open-compare-btn" disabled class="rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+          ⚖ Compare
+        </button>
+        <button id="export-selected-btn" class="rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs">
+          Export selected
+        </button>
+        <button id="clear-selection-btn" class="rounded-xl px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-all">
+          Clear
+        </button>
       </div>
     </div>
 
-    <div class="overflow-auto max-h-[600px]">
-      <table class="w-full text-left text-xs text-muted-foreground" id="competitors-table">
-        <thead class="sticky top-0 z-10 border-b border-border bg-muted text-foreground font-semibold" id="competitors-thead"></thead>
-        <tbody id="competitors-table-body" class="divide-y divide-border bg-card"></tbody>
-        <tfoot id="competitors-tfoot" class="hidden border-t-2 border-border bg-muted/50"></tfoot>
+    <!-- Data Table Container -->
+    <div class="overflow-x-auto min-w-full">
+      <table class="w-full text-left text-xs border-collapse" id="competitors-table">
+        <thead class="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur-sm text-foreground font-semibold" id="competitors-thead"></thead>
+        <tbody id="competitors-table-body" class="divide-y divide-border/70 bg-card"></tbody>
+        <tfoot id="competitors-tfoot" class="hidden border-t-2 border-border bg-muted/40"></tfoot>
       </table>
     </div>
 
-    <!-- Pagination -->
-    <div id="pagination-bar" class="flex flex-wrap items-center justify-between gap-3 border-t border-border px-6 py-3 bg-muted/30">
-      <span class="text-[11px] text-muted-foreground" id="page-info">—</span>
-      <div class="flex items-center gap-2">
-        <label class="text-[11px] text-muted-foreground" for="rows-per-page">Rows:</label>
-        <select id="rows-per-page" class="rounded-lg border border-border bg-background px-2 py-1 text-[11px] text-foreground focus:outline-none">
-          <option>10</option><option>25</option><option>50</option>
+    <!-- Pagination & Row Limit Toolbar -->
+    <div id="pagination-bar" class="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3 bg-muted/20">
+      <span class="text-xs text-muted-foreground font-medium" id="page-info">—</span>
+      <div class="flex items-center gap-2.5">
+        <label class="text-xs text-muted-foreground font-medium" for="rows-per-page">Rows:</label>
+        <select id="rows-per-page" class="rounded-xl border border-border bg-background px-2.5 py-1 text-xs text-foreground focus:outline-none shadow-2xs">
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
         </select>
-        <button id="page-prev" class="rounded-lg border border-border bg-background px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted disabled:opacity-40 transition-all" disabled>← Prev</button>
-        <button id="page-next" class="rounded-lg border border-border bg-background px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted disabled:opacity-40 transition-all" disabled>Next →</button>
+        <div class="flex items-center gap-1">
+          <button id="page-prev" class="rounded-xl border border-border bg-background px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs" disabled>
+            ← Prev
+          </button>
+          <button id="page-next" class="rounded-xl border border-border bg-background px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs" disabled>
+            Next →
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- ═══ Details Drawer (slide-over) ═══ -->
   <div id="drawer-backdrop" class="fixed inset-0 z-40 bg-black/50 opacity-0 pointer-events-none transition-opacity duration-300"></div>
-  <aside id="competitor-drawer" aria-label="Competitor details"
+  <aside id="competitor-drawer" aria-label="Competitor details preview"
     class="fixed inset-y-0 right-0 z-50 w-full max-w-md transform translate-x-full transition-transform duration-300 bg-card border-l border-border shadow-2xl flex flex-col">
-    <div class="flex items-center justify-between border-b border-border px-5 py-4">
-      <span class="text-sm font-bold text-foreground">Profile Overview</span>
-      <button id="drawer-close" class="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
+    <div class="flex items-center justify-between border-b border-border px-5 py-4 bg-muted/20">
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Profile Overview</span>
+      </div>
+      <button id="drawer-close" class="rounded-xl p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" aria-label="Close drawer">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
@@ -251,10 +387,12 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     <div class="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 z-10">
       <div class="flex items-center justify-between border-b border-border pb-4">
         <div class="flex items-center gap-2.5">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+          <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          </div>
           <h3 class="text-base font-bold text-foreground">Track Pinterest Profile</h3>
         </div>
-        <button data-close class="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        <button data-close class="rounded-xl p-1 text-muted-foreground hover:bg-muted hover:text-foreground"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div id="add-competitor-error" class="hidden rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-500"></div>
       <form id="add-competitor-form" class="space-y-4">
@@ -263,11 +401,11 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
           <div class="grid grid-cols-2 gap-3">
             <label class="flex items-center justify-between rounded-xl border border-border bg-background p-3 cursor-pointer hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-all">
               <div class="flex items-center gap-2"><span class="text-sm">🎯</span><div><div class="text-xs font-bold text-foreground">Competitor</div><div class="text-[10px] text-muted-foreground">External target profile</div></div></div>
-              <input type="radio" name="account_type_radio" value="competitor" checked class="text-primary focus:ring-primary" />
+              <input type="radio" name="account_type_radio" value="competitor" checked class="text-primary focus:ring-primary accent-primary" />
             </label>
             <label class="flex items-center justify-between rounded-xl border border-border bg-background p-3 cursor-pointer hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-all">
               <div class="flex items-center gap-2"><span class="text-sm">👤</span><div><div class="text-xs font-bold text-foreground">My Account</div><div class="text-[10px] text-muted-foreground">Internal brand account</div></div></div>
-              <input type="radio" name="account_type_radio" value="own" class="text-primary focus:ring-primary" />
+              <input type="radio" name="account_type_radio" value="own" class="text-primary focus:ring-primary accent-primary" />
             </label>
           </div>
         </div>
@@ -286,12 +424,12 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
           </div>
           <div class="space-y-1.5">
             <label for="competitor-tags-input" class="block text-xs font-semibold text-foreground">Tags (Comma-Separated)</label>
-            <input id="competitor-tags-input" type="text" placeholder="e.g. Main, E-com, Priority" class="w-full rounded-xl border border-border bg-background py-2.5 px-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+            <input id="competitor-tags-input" type="text" placeholder="e.g. Main, Keto, Priority" class="w-full rounded-xl border border-border bg-background py-2.5 px-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
           </div>
         </div>
         <div class="space-y-1.5">
           <label for="competitor-notes-input" class="block text-xs font-semibold text-foreground">Internal Strategy Notes</label>
-          <textarea id="competitor-notes-input" rows="3" placeholder="e.g. Focuses on 30-minute quick dinners and keto meal prep infographics..." class="w-full rounded-xl border border-border bg-background py-2 px-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"></textarea>
+          <textarea id="competitor-notes-input" rows="3" placeholder="e.g. Focuses on quick 30-minute recipes and weekly meal prep infographics..." class="w-full rounded-xl border border-border bg-background py-2 px-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"></textarea>
         </div>
         <div class="flex items-center justify-end gap-3 border-t border-border pt-4">
           <button type="button" data-close class="rounded-xl border border-border px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground">Cancel</button>
@@ -307,10 +445,12 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     <div class="relative w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 z-10">
       <div class="flex items-center justify-between border-b border-border pb-4">
         <div class="flex items-center gap-2.5">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></div>
+          <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+          </div>
           <h3 class="text-base font-bold text-foreground">Ingest DevTools Payload</h3>
         </div>
-        <button data-close class="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        <button data-close class="rounded-xl p-1 text-muted-foreground hover:bg-muted hover:text-foreground"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div id="paste-payload-error" class="hidden rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-500"></div>
       <form id="paste-payload-form" class="space-y-4">
@@ -321,7 +461,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
             <label for="raw-payload-textarea" class="text-xs font-semibold text-foreground">Raw JSON (UserResource / BoardsResource)</label>
-            <span id="detected-payload-type" class="rounded bg-muted px-2 py-0.5 text-[10px] font-semibold text-foreground">Waiting for paste...</span>
+            <span id="detected-payload-type" class="rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold text-foreground">Waiting for paste...</span>
           </div>
           <textarea id="raw-payload-textarea" rows="10" placeholder='Paste the JSON response copied from Pinterest DevTools network tab…'
             class="w-full rounded-xl border border-border bg-background py-2 px-3 font-mono text-[11px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"></textarea>
@@ -340,7 +480,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     <div class="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 z-10">
       <div class="flex items-center justify-between border-b border-border pb-4">
         <h3 class="text-base font-bold text-foreground">Edit Profile</h3>
-        <button data-close class="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        <button data-close class="rounded-xl p-1 text-muted-foreground hover:bg-muted hover:text-foreground"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div id="edit-competitor-error" class="hidden rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-500"></div>
       <form id="edit-competitor-form" class="space-y-4">
@@ -348,11 +488,11 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         <div class="grid grid-cols-2 gap-3">
           <label class="flex items-center justify-between rounded-xl border border-border bg-background p-3 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-all">
             <span class="text-xs font-bold text-foreground">🎯 Competitor</span>
-            <input type="radio" name="edit_account_type_radio" value="competitor" checked />
+            <input type="radio" name="edit_account_type_radio" value="competitor" checked class="accent-primary" />
           </label>
           <label class="flex items-center justify-between rounded-xl border border-border bg-background p-3 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-all">
             <span class="text-xs font-bold text-foreground">👤 My Account</span>
-            <input type="radio" name="edit_account_type_radio" value="own" />
+            <input type="radio" name="edit_account_type_radio" value="own" class="accent-primary" />
           </label>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -390,7 +530,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     <div class="relative w-full max-w-3xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 z-10">
       <div class="flex items-center justify-between border-b border-border pb-4">
         <h3 class="text-base font-bold text-foreground">⚖ Side-by-Side Comparison</h3>
-        <button data-close class="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        <button data-close class="rounded-xl p-1 text-muted-foreground hover:bg-muted hover:text-foreground"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div id="compare-body" class="overflow-x-auto"></div>
     </div>
@@ -401,7 +541,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     <div class="fixed inset-0" data-close></div>
     <div class="relative w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4 z-10">
       <div class="flex items-center gap-3">
-        <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-rose-500/10 text-rose-500"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500 border border-rose-500/20"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
         <h3 id="confirm-title" class="text-sm font-bold text-foreground">Are you sure?</h3>
       </div>
       <p id="confirm-message" class="text-xs text-muted-foreground"></p>
@@ -429,7 +569,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
   import { getActiveWorkspaceId } from '../lib/workspaces';
   import type { Competitor, CompetitorDeltaStats } from '../lib/types';
 
-  // ─── Server-only CRUD for Project 2 (via admin endpoints) ───
+  // ─── Server-only CRUD for Competitors (via admin endpoints) ───
   async function apiJSON(url: string, opts: RequestInit = {}) {
     const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
     const d = await r.json().catch(() => ({}));
@@ -452,32 +592,36 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
   let selectedCompetitorIdForPayload: string | null = null;
 
   let activeTypeTab: 'all' | 'own' | 'competitor' = 'all';
+  let selectedActivity = 'all';
   let selectedTag = 'all';
   let searchQuery = '';
-  let sortKey: string | null = null;
+  let sortKey: string | null = 'profile_reach';
   let sortDir: 'asc' | 'desc' = 'desc';
   let page = 1;
   let rowsPerPage = Number(localStorage.getItem('po_comp_rows') || 10);
+  let isCompactNumbers = localStorage.getItem('po_comp_num_fmt') === 'compact';
+  let isCompactDensity = localStorage.getItem('po_comp_density') === 'compact';
   let archivedUsernames = new Set<string>();
 
-  interface ColDef { key: string; label: string; defaultVisible: boolean; locked?: boolean; }
+  interface ColDef { key: string; label: string; defaultVisible: boolean; locked?: boolean; align?: 'left' | 'right' | 'center'; }
   const COLUMN_DEFS: ColDef[] = [
-    { key: 'select',       label: '',               defaultVisible: true, locked: true },
-    { key: 'profile',      label: 'Profile',        defaultVisible: true, locked: true },
-    { key: 'type',         label: 'Type',           defaultVisible: true },
-    { key: 'niche',        label: 'Niche',          defaultVisible: false },
-    { key: 'reach',        label: 'Monthly Reach',  defaultVisible: true },
-    { key: 'views',        label: 'Profile Views',  defaultVisible: true },
-    { key: 'followers',    label: 'Followers',      defaultVisible: false },
-    { key: 'pins',         label: 'Total Pins',     defaultVisible: true },
-    { key: 'boards_count', label: 'Boards Count',   defaultVisible: true },
-    { key: 'last_pin',     label: 'Last Pin',       defaultVisible: true },
-    { key: 'strategy_age', label: 'Strategy Age',   defaultVisible: false },
-    { key: 'actions',      label: 'Actions',        defaultVisible: true, locked: true },
+    { key: 'select',       label: '',               defaultVisible: true, locked: true, align: 'left' },
+    { key: 'profile',      label: 'Profile',        defaultVisible: true, locked: true, align: 'left' },
+    { key: 'type',         label: 'Type',           defaultVisible: false, align: 'left' },
+    { key: 'reach',        label: 'Monthly Reach',  defaultVisible: true, align: 'right' },
+    { key: 'views',        label: 'Profile Views',  defaultVisible: true, align: 'right' },
+    { key: 'followers',    label: 'Followers',      defaultVisible: true, align: 'right' },
+    { key: 'pins',         label: 'Total Pins',     defaultVisible: true, align: 'right' },
+    { key: 'boards_count', label: 'Boards',         defaultVisible: true, align: 'right' },
+    { key: 'last_pin',     label: 'Activity',       defaultVisible: true, align: 'left' },
+    { key: 'niche',        label: 'Niche',          defaultVisible: false, align: 'left' },
+    { key: 'strategy_age', label: 'Age Tracked',    defaultVisible: false, align: 'left' },
+    { key: 'actions',      label: 'Actions',        defaultVisible: true, locked: true, align: 'right' },
   ];
+
   const colVisible: Record<string, boolean> = {};
   try {
-    const saved = JSON.parse(localStorage.getItem('po_comp_cols') || '{}');
+    const saved = JSON.parse(localStorage.getItem('po_comp_cols_v2') || '{}');
     COLUMN_DEFS.forEach(c => { colVisible[c.key] = (c.key in saved) ? !!saved[c.key] : c.defaultVisible; });
   } catch { COLUMN_DEFS.forEach(c => { colVisible[c.key] = c.defaultVisible; }); }
 
@@ -490,13 +634,20 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
   const selectionBar = $('selection-bar'), selectionCount = $('selection-count');
   const compareBtn = $('open-compare-btn') as HTMLButtonElement;
   const tagFilterSelect = $('tag-filter-select') as HTMLSelectElement;
+  const activityFilterSelect = $('activity-filter-select') as HTMLSelectElement;
   const searchInput = $('competitor-search-input') as HTMLInputElement;
+  const searchClearBtn = $('search-clear-btn');
   const drawer = $('competitor-drawer'), drawerBackdrop = $('drawer-backdrop'), drawerBody = $('drawer-body');
+  const densityToggleBtn = $('density-toggle-btn'), densityLabel = $('density-label');
+  const numFormatToggleBtn = $('num-format-toggle-btn'), numFormatLabel = $('num-format-label');
+  const activeFiltersBar = $('active-filters-bar'), activeFilterChips = $('active-filter-chips'), resetAllFiltersBtn = $('reset-all-filters-btn');
 
   // ─── Formatting helpers ───────────────────────────────────────────────────
   const escHtml = (s: any) => String(s ?? '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m] as string));
   const fmtFull = (n: number | null | undefined) => (n ?? 0).toLocaleString('en-US');
   const fmtCompact = (n: number | null | undefined) => new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(n ?? 0);
+  const formatMetric = (n: number | null | undefined) => isCompactNumbers ? fmtCompact(n) : fmtFull(n);
+
   function timeAgo(iso?: string | null): string {
     if (!iso) return '—';
     const ms = Date.now() - new Date(iso).getTime();
@@ -512,26 +663,31 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     if (mo < 12) return `${mo}mo ago`;
     return `${Math.floor(mo / 12)}y ago`;
   }
-  function activityOf(c: Competitor): { label: string; dot: string; text: string } {
-    if (!c.last_pin_at) return { label: 'Unknown', dot: 'bg-muted-foreground/40', text: 'text-muted-foreground' };
+
+  function activityOf(c: Competitor): { label: string; dot: string; pill: string; status: 'active' | 'cooling' | 'stale' | 'unknown' } {
+    if (!c.last_pin_at) return { label: 'Unknown', dot: 'bg-muted-foreground/40', pill: 'bg-muted text-muted-foreground border-border', status: 'unknown' };
     const d = (Date.now() - new Date(c.last_pin_at).getTime()) / 86400000;
-    if (d <= 7) return { label: 'Active', dot: 'bg-emerald-500', text: 'text-emerald-500' };
-    if (d <= 30) return { label: 'Cooling', dot: 'bg-amber-500', text: 'text-amber-500' };
-    return { label: 'Stale', dot: 'bg-rose-500', text: 'text-rose-500' };
+    if (d <= 7) return { label: 'Active', dot: 'bg-emerald-500', pill: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', status: 'active' };
+    if (d <= 30) return { label: 'Cooling', dot: 'bg-amber-500', pill: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20', status: 'cooling' };
+    return { label: 'Stale', dot: 'bg-rose-500', pill: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20', status: 'stale' };
   }
+
   function deltaChip(change: number, percent: number): string {
-    if (!change && !percent) return '<span class="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">—</span>';
+    if (!change && !percent) return '<span class="text-[10px] text-muted-foreground">—</span>';
     const up = change > 0;
     const label = `${up ? 'increased by' : 'decreased by'} ${Math.abs(percent).toFixed(1)}%`;
-    return `<span class="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${up ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}" role="status" aria-label="${label}">${up ? '↑' : '↓'} ${Math.abs(percent).toFixed(1)}%</span>`;
+    return `<span class="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${up ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'}" role="status" aria-label="${label}">${up ? '↑' : '↓'} ${Math.abs(percent).toFixed(1)}%</span>`;
   }
+
   function formatDeltaSpan(diff: number | undefined | null): string {
     if (diff === undefined || diff === null || diff === 0) return '';
     const isPos = diff > 0;
-    return `<span class="ml-1.5 font-semibold text-[10px] ${isPos ? 'text-emerald-500' : 'text-rose-500'}">(${isPos ? '+' : ''}${fmtFull(diff)})</span>`;
+    const formatted = isCompactNumbers ? fmtCompact(Math.abs(diff)) : fmtFull(Math.abs(diff));
+    return `<span class="ml-1 font-semibold text-[10.5px] ${isPos ? 'text-emerald-500' : 'text-rose-500'}">(${isPos ? '+' : '-'}${formatted})</span>`;
   }
+
   function sparkline(values: number[], cls: string): string {
-    if (values.length < 2) return '<div class="text-[10px] text-muted-foreground py-2">Not enough history yet — ingest more snapshots.</div>';
+    if (values.length < 2) return '<div class="text-[11px] text-muted-foreground py-2">Not enough history yet — ingest snapshots to build graph.</div>';
     const w = 280, h = 48, pad = 3;
     const min = Math.min(...values), max = Math.max(...values);
     const range = max - min || 1;
@@ -543,7 +699,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     const last = pts[pts.length - 1].split(',');
     return `<svg viewBox="0 0 ${w} ${h}" class="w-full ${cls}" preserveAspectRatio="none">
       <polyline points="${pts.join(' ')}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="${last[0]}" cy="${last[1]}" r="3" fill="currentColor"/></svg>`;
+      <circle cx="${last[0]}" cy="${last[1]}" r="3.5" fill="currentColor"/></svg>`;
   }
 
   // ─── Toasts ───────────────────────────────────────────────────────────────
@@ -551,66 +707,158 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     const colors = { success: 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400', error: 'border-rose-500/40 text-rose-600 dark:text-rose-400', info: 'border-primary/40 text-primary' };
     const icons = { success: '✓', error: '✕', info: 'ℹ' };
     const el = document.createElement('div');
-    el.className = `flex items-start gap-2.5 rounded-xl border bg-card p-3 text-xs font-semibold shadow-lg ${colors[type]}`;
-    el.innerHTML = `<span class="flex-shrink-0">${icons[type]}</span><span class="flex-1 text-foreground">${escHtml(message)}</span>
+    el.className = `flex items-start gap-2.5 rounded-xl border bg-card p-3 text-xs font-semibold shadow-lg ${colors[type]} transition-all animate-in fade-in slide-in-from-bottom-2`;
+    el.innerHTML = `<span class="flex-shrink-0 font-bold">${icons[type]}</span><span class="flex-1 text-foreground">${escHtml(message)}</span>
       <button class="text-muted-foreground hover:text-foreground" aria-label="Dismiss">✕</button>`;
     el.querySelector('button')!.addEventListener('click', () => el.remove());
     $('toast-root').appendChild(el);
-    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 4200);
+    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3800);
   }
 
-  // ─── Overlays (generic show/hide + focus + Esc) ───────────────────────────
-  const lastFocusMap = new Map<HTMLElement, Element | null>();
+  // ─── Overlays & Modals ────────────────────────────────────────────────────
   function showOverlay(el: HTMLElement) {
-    lastFocusMap.set(el, document.activeElement);
-    el.classList.remove('hidden'); el.classList.add('flex');
-    const f = el.querySelector<HTMLElement>('input:not([type=hidden]), select, textarea');
-    (f || el.querySelector<HTMLElement>('button[data-close]'))?.focus();
+    el.classList.remove('hidden');
+    el.classList.add('flex');
   }
   function hideOverlay(el: HTMLElement) {
-    el.classList.add('hidden'); el.classList.remove('flex');
-    const prev = lastFocusMap.get(el) as HTMLElement | null;
-    prev?.focus?.();
+    el.classList.add('hidden');
+    el.classList.remove('flex');
   }
-  document.querySelectorAll('.overlay-root').forEach(root => {
-    root.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => hideOverlay(root as HTMLElement)));
+
+  document.querySelectorAll<HTMLElement>('.overlay-root').forEach(root => {
+    root.querySelectorAll('[data-close]').forEach(btn => {
+      btn.addEventListener('click', () => hideOverlay(root));
+    });
   });
 
-  let confirmResolver: ((ok: boolean) => void) | null = null;
+  // ─── Confirm modal ────────────────────────────────────────────────────────
+  let confirmResolve: ((v: boolean) => void) | null = null;
   function askConfirm(title: string, message: string): Promise<boolean> {
     $('confirm-title').textContent = title;
     $('confirm-message').textContent = message;
     showOverlay($('confirm-modal'));
-    return new Promise(res => { confirmResolver = res; });
+    return new Promise(res => { confirmResolve = res; });
   }
-  $('confirm-ok').addEventListener('click', () => { hideOverlay($('confirm-modal')); confirmResolver?.(true); confirmResolver = null; });
-  $('confirm-cancel').addEventListener('click', () => { hideOverlay($('confirm-modal')); confirmResolver?.(false); confirmResolver = null; });
+  $('confirm-cancel').addEventListener('click', () => { hideOverlay($('confirm-modal')); confirmResolve?.(false); });
+  $('confirm-ok').addEventListener('click', () => { hideOverlay($('confirm-modal')); confirmResolve?.(true); });
 
-  // ─── Filtering / sorting ──────────────────────────────────────────────────
+  // ─── Copy to Clipboard Helper ─────────────────────────────────────────────
+  async function copyToClipboard(text: string, btn?: HTMLElement) {
+    try {
+      await navigator.clipboard.writeText(text);
+      if (btn) {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<span class="text-emerald-500 font-bold">✓</span>';
+        setTimeout(() => { btn.innerHTML = orig; }, 1200);
+      }
+      toast(`Copied "${text}" to clipboard!`);
+    } catch {
+      toast('Failed to copy', 'error');
+    }
+  }
+
+  // ─── Filtering & Sorting Engine ───────────────────────────────────────────
   function applySortAndFilter(): Competitor[] {
-    let filtered = competitorsList.filter(c => {
-      if (activeTypeTab === 'own') return c.account_type === 'own';
-      if (activeTypeTab === 'competitor') return c.account_type !== 'own';
-      return true;
-    });
-    if (selectedTag !== 'all') filtered = filtered.filter(c => Array.isArray(c.tags) && c.tags.includes(selectedTag));
+    let filtered = [...competitorsList];
+
+    // Filter by tab type (all / own / competitor)
+    if (activeTypeTab === 'own') filtered = filtered.filter(c => c.account_type === 'own');
+    else if (activeTypeTab === 'competitor') filtered = filtered.filter(c => c.account_type !== 'own');
+
+    // Filter by activity status
+    if (selectedActivity !== 'all') {
+      filtered = filtered.filter(c => {
+        const act = activityOf(c);
+        return act.status === selectedActivity;
+      });
+    }
+
+    // Filter by Tag
+    if (selectedTag !== 'all') {
+      filtered = filtered.filter(c => Array.isArray(c.tags) && c.tags.includes(selectedTag));
+    }
+
+    // Filter by Search Query
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(c =>
         (c.username || '').toLowerCase().includes(q) ||
         (c.full_name || '').toLowerCase().includes(q) ||
-        (c.niche || '').toLowerCase().includes(q));
+        (c.niche || '').toLowerCase().includes(q) ||
+        (c.notes || '').toLowerCase().includes(q) ||
+        (Array.isArray(c.tags) && c.tags.some(t => t.toLowerCase().includes(q)))
+      );
     }
+
+    // Sorting
     if (sortKey) {
       filtered = [...filtered].sort((a, b) => {
         let av: any, bv: any;
-        if (sortKey === 'last_pin_at') { av = a.last_pin_at ? +new Date(a.last_pin_at) : 0; bv = b.last_pin_at ? +new Date(b.last_pin_at) : 0; }
-        else { av = (a as any)[sortKey] ?? 0; bv = (b as any)[sortKey] ?? 0; }
+        if (sortKey === 'last_pin_at') {
+          av = a.last_pin_at ? +new Date(a.last_pin_at) : 0;
+          bv = b.last_pin_at ? +new Date(b.last_pin_at) : 0;
+        } else if (sortKey === 'username' || sortKey === 'full_name') {
+          av = (a as any)[sortKey] || '';
+          bv = (b as any)[sortKey] || '';
+          return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+        } else {
+          av = (a as any)[sortKey] ?? 0;
+          bv = (b as any)[sortKey] ?? 0;
+        }
         return sortDir === 'asc' ? av - bv : bv - av;
       });
     }
+
     return filtered;
   }
+
+  // ─── Active Filter Chips Bar ──────────────────────────────────────────────
+  function renderActiveFiltersBar() {
+    const chips: string[] = [];
+    if (activeTypeTab !== 'all') {
+      chips.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-card border border-border text-foreground font-medium">Type: ${activeTypeTab === 'own' ? '👤 My Accounts' : '🎯 Competitors'} <button data-clear-filter="type" class="hover:text-primary ml-0.5">✕</button></span>`);
+    }
+    if (selectedActivity !== 'all') {
+      const actLabels: Record<string, string> = { active: 'Active (≤7d)', cooling: 'Cooling (7-30d)', stale: 'Stale (>30d)' };
+      chips.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-card border border-border text-foreground font-medium">Activity: ${actLabels[selectedActivity]} <button data-clear-filter="activity" class="hover:text-primary ml-0.5">✕</button></span>`);
+    }
+    if (selectedTag !== 'all') {
+      chips.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-card border border-border text-foreground font-medium">Tag: #${escHtml(selectedTag)} <button data-clear-filter="tag" class="hover:text-primary ml-0.5">✕</button></span>`);
+    }
+    if (searchQuery) {
+      chips.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-card border border-border text-foreground font-medium">Search: "${escHtml(searchQuery)}" <button data-clear-filter="search" class="hover:text-primary ml-0.5">✕</button></span>`);
+    }
+
+    if (chips.length > 0) {
+      activeFiltersBar.classList.remove('hidden');
+      activeFiltersBar.classList.add('flex');
+      activeFilterChips.innerHTML = chips.join('');
+      activeFilterChips.querySelectorAll<HTMLElement>('[data-clear-filter]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const type = btn.dataset.clearFilter;
+          if (type === 'type') { activeTypeTab = 'all'; syncTabClasses(); }
+          else if (type === 'activity') { selectedActivity = 'all'; activityFilterSelect.value = 'all'; }
+          else if (type === 'tag') { selectedTag = 'all'; tagFilterSelect.value = 'all'; }
+          else if (type === 'search') { searchQuery = ''; searchInput.value = ''; searchClearBtn?.classList.add('hidden'); }
+          page = 1;
+          renderTable();
+        });
+      });
+    } else {
+      activeFiltersBar.classList.add('hidden');
+      activeFiltersBar.classList.remove('flex');
+      activeFilterChips.innerHTML = '';
+    }
+  }
+
+  resetAllFiltersBtn?.addEventListener('click', () => {
+    activeTypeTab = 'all'; syncTabClasses();
+    selectedActivity = 'all'; activityFilterSelect.value = 'all';
+    selectedTag = 'all'; tagFilterSelect.value = 'all';
+    searchQuery = ''; searchInput.value = ''; searchClearBtn?.classList.add('hidden');
+    page = 1;
+    renderTable();
+  });
 
   // ─── KPIs ─────────────────────────────────────────────────────────────────
   function renderKPIs() {
@@ -624,22 +872,33 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     const top = [...competitorsList].sort((a, b) => (b.profile_reach || 0) - (a.profile_reach || 0))[0];
 
     $('kpi-total').textContent = String(total);
-    $('kpi-split-label').textContent = `${own} own • ${comp} competitors`;
+    $('kpi-split-label').innerHTML = `<span>${own} own</span><span>${comp} competitors</span>`;
     const bar = $('kpi-split-bar').children as HTMLCollectionOf<HTMLElement>;
-    bar[0].style.width = total ? `${(own / total) * 100}%` : '0%';
-    bar[1].style.width = total ? `${(comp / total) * 100}%` : '0%';
+    if (bar[0] && bar[1]) {
+      bar[0].style.width = total ? `${(own / total) * 100}%` : '0%';
+      bar[1].style.width = total ? `${(comp / total) * 100}%` : '0%';
+    }
     $('kpi-reach').textContent = fmtCompact(reach);
-    $('kpi-reach-sub').textContent = top ? `top: @${top.username}` : 'monthly profile reach';
+    $('kpi-reach').title = `${fmtFull(reach)} total monthly reach`;
+    $('kpi-reach-sub').textContent = top ? `top: @${top.username} (${fmtCompact(top.profile_reach)})` : 'monthly profile reach';
     $('kpi-followers').textContent = fmtCompact(followers);
+    $('kpi-followers').title = `${fmtFull(followers)} total followers`;
     $('kpi-followers-sub').textContent = total ? `avg ${fmtCompact(Math.round(followers / total))} / profile` : 'avg — / profile';
     $('kpi-pins').textContent = fmtCompact(pins);
+    $('kpi-pins').title = `${fmtFull(pins)} total pins`;
     $('kpi-active-sub').textContent = `${activeWeek} active this week`;
   }
 
   // ─── Table rendering ──────────────────────────────────────────────────────
   const SORTABLE: Record<string, string> = {
-    reach: 'profile_reach', views: 'profile_views', followers: 'follower_count',
-    pins: 'pin_count', boards_count: 'boards_count', last_pin: 'last_pin_at',
+    profile: 'username',
+    reach: 'profile_reach',
+    views: 'profile_views',
+    followers: 'follower_count',
+    pins: 'pin_count',
+    boards_count: 'boards_count',
+    last_pin: 'last_pin_at',
+    strategy_age: 'strategy_age_days',
   };
   const visibleCols = () => COLUMN_DEFS.filter(c => colVisible[c.key] || c.locked);
 
@@ -648,12 +907,21 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     thead.innerHTML = `<tr>${cols.map(c => {
       const sk = SORTABLE[c.key];
       const sortable = !!sk;
-      const arrow = sk ? (sortKey === sk ? (sortDir === 'asc' ? '<span class="text-primary ml-1">↑</span>' : '<span class="text-primary ml-1">↓</span>') : '<span class="ml-1 opacity-30">↕</span>') : '';
+      const arrow = sk ? (sortKey === sk ? (sortDir === 'asc' ? '<span class="text-primary ml-1">▲</span>' : '<span class="text-primary ml-1">▼</span>') : '<span class="ml-1 opacity-25 hover:opacity-100">⇅</span>') : '';
       const ariaSort = sk && sortKey === sk ? `aria-sort="${sortDir === 'asc' ? 'ascending' : 'descending'}"` : '';
-      if (c.key === 'select') return `<th scope="col" class="py-3 px-4 w-8"><input type="checkbox" id="select-all-cb" class="rounded accent-primary" title="Select all filtered"/></th>`;
-      const align = c.key === 'actions' ? 'text-right' : '';
-      return `<th scope="col" ${ariaSort} class="py-3 px-4 ${align} ${sortable ? 'cursor-pointer select-none hover:text-primary' : ''}" ${sortable ? `data-sort-col="${c.key}"` : ''}>${c.label}${arrow}</th>`;
+      
+      if (c.key === 'select') {
+        const isAllSelected = filteredCache.length > 0 && filteredCache.every(x => selectedIds.has(x.id));
+        return `<th scope="col" class="py-3 px-4 w-10 text-center"><input type="checkbox" id="select-all-cb" ${isAllSelected ? 'checked' : ''} class="rounded accent-primary h-3.5 w-3.5" title="Select all filtered profiles"/></th>`;
+      }
+      
+      const alignClass = c.align === 'right' ? 'text-right' : (c.align === 'center' ? 'text-center' : 'text-left');
+      const sortClass = sortable ? 'cursor-pointer select-none hover:text-primary transition-colors' : '';
+      const activeSortStyle = sk && sortKey === sk ? 'text-primary font-bold' : 'text-muted-foreground';
+
+      return `<th scope="col" ${ariaSort} class="py-3 px-4 text-xs font-semibold ${alignClass} ${sortClass} ${activeSortStyle}" ${sortable ? `data-sort-col="${c.key}"` : ''}>${c.label}${arrow}</th>`;
     }).join('')}</tr>`;
+
     thead.querySelectorAll<HTMLElement>('[data-sort-col]').forEach(th => {
       th.addEventListener('click', () => {
         const sk = SORTABLE[th.dataset.sortCol!];
@@ -662,6 +930,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         renderTable();
       });
     });
+
     $('select-all-cb')?.addEventListener('change', (e) => {
       const checked = (e.target as HTMLInputElement).checked;
       filteredCache.forEach(c => checked ? selectedIds.add(c.id) : selectedIds.delete(c.id));
@@ -671,14 +940,16 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
 
   function renderSkeleton() {
     const n = visibleCols().length;
-    tbody.innerHTML = Array.from({ length: 5 }, () =>
-      `<tr>${Array.from({ length: n }, (_, i) => `<td class="py-4 ${i === 0 ? 'px-4' : 'px-4'}"><div class="skeleton h-4 ${i === 1 ? 'w-32' : 'w-16'}"></div></td>`).join('')}</tr>`).join('');
+    tbody.innerHTML = Array.from({ length: 6 }, () =>
+      `<tr>${Array.from({ length: n }, (_, i) => `<td class="py-3.5 px-4"><div class="skeleton h-4 ${i === 1 ? 'w-40' : (i === 0 ? 'w-4' : 'w-16')}"></div></td>`).join('')}</tr>`).join('');
   }
 
   function renderTable() {
     renderTableHeader();
     filteredCache = applySortAndFilter();
     badge.textContent = `${filteredCache.length} ${filteredCache.length === 1 ? 'Profile' : 'Profiles'}`;
+
+    renderActiveFiltersBar();
 
     const totalPages = Math.max(1, Math.ceil(filteredCache.length / rowsPerPage));
     if (page > totalPages) page = totalPages;
@@ -687,7 +958,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
 
     pageInfo.textContent = filteredCache.length
       ? `Showing ${start + 1}–${Math.min(start + rowsPerPage, filteredCache.length)} of ${filteredCache.length}`
-      : 'No rows';
+      : '0 profiles found';
     prevBtn.disabled = page <= 1;
     nextBtn.disabled = page >= totalPages;
 
@@ -697,41 +968,52 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
       tfoot.classList.add('hidden');
       const isEmptyWorkspace = competitorsList.length === 0;
       tbody.innerHTML = `<tr><td colspan="99" class="py-16 text-center">
-        <div class="flex flex-col items-center gap-3 px-6">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-muted-foreground/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        <div class="flex flex-col items-center gap-3 px-6 max-w-md mx-auto">
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+          </div>
           ${isEmptyWorkspace ? `
             <div class="text-sm font-bold text-foreground">No profiles tracked yet</div>
-            <p class="max-w-sm text-xs text-muted-foreground">Start monitoring competitor reach, follower velocity and board strategy. Data syncs automatically daily at 02:00 UTC, or instantly via DevTools payloads.</p>
-            <div class="flex gap-2.5">
-              <button id="empty-track-btn" class="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary/90">+ Track Profile</button>
-              <button id="empty-paste-btn" class="rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted">Paste Payload</button>
+            <p class="text-xs text-muted-foreground text-center">Start monitoring competitor reach, follower velocity and board strategy over time.</p>
+            <div class="flex gap-2 pt-2">
+              <button id="empty-track-btn" class="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all">+ Track Profile</button>
+              <button id="empty-paste-btn" class="rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-all">Ingest JSON</button>
             </div>` : `
-            <div class="text-sm font-bold text-foreground">No matches for your filters</div>
-            <button id="clear-filters-btn" class="rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted">Clear filters</button>`}
+            <div class="text-sm font-bold text-foreground">No profiles match active filters</div>
+            <p class="text-xs text-muted-foreground text-center">Try changing your search query, status filters, or tag selections.</p>
+            <button id="clear-filters-btn" class="rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-all mt-1">Reset all filters</button>`}
         </div></td></tr>`;
       $('empty-track-btn')?.addEventListener('click', () => showOverlay($('add-competitor-modal')));
       $('empty-paste-btn')?.addEventListener('click', () => openPasteModal());
       $('clear-filters-btn')?.addEventListener('click', () => {
-        searchQuery = ''; searchInput.value = ''; selectedTag = 'all'; tagFilterSelect.value = 'all';
+        searchQuery = ''; searchInput.value = ''; searchClearBtn?.classList.add('hidden');
+        selectedTag = 'all'; tagFilterSelect.value = 'all';
+        selectedActivity = 'all'; activityFilterSelect.value = 'all';
         activeTypeTab = 'all'; syncTabClasses(); page = 1; renderTable();
       });
       return;
     }
 
-    // tfoot totals
+    // Footer summary totals
     const totR = filteredCache.reduce((s, c) => s + (c.profile_reach || 0), 0);
     const totV = filteredCache.reduce((s, c) => s + (c.profile_views || 0), 0);
+    const totF = filteredCache.reduce((s, c) => s + (c.follower_count || 0), 0);
     const totP = filteredCache.reduce((s, c) => s + (c.pin_count || 0), 0);
+
     tfoot.innerHTML = `<tr>${visibleCols().map(c => {
-      if (c.key === 'profile') return `<td class="py-3 px-4 font-bold text-xs text-foreground">∑ Totals (${filteredCache.length})</td>`;
-      if (c.key === 'reach') return `<td class="py-3 px-4 font-bold text-xs text-emerald-500">${fmtFull(totR)}</td>`;
-      if (c.key === 'views') return `<td class="py-3 px-4 font-bold text-xs text-foreground">${fmtFull(totV)}</td>`;
-      if (c.key === 'pins') return `<td class="py-3 px-4 font-bold text-xs text-foreground">${fmtFull(totP)}</td>`;
+      if (c.key === 'profile') return `<td class="py-3 px-4 font-bold text-xs text-foreground">Totals (${filteredCache.length})</td>`;
+      if (c.key === 'reach') return `<td class="py-3 px-4 font-bold text-xs text-emerald-600 dark:text-emerald-400 text-right font-mono tabular-nums">${formatMetric(totR)}</td>`;
+      if (c.key === 'views') return `<td class="py-3 px-4 font-bold text-xs text-foreground text-right font-mono tabular-nums">${formatMetric(totV)}</td>`;
+      if (c.key === 'followers') return `<td class="py-3 px-4 font-bold text-xs text-foreground text-right font-mono tabular-nums">${formatMetric(totF)}</td>`;
+      if (c.key === 'pins') return `<td class="py-3 px-4 font-bold text-xs text-foreground text-right font-mono tabular-nums">${formatMetric(totP)}</td>`;
       return `<td class="py-3 px-4"></td>`;
     }).join('')}</tr>`;
     tfoot.classList.remove('hidden');
 
-    // tbody
+    const padClass = isCompactDensity ? 'py-2 px-4' : 'py-3.5 px-4';
+    const avatarSize = isCompactDensity ? 'h-8 w-8' : 'h-10 w-10';
+
+    // Body rows
     tbody.innerHTML = pageRows.map(c => {
       const rawAvatar = c.avatar_url && /^https?:\/\//i.test(c.avatar_url) ? c.avatar_url : `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80`;
       const avatar = escHtml(rawAvatar);
@@ -739,63 +1021,119 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
       const act = activityOf(c);
       const isSel = selectedIds.has(c.id);
 
-      const tagsHtml = (Array.isArray(c.tags) && c.tags.length > 0)
-        ? `<div class="flex flex-wrap items-center gap-1 pt-1">${c.tags.map(t => `<button data-click-tag="${escHtml(t)}" class="rounded bg-muted px-1.5 py-0.5 text-[9.5px] font-semibold text-muted-foreground border border-border/50 hover:border-primary hover:text-foreground">#${escHtml(t)}</button>`).join('')}</div>` : '';
+      const tagsHtml = (!isCompactDensity && Array.isArray(c.tags) && c.tags.length > 0)
+        ? `<div class="flex flex-wrap items-center gap-1 pt-1">${c.tags.map(t => `<button data-click-tag="${escHtml(t)}" class="rounded-md bg-muted px-1.5 py-0.5 text-[9.5px] font-semibold text-muted-foreground border border-border/60 hover:border-primary hover:text-foreground transition-colors">#${escHtml(t)}</button>`).join('')}</div>` : '';
 
       const cellMap: Record<string, string> = {
-        select: `<td class="py-4 px-4"><input type="checkbox" data-row-select="${c.id}" ${isSel ? 'checked' : ''} class="rounded accent-primary" /></td>`,
+        select: `<td class="${padClass} w-10 text-center"><input type="checkbox" data-row-select="${c.id}" ${isSel ? 'checked' : ''} class="rounded accent-primary h-3.5 w-3.5 cursor-pointer" /></td>`,
+        
         profile: (() => {
           const isArchived = archivedUsernames.has((c.username || '').toLowerCase());
           const pinArchiveBadge = isArchived
-            ? `<a href="/pinarchive/account/${encodeURIComponent(c.username)}" title="View in PinArchive" class="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors">In PinArchive</a>`
+            ? `<a href="/pinarchive/account/${encodeURIComponent(c.username)}" title="Archived in PinArchive database" class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors">PinArchive</a>`
             : '';
 
-          return `<td class="py-4 px-4">
+          return `<td class="${padClass}">
             <div class="flex items-center gap-3">
-              <img src="${avatar}" alt="${escHtml(c.username)}" loading="lazy" class="h-10 w-10 rounded-full object-cover border border-border shadow-sm flex-shrink-0" />
+              <img src="${avatar}" alt="${escHtml(c.username)}" loading="lazy" class="${avatarSize} rounded-xl object-cover border border-border shadow-2xs flex-shrink-0" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80'" />
               <div class="flex flex-col min-w-0">
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <a href="/competitors/details?id=${c.id}" aria-label="View detailed analytics for ${escHtml(c.full_name || c.username)}" class="text-xs font-bold text-foreground hover:text-primary transition-colors truncate text-left">${escHtml(c.full_name || c.username)}</a>
-                  <a href="https://www.pinterest.com/${escHtml(c.username)}/" target="_blank" rel="noopener noreferrer" class="text-muted-foreground/60 hover:text-primary" title="Open Pinterest">
+                  <a href="/competitors/details?id=${c.id}" aria-label="View detailed analytics for ${escHtml(c.full_name || c.username)}" class="text-xs font-bold text-foreground hover:text-primary transition-colors truncate text-left max-w-[200px] sm:max-w-[280px]">
+                    ${escHtml(c.full_name || c.username)}
+                  </a>
+                  <a href="https://www.pinterest.com/${escHtml(c.username)}/" target="_blank" rel="noopener noreferrer" class="text-muted-foreground/60 hover:text-primary transition-colors p-0.5" title="Open Pinterest Profile in New Tab">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                   </a>
                   ${pinArchiveBadge}
                 </div>
-                <span class="text-[11px] text-muted-foreground">@${escHtml(c.username)}</span>
+                <div class="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <span>@${escHtml(c.username)}</span>
+                  <button data-copy-handle="${escHtml(c.username)}" class="opacity-40 hover:opacity-100 transition-opacity p-0.5" title="Copy username">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  </button>
+                  ${isOwn ? '<span class="text-[10px] font-bold text-blue-500 ml-1">👤 My Brand</span>' : ''}
+                </div>
                 ${tagsHtml}
               </div>
             </div></td>`;
         })(),
-        type: `<td class="py-4 px-4"><span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border ${isOwn ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 'bg-purple-500/10 text-purple-500 border-purple-500/20'}">${isOwn ? '👤 My Account' : '🎯 Competitor'}</span></td>`,
-        niche: `<td class="py-4 px-4"><span class="inline-flex items-center rounded-md bg-muted px-2 py-1 text-[11px] font-medium text-foreground">${escHtml(c.niche || 'General')}</span></td>`,
-        reach: `<td class="py-4 px-4 font-bold text-emerald-500">${fmtFull(c.profile_reach || 0)}${formatDeltaSpan(c.deltas?.reachChange ?? c.deltas?.reach?.change)}</td>`,
-        views: `<td class="py-4 px-4 font-semibold text-foreground">${fmtFull(c.profile_views || 0)}${formatDeltaSpan(c.deltas?.viewsChange ?? c.deltas?.views?.change)}</td>`,
-        followers: `<td class="py-4 px-4 font-semibold text-foreground">${fmtFull(c.follower_count || 0)}${formatDeltaSpan(c.deltas?.followersChange ?? c.deltas?.followers?.change)}</td>`,
-        pins: `<td class="py-4 px-4 text-foreground">${fmtFull(c.pin_count || 0)}${formatDeltaSpan(c.deltas?.pinsChange ?? c.deltas?.pins?.change)}</td>`,
-        boards_count: `<td class="py-4 px-4"><span class="inline-flex items-center rounded-md bg-muted/60 px-2 py-1 text-[11px] font-semibold text-foreground">${c.boards_count ?? 0}</span></td>`,
-        last_pin: `<td class="py-4 px-4 text-[11px] ${act.text}" title="${escHtml(c.last_pin_at || '')}">
-          <span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full ${act.dot}"></span><span>${timeAgo(c.last_pin_at)}${c.last_pin_at ? ' · ' + new Date(c.last_pin_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</span></span>
+
+        type: `<td class="${padClass}"><span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold border ${isOwn ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'}">${isOwn ? '👤 My Account' : '🎯 Competitor'}</span></td>`,
+        
+        reach: `<td class="${padClass} text-right font-bold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums text-xs" title="${fmtFull(c.profile_reach || 0)} monthly reach">
+          ${formatMetric(c.profile_reach || 0)}${formatDeltaSpan(c.deltas?.reachChange ?? c.deltas?.reach?.change)}
         </td>`,
-        strategy_age: `<td class="py-4 px-4"><span class="rounded bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">${c.strategy_age_days ? `${c.strategy_age_days}d active` : 'Unknown'}</span></td>`,
+        
+        views: `<td class="${padClass} text-right font-semibold text-foreground font-mono tabular-nums text-xs" title="${fmtFull(c.profile_views || 0)} profile views">
+          ${formatMetric(c.profile_views || 0)}${formatDeltaSpan(c.deltas?.viewsChange ?? c.deltas?.views?.change)}
+        </td>`,
+        
+        followers: `<td class="${padClass} text-right font-semibold text-foreground font-mono tabular-nums text-xs" title="${fmtFull(c.follower_count || 0)} followers">
+          ${formatMetric(c.follower_count || 0)}${formatDeltaSpan(c.deltas?.followersChange ?? c.deltas?.followers?.change)}
+        </td>`,
+        
+        pins: `<td class="${padClass} text-right text-foreground font-mono tabular-nums text-xs" title="${fmtFull(c.pin_count || 0)} total pins">
+          ${formatMetric(c.pin_count || 0)}${formatDeltaSpan(c.deltas?.pinsChange ?? c.deltas?.pins?.change)}
+        </td>`,
+        
+        boards_count: `<td class="${padClass} text-right font-mono tabular-nums text-xs">
+          <span class="inline-flex items-center justify-center rounded-md bg-muted px-2 py-0.5 font-semibold text-foreground border border-border/50 min-w-[28px]">${c.boards_count ?? 0}</span>
+        </td>`,
+        
+        last_pin: `<td class="${padClass} text-xs whitespace-nowrap">
+          <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-medium ${act.pill}" title="${escHtml(c.last_pin_at || 'No pin recorded')}">
+            <span class="h-1.5 w-1.5 rounded-full ${act.dot}"></span>
+            <span>${timeAgo(c.last_pin_at)}</span>
+          </span>
+        </td>`,
+        
+        niche: `<td class="${padClass}"><span class="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground">${escHtml(c.niche || 'General')}</span></td>`,
+        
+        strategy_age: `<td class="${padClass}"><span class="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary border border-primary/20">${c.strategy_age_days ? `${c.strategy_age_days}d active` : 'Unknown'}</span></td>`,
+        
         actions: (() => {
           const isArchived = archivedUsernames.has((c.username || '').toLowerCase());
           const pinArchiveBtn = isArchived
-            ? `<a href="/pinarchive/account/${encodeURIComponent(c.username)}" class="rounded-lg border border-border p-1.5 text-purple-500 hover:bg-purple-500/10" title="View in PinArchive"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg></a>`
-            : `<button data-pinarchive-import-id="${c.id}" data-username="${escHtml(c.username)}" class="rounded-lg border border-border p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10" title="Send to PinArchive"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg></button>`;
+            ? `<a href="/pinarchive/account/${encodeURIComponent(c.username)}" class="rounded-xl border border-border bg-background p-1.5 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 shadow-2xs transition-colors" title="View in PinArchive"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg></a>`
+            : `<button data-pinarchive-import-id="${c.id}" data-username="${escHtml(c.username)}" class="rounded-xl border border-border bg-background p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 shadow-2xs transition-colors" title="Send to PinArchive"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg></button>`;
 
-          return `<td class="py-4 px-4 text-right">
-            <div class="flex items-center justify-end gap-1.5">
+          return `<td class="${padClass} text-right">
+            <div class="flex items-center justify-end gap-1">
               ${pinArchiveBtn}
-              <button data-drawer-id="${c.id}" class="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" title="Quick preview"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
-              <button data-edit-id="${c.id}" class="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-amber-500/10 hover:text-amber-500" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-              <button data-paste-id="${c.id}" class="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" title="Paste DevTools Payload"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></button>
-              <button data-delete-id="${c.id}" data-username="${escHtml(c.username)}" class="rounded-lg p-1.5 text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500" title="Delete"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+              <button data-drawer-id="${c.id}" class="rounded-xl border border-border bg-background p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground shadow-2xs transition-colors" title="Quick overview drawer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              
+              <!-- More Actions Dropdown -->
+              <div class="relative inline-block text-left" data-row-menu-container>
+                <button data-row-menu-trigger class="rounded-xl border border-border bg-background p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground shadow-2xs transition-colors" title="More options">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                </button>
+                <div data-row-menu-dropdown class="hidden absolute right-0 top-full mt-1 z-30 w-44 rounded-xl border border-border bg-card shadow-xl p-1 space-y-0.5 text-left">
+                  <a href="/competitors/details?id=${c.id}" class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-muted transition-colors">
+                    <span>📊 Analytics Details</span>
+                  </a>
+                  <button data-edit-id="${c.id}" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-muted transition-colors">
+                    <span>✏️ Edit Profile</span>
+                  </button>
+                  <button data-paste-id="${c.id}" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-muted transition-colors">
+                    <span>📋 Ingest DevTools JSON</span>
+                  </button>
+                  <a href="https://www.pinterest.com/${escHtml(c.username)}/" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-muted transition-colors">
+                    <span>📌 View Pinterest</span>
+                  </a>
+                  <div class="border-t border-border/70 my-0.5"></div>
+                  <button data-delete-id="${c.id}" data-username="${escHtml(c.username)}" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-500 hover:bg-rose-500/10 transition-colors">
+                    <span>🗑️ Remove Profile</span>
+                  </button>
+                </div>
+              </div>
             </div></td>`;
         })(),
       };
 
-      const cells = visibleCols().map(col => cellMap[col.key] || `<td class="py-4 px-4"></td>`).join('');
-      return `<tr class="${isSel ? 'bg-primary/5' : 'hover:bg-muted/30'} transition-colors">${cells}</tr>`;
+      const cells = visibleCols().map(col => cellMap[col.key] || `<td class="${padClass}"></td>`).join('');
+      return `<tr class="${isSel ? 'bg-primary/5 font-medium' : 'hover:bg-muted/40'} transition-colors group">${cells}</tr>`;
     }).join('');
 
     // Attach row events
@@ -806,6 +1144,14 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         renderTable();
       });
     });
+
+    tbody.querySelectorAll<HTMLElement>('[data-copy-handle]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        copyToClipboard(btn.dataset.copyHandle!, btn);
+      });
+    });
+
     tbody.querySelectorAll<HTMLElement>('[data-click-tag]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -815,15 +1161,40 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         renderTable();
       });
     });
+
     tbody.querySelectorAll<HTMLElement>('[data-drawer-id]').forEach(btn => {
       btn.addEventListener('click', () => openDrawer(btn.dataset.drawerId!));
     });
+
+    // Row Menu Dropdowns
+    tbody.querySelectorAll<HTMLElement>('[data-row-menu-container]').forEach(container => {
+      const trigger = container.querySelector<HTMLElement>('[data-row-menu-trigger]');
+      const menu = container.querySelector<HTMLElement>('[data-row-menu-dropdown]');
+      if (!trigger || !menu) return;
+
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll<HTMLElement>('[data-row-menu-dropdown]').forEach(m => {
+          if (m !== menu) m.classList.add('hidden');
+        });
+        menu.classList.toggle('hidden');
+      });
+    });
+
     tbody.querySelectorAll<HTMLElement>('[data-edit-id]').forEach(btn => {
-      btn.addEventListener('click', () => openEditModal(btn.dataset.editId!));
+      btn.addEventListener('click', () => {
+        btn.closest('[data-row-menu-dropdown]')?.classList.add('hidden');
+        openEditModal(btn.dataset.editId!);
+      });
     });
+
     tbody.querySelectorAll<HTMLElement>('[data-paste-id]').forEach(btn => {
-      btn.addEventListener('click', () => openPasteModal(btn.dataset.pasteId!));
+      btn.addEventListener('click', () => {
+        btn.closest('[data-row-menu-dropdown]')?.classList.add('hidden');
+        openPasteModal(btn.dataset.pasteId!);
+      });
     });
+
     tbody.querySelectorAll<HTMLElement>('[data-pinarchive-import-id]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const u = btn.dataset.username!;
@@ -846,8 +1217,10 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         }
       });
     });
+
     tbody.querySelectorAll<HTMLElement>('[data-delete-id]').forEach(btn => {
       btn.addEventListener('click', async () => {
+        btn.closest('[data-row-menu-dropdown]')?.classList.add('hidden');
         const id = btn.dataset.deleteId!, u = btn.dataset.username || 'this profile';
         const ok = await askConfirm('Remove Profile', `Are you sure you want to stop tracking @${u}? Historical snapshots will be retained.`);
         if (!ok) return;
@@ -863,21 +1236,21 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     });
   }
 
+  // Close row menus on outside click
+  document.addEventListener('click', () => {
+    document.querySelectorAll<HTMLElement>('[data-row-menu-dropdown]').forEach(m => m.classList.add('hidden'));
+  });
+
   // ─── Selection bar ────────────────────────────────────────────────────────
   function updateSelectionBar() {
-    const runUpdateLabel = $('run-full-update-label');
-    const updateSelectedLabel = $('update-selected-label');
     if (selectedIds.size > 0) {
       selectionBar.classList.remove('hidden'); selectionBar.classList.add('flex');
       selectionCount.textContent = `${selectedIds.size} selected`;
       compareBtn.disabled = selectedIds.size < 2 || selectedIds.size > 4;
-      compareBtn.title = selectedIds.size < 2 ? 'Select at least 2 profiles to compare' : (selectedIds.size > 4 ? 'Select up to 4 profiles' : 'Compare selected profiles');
-      if (runUpdateLabel) runUpdateLabel.textContent = `⚡ Update Selected (${selectedIds.size})`;
-      if (updateSelectedLabel) updateSelectedLabel.textContent = `⚡ Update selected (${selectedIds.size})`;
+      compareBtn.title = selectedIds.size < 2 ? 'Select at least 2 profiles to compare' : (selectedIds.size > 4 ? 'Select up to 4 profiles' : 'Compare selected profiles side-by-side');
+      $('update-selected-label').textContent = `⚡ Update (${selectedIds.size})`;
     } else {
       selectionBar.classList.add('hidden'); selectionBar.classList.remove('flex');
-      if (runUpdateLabel) runUpdateLabel.textContent = '⚡ Run Full Update Now';
-      if (updateSelectedLabel) updateSelectedLabel.textContent = '⚡ Update selected';
     }
   }
 
@@ -909,7 +1282,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || 'Bulk import failed');
-      toast(`Imported ${json.imported} account(s), ${json.skipped} already archived.`);
+      toast(`Imported ${json.imported} account(s) to PinArchive!`);
       selectedComps.forEach(c => archivedUsernames.add((c.username || '').toLowerCase()));
       selectedIds.clear();
       renderTable();
@@ -920,36 +1293,75 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     }
   });
 
+  // ─── Density & Number Format Toggles ──────────────────────────────────────
+  function updateDensityUI() {
+    densityLabel.textContent = isCompactDensity ? 'Compact' : 'Comfortable';
+  }
+  densityToggleBtn.addEventListener('click', () => {
+    isCompactDensity = !isCompactDensity;
+    localStorage.setItem('po_comp_density', isCompactDensity ? 'compact' : 'comfortable');
+    updateDensityUI();
+    renderTable();
+  });
+  updateDensityUI();
+
+  function updateNumFormatUI() {
+    numFormatLabel.textContent = isCompactNumbers ? 'Compact (#)' : 'Full Numbers';
+  }
+  numFormatToggleBtn.addEventListener('click', () => {
+    isCompactNumbers = !isCompactNumbers;
+    localStorage.setItem('po_comp_num_fmt', isCompactNumbers ? 'compact' : 'full');
+    updateNumFormatUI();
+    renderTable();
+  });
+  updateNumFormatUI();
+
   // ─── Column visibility menu ───────────────────────────────────────────────
   const colMenu = $('col-visibility-menu');
+  const colContainer = $('col-checkboxes-container');
   function buildColVisibilityMenu() {
-    colMenu.innerHTML = COLUMN_DEFS.filter(c => !c.locked).map(c => `
-      <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-muted/60 transition-colors text-xs font-medium text-foreground">
-        <input type="checkbox" class="rounded accent-primary" data-col-key="${c.key}" ${colVisible[c.key] ? 'checked' : ''} />
+    if (!colContainer) return;
+    colContainer.innerHTML = COLUMN_DEFS.filter(c => !c.locked).map(c => `
+      <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-muted transition-colors text-xs font-medium text-foreground">
+        <input type="checkbox" class="rounded accent-primary h-3.5 w-3.5" data-col-key="${c.key}" ${colVisible[c.key] ? 'checked' : ''} />
         <span>${c.label}</span>
       </label>`).join('');
-    colMenu.querySelectorAll<HTMLInputElement>('input[data-col-key]').forEach(cb => {
+    colContainer.querySelectorAll<HTMLInputElement>('input[data-col-key]').forEach(cb => {
       cb.addEventListener('change', () => {
         colVisible[cb.dataset.colKey!] = cb.checked;
-        localStorage.setItem('po_comp_cols', JSON.stringify(colVisible));
+        localStorage.setItem('po_comp_cols_v2', JSON.stringify(colVisible));
         renderTable();
       });
     });
   }
+
+  $('reset-cols-btn')?.addEventListener('click', () => {
+    COLUMN_DEFS.forEach(c => { colVisible[c.key] = c.defaultVisible; });
+    localStorage.removeItem('po_comp_cols_v2');
+    buildColVisibilityMenu();
+    renderTable();
+  });
+
   $('col-visibility-btn').addEventListener('click', (e) => { e.stopPropagation(); colMenu.classList.toggle('hidden'); });
   document.addEventListener('click', (e) => {
     const w = $('col-visibility-wrapper');
     if (w && !w.contains(e.target as Node)) colMenu.classList.add('hidden');
   });
 
-  // ─── Tags dropdown ────────────────────────────────────────────────────────
+  // ─── Tags & Activity dropdowns ────────────────────────────────────────────
   function populateTagDropdown() {
     const s = new Set<string>();
     competitorsList.forEach(c => Array.isArray(c.tags) && c.tags.forEach(t => s.add(t)));
     const arr = Array.from(s).sort();
-    tagFilterSelect.innerHTML = `<option value="all">All Tags</option>` +
+    tagFilterSelect.innerHTML = `<option value="all">🏷️ All Tags</option>` +
       arr.map(t => `<option value="${escHtml(t)}" ${selectedTag === t ? 'selected' : ''}>#${escHtml(t)}</option>`).join('');
   }
+
+  activityFilterSelect.addEventListener('change', () => {
+    selectedActivity = activityFilterSelect.value;
+    page = 1;
+    renderTable();
+  });
 
   // ─── Pagination & rows per page ───────────────────────────────────────────
   rowsSelect.value = String(rowsPerPage);
@@ -968,8 +1380,8 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     typeTabBtns.forEach(b => {
       const active = (b.dataset.typeTab || 'all') === activeTypeTab;
       b.className = active
-        ? 'account-type-tab-btn rounded-lg px-3.5 py-1.5 text-xs font-semibold bg-background text-foreground shadow-xs transition-all'
-        : 'account-type-tab-btn rounded-lg px-3.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all';
+        ? 'account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold bg-background text-foreground shadow-2xs transition-all'
+        : 'account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all';
     });
   }
   typeTabBtns.forEach(btn => {
@@ -986,7 +1398,20 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
   let searchDebounce: any;
   searchInput.addEventListener('input', () => {
     clearTimeout(searchDebounce);
-    searchDebounce = setTimeout(() => { searchQuery = searchInput.value.trim(); page = 1; renderTable(); }, 180);
+    if (searchInput.value.trim().length > 0) {
+      searchClearBtn?.classList.remove('hidden');
+    } else {
+      searchClearBtn?.classList.add('hidden');
+    }
+    searchDebounce = setTimeout(() => { searchQuery = searchInput.value.trim(); page = 1; renderTable(); }, 160);
+  });
+
+  searchClearBtn?.addEventListener('click', () => {
+    searchInput.value = '';
+    searchQuery = '';
+    searchClearBtn.classList.add('hidden');
+    page = 1;
+    renderTable();
   });
 
   // ─── CSV Export ───────────────────────────────────────────────────────────
@@ -1021,49 +1446,62 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     a.download = `pinorbit-competitors-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast(`Exported ${list.length} profiles to CSV`);
+    toast(`Exported ${list.length} profiles to CSV!`);
   }
   $('export-csv-btn').addEventListener('click', () => exportCSV());
 
-  // ─── Side Drawer ──────────────────────────────────────────────────────────
+  // ─── Side Drawer Preview ──────────────────────────────────────────────────
   function openDrawer(id: string) {
     const c = competitorsList.find(x => x.id === id);
     if (!c) return;
 
     const drawerAvatar = c.avatar_url && /^https?:\/\//i.test(c.avatar_url) ? c.avatar_url : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80';
     drawerBody.innerHTML = `
-      <div class="flex items-center gap-3 pb-3 border-b border-border">
-        <img src="${escHtml(drawerAvatar)}" class="h-12 w-12 rounded-full object-cover border border-border" />
+      <div class="flex items-center gap-3.5 pb-4 border-b border-border">
+        <img src="${escHtml(drawerAvatar)}" class="h-12 w-12 rounded-xl object-cover border border-border shadow-xs" />
         <div class="min-w-0 flex-1">
           <div class="text-sm font-bold text-foreground truncate">${escHtml(c.full_name || c.username)}</div>
-          <div class="text-xs text-muted-foreground">@${escHtml(c.username)}</div>
+          <div class="text-xs text-muted-foreground flex items-center gap-1">
+            <span>@${escHtml(c.username)}</span>
+            <a href="https://www.pinterest.com/${escHtml(c.username)}/" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">↗</a>
+          </div>
         </div>
-        <a href="/competitors/details?id=${c.id}" class="rounded-xl bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">Full Details →</a>
+        <a href="/competitors/details?id=${c.id}" class="rounded-xl bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all">Full View →</a>
       </div>
+      
       <div class="grid grid-cols-2 gap-3">
         <div class="rounded-xl border border-border bg-background p-3">
           <div class="text-[10px] text-muted-foreground uppercase font-semibold">Monthly Reach</div>
-          <div class="text-lg font-bold text-emerald-500 mt-0.5">${fmtCompact(c.profile_reach)}</div>
+          <div class="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 font-mono tabular-nums">${fmtCompact(c.profile_reach)}</div>
+          <div class="text-[10px] text-muted-foreground mt-0.5">${fmtFull(c.profile_reach)} exact</div>
         </div>
         <div class="rounded-xl border border-border bg-background p-3">
           <div class="text-[10px] text-muted-foreground uppercase font-semibold">Profile Views</div>
-          <div class="text-lg font-bold text-foreground mt-0.5">${fmtCompact(c.profile_views)}</div>
+          <div class="text-xl font-bold text-foreground mt-0.5 font-mono tabular-nums">${fmtCompact(c.profile_views)}</div>
+          <div class="text-[10px] text-muted-foreground mt-0.5">${fmtFull(c.profile_views)} exact</div>
         </div>
         <div class="rounded-xl border border-border bg-background p-3">
           <div class="text-[10px] text-muted-foreground uppercase font-semibold">Followers</div>
-          <div class="text-lg font-bold text-foreground mt-0.5">${fmtCompact(c.follower_count)}</div>
+          <div class="text-xl font-bold text-foreground mt-0.5 font-mono tabular-nums">${fmtCompact(c.follower_count)}</div>
+          <div class="text-[10px] text-muted-foreground mt-0.5">${fmtFull(c.follower_count)} exact</div>
         </div>
         <div class="rounded-xl border border-border bg-background p-3">
-          <div class="text-[10px] text-muted-foreground uppercase font-semibold">Pins</div>
-          <div class="text-lg font-bold text-foreground mt-0.5">${fmtCompact(c.pin_count)}</div>
+          <div class="text-[10px] text-muted-foreground uppercase font-semibold">Total Pins</div>
+          <div class="text-xl font-bold text-foreground mt-0.5 font-mono tabular-nums">${fmtCompact(c.pin_count)}</div>
+          <div class="text-[10px] text-muted-foreground mt-0.5">${c.boards_count ?? 0} boards</div>
         </div>
       </div>
+
       <div class="space-y-2">
-        <div class="text-xs font-bold text-foreground">Reach History (Last 14d)</div>
+        <div class="text-xs font-bold text-foreground flex items-center justify-between">
+          <span>Reach History (14-Day Velocity)</span>
+          <span class="text-[10px] text-emerald-500 font-bold">Trend</span>
+        </div>
         <div id="drawer-sparkline" class="rounded-xl border border-border bg-background p-3">
           <div class="text-xs text-muted-foreground animate-pulse">Loading history…</div>
         </div>
       </div>
+
       <div class="space-y-2">
         <div class="text-xs font-bold text-foreground">Strategy Notes</div>
         <div class="rounded-xl border border-border bg-background p-3 text-xs text-muted-foreground whitespace-pre-wrap">${escHtml(c.notes || 'No internal notes set yet.')}</div>
@@ -1079,14 +1517,14 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
       const el = $('drawer-sparkline');
       if (!el) return;
       if (!det || !det.snapshots || det.snapshots.length < 2) {
-        el.innerHTML = '<div class="text-[11px] text-muted-foreground">Not enough snapshot history yet. Ingest DevTools payloads to build timeline.</div>';
+        el.innerHTML = '<div class="text-[11px] text-muted-foreground">Not enough snapshot history yet. Ingest DevTools JSON payloads to build velocity graph.</div>';
         return;
       }
       const vals = det.snapshots.map(s => s.profile_reach || 0);
       el.innerHTML = sparkline(vals, 'text-emerald-500');
     }).catch(() => {
       const el = $('drawer-sparkline');
-      if (el) el.innerHTML = '<div class="text-[11px] text-muted-foreground">Could not load sparkline.</div>';
+      if (el) el.innerHTML = '<div class="text-[11px] text-muted-foreground">Could not load velocity graph.</div>';
     });
   }
 
@@ -1104,22 +1542,22 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     const list = competitorsList.filter(c => selectedIds.has(c.id));
     if (list.length < 2) return;
 
-    // Load deltas in parallel
     const details = await Promise.all(list.map(c => getCompetitorDetails(c.id).catch(() => null)));
+    const maxReach = Math.max(...list.map(c => c.profile_reach || 0));
 
     const body = $('compare-body');
     body.innerHTML = `
-      <table class="w-full text-left text-xs border border-border">
+      <table class="w-full text-left text-xs border border-border rounded-xl overflow-hidden">
         <thead>
-          <tr class="bg-muted border-b border-border">
+          <tr class="bg-muted/60 border-b border-border">
             <th class="py-3 px-4 text-muted-foreground font-semibold">Metric</th>
             ${list.map(c => {
               const compAvatar = c.avatar_url && /^https?:\/\//i.test(c.avatar_url) ? c.avatar_url : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80';
               return `
               <th class="py-3 px-4 font-bold text-foreground">
                 <div class="flex items-center gap-2">
-                  <img src="${escHtml(compAvatar)}" class="h-6 w-6 rounded-full" />
-                  <span>@${escHtml(c.username)}</span>
+                  <img src="${escHtml(compAvatar)}" class="h-6 w-6 rounded-lg object-cover border border-border" />
+                  <span class="truncate max-w-[120px]">@${escHtml(c.username)}</span>
                 </div>
               </th>`;
             }).join('')}
@@ -1129,19 +1567,20 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
           <tr><td class="py-2.5 px-4 font-semibold text-muted-foreground">Type</td>${list.map(c => `<td class="py-2.5 px-4">${c.account_type === 'own' ? '👤 My Account' : '🎯 Competitor'}</td>`).join('')}</tr>
           <tr><td class="py-2.5 px-4 font-semibold text-muted-foreground">Niche</td>${list.map(c => `<td class="py-2.5 px-4">${escHtml(c.niche || '—')}</td>`).join('')}</tr>
           <tr><td class="py-2.5 px-4 font-semibold text-muted-foreground">Monthly Reach</td>${list.map((c, i) => {
+            const isWinner = c.profile_reach === maxReach && maxReach > 0;
             const d = details[i]?.deltas?.reach;
-            return `<td class="py-2.5 px-4 font-bold text-emerald-500">${fmtCompact(c.profile_reach)} ${d ? deltaChip(d.change, d.percent) : ''}</td>`;
+            return `<td class="py-2.5 px-4 font-bold ${isWinner ? 'text-emerald-500 bg-emerald-500/5' : 'text-foreground'} font-mono">${fmtCompact(c.profile_reach)} ${isWinner ? '👑' : ''} ${d ? deltaChip(d.change, d.percent) : ''}</td>`;
           }).join('')}</tr>
           <tr><td class="py-2.5 px-4 font-semibold text-muted-foreground">Profile Views</td>${list.map((c, i) => {
             const d = details[i]?.deltas?.views;
-            return `<td class="py-2.5 px-4 font-semibold text-foreground">${fmtCompact(c.profile_views)} ${d ? deltaChip(d.change, d.percent) : ''}</td>`;
+            return `<td class="py-2.5 px-4 font-semibold text-foreground font-mono">${fmtCompact(c.profile_views)} ${d ? deltaChip(d.change, d.percent) : ''}</td>`;
           }).join('')}</tr>
           <tr><td class="py-2.5 px-4 font-semibold text-muted-foreground">Followers</td>${list.map((c, i) => {
             const d = details[i]?.deltas?.followers;
-            return `<td class="py-2.5 px-4 font-semibold text-foreground">${fmtCompact(c.follower_count)} ${d ? deltaChip(d.change, d.percent) : ''}</td>`;
+            return `<td class="py-2.5 px-4 font-semibold text-foreground font-mono">${fmtCompact(c.follower_count)} ${d ? deltaChip(d.change, d.percent) : ''}</td>`;
           }).join('')}</tr>
-          <tr><td class="py-2.5 px-4 font-semibold text-muted-foreground">Pins</td>${list.map(c => `<td class="py-2.5 px-4 text-foreground">${fmtCompact(c.pin_count)}</td>`).join('')}</tr>
-          <tr><td class="py-2.5 px-4 font-semibold text-muted-foreground">Boards</td>${list.map(c => `<td class="py-2.5 px-4 text-foreground">${c.boards_count ?? 0}</td>`).join('')}</tr>
+          <tr><td class="py-2.5 px-4 font-semibold text-muted-foreground">Total Pins</td>${list.map(c => `<td class="py-2.5 px-4 text-foreground font-mono">${fmtCompact(c.pin_count)}</td>`).join('')}</tr>
+          <tr><td class="py-2.5 px-4 font-semibold text-muted-foreground">Boards Count</td>${list.map(c => `<td class="py-2.5 px-4 text-foreground font-mono">${c.boards_count ?? 0}</td>`).join('')}</tr>
           <tr><td class="py-2.5 px-4 font-semibold text-muted-foreground">Last Pin</td>${list.map(c => `<td class="py-2.5 px-4 text-muted-foreground">${timeAgo(c.last_pin_at)}</td>`).join('')}</tr>
           <tr><td class="py-2.5 px-4 font-semibold text-muted-foreground">Actions</td>${list.map(c => `<td class="py-2.5 px-4"><a href="/competitors/details?id=${c.id}" class="text-primary font-bold hover:underline">Details →</a></td>`).join('')}</tr>
         </tbody>
@@ -1155,6 +1594,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     ($('add-competitor-form') as HTMLFormElement).reset();
     showOverlay($('add-competitor-modal'));
   });
+
   $('add-competitor-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const typeRadio = document.querySelector<HTMLInputElement>('input[name="account_type_radio"]:checked');
@@ -1193,6 +1633,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     });
     showOverlay($('edit-competitor-modal'));
   }
+
   $('edit-competitor-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const id = ($('edit-competitor-id') as HTMLInputElement).value;
@@ -1210,7 +1651,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         tags: tagsArr,
       });
       hideOverlay($('edit-competitor-modal'));
-      toast('Profile updated');
+      toast('Profile updated successfully');
       await loadWorkspaceData();
     } catch (err: any) {
       const er = $('edit-competitor-error');
@@ -1230,7 +1671,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     $('paste-payload-error').classList.add('hidden');
     ($('paste-payload-form') as HTMLFormElement).reset();
     $('detected-payload-type').textContent = 'Waiting for paste...';
-    $('detected-payload-type').className = 'rounded bg-muted px-2 py-0.5 text-[10px] font-semibold text-foreground';
+    $('detected-payload-type').className = 'rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold text-foreground';
     showOverlay($('paste-payload-modal'));
   }
   $('open-paste-payload-modal')?.addEventListener('click', () => openPasteModal());
@@ -1240,17 +1681,17 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     const text = rawPayloadTextarea.value.trim();
     const tag = $('detected-payload-type');
     if (!tag) return;
-    if (!text) { tag.textContent = 'Waiting for paste...'; tag.className = 'rounded bg-muted px-2 py-0.5 text-[10px] font-semibold text-foreground'; return; }
+    if (!text) { tag.textContent = 'Waiting for paste...'; tag.className = 'rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold text-foreground'; return; }
     const p = parsePinterestPayload(text);
     if (p.type === 'user_profile') {
       tag.textContent = '✓ User Profile (UserResource)';
-      tag.className = 'rounded bg-emerald-500/20 text-emerald-500 px-2 py-0.5 text-[10px] font-bold';
+      tag.className = 'rounded-full bg-emerald-500/20 text-emerald-500 px-2.5 py-0.5 text-[10px] font-bold';
     } else if (p.type === 'user_boards') {
       tag.textContent = '✓ User Boards (BoardsResource)';
-      tag.className = 'rounded bg-primary/20 text-primary px-2 py-0.5 text-[10px] font-bold';
+      tag.className = 'rounded-full bg-primary/20 text-primary px-2.5 py-0.5 text-[10px] font-bold';
     } else {
       tag.textContent = '✕ Unknown Payload';
-      tag.className = 'rounded bg-rose-500/20 text-rose-500 px-2 py-0.5 text-[10px] font-bold';
+      tag.className = 'rounded-full bg-rose-500/20 text-rose-500 px-2.5 py-0.5 text-[10px] font-bold';
     }
   });
 
@@ -1275,6 +1716,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     }
   });
 
+  // ─── Targeted Update Polling ──────────────────────────────────────────────
   let activePollingInterval: any = null;
 
   function pollJobStatus(jobId: string, totalCount: number | 'all') {
@@ -1303,7 +1745,6 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
           }
         }
 
-        // Timeout safety: stop polling after 5 minutes
         if (Date.now() - startTime > 300000) {
           clearInterval(activePollingInterval);
           activePollingInterval = null;
@@ -1314,17 +1755,13 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     }, 2000);
   }
 
-  // ─── Run Full / Targeted Update ──────────────────────────────────────────
+  // ─── Run Targeted Update ──────────────────────────────────────────────────
   async function executeCompetitorUpdate(targetIds?: string[], force: boolean = false) {
     const ids = targetIds ?? (selectedIds.size > 0 ? Array.from(selectedIds) : []);
-    const runBtn = $('run-full-update-btn') as HTMLButtonElement;
-    const runIcon = $('run-full-update-icon');
     const selBtn = $('update-selected-btn') as HTMLButtonElement;
     const selIcon = $('update-selected-icon');
 
-    if (runBtn) runBtn.disabled = true;
     if (selBtn) selBtn.disabled = true;
-    runIcon?.classList.add('animate-spin');
     selIcon?.classList.add('animate-spin');
 
     try {
@@ -1349,7 +1786,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
       if (res.job_id) {
         const shortJobId = res.job_id.slice(0, 8);
         const count = ids.length > 0 ? ids.length : 'all';
-        toast(`🚀 Workflow dispatched (#${shortJobId}) — scraping profiles on background runner...`, 'success');
+        toast(`🚀 Workflow dispatched (#${shortJobId}) — updating ${count} profile(s)...`, 'success');
         pollJobStatus(res.job_id, count);
       } else {
         toast('Update dispatched successfully', 'success');
@@ -1358,14 +1795,11 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     } catch (err: any) {
       toast(`Failed to dispatch update: ${err.message || 'Server error'}`, 'error');
     } finally {
-      runIcon?.classList.remove('animate-spin');
       selIcon?.classList.remove('animate-spin');
-      if (runBtn) runBtn.disabled = false;
       if (selBtn) selBtn.disabled = false;
     }
   }
 
-  $('run-full-update-btn')?.addEventListener('click', () => executeCompetitorUpdate());
   $('update-selected-btn')?.addEventListener('click', () => executeCompetitorUpdate());
 
   // ─── Refresh button ───────────────────────────────────────────────────────
@@ -1391,6 +1825,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
       document.querySelectorAll<HTMLElement>('.overlay-root').forEach(m => {
         if (!m.classList.contains('hidden')) hideOverlay(m);
       });
+      document.querySelectorAll<HTMLElement>('[data-row-menu-dropdown]').forEach(m => m.classList.add('hidden'));
     }
   });
 
@@ -1420,7 +1855,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
       renderKPIs();
       renderTable();
       buildColVisibilityMenu();
-      $('updated-at').textContent = `Updated ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      $('updated-at').textContent = `Synced ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     } catch (err: any) {
       toast(`Failed to load data: ${err.message}`, 'error');
     }
