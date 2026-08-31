@@ -1364,14 +1364,13 @@ import Layout from '../../layouts/Layout.astro';
 
     // Summary totals row (Accurately computed for the selected slice)
     function formatTotalDeltaSlot(diff: number) {
-      if (diff === 0) return '<div class="flex items-center justify-end w-full"><span class="font-mono text-muted-foreground text-xs">—</span></div>';
+      if (diff === 0) return '<div class="flex items-center justify-end w-full text-right"><span class="font-mono text-muted-foreground text-xs">—</span></div>';
       const isPos = diff > 0;
       return `
-        <div class="flex items-center justify-end gap-2 w-full text-right">
-          <span class="font-bold text-xs font-mono tabular-nums ${isPos ? 'text-emerald-500' : 'text-rose-500'}">
+        <div class="flex items-center justify-end w-full text-right">
+          <span class="font-extrabold text-xs font-mono tabular-nums ${isPos ? 'text-emerald-500' : 'text-rose-500'}">
             (${isPos ? '+' : '−'}${fmtSnapMetric(Math.abs(diff))})
           </span>
-          <span class="inline-block w-[72px] invisible text-[10px]">—</span>
         </div>
       `;
     }

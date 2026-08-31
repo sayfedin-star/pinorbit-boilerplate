@@ -808,6 +808,27 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
     return `<span class="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${up ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'}" role="status" aria-label="${label}">${up ? '↑' : '↓'} ${Math.abs(percent).toFixed(1)}%</span>`;
   }
 
+  function renderMetricWithDelta(val: number | null | undefined, diff: number | null | undefined): string {
+    const isPos = typeof diff === 'number' && diff > 0;
+    const isNeg = typeof diff === 'number' && diff < 0;
+    const deltaStr = isPos 
+      ? `(+${formatMetric(Math.abs(diff))})` 
+      : isNeg 
+      ? `(−${formatMetric(Math.abs(diff))})` 
+      : '';
+
+    return `
+      <div class="flex items-center justify-end gap-1.5 w-full text-right">
+        <span class="font-extrabold text-neutral-900 dark:text-neutral-100 font-mono tabular-nums text-xs">${formatMetric(val || 0)}</span>
+        <span class="inline-block w-[72px] text-right font-bold text-[10.5px] font-mono tabular-nums ${
+          isPos ? 'text-emerald-500' : isNeg ? 'text-rose-500' : 'invisible'
+        }">
+          ${deltaStr || '—'}
+        </span>
+      </div>
+    `;
+  }
+
   function formatDeltaSpan(diff: number | undefined | null): string {
     if (diff === undefined || diff === null || diff === 0) return '';
     const isPos = diff > 0;
@@ -1156,11 +1177,11 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
     const totP = filteredCache.reduce((s, c) => s + (c.pin_count || 0), 0);
 
     tfoot.innerHTML = `<tr>${visibleCols().map(c => {
-      if (c.key === 'profile') return `<td class="py-3 px-4 font-bold text-xs text-foreground">Totals (${filteredCache.length})</td>`;
-      if (c.key === 'reach') return `<td class="py-3 px-4 font-bold text-xs text-emerald-600 dark:text-emerald-400 text-right font-mono tabular-nums">${formatMetric(totR)}</td>`;
-      if (c.key === 'views') return `<td class="py-3 px-4 font-bold text-xs text-foreground text-right font-mono tabular-nums">${formatMetric(totV)}</td>`;
-      if (c.key === 'followers') return `<td class="py-3 px-4 font-bold text-xs text-foreground text-right font-mono tabular-nums">${formatMetric(totF)}</td>`;
-      if (c.key === 'pins') return `<td class="py-3 px-4 font-bold text-xs text-foreground text-right font-mono tabular-nums">${formatMetric(totP)}</td>`;
+      if (c.key === 'profile') return `<td class="py-3 px-4 font-bold text-xs text-neutral-900 dark:text-neutral-100">Totals (${filteredCache.length})</td>`;
+      if (c.key === 'reach') return `<td class="py-3 px-4 text-right">${renderMetricWithDelta(totR, null)}</td>`;
+      if (c.key === 'views') return `<td class="py-3 px-4 text-right">${renderMetricWithDelta(totV, null)}</td>`;
+      if (c.key === 'followers') return `<td class="py-3 px-4 text-right">${renderMetricWithDelta(totF, null)}</td>`;
+      if (c.key === 'pins') return `<td class="py-3 px-4 text-right">${renderMetricWithDelta(totP, null)}</td>`;
       return `<td class="py-3 px-4"></td>`;
     }).join('')}</tr>`;
     tfoot.classList.remove('hidden');
@@ -1220,20 +1241,20 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
 
         type: `<td class="${padClass}"><span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold border ${isOwn ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'}">${isOwn ? '👤 My Account' : '🎯 Competitor'}</span></td>`,
         
-        reach: `<td class="${padClass} text-right font-bold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums text-xs" title="${fmtFull(c.profile_reach || 0)} monthly reach">
-          ${formatMetric(c.profile_reach || 0)}${formatDeltaSpan(c.deltas?.reachChange ?? c.deltas?.reach?.change)}
+        reach: `<td class="${padClass} text-right whitespace-nowrap min-w-[150px]" title="${fmtFull(c.profile_reach || 0)} monthly reach">
+          ${renderMetricWithDelta(c.profile_reach, c.deltas?.reachChange ?? c.deltas?.reach?.change)}
         </td>`,
         
-        views: `<td class="${padClass} text-right font-semibold text-foreground font-mono tabular-nums text-xs" title="${fmtFull(c.profile_views || 0)} profile views">
-          ${formatMetric(c.profile_views || 0)}${formatDeltaSpan(c.deltas?.viewsChange ?? c.deltas?.views?.change)}
+        views: `<td class="${padClass} text-right whitespace-nowrap min-w-[150px]" title="${fmtFull(c.profile_views || 0)} profile views">
+          ${renderMetricWithDelta(c.profile_views, c.deltas?.viewsChange ?? c.deltas?.views?.change)}
         </td>`,
         
-        followers: `<td class="${padClass} text-right font-semibold text-foreground font-mono tabular-nums text-xs" title="${fmtFull(c.follower_count || 0)} followers">
-          ${formatMetric(c.follower_count || 0)}${formatDeltaSpan(c.deltas?.followersChange ?? c.deltas?.followers?.change)}
+        followers: `<td class="${padClass} text-right whitespace-nowrap min-w-[130px]" title="${fmtFull(c.follower_count || 0)} followers">
+          ${renderMetricWithDelta(c.follower_count, c.deltas?.followersChange ?? c.deltas?.followers?.change)}
         </td>`,
         
-        pins: `<td class="${padClass} text-right text-foreground font-mono tabular-nums text-xs" title="${fmtFull(c.pin_count || 0)} total pins">
-          ${formatMetric(c.pin_count || 0)}${formatDeltaSpan(c.deltas?.pinsChange ?? c.deltas?.pins?.change)}
+        pins: `<td class="${padClass} text-right whitespace-nowrap min-w-[130px]" title="${fmtFull(c.pin_count || 0)} total pins">
+          ${renderMetricWithDelta(c.pin_count, c.deltas?.pinsChange ?? c.deltas?.pins?.change)}
         </td>`,
         
         boards_count: `<td class="${padClass} text-right font-mono tabular-nums text-xs">
