@@ -10,6 +10,9 @@ const workspaceId = Astro.locals.activeWorkspaceId || '';
 const runtimeEnv = (Astro.locals as any)?.runtime?.env || (Astro.locals as any)?.runtimeEnv;
 
 let competitor_pipeline_settings: { cron_expression?: string | null } | null = null;
+let isMasterWorkspace = false;
+let currentWsName = 'Hymum';
+
 if (workspaceId) {
   try {
     const compClient = dbClients.getCompetitors(runtimeEnv);
@@ -19,6 +22,17 @@ if (workspaceId) {
       .eq('workspace_id', workspaceId)
       .maybeSingle();
     competitor_pipeline_settings = data;
+
+    const schedClient = dbClients.getSchedulingAdmin(runtimeEnv);
+    const { data: wsData } = await schedClient
+      .from('workspaces')
+      .select('name, is_master')
+      .eq('id', workspaceId)
+      .maybeSingle();
+    if (wsData) {
+      isMasterWorkspace = Boolean(wsData.is_master);
+      if (wsData.name) currentWsName = wsData.name;
+    }
   } catch (e) {
     console.warn('[competitors] Error fetching pipeline settings:', e);
   }
@@ -79,14 +93,16 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
 
       <RunNowButton
         endpoint="/api/admin/competitor-ops"
-        payload={{ scope: 'all' }}
-        forcePayload={{ scope: 'all', force: true }}
-        label="Run Full Update"
+        payload={{ scope: isMasterWorkspace ? 'all' : 'current' }}
+        forcePayload={{ scope: isMasterWorkspace ? 'all' : 'current', force: true }}
+        label={isMasterWorkspace ? 'Run All Workspaces' : 'Run Full Update'}
         forceLabel="⚡ Force Run"
         size="md"
         variant="primary"
         buttonId="run-full-update-btn-unified"
         scope="competitors"
+        isMaster={isMasterWorkspace}
+        currentWsName={currentWsName}
       />
 
       <button id="open-add-competitor-modal"

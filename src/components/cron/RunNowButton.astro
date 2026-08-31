@@ -3,21 +3,25 @@ export interface Props {
   endpoint: string;
   method?: 'POST' | 'GET';
   payload?: Record<string, any>;
+  forcePayload?: Record<string, any>;
   label?: string;
   forceLabel?: string;
   size?: 'sm' | 'md' | 'lg';
-  variant?: 'primary' | 'secondary' | 'amber' | 'emerald' | 'subtle';
+  variant?: 'primary' | 'secondary' | 'amber' | 'emerald' | 'subtle' | 'blue';
   disabled?: boolean;
   class?: string;
   buttonId?: string;
   onSuccessEvent?: string;
   scope?: string;
+  isMaster?: boolean;
+  currentWsName?: string;
 }
 
 const {
   endpoint,
   method = 'POST',
   payload = {},
+  forcePayload = {},
   label = 'Run Now',
   forceLabel = 'Force Run',
   size = 'md',
@@ -27,12 +31,20 @@ const {
   buttonId = `run-now-btn-${Math.random().toString(36).slice(2, 9)}`,
   onSuccessEvent = 'cron:run-completed',
   scope = 'default',
+  isMaster = false,
+  currentWsName = 'Hymum',
 } = Astro.props;
 
 const sizeClasses = {
   sm: 'px-2.5 py-1 text-xs gap-1.5',
   md: 'px-3.5 py-2 text-sm gap-2',
   lg: 'px-5 py-2.5 text-base gap-2.5',
+}[size];
+
+const splitChevronClasses = {
+  sm: 'px-1.5 py-1 text-xs',
+  md: 'px-2 py-2 text-sm',
+  lg: 'px-2.5 py-2.5 text-base',
 }[size];
 
 const variantClasses = {
@@ -45,7 +57,7 @@ const variantClasses = {
 }[variant];
 ---
 
-<div class="relative inline-flex items-center group/runnow">
+<div class="relative inline-flex items-stretch group/runnow">
   <button
     id={buttonId}
     type="button"
@@ -53,11 +65,13 @@ const variantClasses = {
     data-endpoint={endpoint}
     data-method={method}
     data-payload={JSON.stringify(payload)}
+    data-force-payload={JSON.stringify(forcePayload)}
     data-label={label}
     data-force-label={forceLabel}
     data-success-event={onSuccessEvent}
     data-scope={scope}
-    class={`relative select-none overflow-hidden font-medium rounded-lg inline-flex items-center justify-center transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${sizeClasses} ${variantClasses} ${className}`}
+    data-is-master={isMaster ? 'true' : 'false'}
+    class={`relative select-none overflow-hidden font-medium ${isMaster ? 'rounded-l-lg' : 'rounded-lg'} inline-flex items-center justify-center transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${sizeClasses} ${variantClasses} ${className}`}
     title="Click to Run Now. Hold for 800ms to Force Run (bypasses active windows, rate caps & disabled flags)."
   >
     <!-- Circular Progress SVG Ring (Charges on Long Press) -->
@@ -103,10 +117,124 @@ const variantClasses = {
       <span>Executing...</span>
     </span>
   </button>
+
+  {isMaster && (
+    <div class="relative inline-flex items-center">
+      <button
+        id={`${buttonId}-dropdown-btn`}
+        type="button"
+        disabled={disabled}
+        aria-haspopup="true"
+        aria-expanded="false"
+        class={`rounded-r-lg border-l border-white/20 inline-flex items-center justify-center transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${splitChevronClasses} ${variantClasses}`}
+        title="Select execution scope (All Workspaces vs Current Only)"
+      >
+        <svg class="w-3.5 h-3.5 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <!-- Scope Selector Menu Dropdown -->
+      <div
+        id={`${buttonId}-dropdown-menu`}
+        class="hidden absolute right-0 top-full mt-1.5 z-50 w-72 rounded-2xl border border-border bg-card p-2 shadow-xl ring-1 ring-black/10 transition-all duration-150"
+      >
+        <div class="px-2 py-1.5 mb-1 border-b border-border/80">
+          <p class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Select Execution Scope</p>
+        </div>
+        <div class="space-y-1">
+          <button
+            type="button"
+            data-run-scope="all"
+            data-target-btn={buttonId}
+            class="runnow-scope-option w-full text-left flex items-start gap-2.5 p-2 rounded-xl hover:bg-muted/80 transition-colors cursor-pointer group"
+          >
+            <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 mt-0.5 text-xs">
+              👑
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-bold text-foreground group-hover:text-primary">Run All Workspaces</span>
+                <span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                  Global
+                </span>
+              </div>
+              <p class="text-[10px] text-muted-foreground leading-tight mt-0.5">
+                Parallel matrix execution across all 4 active workspaces
+              </p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            data-run-scope="current"
+            data-target-btn={buttonId}
+            class="runnow-scope-option w-full text-left flex items-start gap-2.5 p-2 rounded-xl hover:bg-muted/80 transition-colors cursor-pointer group"
+          >
+            <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 border border-blue-500/20 mt-0.5 text-xs">
+              🎯
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-bold text-foreground group-hover:text-primary">Run Current Only</span>
+                <span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                  {currentWsName}
+                </span>
+              </div>
+              <p class="text-[10px] text-muted-foreground leading-tight mt-0.5">
+                Target only profiles and accounts in this workspace
+              </p>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
 </div>
 
 <script>
   function setupRunNowButtons() {
+    // 1. Setup Dropdown Menus for Master Workspace buttons
+    document.querySelectorAll<HTMLButtonElement>('[id$="-dropdown-btn"]').forEach((dropdownBtn) => {
+      if (dropdownBtn.dataset.initialized) return;
+      dropdownBtn.dataset.initialized = 'true';
+
+      const menu = dropdownBtn.nextElementSibling as HTMLElement | null;
+      if (!menu) return;
+
+      dropdownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isHidden = menu.classList.contains('hidden');
+        document.querySelectorAll('[id$="-dropdown-menu"]').forEach(m => m.classList.add('hidden'));
+        if (isHidden) {
+          menu.classList.remove('hidden');
+        }
+      });
+    });
+
+    // Close menus on outside click
+    document.addEventListener('click', () => {
+      document.querySelectorAll('[id$="-dropdown-menu"]').forEach(m => m.classList.add('hidden'));
+    });
+
+    // 2. Setup Scope Selection items
+    document.querySelectorAll<HTMLButtonElement>('.runnow-scope-option').forEach((optionBtn) => {
+      if (optionBtn.dataset.initialized) return;
+      optionBtn.dataset.initialized = 'true';
+
+      optionBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const targetBtnId = optionBtn.dataset.targetBtn;
+        const scope = optionBtn.dataset.runScope;
+        const mainBtn = targetBtnId ? document.getElementById(targetBtnId) as HTMLButtonElement | null : null;
+        if (!mainBtn) return;
+
+        document.querySelectorAll('[id$="-dropdown-menu"]').forEach(m => m.classList.add('hidden'));
+        (mainBtn as any)._triggerScopeRun?.(scope);
+      });
+    });
+
+    // 3. Setup Main RunNow buttons
     document.querySelectorAll<HTMLButtonElement>('button[data-endpoint]').forEach((btn) => {
       if (btn.dataset.initialized) return;
       btn.dataset.initialized = 'true';
@@ -120,7 +248,6 @@ const variantClasses = {
       const normalContent = btn.querySelector('.runnow-content') as HTMLElement;
       const chargingText = btn.querySelector('.runnow-charging-text') as HTMLElement;
       const runningText = btn.querySelector('.runnow-running-text') as HTMLElement;
-      const normalLabel = btn.querySelector('.runnow-label') as HTMLElement;
 
       function startPress(e: Event) {
         if (btn.disabled) return;
@@ -165,7 +292,6 @@ const variantClasses = {
 
       function handleClick(e: MouseEvent) {
         if (isLongPress) {
-          // Already handled via long-press timeout
           isLongPress = false;
           return;
         }
@@ -173,13 +299,17 @@ const variantClasses = {
         triggerExecution(false);
       }
 
-      async function triggerExecution(force: boolean) {
+      async function triggerExecution(force: boolean, customScope?: string) {
         const endpoint = btn.dataset.endpoint;
         const method = btn.dataset.method || 'POST';
         const rawPayload = btn.dataset.payload ? JSON.parse(btn.dataset.payload) : {};
         const successEvent = btn.dataset.successEvent || 'cron:run-completed';
 
-        const payload = { ...rawPayload, force: force ? true : undefined };
+        const payload = {
+          ...rawPayload,
+          force: force ? true : undefined,
+          scope: customScope || rawPayload.scope || (btn.dataset.isMaster === 'true' ? 'all' : undefined),
+        };
 
         // Set Loading State
         btn.disabled = true;
@@ -201,10 +331,9 @@ const variantClasses = {
           const data = await res.json().catch(() => ({}));
 
           if (res.ok && (data.success !== false)) {
-            // Dispatch success custom event
             window.dispatchEvent(
               new CustomEvent(successEvent, {
-                detail: { success: true, force, data, scope: btn.dataset.scope },
+                detail: { success: true, force, data, scope: payload.scope || btn.dataset.scope },
               })
             );
           } else {
@@ -220,6 +349,11 @@ const variantClasses = {
           normalContent?.classList.remove('hidden');
         }
       }
+
+      // Expose scope trigger for dropdown selection
+      (btn as any)._triggerScopeRun = (customScope: string) => {
+        triggerExecution(false, customScope);
+      };
 
       // Pointer & Mouse Events
       btn.addEventListener('pointerdown', startPress);
