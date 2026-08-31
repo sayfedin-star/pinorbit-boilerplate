@@ -3,12 +3,16 @@ export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import SectionHeader from '../components/ui/SectionHeader.astro';
 import PinArchiveCronCard from '../components/pinarchive/PinArchiveCronCard.astro';
+import { getWorkspaces } from '../lib/workspaces';
 
 const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
+const workspaces = await getWorkspaces(Astro.cookies, Astro.request, Astro.response?.headers);
+const currentWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) || workspaces[0];
+const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
 ---
 
 <Layout title="PinArchive Intelligence" description="Historical pin performance, winning recipe clusters, SEO topics, and canonical variations.">
-  <div id="pinarchive-page-root" data-workspace-id={activeWorkspaceId}>
+  <div id="pinarchive-page-root" data-workspace-id={activeWorkspaceId} data-is-master={isMasterWorkspace ? 'true' : 'false'}>
   
   <!-- ═══ Header & Primary Controls ═══ -->
   <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -44,6 +48,19 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         <span id="refresh-meta-text" class="font-medium text-foreground">Loading sync schedule...</span>
       </div>
 
+      <!-- Architecture Guide Trigger Button -->
+      <button
+        id="open-architecture-guide-btn"
+        type="button"
+        class="inline-flex h-9 items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground px-3 text-xs font-semibold shadow-xs transition-all cursor-pointer"
+        title="View Architecture & Automation Guide"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <span>📖 How It Works</span>
+      </button>
+
       <!-- Quick Navigation Toolbar -->
       <div class="flex items-center rounded-xl border border-border/80 bg-card p-0.5 shadow-xs">
         <button id="pa-refresh-btn" title="Refresh PinArchive overview data"
@@ -67,6 +84,33 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
       </div>
     </div>
   </div>
+
+  {isMasterWorkspace && (
+    <!-- ═══ 👑 Master Workspace (Global Orchestrator) Banner ═══ -->
+    <div class="mb-6 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-xs">
+      <div class="flex items-center gap-3.5">
+        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xl shadow-2xs">
+          👑
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 class="text-sm font-bold text-foreground">Master Workspace (Global Multi-Tenant Orchestrator)</h3>
+            <span class="rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 px-2.5 py-0.5 text-[10px] font-bold">ALL-WORKSPACES MODE</span>
+          </div>
+          <p class="text-xs text-muted-foreground mt-0.5">
+            This workspace acts as the central command center. Automation dispatches and FastCron schedules configured here run across <strong>all active workspaces</strong> concurrently in parallel via 4 matrix sharding runners.
+          </p>
+        </div>
+      </div>
+      <button
+        id="open-architecture-guide-banner-btn"
+        type="button"
+        class="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white px-3.5 py-2 text-xs font-bold transition-all self-start sm:self-auto cursor-pointer shadow-2xs"
+      >
+        <span>📖 Automation Architecture</span>
+      </button>
+    </div>
+  )}
 
   <!-- ═══ PinArchive Tab Navigation (Segmented Minimalist Pill Switcher) ═══ -->
   <div class="mb-6 flex items-center gap-1 bg-muted/60 p-1 rounded-2xl border border-border/60 w-fit">
@@ -638,6 +682,175 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
             Delete Accounts
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL: Platform Architecture & Automation Guide ═══ -->
+  <div
+    id="architecture-guide-modal"
+    class="fixed inset-0 z-50 hidden min-h-screen overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center"
+    aria-modal="true"
+    role="dialog"
+  >
+    <div id="architecture-guide-backdrop" class="fixed inset-0"></div>
+    <div class="relative w-full max-w-3xl rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-2xl space-y-5 z-10 my-auto max-h-[90vh] flex flex-col">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-border pb-4 flex-shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-foreground">PinOrbit Architecture &amp; Automation Guide</h3>
+            <p class="text-xs text-muted-foreground">دليل الهندسة المعمارية والأتمتة — Dual-Scheduler &amp; Master Workspace</p>
+          </div>
+        </div>
+        <button
+          id="close-architecture-guide-modal-btn"
+          type="button"
+          class="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all cursor-pointer"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Guide Tabs -->
+      <div class="flex items-center gap-1.5 bg-muted/60 p-1 rounded-xl border border-border/60 flex-shrink-0 overflow-x-auto">
+        <button
+          id="guide-tab-btn-master"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-background text-foreground shadow-2xs transition-all cursor-pointer whitespace-nowrap"
+        >
+          <span>👑 Master Workspace</span>
+        </button>
+        <button
+          id="guide-tab-btn-scheduler"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-muted-foreground hover:text-foreground transition-all cursor-pointer whitespace-nowrap"
+        >
+          <span>⚡ Dual-Scheduler Engine</span>
+        </button>
+        <button
+          id="guide-tab-btn-matrix"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-muted-foreground hover:text-foreground transition-all cursor-pointer whitespace-nowrap"
+        >
+          <span>🚀 4-Shard Matrix Parallel</span>
+        </button>
+      </div>
+
+      <!-- Guide Content (Scrollable) -->
+      <div class="flex-1 overflow-y-auto space-y-4 pr-1 text-xs text-muted-foreground leading-relaxed">
+        
+        <!-- Tab 1: Master Workspace -->
+        <div id="guide-tab-view-master" class="space-y-3.5">
+          <div class="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-2">
+            <h4 class="font-bold text-foreground flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+              <span>👑 ما هي المساحة الرئيسية (Master Workspace)؟</span>
+            </h4>
+            <p>
+              المساحة الرئيسية هي <strong>مركز القيادة الشامل للمنصة</strong>. عند تعيين مساحة عمل كـ Master Workspace:
+            </p>
+            <ul class="list-disc list-inside space-y-1.5 pl-1">
+              <li><strong>⚡ زر Run Now الشامل:</strong> يطلق المزامنة لكل الحسابات في <strong>جميع مساحات العمل دفعة واحدة</strong> بالتوازي عبر الـ 4 خوادم.</li>
+              <li><strong>🕒 مهمة FastCron واحدة للمنصة:</strong> يمكنك إنشاء مهمة FastCron في الـ Master Workspace لتقوم بمزامنة وتحديث كافة المساحات في توقيت مخصص تختاره أنت.</li>
+              <li><strong>🛑 مفتاح الإيقاف العام (Global Kill-Switch):</strong> تعطيل مجدول GitHub في الـ Master Workspace يوقف المجدول التلقائي للمنصة ككل فوراً.</li>
+            </ul>
+          </div>
+
+          <div class="rounded-xl border border-border bg-background p-4 space-y-2">
+            <h5 class="font-bold text-foreground">كيف تعيّن مساحة كـ Master Workspace؟</h5>
+            <p>
+              من قائمة اختيار المساحات بالأعلى، اضغط على <strong>Manage Workspaces (⚙️)</strong> ثم اضغط على زر <strong>Set Master 👑</strong> بجانب المساحة المطلوبة.
+            </p>
+          </div>
+        </div>
+
+        <!-- Tab 2: Dual-Scheduler -->
+        <div id="guide-tab-view-scheduler" class="hidden space-y-3.5">
+          <div class="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-2">
+            <h4 class="font-bold text-foreground flex items-center gap-2 text-sm text-primary">
+              <span>⚡ منظومة المجدول المزدوج (Dual-Scheduler Engine)</span>
+            </h4>
+            <p>
+              تمتلك المنصة خيارين للجدولة التلقائية يمكنك التبديل بينهما بكل حرية واستقلالية:
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="rounded-xl border border-border bg-background p-3.5 space-y-1.5">
+              <span class="font-bold text-foreground text-xs flex items-center gap-1.5">
+                <span class="h-2 w-2 rounded-full bg-primary"></span>
+                <span>1. مجدول GitHub Actions (07:00 UTC)</span>
+              </span>
+              <p class="text-[11px]">
+                يعمل تلقائياً يومياً في تمام الساعة 07:00 UTC (08:00 صباحاً بتوقيت المغرب). إذا كنت لا تريد تشغيله في هذا الوقت، يمكنك تعطيله بزر واحد من لوحة الإعدادات.
+              </p>
+            </div>
+
+            <div class="rounded-xl border border-border bg-background p-3.5 space-y-1.5">
+              <span class="font-bold text-foreground text-xs flex items-center gap-1.5">
+                <span class="h-2 w-2 rounded-full bg-amber-500"></span>
+                <span>2. مجدول FastCron المخصص</span>
+              </span>
+              <p class="text-[11px]">
+                يتيح لك تحديد التوقيت المفضل بدقة (مثلاً 03:00 UTC أو كل 6 ساعات) وإدارته بحرية كاملة عبر FastCron مع حماية التوكنات وتشفيرها.
+              </p>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-[11px] text-emerald-700 dark:text-emerald-300">
+            💡 <strong>Zero-Resource Early Exit:</strong> عند تعطيل مجدول GitHub لمساحة ما، يتوقف الاسكربت فوراً في ثانية واحدة [SKIP] دون استهلاك أي دقائق مجانية أو الاتصال بـ Pinterest.
+          </div>
+        </div>
+
+        <!-- Tab 3: Matrix Sharding -->
+        <div id="guide-tab-view-matrix" class="hidden space-y-3.5">
+          <div class="rounded-xl border border-border bg-background p-4 space-y-2">
+            <h4 class="font-bold text-foreground text-sm flex items-center gap-2">
+              <span>🚀 التوزيع المصفوفي المتوازي (Matrix Sharding — 4 Shards)</span>
+            </h4>
+            <p>
+              عندما تملك عدداً كبيراً من الحسابات والبيينز، يقوم النظام تلقائياً بتوزيع الحمل:
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-center font-mono text-[11px]">
+              <div class="p-2.5 rounded-lg border border-border bg-muted/30">
+                <span class="font-bold text-foreground block">Shard 0</span>
+                <span class="text-[10px] text-muted-foreground">خادم مستقل 1</span>
+              </div>
+              <div class="p-2.5 rounded-lg border border-border bg-muted/30">
+                <span class="font-bold text-foreground block">Shard 1</span>
+                <span class="text-[10px] text-muted-foreground">خادم مستقل 2</span>
+              </div>
+              <div class="p-2.5 rounded-lg border border-border bg-muted/30">
+                <span class="font-bold text-foreground block">Shard 2</span>
+                <span class="text-[10px] text-muted-foreground">خادم مستقل 3</span>
+              </div>
+              <div class="p-2.5 rounded-lg border border-border bg-muted/30">
+                <span class="font-bold text-foreground block">Shard 3</span>
+                <span class="text-[10px] text-muted-foreground">خادم مستقل 4</span>
+              </div>
+            </div>
+            <p class="pt-2">
+              ✨ <strong>النتيجة:</strong> معالجة آلاف البيينز في دقائق معدودة، بدون أي تعارض في أقفال قواعد البيانات (Zero Lock Contention)، مع ضبط تلقائي للسرعة ومعدل الطلبات لتفادي الحظر.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-end border-t border-border pt-3.5 flex-shrink-0">
+        <button
+          id="done-architecture-guide-modal-btn"
+          type="button"
+          class="rounded-xl bg-primary text-primary-foreground px-4 py-2 text-xs font-semibold hover:bg-primary/90 transition-all cursor-pointer shadow-xs"
+        >
+          Got It
+        </button>
       </div>
     </div>
   </div>
@@ -1851,6 +2064,59 @@ const activeWorkspaceId = Astro.locals.activeWorkspaceId || '';
         setTimeout(() => icon?.classList.remove('animate-spin'), 400);
       });
     });
+
+    // ─── Architecture Guide Modal Controls ────────────────────────────────────
+    function setupArchitectureGuideModal() {
+      const modal = document.getElementById('architecture-guide-modal');
+      const openBtn = document.getElementById('open-architecture-guide-btn');
+      const bannerBtn = document.getElementById('open-architecture-guide-banner-btn');
+      const closeBtn = document.getElementById('close-architecture-guide-modal-btn');
+      const doneBtn = document.getElementById('done-architecture-guide-modal-btn');
+      const backdrop = document.getElementById('architecture-guide-backdrop');
+
+      const tabBtnMaster = document.getElementById('guide-tab-btn-master');
+      const tabBtnScheduler = document.getElementById('guide-tab-btn-scheduler');
+      const tabBtnMatrix = document.getElementById('guide-tab-btn-matrix');
+
+      const tabViewMaster = document.getElementById('guide-tab-view-master');
+      const tabViewScheduler = document.getElementById('guide-tab-view-scheduler');
+      const tabViewMatrix = document.getElementById('guide-tab-view-matrix');
+
+      function openModal() {
+        modal?.classList.remove('hidden');
+        modal?.classList.add('flex');
+      }
+
+      function closeModal() {
+        modal?.classList.add('hidden');
+        modal?.classList.remove('flex');
+      }
+
+      openBtn?.addEventListener('click', openModal);
+      bannerBtn?.addEventListener('click', openModal);
+      closeBtn?.addEventListener('click', closeModal);
+      doneBtn?.addEventListener('click', closeModal);
+      backdrop?.addEventListener('click', closeModal);
+
+      function switchTab(activeBtn: HTMLElement | null, activeView: HTMLElement | null) {
+        [tabBtnMaster, tabBtnScheduler, tabBtnMatrix].forEach(btn => {
+          btn?.classList.remove('bg-background', 'text-foreground', 'shadow-2xs');
+          btn?.classList.add('text-muted-foreground');
+        });
+        [tabViewMaster, tabViewScheduler, tabViewMatrix].forEach(view => {
+          view?.classList.add('hidden');
+        });
+
+        activeBtn?.classList.remove('text-muted-foreground');
+        activeBtn?.classList.add('bg-background', 'text-foreground', 'shadow-2xs');
+        activeView?.classList.remove('hidden');
+      }
+
+      tabBtnMaster?.addEventListener('click', () => switchTab(tabBtnMaster, tabViewMaster));
+      tabBtnScheduler?.addEventListener('click', () => switchTab(tabBtnScheduler, tabViewScheduler));
+      tabBtnMatrix?.addEventListener('click', () => switchTab(tabBtnMatrix, tabViewMatrix));
+    }
+    setupArchitectureGuideModal();
   }
 
   // ─── Keyboard shortcut ────────────────────────────────────────────────────

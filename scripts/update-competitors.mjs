@@ -284,6 +284,23 @@ async function main() {
 
   console.log(`🚀 Execution Scope: ${targetScope} | Workspaces: ${workspaces.length} | Competitors Filter: ${competitorIds.length ? competitorIds.length : 'All'} | DRY_RUN=${DRY_RUN} | FORCE=${forceRun}`);
 
+  // Check Master Workspace Global Kill-Switch for scheduled pipeline runs
+  const isGhScheduled = (process.env.EVENT_NAME || process.env.GITHUB_EVENT_NAME || '').trim().toLowerCase() === 'schedule';
+  if (isGhScheduled) {
+    try {
+      const { data: masterWs } = await db.from('workspaces').select('id, is_master').eq('is_master', true).maybeSingle();
+      if (masterWs?.id) {
+        const { data: masterPipe } = await db.from('competitor_pipeline_settings').select('github_schedule_enabled').eq('workspace_id', masterWs.id).maybeSingle();
+        if (masterPipe && masterPipe.github_schedule_enabled === false) {
+          console.log(`[GLOBAL SKIP] GitHub Actions 02:00 UTC schedule is globally disabled by Master Workspace (${masterWs.id.slice(0, 8)}). Exiting immediately.`);
+          return;
+        }
+      }
+    } catch (err) {
+      // Non-blocking fallback
+    }
+  }
+
   let anyFatal = false;
   let grandProcessed = 0;
 

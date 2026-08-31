@@ -5,9 +5,13 @@ import ProviderBadge from '../../components/cron/ProviderBadge.astro';
 import RunNowButton from '../../components/cron/RunNowButton.astro';
 import { humanCron, humanCronTitle } from '../../lib/cron-helper';
 import { dbClients } from '../../server/db/clients';
+import { getWorkspaces } from '../../lib/workspaces';
 
 const workspaceId = Astro.locals.activeWorkspaceId || '';
 const runtimeEnv = (Astro.locals as any)?.runtime?.env || (Astro.locals as any)?.runtimeEnv;
+const workspaces = await getWorkspaces(Astro.cookies, Astro.request, Astro.response?.headers);
+const currentWorkspace = workspaces.find((w) => w.id === workspaceId) || workspaces[0];
+const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
 
 let competitor_pipeline_settings: { cron_expression?: string | null } | null = null;
 if (workspaceId) {
@@ -53,6 +57,26 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
       </div>
     </div>
   </div>
+
+  {isMasterWorkspace && (
+    <!-- ═══ 👑 Master Workspace (Global Orchestrator) Banner ═══ -->
+    <div class="mb-6 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-xs">
+      <div class="flex items-center gap-3.5">
+        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xl shadow-2xs">
+          👑
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 class="text-sm font-bold text-foreground">Master Workspace (Global Competitor Orchestrator)</h3>
+            <span class="rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 px-2.5 py-0.5 text-[10px] font-bold">ALL-WORKSPACES MODE</span>
+          </div>
+          <p class="text-xs text-muted-foreground mt-0.5">
+            This workspace acts as the central orchestrator. Competitor sync pipelines and FastCron schedules configured here run across <strong>all active workspaces</strong> simultaneously.
+          </p>
+        </div>
+      </div>
+    </div>
+  )}
 
   <div class="space-y-8">
     <!-- ═══ SECTION 0: Automation Schedules & Cron Provider ═══ -->

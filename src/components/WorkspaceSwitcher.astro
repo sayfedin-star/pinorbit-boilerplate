@@ -18,7 +18,7 @@ const currentWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) || w
       >
         {workspaces.map((ws) => (
           <option value={ws.id} selected={ws.id === currentWorkspace?.id}>
-            {ws.name}
+            {ws.is_master ? `👑 ${ws.name} (Master)` : ws.name}
           </option>
         ))}
       </select>
@@ -235,7 +235,7 @@ const currentWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) || w
         select.innerHTML = cachedWorkspaces
           .map(
             (ws) =>
-              `<option value="${ws.id}" ${ws.id === activeId ? 'selected' : ''}>${escapeHtml(ws.name)}</option>`
+              `<option value="${ws.id}" ${ws.id === activeId ? 'selected' : ''}>${ws.is_master ? `👑 ${escapeHtml(ws.name)} (Master)` : escapeHtml(ws.name)}</option>`
           )
           .join('');
         select.value = activeId;
@@ -370,6 +370,11 @@ const currentWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) || w
               <div class="flex items-center gap-2.5 min-w-0">
                 <span class="font-bold text-sm text-foreground truncate">${escapeHtml(ws.name)}</span>
                 ${
+                  ws.is_master
+                    ? `<span class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 text-[10px] font-bold">👑 MASTER</span>`
+                    : ''
+                }
+                ${
                   isDefault
                     ? `<span class="inline-flex items-center rounded-full bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 text-[10px] font-bold">DEFAULT</span>`
                     : ws.slug ? `<span class="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-[10px] font-mono text-muted-foreground">slug: ${escapeHtml(ws.slug)}</span>` : ''
@@ -383,6 +388,13 @@ const currentWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) || w
 
               <!-- Actions -->
               <div class="flex items-center gap-2 flex-shrink-0">
+                <button
+                  data-ws-action="toggle-master"
+                  data-id="${ws.id}"
+                  data-is-master="${ws.is_master ? 'false' : 'true'}"
+                  class="rounded-lg border ${ws.is_master ? 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white' : 'border-border text-foreground hover:bg-muted'} px-2.5 py-1 text-xs font-medium transition-all"
+                  title="${ws.is_master ? 'Remove Master status' : 'Set as Master Workspace (Global Orchestrator for all workspaces)'}"
+                >${ws.is_master ? 'Unset Master' : 'Set Master 👑'}</button>
                 ${
                   !isDefault
                     ? `<button
@@ -495,6 +507,33 @@ const currentWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) || w
           window.location.reload();
         } catch (err: any) {
           showManageError(err.message || 'Failed to delete workspace');
+        }
+      });
+    });
+
+    // Toggle Master Workspace Action
+    document.querySelectorAll('[data-ws-action="toggle-master"]').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        hideManageFeedback();
+        const id = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+        const shouldBeMaster = (e.currentTarget as HTMLElement).getAttribute('data-is-master') === 'true';
+
+        try {
+          (e.currentTarget as HTMLButtonElement).disabled = true;
+          const res = await fetch('/api/workspaces/set-master', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ workspace_id: id, is_master: shouldBeMaster }),
+          });
+          const json = await res.json();
+          if (!res.ok || !json.success) {
+            throw new Error(json.error || 'Failed to update Master Workspace status');
+          }
+          showManageSuccess(shouldBeMaster ? '👑 Workspace set as Master Workspace (Global Orchestrator).' : 'Master Workspace status removed.');
+          await hydrateWorkspaceSwitcher();
+          await renderManageList();
+        } catch (err: any) {
+          showManageError(err.message || 'Failed to update Master Workspace status');
         }
       });
     });

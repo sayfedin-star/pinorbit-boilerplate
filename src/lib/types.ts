@@ -8,6 +8,7 @@ export interface Workspace {
   updated_at: string;
   cron_provider?: 'fastcron' | 'cronjoborg' | string;
   cron_provider_api_key_encrypted?: string | null;
+  is_master?: boolean;
 }
 
 export interface WorkspaceMembership {
@@ -23,6 +24,7 @@ export interface WorkspaceOption {
   name: string;
   slug?: string | null;
   is_default?: boolean;
+  is_master?: boolean;
 }
 
 export interface AccountWebhook {
