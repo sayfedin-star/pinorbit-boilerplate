@@ -88,7 +88,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
       <button id="open-add-competitor-modal"
         class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        <span>Track Profile</span>
+        <span>Track Profiles</span>
       </button>
     </div>
   </div>
@@ -226,11 +226,15 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
       
       <!-- Left: Tabs & Quick Filters -->
       <div class="flex items-center gap-2.5 flex-wrap">
-        <!-- Account Type Tabs -->
+        <!-- Account Type & Hidden Tabs -->
         <div class="flex items-center gap-1 bg-muted/70 p-1 rounded-xl border border-border/60">
           <button data-type-tab="all" class="account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold bg-background text-foreground shadow-2xs transition-all">All Profiles</button>
           <button data-type-tab="own" class="account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all">👤 My Accounts</button>
           <button data-type-tab="competitor" class="account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all">🎯 Competitors</button>
+          <button data-type-tab="hidden" class="account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5">
+            <span>👁️‍🗨️ Hidden</span>
+            <span id="hidden-tab-badge" class="hidden rounded-full bg-muted-foreground/20 px-1.5 py-0.2 text-[9.5px] font-bold">0</span>
+          </button>
         </div>
 
         <!-- Activity Status Filter -->
@@ -322,6 +326,10 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
           <span>Send to PinArchive</span>
         </button>
+        <button id="hide-selected-btn" class="rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs flex items-center gap-1">
+          <span id="hide-selected-icon">👁️‍🗨️</span>
+          <span id="hide-selected-label">Hide selected</span>
+        </button>
         <button id="open-compare-btn" disabled class="rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
           ⚖ Compare
         </button>
@@ -366,6 +374,30 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
     </div>
   </div>
 
+  <!-- ═══ GLOBAL FLOATING MORE OPTIONS MENU (Portal positioned via getBoundingClientRect) ═══ -->
+  <div id="global-row-menu" class="hidden fixed z-[9999] w-48 rounded-2xl border border-border bg-card shadow-2xl p-1.5 space-y-0.5 text-left animate-in fade-in zoom-in-95 duration-100 backdrop-blur-md">
+    <a id="menu-item-details" href="#" class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-foreground hover:bg-muted transition-colors">
+      <span>📊 Analytics Details</span>
+    </a>
+    <button id="menu-item-edit" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-foreground hover:bg-muted transition-colors">
+      <span>✏️ Edit Profile</span>
+    </button>
+    <button id="menu-item-hide" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-foreground hover:bg-muted transition-colors">
+      <span id="menu-item-hide-icon">👁️‍🗨️</span>
+      <span id="menu-item-hide-text">Hide Profile</span>
+    </button>
+    <button id="menu-item-paste" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-foreground hover:bg-muted transition-colors">
+      <span>📋 Ingest DevTools JSON</span>
+    </button>
+    <a id="menu-item-pinterest" href="#" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-foreground hover:bg-muted transition-colors">
+      <span>📌 View Pinterest</span>
+    </a>
+    <div class="border-t border-border/70 my-0.5"></div>
+    <button id="menu-item-delete" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-rose-500 hover:bg-rose-500/10 transition-colors">
+      <span>🗑️ Remove Profile</span>
+    </button>
+  </div>
+
   <!-- ═══ Details Drawer (slide-over) ═══ -->
   <div id="drawer-backdrop" class="fixed inset-0 z-40 bg-black/50 opacity-0 pointer-events-none transition-opacity duration-300"></div>
   <aside id="competitor-drawer" aria-label="Competitor details preview"
@@ -381,20 +413,34 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
     <div id="drawer-body" class="flex-1 overflow-y-auto p-5 space-y-5"></div>
   </aside>
 
-  <!-- ═══ MODAL: Track Profile ═══ -->
+  <!-- ═══ MODAL: Track Profile (Single & Bulk) ═══ -->
   <div id="add-competitor-modal" class="overlay-root fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4" aria-modal="true" role="dialog">
     <div class="fixed inset-0" data-close></div>
-    <div class="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 z-10">
+    <div class="relative w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 z-10">
+      
       <div class="flex items-center justify-between border-b border-border pb-4">
         <div class="flex items-center gap-2.5">
           <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
-          <h3 class="text-base font-bold text-foreground">Track Pinterest Profile</h3>
+          <h3 class="text-base font-bold text-foreground">Track Pinterest Profiles</h3>
         </div>
         <button data-close class="rounded-xl p-1 text-muted-foreground hover:bg-muted hover:text-foreground"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
+
+      <!-- Single vs Bulk Tabs -->
+      <div class="flex items-center gap-1.5 p-1 rounded-xl bg-muted/60 border border-border/60">
+        <button type="button" id="modal-tab-single" class="flex-1 py-1.5 text-xs font-bold rounded-lg bg-background text-foreground shadow-2xs transition-all">
+          👤 Single Profile
+        </button>
+        <button type="button" id="modal-tab-bulk" class="flex-1 py-1.5 text-xs font-bold rounded-lg text-muted-foreground hover:text-foreground transition-all">
+          ⚡ Bulk Add (Multiple)
+        </button>
+      </div>
+
       <div id="add-competitor-error" class="hidden rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-500"></div>
+
+      <!-- SINGLE FORM -->
       <form id="add-competitor-form" class="space-y-4">
         <div class="space-y-1.5">
           <label class="block text-xs font-semibold text-foreground">Profile Classification *</label>
@@ -410,10 +456,10 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
           </div>
         </div>
         <div class="space-y-1.5">
-          <label for="competitor-username-input" class="block text-xs font-semibold text-foreground">Pinterest Username *</label>
+          <label for="competitor-username-input" class="block text-xs font-semibold text-foreground">Pinterest Username or URL *</label>
           <div class="relative">
             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-xs font-semibold text-muted-foreground">@</span>
-            <input id="competitor-username-input" type="text" required placeholder="e.g. tastyrecipes"
+            <input id="competitor-username-input" type="text" required placeholder="e.g. tastyrecipes or https://pinterest.com/tastyrecipes"
               class="w-full rounded-xl border border-border bg-background py-2.5 pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
           </div>
         </div>
@@ -429,11 +475,55 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
         </div>
         <div class="space-y-1.5">
           <label for="competitor-notes-input" class="block text-xs font-semibold text-foreground">Internal Strategy Notes</label>
-          <textarea id="competitor-notes-input" rows="3" placeholder="e.g. Focuses on quick 30-minute recipes and weekly meal prep infographics..." class="w-full rounded-xl border border-border bg-background py-2 px-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"></textarea>
+          <textarea id="competitor-notes-input" rows="2" placeholder="e.g. Focuses on quick 30-minute recipes and weekly meal prep infographics..." class="w-full rounded-xl border border-border bg-background py-2 px-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"></textarea>
         </div>
         <div class="flex items-center justify-end gap-3 border-t border-border pt-4">
           <button type="button" data-close class="rounded-xl border border-border px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground">Cancel</button>
-          <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary/90 transition-all">Start Tracking</button>
+          <button type="submit" id="add-single-submit-btn" class="rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary/90 transition-all">Start Tracking</button>
+        </div>
+      </form>
+
+      <!-- BULK FORM -->
+      <form id="add-bulk-competitor-form" class="space-y-4 hidden">
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold text-foreground">Profile Classification for all *</label>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="flex items-center justify-between rounded-xl border border-border bg-background p-3 cursor-pointer hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-all">
+              <div class="flex items-center gap-2"><span class="text-sm">🎯</span><div><div class="text-xs font-bold text-foreground">Competitors</div><div class="text-[10px] text-muted-foreground">External target profiles</div></div></div>
+              <input type="radio" name="bulk_account_type_radio" value="competitor" checked class="text-primary focus:ring-primary accent-primary" />
+            </label>
+            <label class="flex items-center justify-between rounded-xl border border-border bg-background p-3 cursor-pointer hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-all">
+              <div class="flex items-center gap-2"><span class="text-sm">👤</span><div><div class="text-xs font-bold text-foreground">My Accounts</div><div class="text-[10px] text-muted-foreground">Internal brand accounts</div></div></div>
+              <input type="radio" name="bulk_account_type_radio" value="own" class="text-primary focus:ring-primary accent-primary" />
+            </label>
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label for="bulk-usernames-textarea" class="block text-xs font-semibold text-foreground">Paste Usernames or URLs (One per line) *</label>
+            <span id="bulk-detected-count" class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">0 detected</span>
+          </div>
+          <textarea id="bulk-usernames-textarea" rows="6" placeholder={`@tastyrecipes\n@ketodietmaster\nhttps://www.pinterest.com/healthyhomekitchen/\nveganmealprep`}
+            class="w-full rounded-xl border border-border bg-background py-2.5 px-3 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="space-y-1.5">
+            <label for="bulk-niche-input" class="block text-xs font-semibold text-foreground">Niche / Category (Applied to all)</label>
+            <input id="bulk-niche-input" type="text" placeholder="e.g. Food & Recipes" class="w-full rounded-xl border border-border bg-background py-2.5 px-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+          </div>
+          <div class="space-y-1.5">
+            <label for="bulk-tags-input" class="block text-xs font-semibold text-foreground">Tags (Applied to all)</label>
+            <input id="bulk-tags-input" type="text" placeholder="e.g. Wave1, Keto, Top20" class="w-full rounded-xl border border-border bg-background py-2.5 px-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 border-t border-border pt-4">
+          <button type="button" data-close class="rounded-xl border border-border px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground">Cancel</button>
+          <button type="submit" id="add-bulk-submit-btn" class="rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary/90 transition-all disabled:opacity-50">
+            Track 0 Profiles
+          </button>
         </div>
       </form>
     </div>
@@ -579,6 +669,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
   async function getCompetitors() { return (await apiJSON('/api/admin/competitors')).competitors as any[]; }
   async function getCompetitorDetails(id: string) { return apiJSON(`/api/admin/competitors?id=${encodeURIComponent(id)}`); }
   async function addCompetitor(data: any) { return (await apiJSON('/api/admin/competitors', { method: 'POST', body: JSON.stringify(data) })).competitor; }
+  async function addBulkCompetitors(data: any) { return await apiJSON('/api/admin/competitors', { method: 'POST', body: JSON.stringify(data) }); }
   async function updateCompetitor(id: string, data: any) { return (await apiJSON('/api/admin/competitors', { method: 'PATCH', body: JSON.stringify({ id, ...data }) })).competitor; }
   async function deleteCompetitor(id: string) { await apiJSON('/api/admin/competitors', { method: 'DELETE', body: JSON.stringify({ id }) }); return true; }
   async function ingestDevToolsPayload(competitorId: string, payloadText: string) {
@@ -591,7 +682,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
   const selectedIds = new Set<string>();
   let selectedCompetitorIdForPayload: string | null = null;
 
-  let activeTypeTab: 'all' | 'own' | 'competitor' = 'all';
+  let activeTypeTab: 'all' | 'own' | 'competitor' | 'hidden' = 'all';
   let selectedActivity = 'all';
   let selectedTag = 'all';
   let searchQuery = '';
@@ -602,6 +693,26 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
   let isCompactNumbers = localStorage.getItem('po_comp_num_fmt') === 'compact';
   let isCompactDensity = localStorage.getItem('po_comp_density') === 'compact';
   let archivedUsernames = new Set<string>();
+  let hiddenProfileIds = new Set<string>();
+
+  function loadHiddenStorage() {
+    try {
+      const wsId = getActiveWorkspaceId() || 'default';
+      const raw = localStorage.getItem(`po_hidden_comps_${wsId}`);
+      hiddenProfileIds = new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch {
+      hiddenProfileIds = new Set<string>();
+    }
+  }
+
+  function saveHiddenStorage() {
+    try {
+      const wsId = getActiveWorkspaceId() || 'default';
+      localStorage.setItem(`po_hidden_comps_${wsId}`, JSON.stringify(Array.from(hiddenProfileIds)));
+    } catch (e) {
+      console.warn('Failed to save hidden profiles to localStorage', e);
+    }
+  }
 
   interface ColDef { key: string; label: string; defaultVisible: boolean; locked?: boolean; align?: 'left' | 'right' | 'center'; }
   const COLUMN_DEFS: ColDef[] = [
@@ -641,12 +752,23 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
   const densityToggleBtn = $('density-toggle-btn'), densityLabel = $('density-label');
   const numFormatToggleBtn = $('num-format-toggle-btn'), numFormatLabel = $('num-format-label');
   const activeFiltersBar = $('active-filters-bar'), activeFilterChips = $('active-filter-chips'), resetAllFiltersBtn = $('reset-all-filters-btn');
+  const globalRowMenu = $('global-row-menu');
+  const hiddenTabBadge = $('hidden-tab-badge');
+  const hideSelectedBtn = $('hide-selected-btn'), hideSelectedIcon = $('hide-selected-icon'), hideSelectedLabel = $('hide-selected-label');
 
   // ─── Formatting helpers ───────────────────────────────────────────────────
   const escHtml = (s: any) => String(s ?? '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m] as string));
   const fmtFull = (n: number | null | undefined) => (n ?? 0).toLocaleString('en-US');
   const fmtCompact = (n: number | null | undefined) => new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(n ?? 0);
   const formatMetric = (n: number | null | undefined) => isCompactNumbers ? fmtCompact(n) : fmtFull(n);
+
+  function cleanPinterestUsername(input: string): string {
+    let u = String(input || '').trim();
+    u = u.replace(/^(https?:\/\/)?(www\.)?pinterest\.[a-z.]+\//i, '');
+    u = u.replace(/\/.*$/, '');
+    u = u.replace(/^@+/, '').trim();
+    return u;
+  }
 
   function timeAgo(iso?: string | null): string {
     if (!iso) return '—';
@@ -761,9 +883,16 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
   function applySortAndFilter(): Competitor[] {
     let filtered = [...competitorsList];
 
-    // Filter by tab type (all / own / competitor)
-    if (activeTypeTab === 'own') filtered = filtered.filter(c => c.account_type === 'own');
-    else if (activeTypeTab === 'competitor') filtered = filtered.filter(c => c.account_type !== 'own');
+    // Filter by hidden vs visible
+    if (activeTypeTab === 'hidden') {
+      filtered = filtered.filter(c => hiddenProfileIds.has(c.id));
+    } else {
+      // Default: hide profiles that are in hiddenProfileIds
+      filtered = filtered.filter(c => !hiddenProfileIds.has(c.id));
+
+      if (activeTypeTab === 'own') filtered = filtered.filter(c => c.account_type === 'own');
+      else if (activeTypeTab === 'competitor') filtered = filtered.filter(c => c.account_type !== 'own');
+    }
 
     // Filter by activity status
     if (selectedActivity !== 'all') {
@@ -815,7 +944,9 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
   // ─── Active Filter Chips Bar ──────────────────────────────────────────────
   function renderActiveFiltersBar() {
     const chips: string[] = [];
-    if (activeTypeTab !== 'all') {
+    if (activeTypeTab === 'hidden') {
+      chips.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-card border border-border text-foreground font-medium">Viewing: 👁️‍🗨️ Hidden Profiles <button data-clear-filter="type" class="hover:text-primary ml-0.5">✕</button></span>`);
+    } else if (activeTypeTab !== 'all') {
       chips.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-card border border-border text-foreground font-medium">Type: ${activeTypeTab === 'own' ? '👤 My Accounts' : '🎯 Competitors'} <button data-clear-filter="type" class="hover:text-primary ml-0.5">✕</button></span>`);
     }
     if (selectedActivity !== 'all') {
@@ -862,14 +993,15 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
 
   // ─── KPIs ─────────────────────────────────────────────────────────────────
   function renderKPIs() {
-    const total = competitorsList.length;
-    const own = competitorsList.filter(c => c.account_type === 'own').length;
+    const activeList = competitorsList.filter(c => !hiddenProfileIds.has(c.id));
+    const total = activeList.length;
+    const own = activeList.filter(c => c.account_type === 'own').length;
     const comp = total - own;
-    const reach = competitorsList.reduce((s, c) => s + (c.profile_reach || 0), 0);
-    const followers = competitorsList.reduce((s, c) => s + (c.follower_count || 0), 0);
-    const pins = competitorsList.reduce((s, c) => s + (c.pin_count || 0), 0);
-    const activeWeek = competitorsList.filter(c => c.last_pin_at && (Date.now() - +new Date(c.last_pin_at)) < 7 * 86400000).length;
-    const top = [...competitorsList].sort((a, b) => (b.profile_reach || 0) - (a.profile_reach || 0))[0];
+    const reach = activeList.reduce((s, c) => s + (c.profile_reach || 0), 0);
+    const followers = activeList.reduce((s, c) => s + (c.follower_count || 0), 0);
+    const pins = activeList.reduce((s, c) => s + (c.pin_count || 0), 0);
+    const activeWeek = activeList.filter(c => c.last_pin_at && (Date.now() - +new Date(c.last_pin_at)) < 7 * 86400000).length;
+    const top = [...activeList].sort((a, b) => (b.profile_reach || 0) - (a.profile_reach || 0))[0];
 
     $('kpi-total').textContent = String(total);
     $('kpi-split-label').innerHTML = `<span>${own} own</span><span>${comp} competitors</span>`;
@@ -887,6 +1019,16 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
     $('kpi-pins').textContent = fmtCompact(pins);
     $('kpi-pins').title = `${fmtFull(pins)} total pins`;
     $('kpi-active-sub').textContent = `${activeWeek} active this week`;
+
+    // Hidden tab count badge
+    if (hiddenTabBadge) {
+      if (hiddenProfileIds.size > 0) {
+        hiddenTabBadge.textContent = String(hiddenProfileIds.size);
+        hiddenTabBadge.classList.remove('hidden');
+      } else {
+        hiddenTabBadge.classList.add('hidden');
+      }
+    }
   }
 
   // ─── Table rendering ──────────────────────────────────────────────────────
@@ -967,23 +1109,29 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
     if (filteredCache.length === 0) {
       tfoot.classList.add('hidden');
       const isEmptyWorkspace = competitorsList.length === 0;
+      const isViewingHiddenTab = activeTypeTab === 'hidden';
+
       tbody.innerHTML = `<tr><td colspan="99" class="py-16 text-center">
         <div class="flex flex-col items-center gap-3 px-6 max-w-md mx-auto">
           <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
           </div>
-          ${isEmptyWorkspace ? `
+          ${isViewingHiddenTab ? `
+            <div class="text-sm font-bold text-foreground">No hidden profiles</div>
+            <p class="text-xs text-muted-foreground text-center">You haven't hidden any profiles yet. You can hide profiles from the '...' menu on any row.</p>
+            <button id="clear-filters-btn" class="rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-all mt-1">Back to all profiles</button>
+          ` : isEmptyWorkspace ? `
             <div class="text-sm font-bold text-foreground">No profiles tracked yet</div>
             <p class="text-xs text-muted-foreground text-center">Start monitoring competitor reach, follower velocity and board strategy over time.</p>
             <div class="flex gap-2 pt-2">
-              <button id="empty-track-btn" class="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all">+ Track Profile</button>
+              <button id="empty-track-btn" class="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all">+ Track Profiles</button>
               <button id="empty-paste-btn" class="rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-all">Ingest JSON</button>
             </div>` : `
             <div class="text-sm font-bold text-foreground">No profiles match active filters</div>
             <p class="text-xs text-muted-foreground text-center">Try changing your search query, status filters, or tag selections.</p>
             <button id="clear-filters-btn" class="rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-all mt-1">Reset all filters</button>`}
         </div></td></tr>`;
-      $('empty-track-btn')?.addEventListener('click', () => showOverlay($('add-competitor-modal')));
+      $('empty-track-btn')?.addEventListener('click', () => openAddModal('single'));
       $('empty-paste-btn')?.addEventListener('click', () => openPasteModal());
       $('clear-filters-btn')?.addEventListener('click', () => {
         searchQuery = ''; searchInput.value = ''; searchClearBtn?.classList.add('hidden');
@@ -1018,6 +1166,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
       const rawAvatar = c.avatar_url && /^https?:\/\//i.test(c.avatar_url) ? c.avatar_url : `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80`;
       const avatar = escHtml(rawAvatar);
       const isOwn = c.account_type === 'own';
+      const isHidden = hiddenProfileIds.has(c.id);
       const act = activityOf(c);
       const isSel = selectedIds.has(c.id);
 
@@ -1032,9 +1181,12 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
           const pinArchiveBadge = isArchived
             ? `<a href="/pinarchive/account/${encodeURIComponent(c.username)}" title="Archived in PinArchive database" class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors">PinArchive</a>`
             : '';
+          const hiddenBadge = isHidden
+            ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-bold bg-muted text-muted-foreground border border-border">Hidden</span>`
+            : '';
 
           return `<td class="${padClass}">
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 ${isHidden ? 'opacity-65' : ''}">
               <img src="${avatar}" alt="${escHtml(c.username)}" loading="lazy" class="${avatarSize} rounded-xl object-cover border border-border shadow-2xs flex-shrink-0" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80'" />
               <div class="flex flex-col min-w-0">
                 <div class="flex items-center gap-1.5 flex-wrap">
@@ -1045,6 +1197,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                   </a>
                   ${pinArchiveBadge}
+                  ${hiddenBadge}
                 </div>
                 <div class="flex items-center gap-1 text-[11px] text-muted-foreground">
                   <span>@${escHtml(c.username)}</span>
@@ -1104,30 +1257,10 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               </button>
               
-              <!-- More Actions Dropdown -->
-              <div class="relative inline-block text-left" data-row-menu-container>
-                <button data-row-menu-trigger class="rounded-xl border border-border bg-background p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground shadow-2xs transition-colors" title="More options">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                </button>
-                <div data-row-menu-dropdown class="hidden absolute right-0 top-full mt-1 z-30 w-44 rounded-xl border border-border bg-card shadow-xl p-1 space-y-0.5 text-left">
-                  <a href="/competitors/details?id=${c.id}" class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-muted transition-colors">
-                    <span>📊 Analytics Details</span>
-                  </a>
-                  <button data-edit-id="${c.id}" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-muted transition-colors">
-                    <span>✏️ Edit Profile</span>
-                  </button>
-                  <button data-paste-id="${c.id}" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-muted transition-colors">
-                    <span>📋 Ingest DevTools JSON</span>
-                  </button>
-                  <a href="https://www.pinterest.com/${escHtml(c.username)}/" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-muted transition-colors">
-                    <span>📌 View Pinterest</span>
-                  </a>
-                  <div class="border-t border-border/70 my-0.5"></div>
-                  <button data-delete-id="${c.id}" data-username="${escHtml(c.username)}" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-500 hover:bg-rose-500/10 transition-colors">
-                    <span>🗑️ Remove Profile</span>
-                  </button>
-                </div>
-              </div>
+              <!-- More Actions Trigger (Opens global floating menu) -->
+              <button data-open-row-menu="${c.id}" class="rounded-xl border border-border bg-background p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground shadow-2xs transition-colors" title="More options">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+              </button>
             </div></td>`;
         })(),
       };
@@ -1166,32 +1299,12 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
       btn.addEventListener('click', () => openDrawer(btn.dataset.drawerId!));
     });
 
-    // Row Menu Dropdowns
-    tbody.querySelectorAll<HTMLElement>('[data-row-menu-container]').forEach(container => {
-      const trigger = container.querySelector<HTMLElement>('[data-row-menu-trigger]');
-      const menu = container.querySelector<HTMLElement>('[data-row-menu-dropdown]');
-      if (!trigger || !menu) return;
-
-      trigger.addEventListener('click', (e) => {
+    // Wire global floating row menu to trigger buttons
+    tbody.querySelectorAll<HTMLElement>('[data-open-row-menu]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        document.querySelectorAll<HTMLElement>('[data-row-menu-dropdown]').forEach(m => {
-          if (m !== menu) m.classList.add('hidden');
-        });
-        menu.classList.toggle('hidden');
-      });
-    });
-
-    tbody.querySelectorAll<HTMLElement>('[data-edit-id]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        btn.closest('[data-row-menu-dropdown]')?.classList.add('hidden');
-        openEditModal(btn.dataset.editId!);
-      });
-    });
-
-    tbody.querySelectorAll<HTMLElement>('[data-paste-id]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        btn.closest('[data-row-menu-dropdown]')?.classList.add('hidden');
-        openPasteModal(btn.dataset.pasteId!);
+        const id = btn.dataset.openRowMenu!;
+        openGlobalRowMenu(id, btn);
       });
     });
 
@@ -1217,38 +1330,148 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
         }
       });
     });
-
-    tbody.querySelectorAll<HTMLElement>('[data-delete-id]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        btn.closest('[data-row-menu-dropdown]')?.classList.add('hidden');
-        const id = btn.dataset.deleteId!, u = btn.dataset.username || 'this profile';
-        const ok = await askConfirm('Remove Profile', `Are you sure you want to stop tracking @${u}? Historical snapshots will be retained.`);
-        if (!ok) return;
-        try {
-          await deleteCompetitor(id);
-          selectedIds.delete(id);
-          toast(`Removed @${u}`);
-          await loadWorkspaceData();
-        } catch (err: any) {
-          toast(err.message || 'Failed to delete', 'error');
-        }
-      });
-    });
   }
 
-  // Close row menus on outside click
-  document.addEventListener('click', () => {
-    document.querySelectorAll<HTMLElement>('[data-row-menu-dropdown]').forEach(m => m.classList.add('hidden'));
+  // ─── Global Floating Row Menu (Prevents clipping on bottom rows) ───────────
+  let activeMenuCompetitorId: string | null = null;
+
+  function openGlobalRowMenu(compId: string, triggerBtn: HTMLElement) {
+    const c = competitorsList.find(x => x.id === compId);
+    if (!c || !globalRowMenu) return;
+
+    activeMenuCompetitorId = compId;
+    const isHidden = hiddenProfileIds.has(compId);
+
+    // Update menu items
+    const detailsLink = $('menu-item-details') as HTMLAnchorElement;
+    const pinterestLink = $('menu-item-pinterest') as HTMLAnchorElement;
+    const hideIcon = $('menu-item-hide-icon');
+    const hideText = $('menu-item-hide-text');
+
+    if (detailsLink) detailsLink.href = `/competitors/details?id=${c.id}`;
+    if (pinterestLink) pinterestLink.href = `https://www.pinterest.com/${escHtml(c.username)}/`;
+    if (hideIcon) hideIcon.textContent = isHidden ? '👁️' : '👁️‍🗨️';
+    if (hideText) hideText.textContent = isHidden ? 'Unhide Profile' : 'Hide Profile';
+
+    // Position menu relative to button
+    const rect = triggerBtn.getBoundingClientRect();
+    const menuWidth = 192; // 12rem
+    const menuHeight = 220;
+
+    let top = rect.bottom + 4;
+    // Auto-flip upwards if not enough space below
+    if (top + menuHeight > window.innerHeight) {
+      top = Math.max(8, rect.top - menuHeight - 4);
+    }
+
+    let left = rect.right - menuWidth;
+    if (left < 8) left = 8;
+
+    globalRowMenu.style.top = `${top}px`;
+    globalRowMenu.style.left = `${left}px`;
+    globalRowMenu.classList.remove('hidden');
+  }
+
+  function hideGlobalRowMenu() {
+    if (globalRowMenu) globalRowMenu.classList.add('hidden');
+    activeMenuCompetitorId = null;
+  }
+
+  // Menu item click handlers
+  $('menu-item-edit')?.addEventListener('click', () => {
+    if (activeMenuCompetitorId) openEditModal(activeMenuCompetitorId);
+    hideGlobalRowMenu();
+  });
+
+  $('menu-item-hide')?.addEventListener('click', () => {
+    if (activeMenuCompetitorId) {
+      toggleHideProfile(activeMenuCompetitorId);
+    }
+    hideGlobalRowMenu();
+  });
+
+  $('menu-item-paste')?.addEventListener('click', () => {
+    if (activeMenuCompetitorId) openPasteModal(activeMenuCompetitorId);
+    hideGlobalRowMenu();
+  });
+
+  $('menu-item-delete')?.addEventListener('click', async () => {
+    const id = activeMenuCompetitorId;
+    hideGlobalRowMenu();
+    if (!id) return;
+    const c = competitorsList.find(x => x.id === id);
+    const u = c?.username || 'this profile';
+    const ok = await askConfirm('Remove Profile', `Are you sure you want to stop tracking @${u}? Historical snapshots will be retained.`);
+    if (!ok) return;
+    try {
+      await deleteCompetitor(id);
+      selectedIds.delete(id);
+      hiddenProfileIds.delete(id);
+      saveHiddenStorage();
+      toast(`Removed @${u}`);
+      await loadWorkspaceData();
+    } catch (err: any) {
+      toast(err.message || 'Failed to delete', 'error');
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (globalRowMenu && !globalRowMenu.contains(e.target as Node)) {
+      hideGlobalRowMenu();
+    }
+  });
+  window.addEventListener('scroll', () => hideGlobalRowMenu(), { passive: true });
+  window.addEventListener('resize', () => hideGlobalRowMenu(), { passive: true });
+
+  // ─── Hide / Unhide Logic ──────────────────────────────────────────────────
+  function toggleHideProfile(id: string) {
+    const c = competitorsList.find(x => x.id === id);
+    const u = c?.username || 'profile';
+    if (hiddenProfileIds.has(id)) {
+      hiddenProfileIds.delete(id);
+      toast(`Unhid @${u}`);
+    } else {
+      hiddenProfileIds.add(id);
+      selectedIds.delete(id);
+      toast(`Hidden @${u} from active view`);
+    }
+    saveHiddenStorage();
+    renderKPIs();
+    renderTable();
+  }
+
+  hideSelectedBtn?.addEventListener('click', () => {
+    if (selectedIds.size === 0) return;
+    const isViewingHidden = activeTypeTab === 'hidden';
+    const count = selectedIds.size;
+
+    selectedIds.forEach(id => {
+      if (isViewingHidden) {
+        hiddenProfileIds.delete(id);
+      } else {
+        hiddenProfileIds.add(id);
+      }
+    });
+
+    saveHiddenStorage();
+    selectedIds.clear();
+    toast(isViewingHidden ? `Unhid ${count} profile(s)` : `Hidden ${count} profile(s) from view`);
+    renderKPIs();
+    renderTable();
   });
 
   // ─── Selection bar ────────────────────────────────────────────────────────
   function updateSelectionBar() {
+    const isViewingHidden = activeTypeTab === 'hidden';
     if (selectedIds.size > 0) {
       selectionBar.classList.remove('hidden'); selectionBar.classList.add('flex');
       selectionCount.textContent = `${selectedIds.size} selected`;
       compareBtn.disabled = selectedIds.size < 2 || selectedIds.size > 4;
       compareBtn.title = selectedIds.size < 2 ? 'Select at least 2 profiles to compare' : (selectedIds.size > 4 ? 'Select up to 4 profiles' : 'Compare selected profiles side-by-side');
       $('update-selected-label').textContent = `⚡ Update (${selectedIds.size})`;
+      
+      if (hideSelectedLabel) hideSelectedLabel.textContent = isViewingHidden ? `Unhide (${selectedIds.size})` : `Hide (${selectedIds.size})`;
+      if (hideSelectedIcon) hideSelectedIcon.textContent = isViewingHidden ? '👁️' : '👁️‍🗨️';
     } else {
       selectionBar.classList.add('hidden'); selectionBar.classList.remove('flex');
     }
@@ -1378,10 +1601,11 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
   const typeTabBtns = document.querySelectorAll<HTMLButtonElement>('.account-type-tab-btn');
   function syncTabClasses() {
     typeTabBtns.forEach(b => {
-      const active = (b.dataset.typeTab || 'all') === activeTypeTab;
+      const tabKey = b.dataset.typeTab || 'all';
+      const active = tabKey === activeTypeTab;
       b.className = active
-        ? 'account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold bg-background text-foreground shadow-2xs transition-all'
-        : 'account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all';
+        ? 'account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold bg-background text-foreground shadow-2xs transition-all flex items-center gap-1.5'
+        : 'account-type-tab-btn rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5';
     });
   }
   typeTabBtns.forEach(btn => {
@@ -1563,7 +1787,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
             }).join('')}
           </tr>
         </thead>
-        <tbody class="divide-y divide-border bg-card">
+        <tbody class="divide-y border-border bg-card">
           <tr><td class="py-2.5 px-4 font-semibold text-muted-foreground">Type</td>${list.map(c => `<td class="py-2.5 px-4">${c.account_type === 'own' ? '👤 My Account' : '🎯 Competitor'}</td>`).join('')}</tr>
           <tr><td class="py-2.5 px-4 font-semibold text-muted-foreground">Niche</td>${list.map(c => `<td class="py-2.5 px-4">${escHtml(c.niche || '—')}</td>`).join('')}</tr>
           <tr><td class="py-2.5 px-4 font-semibold text-muted-foreground">Monthly Reach</td>${list.map((c, i) => {
@@ -1588,17 +1812,64 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
     showOverlay($('compare-modal'));
   });
 
-  // ─── Add profile modal ────────────────────────────────────────────────────
-  $('open-add-competitor-modal').addEventListener('click', () => {
-    $('add-competitor-error').classList.add('hidden');
-    ($('add-competitor-form') as HTMLFormElement).reset();
-    showOverlay($('add-competitor-modal'));
-  });
+  // ─── Track Profile Modal (Single & Bulk) ──────────────────────────────────
+  const modalTabSingle = $('modal-tab-single');
+  const modalTabBulk = $('modal-tab-bulk');
+  const singleForm = $('add-competitor-form') as HTMLFormElement;
+  const bulkForm = $('add-bulk-competitor-form') as HTMLFormElement;
+  const bulkTextarea = $('bulk-usernames-textarea') as HTMLTextAreaElement;
+  const bulkDetectedCount = $('bulk-detected-count');
+  const addBulkSubmitBtn = $('add-bulk-submit-btn') as HTMLButtonElement;
 
-  $('add-competitor-form').addEventListener('submit', async (e) => {
+  function openAddModal(mode: 'single' | 'bulk' = 'single') {
+    $('add-competitor-error').classList.add('hidden');
+    singleForm.reset();
+    bulkForm.reset();
+    setAddModalTab(mode);
+    updateBulkDetection();
+    showOverlay($('add-competitor-modal'));
+  }
+
+  function setAddModalTab(mode: 'single' | 'bulk') {
+    if (mode === 'single') {
+      modalTabSingle.className = 'flex-1 py-1.5 text-xs font-bold rounded-lg bg-background text-foreground shadow-2xs transition-all';
+      modalTabBulk.className = 'flex-1 py-1.5 text-xs font-bold rounded-lg text-muted-foreground hover:text-foreground transition-all';
+      singleForm.classList.remove('hidden');
+      bulkForm.classList.add('hidden');
+    } else {
+      modalTabBulk.className = 'flex-1 py-1.5 text-xs font-bold rounded-lg bg-background text-foreground shadow-2xs transition-all';
+      modalTabSingle.className = 'flex-1 py-1.5 text-xs font-bold rounded-lg text-muted-foreground hover:text-foreground transition-all';
+      bulkForm.classList.remove('hidden');
+      singleForm.classList.add('hidden');
+    }
+  }
+
+  modalTabSingle?.addEventListener('click', () => setAddModalTab('single'));
+  modalTabBulk?.addEventListener('click', () => setAddModalTab('bulk'));
+  $('open-add-competitor-modal').addEventListener('click', () => openAddModal('single'));
+
+  function extractUsernamesFromText(text: string): string[] {
+    const raw = text.split(/[\n,;]+/).map(line => cleanPinterestUsername(line)).filter(Boolean);
+    return Array.from(new Set(raw));
+  }
+
+  function updateBulkDetection() {
+    if (!bulkTextarea || !bulkDetectedCount || !addBulkSubmitBtn) return;
+    const usernames = extractUsernamesFromText(bulkTextarea.value);
+    const count = usernames.length;
+    bulkDetectedCount.textContent = `${count} ${count === 1 ? 'profile' : 'profiles'} detected`;
+    addBulkSubmitBtn.textContent = `Track ${count} ${count === 1 ? 'Profile' : 'Profiles'} Now`;
+    addBulkSubmitBtn.disabled = count === 0;
+  }
+
+  bulkTextarea?.addEventListener('input', updateBulkDetection);
+
+  // Single Add Submit
+  singleForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const typeRadio = document.querySelector<HTMLInputElement>('input[name="account_type_radio"]:checked');
-    const u = ($('competitor-username-input') as HTMLInputElement).value.trim();
+    const rawU = ($('competitor-username-input') as HTMLInputElement).value;
+    const u = cleanPinterestUsername(rawU);
     const niche = ($('competitor-niche-input') as HTMLInputElement).value.trim();
     const tags = ($('competitor-tags-input') as HTMLInputElement).value.trim();
     const notes = ($('competitor-notes-input') as HTMLTextAreaElement).value.trim();
@@ -1609,12 +1880,51 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
         account_type: (typeRadio?.value as any) || 'competitor',
       });
       hideOverlay($('add-competitor-modal'));
-      toast(`Started tracking @${u.replace(/^@/, '')}`);
+      toast(`Started tracking @${u}!`);
       await loadWorkspaceData();
     } catch (err: any) {
       const er = $('add-competitor-error');
       er.textContent = err.message || 'Failed to add profile';
       er.classList.remove('hidden');
+    }
+  });
+
+  // Bulk Add Submit
+  bulkForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const typeRadio = document.querySelector<HTMLInputElement>('input[name="bulk_account_type_radio"]:checked');
+    const usernames = extractUsernamesFromText(bulkTextarea.value);
+    const niche = ($('bulk-niche-input') as HTMLInputElement).value.trim();
+    const rawTags = ($('bulk-tags-input') as HTMLInputElement).value.trim();
+    const tags = rawTags.split(',').map(t => t.trim()).filter(Boolean);
+    const account_type = (typeRadio?.value as any) || 'competitor';
+
+    if (usernames.length === 0) {
+      const er = $('add-competitor-error');
+      er.textContent = 'Please enter at least one valid username or URL';
+      er.classList.remove('hidden');
+      return;
+    }
+
+    addBulkSubmitBtn.disabled = true;
+    addBulkSubmitBtn.textContent = 'Importing profiles…';
+
+    try {
+      const res = await addBulkCompetitors({
+        competitors: usernames.map(u => ({ username: u, niche, tags, account_type })),
+        niche, tags, account_type,
+      });
+
+      hideOverlay($('add-competitor-modal'));
+      toast(`Successfully added ${res.count || usernames.length} profiles to tracking!`);
+      await loadWorkspaceData();
+    } catch (err: any) {
+      const er = $('add-competitor-error');
+      er.textContent = err.message || 'Failed to bulk import profiles';
+      er.classList.remove('hidden');
+    } finally {
+      addBulkSubmitBtn.disabled = false;
+      updateBulkDetection();
     }
   });
 
@@ -1645,7 +1955,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
     try {
       await updateCompetitor(id, {
         full_name: ($('edit-fullname-input') as HTMLInputElement).value || undefined,
-        username: ($('edit-username-input') as HTMLInputElement).value || undefined,
+        username: cleanPinterestUsername(($('edit-username-input') as HTMLInputElement).value) || undefined,
         account_type: (typeRadio?.value as any) || 'competitor',
         niche: ($('edit-niche-input') as HTMLInputElement).value || undefined,
         tags: tagsArr,
@@ -1821,11 +2131,11 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
       searchInput.focus();
       searchInput.select();
     } else if (e.key === 'Escape') {
+      hideGlobalRowMenu();
       if (!drawer.classList.contains('translate-x-full')) closeDrawer();
       document.querySelectorAll<HTMLElement>('.overlay-root').forEach(m => {
         if (!m.classList.contains('hidden')) hideOverlay(m);
       });
-      document.querySelectorAll<HTMLElement>('[data-row-menu-dropdown]').forEach(m => m.classList.add('hidden'));
     }
   });
 
@@ -1845,6 +2155,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
   }
 
   async function loadWorkspaceData() {
+    loadHiddenStorage();
     renderSkeleton();
     try {
       await Promise.all([
