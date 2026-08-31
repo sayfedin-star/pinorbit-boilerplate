@@ -698,19 +698,32 @@ export async function updateCompetitor(
   data: {
     full_name?: string;
     username?: string;
-    account_type?: string;
+    account_type?: 'creator' | 'brand' | 'other';
     niche?: string;
-    tags?: string[];
-  }
+    tags?: string[] | string;
+  },
+  workspaceId?: string
 ): Promise<Competitor> {
+  const tagsArr = Array.isArray(data.tags)
+    ? data.tags
+    : typeof data.tags === 'string'
+      ? data.tags.split(',').map((t) => t.trim()).filter(Boolean)
+      : undefined;
+
   if (!isSupabaseConfigured || !supabase) {
     const idx = mockCompetitors.findIndex((c) => c.id === id);
     if (idx === -1) throw new Error('Competitor not found');
-    mockCompetitors[idx] = { ...mockCompetitors[idx], ...data };
-    return { ...mockCompetitors[idx] };
+    mockCompetitors[idx] = {
+      ...mockCompetitors[idx],
+      ...(data.full_name !== undefined ? { full_name: data.full_name } : {}),
+      ...(data.username !== undefined ? { username: data.username.trim().replace(/^@/, '').toLowerCase() } : {}),
+      ...(data.account_type !== undefined ? { account_type: data.account_type } : {}),
+      ...(data.niche !== undefined ? { niche: data.niche } : {}),
+      ...(tagsArr !== undefined ? { tags: tagsArr } : {}),
+      updated_at: new Date().toISOString(),
+    };
+    return mockCompetitors[idx];
   }
-
-  const tagsArr = Array.isArray(data.tags) ? data.tags : data.tags ? (data.tags as any as string).split(',').map((t: string) => t.trim()).filter(Boolean) : undefined;
 
   const updatePayload: Record<string, any> = {};
   if (data.full_name !== undefined) updatePayload.full_name = data.full_name;
@@ -719,18 +732,29 @@ export async function updateCompetitor(
   if (data.niche !== undefined) updatePayload.niche = data.niche;
   if (tagsArr !== undefined) updatePayload.tags = tagsArr;
 
-  const { error: updateErr } = await supabase
+  let updateQuery = supabase
     .from('competitors')
     .update(updatePayload)
     .eq('id', id);
 
+  if (workspaceId) {
+    updateQuery = updateQuery.eq('workspace_id', workspaceId);
+  }
+
+  const { error: updateErr } = await updateQuery;
+
   if (updateErr) throw new Error(updateErr.message);
 
-  const { data: updated, error: fetchErr } = await supabase
+  let fetchQuery = supabase
     .from('competitors')
     .select('*')
-    .eq('id', id)
-    .single();
+    .eq('id', id);
+
+  if (workspaceId) {
+    fetchQuery = fetchQuery.eq('workspace_id', workspaceId);
+  }
+
+  const { data: updated, error: fetchErr } = await fetchQuery.single();
 
   if (fetchErr || !updated) throw new Error(fetchErr?.message || 'Failed to fetch updated competitor');
 
@@ -740,7 +764,7 @@ export async function updateCompetitor(
 /**
  * Delete a competitor.
  */
-export async function deleteCompetitor(id: string): Promise<boolean> {
+export async function deleteCompetitor(id: string, workspaceId?: string): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) {
     mockCompetitors = mockCompetitors.filter((c) => c.id !== id);
     delete mockSnapshots[id];
@@ -748,7 +772,12 @@ export async function deleteCompetitor(id: string): Promise<boolean> {
     return true;
   }
 
-  const { error } = await supabase.from('competitors').delete().eq('id', id);
+  let deleteQuery = supabase.from('competitors').delete().eq('id', id);
+  if (workspaceId) {
+    deleteQuery = deleteQuery.eq('workspace_id', workspaceId);
+  }
+
+  const { error } = await deleteQuery;
   if (error) throw new Error(error.message);
   return true;
 }
@@ -756,7 +785,7 @@ export async function deleteCompetitor(id: string): Promise<boolean> {
 /**
  * Delete an individual competitor snapshot record.
  */
-export async function deleteCompetitorSnapshot(snapshotId: string, competitorId?: string): Promise<boolean> {
+export async function deleteCompetitorSnapshot(snapshotId: string, competitorId?: string, workspaceId?: string): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) {
     if (competitorId && mockSnapshots[competitorId]) {
       mockSnapshots[competitorId] = mockSnapshots[competitorId].filter((s) => s.id !== snapshotId);
@@ -764,7 +793,12 @@ export async function deleteCompetitorSnapshot(snapshotId: string, competitorId?
     return true;
   }
 
-  const { error } = await supabase.from('competitor_snapshots').delete().eq('id', snapshotId);
+  let deleteQuery = supabase.from('competitor_snapshots').delete().eq('id', snapshotId);
+  if (workspaceId) {
+    deleteQuery = deleteQuery.eq('workspace_id', workspaceId);
+  }
+
+  const { error } = await deleteQuery;
   if (error) throw new Error(error.message);
   return true;
 }
@@ -775,7 +809,8 @@ export async function deleteCompetitorSnapshot(snapshotId: string, competitorId?
  */
 export async function ingestDevToolsPayload(
   competitorId: string,
-  payloadText: string
+  payloadText: string,
+  workspaceId?: string
 ): Promise<{ success: boolean; type: PinterestPayloadType; message: string }> {
   const parsed = parsePinterestPayload(payloadText);
 
@@ -862,7 +897,7 @@ export async function ingestDevToolsPayload(
       const { full_name, profile_reach, profile_views, follower_count, pin_count, avatar_url, website_url, domain_verified, last_pin_at } = parsed.profileData;
 
       // Update competitors table
-      const { error: updateErr } = await supabase
+      let updateQuery = supabase
         .from('competitors')
         .update({
           full_name,
@@ -878,12 +913,18 @@ export async function ingestDevToolsPayload(
         })
         .eq('id', competitorId);
 
+      if (workspaceId) {
+        updateQuery = updateQuery.eq('workspace_id', workspaceId);
+      }
+
+      const { error: updateErr } = await updateQuery;
       if (updateErr) throw new Error(updateErr.message);
 
       // Insert snapshot record
       await supabase.from('competitor_snapshots').insert([
         {
           competitor_id: competitorId,
+          ...(workspaceId ? { workspace_id: workspaceId } : {}),
           profile_reach,
           profile_views,
           follower_count,
@@ -904,6 +945,7 @@ export async function ingestDevToolsPayload(
           [
             {
               competitor_id: competitorId,
+              ...(workspaceId ? { workspace_id: workspaceId } : {}),
               board_id: b.board_id,
               name: b.name,
               description: b.description,
@@ -919,10 +961,16 @@ export async function ingestDevToolsPayload(
         );
       }
 
-      await supabase
+      let updateQuery = supabase
         .from('competitors')
         .update({ last_checked_at: new Date().toISOString() })
         .eq('id', competitorId);
+
+      if (workspaceId) {
+        updateQuery = updateQuery.eq('workspace_id', workspaceId);
+      }
+
+      await updateQuery;
 
       return {
         success: true,

@@ -171,8 +171,11 @@ async function handleDispatch(body: any, locals: any) {
   return json({ success: true, dispatched, skipped });
 }
 
-export const GET: APIRoute = async ({ url, locals }) =>
-  handleDispatch({ schedule_id: url.searchParams.get('schedule_id') || '', dispatch_token: url.searchParams.get('dispatch_token') || '' }, locals);
+export const GET: APIRoute = async () =>
+  new Response(JSON.stringify({ success: false, error: 'Method Not Allowed. Use POST with JSON payload.' }), {
+    status: 405,
+    headers: { 'Content-Type': 'application/json', Allow: 'POST' },
+  });
 
 export const POST: APIRoute = async ({ request, locals }) => {
   let body: any = {};
@@ -180,13 +183,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     body = JSON.parse((await request.text()) || '{}');
   } catch {
     return json({ success: false, error: 'Malformed JSON payload.' }, 400);
-  }
-
-  // Fall back to URL search params if body is empty
-  if (!body.schedule_id || !body.dispatch_token) {
-    const url = new URL(request.url);
-    body.schedule_id = body.schedule_id || url.searchParams.get('schedule_id');
-    body.dispatch_token = body.dispatch_token || url.searchParams.get('dispatch_token');
   }
 
   return handleDispatch(body, locals);

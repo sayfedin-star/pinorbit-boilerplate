@@ -16,7 +16,7 @@ export async function resolveCompetitorKek(db: SupabaseClient): Promise<string |
       .map(b => b.toString(16).padStart(2, '0')).join('');
 
     // Insert with ignore on conflict (atomic)
-    await db.from('competitor_kek').insert(
+    await db.from('competitor_kek').upsert(
       { id: true, kek: hex },
       { onConflict: 'id', ignoreDuplicates: true }
     );

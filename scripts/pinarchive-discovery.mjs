@@ -25,7 +25,7 @@ const CFG = {
   PAGE_SIZE: 50,
   SLEEP_MS_MIN: 2500,
   SLEEP_MS_MAX: 4000,
-  MAX_BATCH_PINS: 500,
+  MAX_BATCH_PINS: 250,
   CIRCUIT_BREAKER: 3,
   MAX_PAGES_DEFAULT: 50,
 };
@@ -754,7 +754,7 @@ async function main() {
       pages_fetched: pageCount,
       pins_added: newPinsCount,
       pins_updated: 0,
-      pins_promoted: newPinsCount,
+      pins_promoted: 0,
       status: circuitBroken ? 'failed' : 'completed',
       message: lastResult,
     });

@@ -2,7 +2,7 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { isKnownDefaultIngestSecret, isProductionEnv } from '../../../../server/db/clients';
-import { getEffectiveSecret } from '../../../../server/services/webhook-secrets';
+import * as webhookSecrets from '../../../../server/services/webhook-secrets';
 import { runRetentionCleanup } from '../../../../server/services/retention-cleanup';
 import { timingSafeEqual } from '../../../../server/lib/timing-safe';
 
@@ -50,13 +50,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   // 2. Authenticate
   const secret = request.headers.get('x-ingest-secret') || request.headers.get('x-dispatch-secret');
-  const expected = await getEffectiveSecret(workspaceId, runtimeEnv);
+  const expected = webhookSecrets.getEffectiveSecret ? await webhookSecrets.getEffectiveSecret(workspaceId, runtimeEnv) : null;
 
-  if (isProductionEnv(runtimeEnv) && expected.source === 'env' && isKnownDefaultIngestSecret(expected.value)) {
+  if (isProductionEnv(runtimeEnv) && expected?.source === 'env' && isKnownDefaultIngestSecret(expected.value)) {
     return new Response(JSON.stringify({ success: false, error: 'Service unavailable: ingest secret not configured on server.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
   }
 
-  if (!secret || !expected.value || !(await timingSafeEqual(secret, expected.value))) {
+  let authValid = false;
+  try {
+    if ('verifyIngestSecret' in webhookSecrets && typeof (webhookSecrets as any).verifyIngestSecret === 'function') {
+      const verification = await (webhookSecrets as any).verifyIngestSecret(secret, workspaceId, runtimeEnv);
+      authValid = Boolean(verification?.valid);
+    }
+  } catch {}
+  if (!authValid && secret && expected?.value) {
+    authValid = await timingSafeEqual(secret, expected.value);
+  }
+
+  if (!authValid) {
     return new Response(
       JSON.stringify({ success: false, error: 'Unauthorized: invalid or missing x-ingest-secret.' }),
       {

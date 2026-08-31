@@ -10,7 +10,7 @@ import { listWorkspaceTokens, resolveToken } from '../../../server/lib/token-res
 export const getDispatchEndpointUrl = (
   runtimeEnv?: Record<string, any>,
   workspaceId?: string,
-  secret?: string
+  _secret?: string
 ): string => {
   const base =
     (runtimeEnv?.COMPETITORS_DISPATCH_URL as string) ||
@@ -20,9 +20,6 @@ export const getDispatchEndpointUrl = (
   const url = new URL(base);
   if (workspaceId) {
     url.searchParams.set('workspace_id', workspaceId);
-  }
-  if (secret) {
-    url.searchParams.set('secret', secret);
   }
   return url.toString();
 };

@@ -71,10 +71,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       ? process.env.DISPATCH_BASE_URL.replace(/\/$/, '')
       : 'https://pinorbit-v2.o-i.workers.dev';
 
-    const dispatchUrl = `${base}/api/internal/pinterest/dispatch-due-pin?schedule_id=${encodeURIComponent(schedule.id)}&dispatch_token=${encodeURIComponent(schedule.dispatch_token)}${force ? '&force=true' : ''}`;
+    const dispatchUrl = `${base}/api/internal/pinterest/dispatch-due-pin`;
 
     const res = await fetch(dispatchUrl, {
-      method: 'GET',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        schedule_id: schedule.id,
+        dispatch_token: schedule.dispatch_token,
+        force,
+      }),
       signal: AbortSignal.timeout(15000),
     });
 

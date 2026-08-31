@@ -8,7 +8,17 @@ import type {
 } from '../../lib/types';
 
 export const FASTCRON_BASE = 'https://www.fastcron.com/api/v1';
-export const DISPATCH_ENDPOINT_URL = process.env.DISPATCH_BASE_URL || 'https://pinorbit-v2.o-i.workers.dev/api/internal/pinterest/daily-dispatch';
+
+export function getDispatchEndpointUrl(runtimeEnv?: Record<string, any>): string {
+  const base = (runtimeEnv?.DISPATCH_BASE_URL as string) ||
+    (typeof process !== 'undefined' ? process.env.DISPATCH_BASE_URL : '') ||
+    'https://pinorbit-v2.o-i.workers.dev';
+  return `${base.replace(/\/+$/, '')}/api/internal/pinterest/daily-dispatch`;
+}
+
+export const DISPATCH_ENDPOINT_URL = typeof process !== 'undefined' && process.env.DISPATCH_BASE_URL
+  ? `${process.env.DISPATCH_BASE_URL.replace(/\/+$/, '')}/api/internal/pinterest/daily-dispatch`
+  : 'https://pinorbit-v2.o-i.workers.dev/api/internal/pinterest/daily-dispatch';
 
 const ALLOWED_WEBHOOK_HOSTS = [
   'hook.make.com',
@@ -278,11 +288,12 @@ export const fastcronService = {
     const jobName = `PinOrbit ${isAnalytics ? 'analytics' : 'top-pins'} — ${workspaceId.substring(0, 8)} — ${connection.display_name}`;
     const httpHeaders = `Content-Type: application/json\r\nx-ingest-secret: ${effectiveSecret}`;
 
+    const dispatchEndpointUrl = getDispatchEndpointUrl(runtimeEnv);
     const jobParams: Record<string, any> = {
       name: jobName,
       expression: cronValidation.cron,
       timezone: settings?.timezone || 'UTC',
-      url: DISPATCH_ENDPOINT_URL,
+      url: dispatchEndpointUrl,
       httpMethod: 'POST',
       http_method: 'POST',
       httpHeaders: httpHeaders,
@@ -341,7 +352,7 @@ export const fastcronService = {
             name: `PinOrbit analytics — ${workspaceId.substring(0, 8)} — ${connection.display_name}`,
             expression: cronValidation.cron,
             timezone: settings?.timezone || 'UTC',
-            url: DISPATCH_ENDPOINT_URL,
+            url: dispatchEndpointUrl,
             httpMethod: 'POST',
             http_method: 'POST',
             httpHeaders: httpHeaders,
@@ -356,7 +367,7 @@ export const fastcronService = {
             name: `PinOrbit top-pins — ${workspaceId.substring(0, 8)} — ${connection.display_name}`,
             expression: cronTopPins.cron || '30 4 * * *',
             timezone: settings?.timezone || 'UTC',
-            url: DISPATCH_ENDPOINT_URL,
+            url: dispatchEndpointUrl,
             httpMethod: 'POST',
             http_method: 'POST',
             httpHeaders: httpHeaders,
@@ -516,7 +527,9 @@ export const fastcronService = {
                 ? job.post_data
                 : JSON.stringify(job.postData || job.post_data || '');
 
-            const isDispatchUrl = jobUrl === DISPATCH_ENDPOINT_URL || jobUrl === webhookUrl?.trim();
+            const isDispatchUrl = jobUrl === DISPATCH_ENDPOINT_URL ||
+              (typeof jobUrl === 'string' && jobUrl.includes('/api/internal/pinterest/daily-dispatch')) ||
+              jobUrl === webhookUrl?.trim();
             let matchesConnection = false;
             try {
               const parsedData = JSON.parse(jobPostData);
@@ -1027,8 +1040,7 @@ export async function syncPublishingSchedule(
   const base = (typeof process !== 'undefined' && process.env.DISPATCH_BASE_URL)
     ? process.env.DISPATCH_BASE_URL.replace(/\/$/, '')
     : 'https://pinorbit-v2.o-i.workers.dev';
-  const dispatchUrl = `${base}/api/internal/pinterest/dispatch-due-pin`
-    + `?schedule_id=${encodeURIComponent(schedule.id)}&dispatch_token=${encodeURIComponent(schedule.dispatch_token)}`;
+  const dispatchUrl = `${base}/api/internal/pinterest/dispatch-due-pin`;
   const jobName = `PinOrbit-pub-${schedule.id.slice(0, 8)}`;
   const postData = JSON.stringify({ schedule_id: schedule.id, dispatch_token: schedule.dispatch_token });
   const jobParams: Record<string, any> = {
