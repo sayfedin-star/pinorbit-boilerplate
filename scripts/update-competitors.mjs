@@ -319,7 +319,7 @@ async function main() {
       continue;
     }
 
-    let jobId = inputJobId;
+    let jobId = (inputJobId && (targetWsId === wsId || workspaces.length === 1)) ? inputJobId : null;
 
     if (!jobId) {
       const runTrigger = process.env.RUN_TRIGGER || (process.env.EVENT_NAME === 'schedule' ? 'cron' : 'manual');
