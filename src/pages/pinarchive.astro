@@ -1958,6 +1958,116 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       openDeleteAccountsModal(Array.from(selectedAccounts));
     });
 
+    document.getElementById('gas-bulk-run-btn')?.addEventListener('click', async () => {
+      if (selectedAccounts.size === 0) return;
+      const root = document.getElementById('pinarchive-page-root');
+      const wsId = root?.getAttribute('data-workspace-id');
+      if (!wsId) {
+        toast('Workspace identifier not found', 'error');
+        return;
+      }
+
+      const selectedUsernames = rawAccounts
+        .filter(a => selectedAccounts.has(a.id))
+        .map(a => a.username)
+        .filter(Boolean);
+
+      if (selectedUsernames.length === 0) {
+        toast('No valid accounts selected', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('gas-bulk-run-btn') as HTMLButtonElement | null;
+      const originalText = btn?.innerHTML || '<span>🧠 Discover Pins</span>';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span>⏳ Dispatching…</span>`;
+      }
+
+      try {
+        const res = await fetch('/api/pinarchive/accounts-gas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'run_now',
+            workspace_id: wsId,
+            usernames: selectedUsernames,
+          }),
+        });
+        const json = await res.json();
+        if (res.ok && json.success) {
+          const failed = (json.results || []).filter((r: any) => !r.ok);
+          if (failed.length > 0) {
+            toast(`Discovery queued with warnings: ${failed[0]?.error || 'partial error'}`, 'error');
+          } else {
+            toast(`🧠 Discovery pipeline dispatched for @${selectedUsernames.join(', @')}!`);
+          }
+          setTimeout(() => loadOverview(false as any), 2000);
+        } else {
+          toast(json.error || 'Failed to dispatch discovery pipeline', 'error');
+        }
+      } catch (err: any) {
+        toast(err.message || 'Network error', 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      }
+    });
+
+    document.getElementById('refresh-selected-accounts-btn')?.addEventListener('click', async () => {
+      if (selectedAccounts.size === 0) return;
+      const root = document.getElementById('pinarchive-page-root');
+      const wsId = root?.getAttribute('data-workspace-id');
+      if (!wsId) {
+        toast('Workspace identifier not found', 'error');
+        return;
+      }
+
+      const selectedUsernames = rawAccounts
+        .filter(a => selectedAccounts.has(a.id))
+        .map(a => a.username)
+        .filter(Boolean);
+
+      if (selectedUsernames.length === 0) {
+        toast('No valid accounts selected', 'error');
+        return;
+      }
+
+      const icon = document.getElementById('refresh-selected-icon');
+      const textSpan = document.getElementById('refresh-selected-btn-text');
+      const btn = document.getElementById('refresh-selected-accounts-btn') as HTMLButtonElement | null;
+
+      if (icon) icon.classList.add('animate-spin');
+      if (textSpan) textSpan.textContent = 'Syncing…';
+      if (btn) btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/internal/pinarchive/refresh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspace_id: wsId,
+            usernames: selectedUsernames,
+          }),
+        });
+        const json = await res.json();
+        if (res.ok && json.success) {
+          toast(`⚡ Fast Refresh dispatched for ${selectedUsernames.length} account(s)!`);
+          setTimeout(() => loadOverview(false as any), 2000);
+        } else {
+          toast(json.error || 'Failed to trigger fast refresh', 'error');
+        }
+      } catch (err: any) {
+        toast(err.message || 'Network error', 'error');
+      } finally {
+        if (icon) icon.classList.remove('animate-spin');
+        if (textSpan) textSpan.textContent = '⚡ Fast Refresh';
+        if (btn) btn.disabled = false;
+      }
+    });
+
     document.getElementById('gas-bulk-pause-btn')?.addEventListener('click', async () => {
       if (selectedAccounts.size === 0) return;
       try {
