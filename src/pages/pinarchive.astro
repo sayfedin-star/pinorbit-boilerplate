@@ -2286,8 +2286,14 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
             sel.setAttribute('data-prev-days', String(newDays));
             // Update in local array
             const target = rawAccounts.find(a => (accountId && a.id === accountId) || (username && a.username === username));
-            if (target) target.interval_days = newDays;
+            if (target) {
+              target.interval_days = newDays;
+              if (json.next_run_dates && (json.next_run_dates[target.id] || json.next_run_dates[target.username])) {
+                target.next_run_at = json.next_run_dates[target.id] || json.next_run_dates[target.username];
+              }
+            }
             toast(`Discovery interval for @${username || 'account'} set to ${newDays}d`);
+            renderTable();
           }
         } catch (e: any) {
           sel.value = prevDays || '3';
