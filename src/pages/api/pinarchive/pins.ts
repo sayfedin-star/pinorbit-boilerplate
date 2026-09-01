@@ -334,10 +334,19 @@ export const GET: APIRoute = async ({ request, locals }) => {
           const s0 = Number(latestSnap.saves || currentSaves);
           const r0 = Number(latestSnap.repins || currentRepins);
 
-          // Helper: Find baseline snapshot recorded on or before targetMs ago from t0
+          // Helper: Find baseline snapshot closest to targetMs ago from t0
           const findBaselineSnap = (targetMs: number) => {
-            const prior = snaps.find((s) => (t0 - new Date(s.recorded_at).getTime()) >= targetMs * 0.75);
-            return prior || snaps[snaps.length - 1];
+            let bestSnap = snaps[snaps.length - 1];
+            let minDiff = Infinity;
+            for (const s of snaps) {
+              const elapsed = t0 - new Date(s.recorded_at).getTime();
+              const diff = Math.abs(elapsed - targetMs);
+              if (diff < minDiff) {
+                minDiff = diff;
+                bestSnap = s;
+              }
+            }
+            return bestSnap;
           };
 
           const snap24h = findBaselineSnap(ONE_DAY_MS);
