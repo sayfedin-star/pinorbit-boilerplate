@@ -557,7 +557,9 @@ export const GET: APIRoute = async ({ locals }) => {
         await pinArchive
           .from('pa_workspace_settings')
           .update({
+            cron_expression: null,
             fastcron_job_id: null,
+            schedule_status: 'disabled',
             updated_at: new Date().toISOString(),
           })
           .eq('workspace_id', workspaceId);
@@ -1127,6 +1129,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       }
 
       console.log(`[PinArchive FastCron] Deleted FastCron job #${jobId} for workspace ${workspaceId}`);
+      await syncWorkspaceSettingsPostDelete(workspaceId, token, dispatchUrl, runtimeEnv);
       return new Response(
         JSON.stringify({ success: true, message: `FastCron job #${jobId} deleted successfully.` }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -1151,6 +1154,8 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       }
     }
 
+    await syncWorkspaceSettingsPostDelete(workspaceId, token, dispatchUrl, runtimeEnv);
+
     return new Response(
       JSON.stringify({ success: true, message: `Deleted ${deletedCount} FastCron job(s) for workspace.` }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -1162,3 +1167,42 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     );
   }
 };
+
+async function syncWorkspaceSettingsPostDelete(
+  workspaceId: string,
+  token: string,
+  dispatchUrl: string,
+  runtimeEnv: Record<string, any>
+) {
+  try {
+    const listRes = await fastcronCall('cron_list', { keyword: 'PinOrbit' }, token);
+    const jobs: any[] = (Array.isArray(listRes.data) ? listRes.data : listRes.data?.data || []).filter((j: any) =>
+      isMatchingPinArchiveJob(j, workspaceId, dispatchUrl)
+    );
+    const pinArchive = dbClients.getPinArchive(runtimeEnv);
+    if (jobs.length === 0) {
+      await pinArchive
+        .from('pa_workspace_settings')
+        .update({
+          cron_expression: null,
+          fastcron_job_id: null,
+          schedule_status: 'disabled',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('workspace_id', workspaceId);
+    } else {
+      const activeJob = jobs.find((j: any) => !j.paused) || jobs[0];
+      await pinArchive
+        .from('pa_workspace_settings')
+        .update({
+          cron_expression: activeJob.expression || null,
+          fastcron_job_id: String(activeJob.id),
+          schedule_status: activeJob.paused ? 'paused' : 'enabled',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('workspace_id', workspaceId);
+    }
+  } catch (syncErr) {
+    console.warn('[PinArchive FastCron] Post-delete DB sync deferred:', syncErr);
+  }
+}
