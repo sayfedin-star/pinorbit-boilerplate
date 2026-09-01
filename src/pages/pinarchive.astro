@@ -1087,9 +1087,9 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
 
     // Status filter
     if (activeStatusTab === 'active') {
-      filtered = filtered.filter(a => a.status === 'active');
+      filtered = filtered.filter(a => a.status === 'active' && a.ingest_enabled !== false);
     } else if (activeStatusTab === 'paused') {
-      filtered = filtered.filter(a => a.status === 'paused');
+      filtered = filtered.filter(a => a.status === 'paused' || a.ingest_enabled === false);
     }
 
     // Interval filter
@@ -1437,11 +1437,11 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
                 <input
                   type="checkbox"
                   data-acc-ingest-toggle="${escapeHtml(acc.id)}"
-                  ${acc.ingest_enabled !== false ? 'checked' : ''}
+                  ${isActive ? 'checked' : ''}
                   class="sr-only peer"
                   id="toggle-ingest-${escapeHtml(acc.id)}"
                 />
-                <div class="w-8 h-4.5 bg-zinc-300 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-3.5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all after:shadow-xs peer-checked:bg-emerald-500"></div>
+                <div class="w-9 h-5 bg-zinc-300 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all after:shadow-xs peer-checked:bg-emerald-500"></div>
               </label>
             </td>
             <td class="${padClass} text-right">
@@ -1999,26 +1999,42 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         const enabled = cb.checked;
         cb.disabled = true;
 
+        const root = document.getElementById('pinarchive-page-root');
+        const wsId = root?.getAttribute('data-workspace-id');
+
         try {
           const res = await fetch('/api/pinarchive/accounts-ingest-toggle', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ account_ids: [id], ingest_enabled: enabled }),
+            body: JSON.stringify({
+              workspace_id: wsId,
+              account_ids: [id],
+              ingest_enabled: enabled,
+            }),
           });
 
           if (res.status === 403) {
             cb.checked = !enabled;
-            alert('Admin access required to toggle account ingestion.');
+            toast('Admin access required to toggle account ingestion.', 'error');
             return;
           }
 
           const json = await res.json();
           if (!res.ok || !json.success) {
             cb.checked = !enabled;
-            alert(json.error || 'Failed to update account ingest status.');
+            toast(json.error || 'Failed to update account ingest status.', 'error');
+          } else {
+            const target = rawAccounts.find(a => a.id === id);
+            if (target) {
+              target.ingest_enabled = enabled;
+              target.status = enabled ? 'active' : 'paused';
+            }
+            toast(`@${target?.username || 'Account'} is now ${enabled ? 'active' : 'paused'}`);
+            filterAndRenderAccounts();
           }
-        } catch {
+        } catch (e: any) {
           cb.checked = !enabled;
+          toast(e.message || 'Error updating account status', 'error');
         } finally {
           cb.disabled = false;
         }
@@ -2312,19 +2328,33 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
 
     document.getElementById('gas-bulk-pause-btn')?.addEventListener('click', async () => {
       if (selectedAccounts.size === 0) return;
-      const confirmed = confirm(`Pause ingestion for ${selectedAccounts.size} selected account(s)?`);
+      const count = selectedAccounts.size;
+      const confirmed = confirm(`Pause ingestion for ${count} selected account(s)?`);
       if (!confirmed) return;
+
+      const root = document.getElementById('pinarchive-page-root');
+      const wsId = root?.getAttribute('data-workspace-id');
 
       try {
         const res = await fetch('/api/pinarchive/accounts-ingest-toggle', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ account_ids: Array.from(selectedAccounts), ingest_enabled: false }),
+          body: JSON.stringify({
+            workspace_id: wsId,
+            account_ids: Array.from(selectedAccounts),
+            ingest_enabled: false,
+          }),
         });
         const json = await res.json();
         if (res.ok && json.success) {
-          toast(`Paused ingestion for ${selectedAccounts.size} account(s)`);
-          loadOverview(false as any);
+          toast(`Paused ingestion for ${count} account(s)`);
+          rawAccounts.forEach(a => {
+            if (selectedAccounts.has(a.id)) {
+              a.ingest_enabled = false;
+              a.status = 'paused';
+            }
+          });
+          filterAndRenderAccounts();
         } else {
           toast(json.error || 'Failed to pause accounts', 'error');
         }
@@ -2335,19 +2365,33 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
 
     document.getElementById('gas-bulk-resume-btn')?.addEventListener('click', async () => {
       if (selectedAccounts.size === 0) return;
-      const confirmed = confirm(`Resume ingestion for ${selectedAccounts.size} selected account(s)?`);
+      const count = selectedAccounts.size;
+      const confirmed = confirm(`Resume ingestion for ${count} selected account(s)?`);
       if (!confirmed) return;
+
+      const root = document.getElementById('pinarchive-page-root');
+      const wsId = root?.getAttribute('data-workspace-id');
 
       try {
         const res = await fetch('/api/pinarchive/accounts-ingest-toggle', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ account_ids: Array.from(selectedAccounts), ingest_enabled: true }),
+          body: JSON.stringify({
+            workspace_id: wsId,
+            account_ids: Array.from(selectedAccounts),
+            ingest_enabled: true,
+          }),
         });
         const json = await res.json();
         if (res.ok && json.success) {
-          toast(`Resumed ingestion for ${selectedAccounts.size} account(s)`);
-          loadOverview(false as any);
+          toast(`Resumed ingestion for ${count} account(s)`);
+          rawAccounts.forEach(a => {
+            if (selectedAccounts.has(a.id)) {
+              a.ingest_enabled = true;
+              a.status = 'active';
+            }
+          });
+          filterAndRenderAccounts();
         } else {
           toast(json.error || 'Failed to resume accounts', 'error');
         }

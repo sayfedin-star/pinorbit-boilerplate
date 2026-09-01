@@ -65,7 +65,6 @@ async function handleIntervalUpdate(request: Request, locals: any): Promise<Resp
       .from('pa_accounts')
       .update({
         interval_days: intervalDays,
-        updated_at: new Date().toISOString(),
       })
       .eq('workspace_id', wsCtx.workspaceId);
 

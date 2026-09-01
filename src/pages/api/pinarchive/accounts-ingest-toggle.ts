@@ -60,9 +60,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const db = dbClients.getPinArchive(locals.runtime?.env);
 
+    const newStatus = body.ingest_enabled ? 'active' : 'paused';
     const { data, error, count } = await db
       .from('pa_accounts')
-      .update({ ingest_enabled: body.ingest_enabled })
+      .update({
+        ingest_enabled: body.ingest_enabled,
+        status: newStatus,
+      })
       .eq('workspace_id', wsCtx.workspaceId)
       .in('id', accountIds)
       .select('id', { count: 'exact' });
@@ -77,6 +81,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       success: true,
       updated: updatedCount,
       ingest_enabled: body.ingest_enabled,
+      status: newStatus,
     });
   } catch (e: any) {
     return json({ success: false, error: e.message || 'Internal Server Error' }, 500);
