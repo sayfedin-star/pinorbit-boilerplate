@@ -270,7 +270,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         <!-- ═══ 2-Column Bento Grid: Qualification Criteria (Left) + Automation Routines (Right) ═══ -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
           
-          <!-- LEFT CARD (col-span-7): Single Qualification Criteria Card with 3 Stacked Rows -->
+          <!-- LEFT CARD (col-span-7): Single Qualification Criteria Card with 3 Polished Tier Rows -->
           <div class="lg:col-span-7 rounded-2xl border border-border/80 bg-gradient-to-b from-card via-card to-background/50 p-4.5 sm:p-5 shadow-xs flex flex-col justify-between space-y-4">
             <div>
               <div class="flex items-center justify-between pb-3 border-b border-border/60 mb-3.5">
@@ -278,61 +278,83 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
                   <span class="text-xs font-bold text-foreground">🎯 Qualification Criteria (OR Rules)</span>
                   <span class="text-[10px] text-muted-foreground font-medium">Automatic pin preservation thresholds</span>
                 </div>
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/25">
                   OR Logic
                 </span>
               </div>
 
-              <!-- 3 Stacked Criteria Rows -->
-              <div class="space-y-2.5">
+              <!-- 3 Stacked Tier Rows -->
+              <div class="space-y-3">
                 
                 <!-- Row 1: Star Performers (Min Saves) -->
-                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5 hover:border-emerald-500/40 transition-all">
-                  <div class="flex items-center gap-2.5 min-w-0">
-                    <span class="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-500/20">🌟</span>
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5 hover:border-emerald-500/45 transition-all group">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-sm font-bold border border-emerald-500/25 shadow-2xs group-hover:scale-105 transition-transform">
+                      🌟
+                    </div>
                     <div class="min-w-0">
-                      <div class="text-xs font-bold text-foreground truncate">Star Performers (Saves)</div>
-                      <div class="text-[10px] text-muted-foreground truncate">High cumulative saves across all boards</div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-foreground truncate">Star Performers (Saves)</span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Tier 1</span>
+                      </div>
+                      <div class="text-[10px] text-muted-foreground truncate mt-0.5">High cumulative saves across all creator boards</div>
                     </div>
                   </div>
                   <div class="flex items-center gap-1.5 shrink-0">
                     <label for="setting-min-saves" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Min:</label>
-                    <input id="setting-min-saves" type="number" min="0" value="25" class="w-16 rounded-xl border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground text-center font-mono focus:border-emerald-500 focus:outline-none shadow-2xs" />
-                    <span class="text-[11px] font-medium text-muted-foreground">saves</span>
+                    <div class="flex items-center rounded-xl border border-border bg-background px-2 py-1 shadow-2xs focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                      <input id="setting-min-saves" type="number" min="0" value="25" class="w-14 bg-transparent text-xs font-bold text-foreground text-center font-mono focus:outline-none" />
+                      <span class="text-[10px] font-semibold text-muted-foreground pl-1">saves</span>
+                    </div>
                   </div>
                 </div>
 
                 <!-- Row 2: High Virality (Min Repins) -->
-                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-blue-500/25 bg-blue-500/5 hover:border-blue-500/40 transition-all">
-                  <div class="flex items-center gap-2.5 min-w-0">
-                    <span class="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400 text-xs font-bold border border-blue-500/20">🔁</span>
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-blue-500/25 bg-blue-500/5 hover:border-blue-500/45 transition-all group">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 text-sm font-bold border border-blue-500/25 shadow-2xs group-hover:scale-105 transition-transform">
+                      🔁
+                    </div>
                     <div class="min-w-0">
-                      <div class="text-xs font-bold text-foreground truncate">High Virality (Repins)</div>
-                      <div class="text-[10px] text-muted-foreground truncate">Viral repin distribution across Pinterest</div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-foreground truncate">High Virality (Repins)</span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">Tier 2</span>
+                      </div>
+                      <div class="text-[10px] text-muted-foreground truncate mt-0.5">Viral repin distribution across Pinterest networks</div>
                     </div>
                   </div>
                   <div class="flex items-center gap-1.5 shrink-0">
                     <label for="setting-min-repins" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Min:</label>
-                    <input id="setting-min-repins" type="number" min="0" value="25" class="w-16 rounded-xl border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground text-center font-mono focus:border-blue-500 focus:outline-none shadow-2xs" />
-                    <span class="text-[11px] font-medium text-muted-foreground">repins</span>
+                    <div class="flex items-center rounded-xl border border-border bg-background px-2 py-1 shadow-2xs focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20">
+                      <input id="setting-min-repins" type="number" min="0" value="25" class="w-14 bg-transparent text-xs font-bold text-foreground text-center font-mono focus:outline-none" />
+                      <span class="text-[10px] font-semibold text-muted-foreground pl-1">repins</span>
+                    </div>
                   </div>
                 </div>
 
                 <!-- Row 3: Fast Risers (Velocity Rule) -->
-                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-amber-500/25 bg-amber-500/5 hover:border-amber-500/40 transition-all">
-                  <div class="flex items-center gap-2.5 min-w-0">
-                    <span class="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs font-bold border border-amber-500/20">🚀</span>
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-amber-500/25 bg-amber-500/5 hover:border-amber-500/45 transition-all group">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 text-sm font-bold border border-amber-500/25 shadow-2xs group-hover:scale-105 transition-transform">
+                      🚀
+                    </div>
                     <div class="min-w-0">
-                      <div class="text-xs font-bold text-foreground truncate">Fast Risers (Velocity)</div>
-                      <div class="text-[10px] text-muted-foreground truncate">Fresh viral pins growing rapidly early on</div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-foreground truncate">Fast Risers (Velocity)</span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">Tier 3</span>
+                      </div>
+                      <div class="text-[10px] text-muted-foreground truncate mt-0.5">Fresh pins showing rapid early engagement growth</div>
                     </div>
                   </div>
-                  <div class="flex items-center gap-1 shrink-0">
-                    <span class="text-xs text-muted-foreground font-mono">&lt;</span>
-                    <input id="setting-rising-age" type="number" min="1" max="90" value="14" class="w-11 rounded-xl border border-border bg-background px-1 py-1 text-xs font-bold text-foreground text-center font-mono focus:border-amber-500 focus:outline-none shadow-2xs" title="Max age in days" />
-                    <span class="text-[10px] text-muted-foreground">d &amp; &ge;</span>
-                    <input id="setting-rising-saves" type="number" min="1" value="20" class="w-13 rounded-xl border border-border bg-background px-1.5 py-1 text-xs font-bold text-foreground text-center font-mono focus:border-amber-500 focus:outline-none shadow-2xs" title="Min saves within age limit" />
-                    <span class="text-[11px] font-medium text-muted-foreground">saves</span>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <div class="flex items-center rounded-xl border border-border bg-background px-2 py-1 shadow-2xs focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-500/20 gap-1">
+                      <span class="text-[11px] text-muted-foreground font-mono">&lt;</span>
+                      <input id="setting-rising-age" type="number" min="1" max="90" value="14" class="w-7 bg-transparent text-xs font-bold text-foreground text-center font-mono focus:outline-none" title="Max age in days" />
+                      <span class="text-[10px] text-muted-foreground">d</span>
+                      <span class="text-[10px] text-muted-foreground font-bold">&amp; &ge;</span>
+                      <input id="setting-rising-saves" type="number" min="1" value="20" class="w-8 bg-transparent text-xs font-bold text-foreground text-center font-mono focus:outline-none" title="Min saves within age limit" />
+                      <span class="text-[10px] font-semibold text-muted-foreground">saves</span>
+                    </div>
                   </div>
                 </div>
 
@@ -340,77 +362,91 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
             </div>
 
             <!-- Dynamic Logic Explanation Bar (100% English) -->
-            <div id="pinarchive-logic-bar" class="rounded-xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-2.5 sm:px-3 flex items-center gap-2 text-[11px] text-foreground shadow-2xs">
-              <span class="flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-lg bg-primary/20 text-primary text-xs font-bold">💡</span>
-              <p class="leading-tight">
-                <strong class="text-primary font-bold">OR Condition Active:</strong> Any pin matching <span class="underline decoration-primary/50 underline-offset-2 font-bold">ANY single rule above</span> is automatically preserved to DB &amp; Sheets.
-              </p>
+            <div id="pinarchive-logic-bar" class="rounded-xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-3 sm:px-4 flex items-center justify-between gap-3 shadow-2xs">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="relative flex h-2.5 w-2.5 shrink-0">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                </span>
+                <p class="text-[11px] text-foreground font-medium leading-snug">
+                  <strong class="text-primary font-bold">OR Condition Active:</strong> Any pin matching <span class="underline decoration-primary/50 underline-offset-2 font-bold">ANY single rule above</span> will be automatically preserved, ranked, and synced to Supabase &amp; Google Sheets.
+                </p>
+              </div>
+              <span class="hidden md:inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap bg-background/80 px-2 py-0.5 rounded-md border border-border/60">
+                Auto-Evaluated
+              </span>
             </div>
           </div>
 
-          <!-- RIGHT CARD (col-span-5): Automation Routines in 3 Stacked Rows with High-Contrast Switches -->
+          <!-- RIGHT CARD (col-span-5): Automation Routines with Pixel-Perfect Standard Switches -->
           <div class="lg:col-span-5 rounded-2xl border border-border/80 bg-gradient-to-b from-card via-card to-background/50 p-4.5 sm:p-5 shadow-xs flex flex-col justify-between space-y-4">
             <div>
               <div class="flex items-center justify-between pb-3 border-b border-border/60 mb-3.5">
                 <div class="flex items-center gap-2">
                   <span class="text-xs font-bold text-foreground">⚡ Automation Routines</span>
-                  <span class="text-[10px] text-muted-foreground font-medium">Pipeline &amp; sync triggers</span>
+                  <span class="text-[10px] text-muted-foreground font-medium">Pipeline &amp; sync schedules</span>
                 </div>
               </div>
 
               <!-- 3 Stacked Routine Rows -->
-              <div class="space-y-2.5">
+              <div class="space-y-3">
                 
                 <!-- Row 1: Monthly Audit Sweep -->
-                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/70 bg-background/60 hover:border-primary/30 transition-all">
-                  <div class="flex items-center gap-2.5 min-w-0">
-                    <span class="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground text-xs border border-border/60">🗓️</span>
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/70 bg-background/60 hover:border-primary/30 transition-all group">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground text-sm border border-border/60 shadow-2xs group-hover:scale-105 transition-transform">
+                      🗓️
+                    </div>
                     <div class="min-w-0">
-                      <div class="text-xs font-bold text-foreground">Monthly Audit Sweep</div>
-                      <div class="text-[10px] text-muted-foreground">Day-1 02:00 UTC full deep scan</div>
+                      <div class="text-xs font-bold text-foreground truncate">Monthly Audit Sweep</div>
+                      <div class="text-[10px] text-muted-foreground truncate mt-0.5">Day-1 02:00 UTC · Full deep account scan</div>
                     </div>
                   </div>
                   <div class="flex items-center gap-2.5 shrink-0">
                     <span id="setting-audit-sweep-label" class="text-xs font-bold text-emerald-500">Active</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
                       <input id="setting-audit-sweep-enabled" type="checkbox" checked class="sr-only peer" />
-                      <div class="w-10 h-5.5 bg-zinc-200 dark:bg-zinc-700 border border-zinc-300 dark:border-zinc-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 dark:after:border-zinc-600 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all after:shadow-sm peer-checked:bg-emerald-500 peer-checked:border-emerald-500"></div>
+                      <div class="w-11 h-6 bg-zinc-300 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:bg-emerald-500"></div>
                     </label>
                   </div>
                 </div>
 
                 <!-- Row 2: Daily Pipeline Cron -->
-                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/70 bg-background/60 hover:border-primary/30 transition-all">
-                  <div class="flex items-center gap-2.5 min-w-0">
-                    <span class="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground text-xs border border-border/60">⏰</span>
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/70 bg-background/60 hover:border-primary/30 transition-all group">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground text-sm border border-border/60 shadow-2xs group-hover:scale-105 transition-transform">
+                      ⏰
+                    </div>
                     <div class="min-w-0">
-                      <div class="text-xs font-bold text-foreground">Daily Pipeline Cron</div>
-                      <div class="text-[10px] text-muted-foreground">Daily @ 07:00 UTC schedule</div>
+                      <div class="text-xs font-bold text-foreground truncate">Daily Pipeline Cron</div>
+                      <div class="text-[10px] text-muted-foreground truncate mt-0.5">Daily @ 07:00 UTC · FastCron + Matrix</div>
                     </div>
                   </div>
                   <div class="flex items-center gap-2.5 shrink-0">
                     <span id="setting-github-schedule-label" class="text-xs font-bold text-emerald-500">Active</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
                       <input id="setting-github-schedule" type="checkbox" checked class="sr-only peer" />
-                      <div class="w-10 h-5.5 bg-zinc-200 dark:bg-zinc-700 border border-zinc-300 dark:border-zinc-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 dark:after:border-zinc-600 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all after:shadow-sm peer-checked:bg-emerald-500 peer-checked:border-emerald-500"></div>
+                      <div class="w-11 h-6 bg-zinc-300 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:bg-emerald-500"></div>
                     </label>
                   </div>
                 </div>
 
                 <!-- Row 3: Google Sheet Sync -->
-                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/70 bg-background/60 hover:border-primary/30 transition-all">
-                  <div class="flex items-center gap-2.5 min-w-0">
-                    <span class="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground text-xs border border-border/60">📑</span>
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/70 bg-background/60 hover:border-primary/30 transition-all group">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground text-sm border border-border/60 shadow-2xs group-hover:scale-105 transition-transform">
+                      📑
+                    </div>
                     <div class="min-w-0">
-                      <div class="text-xs font-bold text-foreground">Google Sheet Sync</div>
-                      <div class="text-[10px] text-muted-foreground">Sheets → DB 2-way sync</div>
+                      <div class="text-xs font-bold text-foreground truncate">Google Sheet Sync</div>
+                      <div class="text-[10px] text-muted-foreground truncate mt-0.5">Sheets ⇄ Supabase DB 2-way sync</div>
                     </div>
                   </div>
                   <div class="flex items-center gap-2.5 shrink-0">
                     <span id="setting-daily-sheet-sync-label" class="text-xs font-bold text-muted-foreground">Off</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
                       <input id="setting-daily-sheet-sync" type="checkbox" class="sr-only peer" />
-                      <div class="w-10 h-5.5 bg-zinc-200 dark:bg-zinc-700 border border-zinc-300 dark:border-zinc-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 dark:after:border-zinc-600 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all after:shadow-sm peer-checked:bg-emerald-500 peer-checked:border-emerald-500"></div>
+                      <div class="w-11 h-6 bg-zinc-300 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:bg-emerald-500"></div>
                     </label>
                   </div>
                 </div>
@@ -419,12 +455,12 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
             </div>
 
             <!-- Transparency status in right card footer -->
-            <div class="rounded-xl border border-border/60 bg-muted/30 p-2.5 flex items-center justify-between text-[11px] text-muted-foreground">
-              <div class="flex items-center gap-1.5">
+            <div class="rounded-xl border border-border/60 bg-muted/30 p-2.5 sm:px-3 flex items-center justify-between text-[11px] text-muted-foreground shadow-2xs">
+              <div class="flex items-center gap-2">
                 <span id="pipeline-gh-status-dot" class="h-2 w-2 rounded-full bg-primary"></span>
                 <span id="pipeline-gh-status-text">Daily @ 07:00 UTC</span>
               </div>
-              <span id="transparency-cost-estimate">Estimating…</span>
+              <span id="transparency-cost-estimate" class="font-medium">Estimating…</span>
             </div>
           </div>
 
@@ -450,9 +486,9 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
                 </div>
                 <div class="mt-2 flex items-center justify-between">
                   <span class="text-[10px] text-muted-foreground">Accept runs</span>
-                  <label class="relative inline-flex items-center cursor-pointer">
+                  <label class="relative inline-flex items-center cursor-pointer shrink-0">
                     <input id="setting-ingest-enabled" type="checkbox" checked class="sr-only peer" />
-                    <div class="w-9 h-5 bg-zinc-200 dark:bg-zinc-700 border border-zinc-300 dark:border-zinc-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 dark:after:border-zinc-600 after:border after:rounded-full after:h-4 after:w-4 after:transition-all after:shadow-sm peer-checked:bg-emerald-500 peer-checked:border-emerald-500"></div>
+                    <div class="w-9 h-5 bg-zinc-300 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all after:shadow-xs peer-checked:bg-emerald-500"></div>
                   </label>
                 </div>
               </div>
@@ -1373,7 +1409,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
             </td>
             ${dynamicCells}
             <td class="${padClass} text-center">
-              <label class="relative inline-flex items-center cursor-pointer">
+              <label class="relative inline-flex items-center cursor-pointer shrink-0">
                 <input
                   type="checkbox"
                   data-acc-ingest-toggle="${escapeHtml(acc.id)}"
@@ -1381,7 +1417,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
                   class="sr-only peer"
                   id="toggle-ingest-${escapeHtml(acc.id)}"
                 />
-                <div class="w-7 h-4 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                <div class="w-8 h-4.5 bg-zinc-300 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-3.5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all after:shadow-xs peer-checked:bg-emerald-500"></div>
               </label>
             </td>
             <td class="${padClass} text-right">
