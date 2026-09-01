@@ -2997,7 +2997,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
   });
 
   // ─── Initialization ───────────────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', () => {
+  function initPinArchivePage() {
     buildColVisibilityMenu();
     setupColVisibilityToggle();
     setupSettingsCollapse();
@@ -3008,5 +3008,12 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
     document.getElementById('save-ingest-settings-btn')?.addEventListener('click', saveSettings);
     loadSettings();
     loadOverview(2);
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPinArchivePage);
+  } else {
+    initPinArchivePage();
+  }
+  document.addEventListener('astro:page-load', initPinArchivePage);
 </script>
