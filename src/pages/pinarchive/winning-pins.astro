@@ -4,7 +4,7 @@ import Layout from '../../layouts/Layout.astro';
 import SectionHeader from '../../components/ui/SectionHeader.astro';
 ---
 
-<Layout title="Winning Pins Intelligence — PinArchive" description="Historical pin performance archive, high-velocity winners, evergreen matrix, and deep SEO cluster analytics.">
+<Layout title="Winning Pins Intelligence — PinArchive" description="Cross-account high-velocity winners, delta growth analytics (24h/3d/7d), evergreen strategy matrix, and keyword mining.">
   <!-- ═══ Back Link & Top Bar ═══ -->
   <div class="mb-5">
     <a
@@ -20,7 +20,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         <div class="flex items-center gap-2.5">
           <SectionHeader
             title="🏆 Winning Pins Intelligence"
-            description="Deep performance analysis, evergreen strategy matrix, SEO keyword mining, and growth trajectory forecasts."
+            description="Cross-account performance, 24h / 3d / 7d delta growth momentum, evergreen strategy matrix, and SEO keywords mining."
           />
         </div>
         <div id="refresh-meta-line" class="text-xs text-muted-foreground -mt-3 mb-2 flex items-center gap-2">
@@ -28,7 +28,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
-          <span id="refresh-meta-text" class="font-medium text-foreground">Live archive active</span>
+          <span id="refresh-meta-text" class="font-medium text-foreground">Cross-account archive active</span>
         </div>
       </div>
 
@@ -73,14 +73,14 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
           </button>
         </div>
 
-        <!-- Topic Clusters Direct Link -->
+        <!-- Topic Clusters Link -->
         <a
           href="/pinarchive/topics"
-          title="Explore cross-account Topic Clusters"
+          title="Explore Topic Clusters"
           class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground shadow-xs hover:bg-muted transition-all"
         >
           <span class="text-amber-500 font-bold">🏷️</span>
-          <span>Topic Clusters</span>
+          <span>Topics</span>
         </a>
 
         <!-- CSV Export Button -->
@@ -114,10 +114,10 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
 
   <!-- ═══ 1. Executive Winning KPIs Summary Header ═══ -->
   <div id="kpi-header-section" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <!-- Card 1: Top Velocity Champion -->
+    <!-- Card 1: Top Growth Champion (Dynamic by Timeframe) -->
     <div class="relative overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-xs hover:border-primary/40 transition-all group flex flex-col justify-between">
       <div class="flex items-center justify-between">
-        <span class="text-[10.5px] font-bold text-muted-foreground uppercase tracking-wider">Top Velocity Pin</span>
+        <span class="text-[10.5px] font-bold text-muted-foreground uppercase tracking-wider" id="kpi-top-label">🔥 Top 24h Growth</span>
         <span class="flex h-7 w-7 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500 border border-rose-500/20">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         </span>
@@ -128,11 +128,11 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         </div>
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-1.5">
-            <span id="kpi-top-velocity" class="text-xl font-extrabold tracking-tight text-emerald-500 font-mono tabular-nums">0.0/d</span>
-            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">Pace</span>
+            <span id="kpi-top-velocity" class="text-xl font-extrabold tracking-tight text-emerald-500 font-mono tabular-nums">+0 saves</span>
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" id="kpi-top-timeframe-tag">24h</span>
           </div>
           <p id="kpi-top-title" class="text-xs font-semibold text-foreground truncate mt-0.5" title="Top Performer">Loading...</p>
-          <span id="kpi-top-saves" class="text-[11px] text-muted-foreground">0 saves</span>
+          <span id="kpi-top-saves" class="text-[11px] text-muted-foreground">0 total saves · @account</span>
         </div>
       </div>
     </div>
@@ -239,67 +239,83 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     </div>
   </div>
 
-  <!-- ═══ 3. Strategy Slicers & Filter Controls Toolbar ═══ -->
+  <!-- ═══ 3. Growth Timeframe Slicers & Filter Controls Toolbar ═══ -->
   <div class="rounded-2xl border border-border bg-card p-4 shadow-xs mb-6 space-y-3.5">
-    <!-- Preset Slicer Pills -->
-    <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
-      <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-wider shrink-0 flex items-center gap-1">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-        <span>Matrix:</span>
-      </span>
-      <button
-        type="button"
-        data-quick-filter="all"
-        class="quick-pill active px-3 py-1 rounded-xl text-xs font-bold bg-primary text-primary-foreground transition-all cursor-pointer shrink-0"
-      >
-        🌟 All Winners (<span id="quick-count-all">0</span>)
-      </button>
-      <button
-        type="button"
-        data-quick-filter="evergreen"
-        class="quick-pill px-3 py-1 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
-        title="Pins >45d with high sustained saves"
-      >
-        🌲 Evergreen Giants (<span id="quick-count-evergreen">0</span>)
-      </button>
-      <button
-        type="button"
-        data-quick-filter="rocket"
-        class="quick-pill px-3 py-1 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
-        title="Pins ≤14d with velocity ≥15/d"
-      >
-        🚀 Viral Rockets (<span id="quick-count-rocket">0</span>)
-      </button>
-      <button
-        type="button"
-        data-quick-filter="high-virality"
-        class="quick-pill px-3 py-1 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
-        title="Repin to Save ratio ≥ 90%"
-      >
-        💎 High Virality (&gt;90%)
-      </button>
-      <button
-        type="button"
-        data-quick-filter="spike"
-        class="quick-pill px-3 py-1 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
-      >
-        🔥 Viral Spikes (<span id="quick-count-spike">0</span>)
-      </button>
-      <button
-        type="button"
-        data-quick-filter="cluster"
-        class="quick-pill px-3 py-1 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
-      >
-        🧬 In Clusters
-      </button>
+    <!-- Growth Timeframe Slicer Pills (24h / 3d / 7d / All-Time) -->
+    <div class="flex items-center justify-between flex-wrap gap-2">
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+        <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-wider shrink-0 flex items-center gap-1">
+          <span>⚡ Growth Pace:</span>
+        </span>
+        <button
+          type="button"
+          data-timeframe="24h"
+          class="timeframe-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-primary text-primary-foreground shadow-2xs transition-all cursor-pointer shrink-0"
+        >
+          🔥 Last 24 Hours
+        </button>
+        <button
+          type="button"
+          data-timeframe="3d"
+          class="timeframe-pill px-3 py-1.5 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
+        >
+          📈 Last 3 Days
+        </button>
+        <button
+          type="button"
+          data-timeframe="7d"
+          class="timeframe-pill px-3 py-1.5 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
+        >
+          🗓️ Last 7 Days
+        </button>
+        <button
+          type="button"
+          data-timeframe="all"
+          class="timeframe-pill px-3 py-1.5 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
+        >
+          ⭐ All-Time Total
+        </button>
+      </div>
+
+      <!-- Quick Matrix Slicers -->
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+        <button
+          type="button"
+          data-quick-filter="all"
+          class="quick-pill active px-2.5 py-1 rounded-lg text-xs font-bold bg-muted text-foreground transition-all cursor-pointer shrink-0"
+        >
+          All (<span id="quick-count-all">0</span>)
+        </button>
+        <button
+          type="button"
+          data-quick-filter="evergreen"
+          class="quick-pill px-2.5 py-1 rounded-lg text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
+        >
+          🌲 Evergreen (<span id="quick-count-evergreen">0</span>)
+        </button>
+        <button
+          type="button"
+          data-quick-filter="rocket"
+          class="quick-pill px-2.5 py-1 rounded-lg text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
+        >
+          🚀 Rockets (<span id="quick-count-rocket">0</span>)
+        </button>
+        <button
+          type="button"
+          data-quick-filter="spike"
+          class="quick-pill px-2.5 py-1 rounded-lg text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0"
+        >
+          🔥 Spikes (<span id="quick-count-spike">0</span>)
+        </button>
+      </div>
     </div>
 
     <!-- Main Filter Controls Row -->
-    <div class="flex flex-wrap items-center gap-3 justify-between pt-1 border-t border-border/60">
-      <!-- Left Controls: Search & Dropdowns -->
+    <div class="flex flex-wrap items-center gap-3 justify-between pt-2 border-t border-border/60">
+      <!-- Left Controls: Search & Account & Board & Stage -->
       <div class="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
         <!-- Search Input -->
-        <div class="relative flex-1 min-w-[200px] max-w-sm">
+        <div class="relative flex-1 min-w-[180px] max-w-xs">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input
             id="filter-search-input"
@@ -310,10 +326,18 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
           <kbd class="absolute right-2 top-1/2 -translate-y-1/2 rounded border border-border bg-muted px-1 text-[9px] font-bold text-muted-foreground">/</kbd>
         </div>
 
-        <!-- Board Filter -->
+        <!-- Account Filter Dropdown -->
+        <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-2xs">
+          <label for="filter-account-select" class="text-xs font-semibold text-muted-foreground">Account:</label>
+          <select id="filter-account-select" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer max-w-[140px] truncate">
+            <option value="">All Accounts</option>
+          </select>
+        </div>
+
+        <!-- Board Filter Dropdown -->
         <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-2xs">
           <label for="filter-board-select" class="text-xs font-semibold text-muted-foreground">Board:</label>
-          <select id="filter-board-select" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer max-w-[150px] truncate">
+          <select id="filter-board-select" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer max-w-[130px] truncate">
             <option value="">All Boards</option>
           </select>
         </div>
@@ -323,34 +347,33 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
           <label for="filter-stage-select" class="text-xs font-semibold text-muted-foreground">Stage:</label>
           <select id="filter-stage-select" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer">
             <option value="">All Stages</option>
-            <option value="NEW">🟢 NEW (≤14d)</option>
-            <option value="GROWING">🚀 GROWING (≥10/d)</option>
-            <option value="MATURE">🟣 MATURE (&gt;14d)</option>
-            <option value="COOLING">❄️ COOLING (&lt;2/d)</option>
-            <option value="DORMANT">⚪ DORMANT (&lt;0.5/d)</option>
+            <option value="NEW">🟢 NEW</option>
+            <option value="GROWING">🚀 GROWING</option>
+            <option value="MATURE">🟣 MATURE</option>
+            <option value="COOLING">❄️ COOLING</option>
           </select>
         </div>
 
         <!-- In-Cluster Toggle Checkbox -->
-        <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground select-none px-1">
-          <input id="filter-cluster-toggle" type="checkbox" class="rounded border-border text-primary focus:ring-primary h-4 w-4 cursor-pointer" />
-          <span>In Cluster Only</span>
+        <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground select-none px-1">
+          <input id="filter-cluster-toggle" type="checkbox" class="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer" />
+          <span>In Cluster</span>
         </label>
       </div>
 
-      <!-- Right Controls: Multi-Field Sort & Limit & Clear -->
+      <!-- Right Controls: Sort & Limit & Clear -->
       <div class="flex items-center gap-2">
         <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1.5 shadow-2xs">
           <label for="pins-sort-select" class="text-xs font-semibold text-muted-foreground">Sort:</label>
           <select id="pins-sort-select" class="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer">
-            <option value="saves_desc">Saves (High → Low)</option>
-            <option value="saves_asc">Saves (Low → High)</option>
-            <option value="velocity_desc">Velocity (High → Low)</option>
-            <option value="velocity_asc">Velocity (Low → High)</option>
-            <option value="repins_desc">Repins (High → Low)</option>
+            <option value="delta_24h_desc">🔥 24h Growth (High → Low)</option>
+            <option value="delta_3d_desc">📈 3-Day Growth (High → Low)</option>
+            <option value="delta_7d_desc">🗓️ 7-Day Growth (High → Low)</option>
+            <option value="saves_desc">Total Saves (High → Low)</option>
+            <option value="velocity_desc">Daily Velocity (High → Low)</option>
+            <option value="repins_desc">Total Repins (High → Low)</option>
             <option value="virality_desc">Virality Ratio %</option>
             <option value="newest">Newest on Pinterest</option>
-            <option value="oldest">Oldest on Pinterest</option>
           </select>
         </div>
 
@@ -373,7 +396,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
 
   <!-- ═══ 4. Active Winners Presentation Area ═══ -->
   <section class="mb-8" aria-labelledby="winners-section-heading">
-    <!-- Header Section Info & Top Pagination Indicator -->
+    <!-- Header Section Info & Top Action Button -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
       <div>
         <h2 id="winners-section-heading" class="text-base font-bold text-foreground flex items-center gap-2">
@@ -428,14 +451,14 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
           <thead>
             <tr class="border-b border-border bg-muted/40 text-muted-foreground font-bold">
               <th class="py-3 px-3 text-center w-12">#</th>
-              <th class="py-3 px-3 min-w-[240px]">Pin Title &amp; Details</th>
+              <th class="py-3 px-3 min-w-[220px]">Pin Title &amp; Account</th>
               <th class="py-3 px-3 min-w-[120px]">Board</th>
               <th class="py-3 px-3 text-center min-w-[100px]">Strategy Matrix</th>
+              <th class="py-3 px-3 text-right cursor-pointer hover:text-foreground table-sort-header select-none text-emerald-600 dark:text-emerald-400" data-sort="delta">
+                <span id="table-col-delta-label">Δ Growth (24h)</span> <span class="sort-indicator" id="sort-icon-delta">↕</span>
+              </th>
               <th class="py-3 px-3 text-right cursor-pointer hover:text-foreground table-sort-header select-none" data-sort="saves">
                 Saves <span class="sort-indicator" id="sort-icon-saves">↕</span>
-              </th>
-              <th class="py-3 px-3 text-right cursor-pointer hover:text-foreground table-sort-header select-none" data-sort="repins">
-                Repins <span class="sort-indicator" id="sort-icon-repins">↕</span>
               </th>
               <th class="py-3 px-3 text-right cursor-pointer hover:text-foreground table-sort-header select-none" data-sort="velocity">
                 Velocity <span class="sort-indicator" id="sort-icon-velocity">↕</span>
@@ -621,8 +644,10 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
 
 <script>
   let rawPins: any[] = [];
+  let rawAccounts: any[] = [];
   let filteredPins: any[] = [];
-  let currentSort = 'saves_desc';
+  let activeTimeframe: '24h' | '3d' | '7d' | 'all' = '24h';
+  let currentSort = 'delta_24h_desc';
   let currentPage = 1;
   let pageSize = 24;
   let activeView: 'grid' | 'table' | 'board' | 'clusters' = 'grid';
@@ -662,7 +687,21 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     }
   }
 
-  // ═══ Winner Strategy Matrix Classification ═══
+  function getPinDeltaByActiveTimeframe(p: any): number {
+    switch (activeTimeframe) {
+      case '3d':
+        return Number(p.delta_saves_3d ?? p.delta_saves ?? 0);
+      case '7d':
+        return Number(p.delta_saves_7d ?? p.delta_saves ?? 0);
+      case 'all':
+        return Number(p.saves ?? 0);
+      case '24h':
+      default:
+        return Number(p.delta_saves_24h ?? p.delta_saves ?? 0);
+    }
+  }
+
+  // ═══ Strategy Matrix ═══
   type PinStrategy = 'EVERGREEN' | 'ROCKET' | 'VIRAL' | 'MATURE' | 'COOLING';
 
   function getPinStrategy(p: any): PinStrategy {
@@ -691,21 +730,6 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         return '<span class="inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20" title="Slowing growth pace">❄️ COOLING</span>';
       default:
         return '<span class="inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">🟣 MATURE</span>';
-    }
-  }
-
-  function renderStageBadge(stage?: string | null): string {
-    switch (stage) {
-      case 'NEW':
-        return '<span class="inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">🟢 NEW</span>';
-      case 'GROWING':
-        return '<span class="inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">🚀 GROWING</span>';
-      case 'MATURE':
-        return '<span class="inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">🟣 MATURE</span>';
-      case 'COOLING':
-        return '<span class="inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">❄️ COOLING</span>';
-      default:
-        return '<span class="inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-slate-500/10 text-slate-500 border border-slate-500/20">⚪ DORMANT</span>';
     }
   }
 
@@ -788,8 +812,8 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       const domPins = document.getElementById('kpi-dominant-board-pins');
 
       if (topTitle) topTitle.textContent = 'No active pins';
-      if (topVel) topVel.textContent = '0.0/d';
-      if (topSaves) topSaves.textContent = '0 saves';
+      if (topVel) topVel.textContent = '+0 saves';
+      if (topSaves) topSaves.textContent = '0 total saves';
       if (avgVelElem) avgVelElem.textContent = '0.0/d';
       if (totalSavesElem) totalSavesElem.textContent = '0 total saves';
       if (sampleCountElem) sampleCountElem.textContent = '0 pins';
@@ -799,18 +823,23 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       return;
     }
 
-    // 1. Top Velocity Pin
-    const sortedByVelocity = [...pins].sort((a, b) => Number(b.velocity || 0) - Number(a.velocity || 0));
-    const topPin = sortedByVelocity[0];
+    // 1. Top Growth Champion (Dynamic based on active timeframe)
+    const sortedByGrowth = [...pins].sort((a, b) => getPinDeltaByActiveTimeframe(b) - getPinDeltaByActiveTimeframe(a));
+    const topPin = sortedByGrowth[0];
     if (topPin) {
+      const topLabel = document.getElementById('kpi-top-label');
       const topTitle = document.getElementById('kpi-top-title');
       const topVel = document.getElementById('kpi-top-velocity');
+      const topTag = document.getElementById('kpi-top-timeframe-tag');
       const topSaves = document.getElementById('kpi-top-saves');
       const thumbWrapper = document.getElementById('kpi-top-thumb-wrapper');
 
+      const deltaVal = getPinDeltaByActiveTimeframe(topPin);
+      if (topLabel) topLabel.textContent = `🔥 Top ${activeTimeframe.toUpperCase()} Growth`;
+      if (topTag) topTag.textContent = activeTimeframe.toUpperCase();
       if (topTitle) topTitle.textContent = topPin.title || `Pin ${topPin.pin_id}`;
-      if (topVel) topVel.textContent = `${Number(topPin.velocity || 0).toFixed(1)}/d`;
-      if (topSaves) topSaves.textContent = `${fmtNumber(topPin.saves)} saves · @${topPin.board_name || 'board'}`;
+      if (topVel) topVel.textContent = `+${fmtNumber(deltaVal)} saves`;
+      if (topSaves) topSaves.textContent = `${fmtNumber(topPin.saves)} total · @${topPin.account_username || topPin.board_name || 'account'}`;
       if (thumbWrapper && topPin.image_url) {
         thumbWrapper.innerHTML = `<img src="${escapeHtml(topPin.image_url)}" class="w-full h-full object-cover rounded-xl" />`;
       }
@@ -905,6 +934,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     const saves = Number(p.saves || 0);
     const repins = Number(p.repins || 0);
     const velocity = Number(p.velocity || 0);
+    const deltaVal = getPinDeltaByActiveTimeframe(p);
     const annotations = Array.isArray(p.annotations) ? p.annotations : [];
     const category = p.seo_category || p.board_name || null;
     const pinterestUrl = `https://www.pinterest.com/pin/${p.pin_id}/`;
@@ -915,6 +945,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     const createdDate = fmtDate(p.created_at_pinterest);
     const viralityRatio = saves > 0 ? ((repins / saves) * 100).toFixed(0) : '0';
     const strategy = getPinStrategy(p);
+    const accountDisplay = p.account_username ? `@${p.account_username}` : p.board_name ? `@${p.board_name}` : 'account';
 
     const tagsHtml = annotations.slice(0, 3).map((a: any) => {
       const name = typeof a === 'string' ? a : a?.name || '';
@@ -931,8 +962,11 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     return `
       <div class="group rounded-2xl border border-border bg-card overflow-hidden shadow-xs hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between relative">
         <!-- Top Overlays: Rank Badge + Compare Checkbox -->
-        <div class="absolute top-2.5 left-2.5 z-20">
+        <div class="absolute top-2.5 left-2.5 z-20 flex items-center gap-1.5">
           ${renderRankBadge(index)}
+          <span class="inline-flex items-center gap-1 text-[9.5px] font-extrabold px-2 py-0.5 rounded-lg bg-emerald-500/90 text-white shadow-2xs backdrop-blur-xs font-mono">
+            +${fmtNumber(deltaVal)} <span class="text-[8.5px] opacity-90">${activeTimeframe}</span>
+          </span>
         </div>
 
         <div class="absolute top-2.5 right-2.5 z-20 bg-background/90 backdrop-blur-xs rounded-xl px-2 py-1 border border-border/80 shadow-2xs flex items-center gap-1.5">
@@ -985,7 +1019,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
           <div class="p-4 space-y-2.5">
             <div class="flex flex-wrap items-center gap-1.5">
               ${renderStrategyBadge(strategy)}
-              ${renderStageBadge(p.stage)}
+              ${p.account_username ? `<span class="inline-flex items-center text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">@${escapeHtml(p.account_username)}</span>` : ''}
               ${p.canonical_pin_id ? '<span class="text-[9.5px] font-bold px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-500 border border-purple-500/20">🧬 Cluster</span>' : ''}
             </div>
 
@@ -1031,7 +1065,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
 
         <!-- Footer link -->
         <div class="px-4 py-2.5 bg-muted/20 border-t border-border/60 flex items-center justify-between text-[11px] gap-2">
-          <span class="text-muted-foreground text-[10.5px] truncate max-w-[110px] font-medium">@${p.board_name ? escapeHtml(p.board_name) : 'board'}</span>
+          <span class="text-muted-foreground text-[10.5px] truncate max-w-[110px] font-medium" title="${escapeHtml(accountDisplay)}">${escapeHtml(accountDisplay)}</span>
           <div class="flex items-center gap-2">
             ${destinationUrl ? `
               <a href="${escapeHtml(destinationUrl)}" target="_blank" rel="noopener noreferrer nofollow" class="text-[10.5px] font-medium text-muted-foreground hover:text-foreground hover:underline">
@@ -1051,7 +1085,10 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
   // ═══ Pro Data Table View ═══
   function renderTableView(pagePins: any[], startIdx: number) {
     const tbody = document.getElementById('winners-table-body');
+    const colLabel = document.getElementById('table-col-delta-label');
     if (!tbody) return;
+
+    if (colLabel) colLabel.textContent = `Δ Growth (${activeTimeframe.toUpperCase()})`;
 
     if (pagePins.length === 0) {
       tbody.innerHTML = `
@@ -1069,10 +1106,12 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       const saves = Number(p.saves || 0);
       const repins = Number(p.repins || 0);
       const velocity = Number(p.velocity || 0);
+      const deltaVal = getPinDeltaByActiveTimeframe(p);
       const viralityRatio = saves > 0 ? ((repins / saves) * 100).toFixed(0) : '0';
       const pinterestUrl = `https://www.pinterest.com/pin/${p.pin_id}/`;
       const isSelected = selectedForCompare.has(p.id);
       const strategy = getPinStrategy(p);
+      const accountDisplay = p.account_username ? `@${p.account_username}` : p.board_name || 'account';
 
       return `
         <tr class="hover:bg-muted/30 transition-colors group">
@@ -1098,7 +1137,8 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
                 </a>
                 <div class="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-2">
                   <span>${fmtDate(p.created_at_pinterest)}</span>
-                  ${p.canonical_pin_id ? '<span class="text-purple-500 font-semibold font-mono">🧬 In Cluster</span>' : ''}
+                  ${p.account_username ? `<span class="text-primary font-semibold">@${escapeHtml(p.account_username)}</span>` : ''}
+                  ${p.canonical_pin_id ? '<span class="text-purple-500 font-semibold font-mono">🧬 Cluster</span>' : ''}
                 </div>
               </div>
             </div>
@@ -1116,18 +1156,18 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
             ${renderStrategyBadge(strategy)}
           </td>
 
+          <!-- Delta Growth -->
+          <td class="py-3 px-3 text-right font-extrabold text-emerald-600 dark:text-emerald-400 font-mono text-xs">
+            +${fmtNumber(deltaVal)}
+          </td>
+
           <!-- Saves -->
           <td class="py-3 px-3 text-right font-extrabold text-rose-500 font-mono">
             ${fmtNumber(saves)}
           </td>
 
-          <!-- Repins -->
-          <td class="py-3 px-3 text-right font-extrabold text-foreground font-mono">
-            ${fmtNumber(repins)}
-          </td>
-
           <!-- Velocity -->
-          <td class="py-3 px-3 text-right font-extrabold text-emerald-500 font-mono">
+          <td class="py-3 px-3 text-right font-extrabold text-foreground font-mono">
             ${velocity.toFixed(1)}/d
           </td>
 
@@ -1218,7 +1258,6 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       </button>
     `;
 
-    // Numeric page pills
     const startPage = Math.max(1, currentPage - 2);
     const endPage = Math.min(totalPages, currentPage + 2);
 
@@ -1285,10 +1324,23 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       const rB = Number(b.repins || 0);
       const vrA = sA > 0 ? (rA / sA) * 100 : 0;
       const vrB = sB > 0 ? (rB / sB) * 100 : 0;
+      const d24A = Number(a.delta_saves_24h ?? a.delta_saves ?? 0);
+      const d24B = Number(b.delta_saves_24h ?? b.delta_saves ?? 0);
+      const d3A = Number(a.delta_saves_3d ?? a.delta_saves ?? 0);
+      const d3B = Number(b.delta_saves_3d ?? b.delta_saves ?? 0);
+      const d7A = Number(a.delta_saves_7d ?? a.delta_saves ?? 0);
+      const d7B = Number(b.delta_saves_7d ?? b.delta_saves ?? 0);
       const tA = new Date(a.created_at_pinterest || 0).getTime();
       const tB = new Date(b.created_at_pinterest || 0).getTime();
 
       switch (currentSort) {
+        case 'delta_24h_desc':
+        case 'delta_desc':
+          return d24B - d24A;
+        case 'delta_3d_desc':
+          return d3B - d3A;
+        case 'delta_7d_desc':
+          return d7B - d7A;
         case 'saves_asc':
           return sA - sB;
         case 'velocity_desc':
@@ -1320,7 +1372,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     if (badge) badge.textContent = `${total}`;
 
     // Update Header Sort Icons
-    ['saves', 'repins', 'velocity', 'virality'].forEach((col) => {
+    ['delta', 'saves', 'velocity', 'virality'].forEach((col) => {
       const icon = document.getElementById(`sort-icon-${col}`);
       if (icon) {
         if (currentSort.startsWith(col)) {
@@ -1339,7 +1391,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         if (pagePins.length === 0) {
           grid.innerHTML = `
             <div class="col-span-full py-16 text-center text-xs text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 opacity-40 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 opacity-40 mx-auto mb-2 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               No archived winning pins matched your active filters.
             </div>
           `;
@@ -1531,7 +1583,10 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       const viralityRatio = saves > 0 ? ((repins / saves) * 100).toFixed(0) : '0';
       const strategy = getPinStrategy(p);
 
-      // Forecast Calculations
+      const d24 = Number(p.delta_saves_24h ?? p.delta_saves ?? Math.round(velocity * 1));
+      const d3d = Number(p.delta_saves_3d ?? Math.round(velocity * 3));
+      const d7d = Number(p.delta_saves_7d ?? Math.round(velocity * 7));
+
       const proj7d = Math.round(saves + velocity * 7);
       const proj30d = Math.round(saves + velocity * 30);
 
@@ -1563,7 +1618,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         <div class="space-y-2">
           <div class="flex flex-wrap items-center gap-1.5">
             ${renderStrategyBadge(strategy)}
-            ${renderStageBadge(p.stage)}
+            ${p.account_username ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">@${escapeHtml(p.account_username)}</span>` : ''}
             <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-foreground border border-border">
               @${escapeHtml(p.board_name || 'board')}
             </span>
@@ -1591,10 +1646,26 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
           </a>
         </div>
 
-        <!-- 4-Grid Metrics -->
+        <!-- 3-Pillar Delta Growth Cards (24h / 3d / 7d) -->
+        <div class="grid grid-cols-3 gap-2.5">
+          <div class="bg-emerald-500/10 rounded-2xl p-3 border border-emerald-500/20 text-center">
+            <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase block">🔥 24h Saves</span>
+            <span class="text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">+${fmtNumber(d24)}</span>
+          </div>
+          <div class="bg-emerald-500/10 rounded-2xl p-3 border border-emerald-500/20 text-center">
+            <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase block">📈 3-Day Saves</span>
+            <span class="text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">+${fmtNumber(d3d)}</span>
+          </div>
+          <div class="bg-emerald-500/10 rounded-2xl p-3 border border-emerald-500/20 text-center">
+            <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase block">🗓️ 7-Day Saves</span>
+            <span class="text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">+${fmtNumber(d7d)}</span>
+          </div>
+        </div>
+
+        <!-- 4-Grid Cumulative Metrics -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           <div class="bg-muted/30 rounded-2xl p-3 border border-border text-center">
-            <span class="text-[10px] font-bold text-muted-foreground uppercase block">Saves</span>
+            <span class="text-[10px] font-bold text-muted-foreground uppercase block">Total Saves</span>
             <span class="text-base font-extrabold text-rose-500 font-mono">${fmtNumber(p.saves)}</span>
           </div>
           <div class="bg-muted/30 rounded-2xl p-3 border border-border text-center">
@@ -1617,7 +1688,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
             <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
               <span>📈 Growth Pace Forecast</span>
             </span>
-            <span class="text-[10px] font-semibold text-muted-foreground">Based on ${velocity.toFixed(1)}/d current velocity</span>
+            <span class="text-[10px] font-semibold text-muted-foreground">Based on ${velocity.toFixed(1)}/d pace</span>
           </div>
           <div class="grid grid-cols-2 gap-3 pt-1">
             <div class="bg-background/80 rounded-xl p-2.5 border border-border/80 text-center">
@@ -1836,9 +1907,8 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       return;
     }
 
-    const titles = list.map((p) => `- ${p.title || `Pin ${p.pin_id}`} (@${p.board_name || 'board'} | ${fmtNumber(p.saves)} saves | ${Number(p.velocity || 0).toFixed(1)} saves/day)`).join('\n');
+    const titles = list.map((p) => `- ${p.title || `Pin ${p.pin_id}`} (@${p.account_username || p.board_name || 'account'} | ${fmtNumber(p.saves)} saves | +${fmtNumber(getPinDeltaByActiveTimeframe(p))} in ${activeTimeframe})`).join('\n');
 
-    // Extract top tags
     const tagSet = new Set<string>();
     list.forEach((p) => {
       if (Array.isArray(p.annotations)) {
@@ -1900,6 +1970,7 @@ TASK:
               const p = res.pin;
               const m = Array.isArray(res.metrics) ? res.metrics : [];
               const st = getPinStrategy(p);
+              const d24 = Number(p.delta_saves_24h ?? p.delta_saves ?? 0);
               return `
                 <div class="rounded-2xl border border-border bg-card p-4 space-y-3 shadow-xs">
                   <div class="flex items-center gap-3">
@@ -1909,21 +1980,21 @@ TASK:
                         ${renderStrategyBadge(st)}
                       </div>
                       <h4 class="text-xs font-bold text-foreground line-clamp-1">${escapeHtml(p.title || `Pin ${i + 1}`)}</h4>
-                      <span class="text-[10px] text-muted-foreground">@${escapeHtml(p.board_name || 'board')}</span>
+                      <span class="text-[10px] text-muted-foreground">@${escapeHtml(p.account_username || p.board_name || 'account')}</span>
                     </div>
                   </div>
                   <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-border text-center">
+                    <div class="bg-emerald-500/10 p-2 rounded-xl border border-emerald-500/20">
+                      <span class="text-[9px] font-bold text-emerald-700 dark:text-emerald-300 block">24h Growth</span>
+                      <span class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">+${fmtNumber(d24)}</span>
+                    </div>
                     <div class="bg-muted/30 p-2 rounded-xl">
-                      <span class="text-[9px] font-bold text-muted-foreground block">Saves</span>
+                      <span class="text-[9px] font-bold text-muted-foreground block">Total Saves</span>
                       <span class="text-xs font-extrabold text-rose-500 font-mono">${fmtNumber(p.saves)}</span>
                     </div>
                     <div class="bg-muted/30 p-2 rounded-xl">
-                      <span class="text-[9px] font-bold text-muted-foreground block">Repins</span>
-                      <span class="text-xs font-extrabold text-foreground font-mono">${fmtNumber(p.repins)}</span>
-                    </div>
-                    <div class="bg-muted/30 p-2 rounded-xl">
                       <span class="text-[9px] font-bold text-muted-foreground block">Velocity</span>
-                      <span class="text-xs font-extrabold text-emerald-500 font-mono">${Number(p.velocity || 0).toFixed(1)}/d</span>
+                      <span class="text-xs font-extrabold text-foreground font-mono">${Number(p.velocity || 0).toFixed(1)}/d</span>
                     </div>
                   </div>
                   <div class="space-y-1 pt-1">
@@ -1945,17 +2016,16 @@ TASK:
   function applyActiveFilters() {
     let result = [...rawPins];
 
+    const accountSelect = document.getElementById('filter-account-select') as HTMLSelectElement | null;
+    if (accountSelect && accountSelect.value) {
+      result = result.filter((p) => p.account_id === accountSelect.value || p.account_username === accountSelect.value);
+    }
+
     // Quick Matrix Slicing
     if (activeQuickFilter === 'evergreen') {
       result = result.filter((p) => getPinStrategy(p) === 'EVERGREEN');
     } else if (activeQuickFilter === 'rocket') {
       result = result.filter((p) => getPinStrategy(p) === 'ROCKET');
-    } else if (activeQuickFilter === 'high-virality') {
-      result = result.filter((p) => {
-        const saves = Number(p.saves || 0);
-        const repins = Number(p.repins || 0);
-        return saves > 0 && (repins / saves) * 100 >= 90;
-      });
     } else if (activeQuickFilter === 'spike') {
       result = result.filter((p) => p.anomaly === 'SPIKE');
     } else if (activeQuickFilter === 'cluster') {
@@ -1968,6 +2038,15 @@ TASK:
     updateExecutiveKPIs(filteredPins);
     updateKeywordMining(filteredPins);
     renderActiveView();
+  }
+
+  function populateAccountFilter(accounts: any[]) {
+    const select = document.getElementById('filter-account-select') as HTMLSelectElement | null;
+    if (!select) return;
+
+    const currentVal = select.value;
+    select.innerHTML = '<option value="">All Accounts</option>' +
+      accounts.map((acc) => `<option value="${escapeHtml(acc.id)}" ${acc.id === currentVal ? 'selected' : ''}>@${escapeHtml(acc.username)}</option>`).join('');
   }
 
   function populateBoardFilter(pins: any[]) {
@@ -1983,17 +2062,19 @@ TASK:
 
   async function loadPins(retries = 2) {
     const searchInput = document.getElementById('filter-search-input') as HTMLInputElement | null;
+    const accountSelect = document.getElementById('filter-account-select') as HTMLSelectElement | null;
     const boardSelect = document.getElementById('filter-board-select') as HTMLSelectElement | null;
     const stageSelect = document.getElementById('filter-stage-select') as HTMLSelectElement | null;
     const clusterToggle = document.getElementById('filter-cluster-toggle') as HTMLInputElement | null;
 
     const params = new URLSearchParams();
     if (searchInput?.value) params.set('q', searchInput.value.trim());
+    if (accountSelect?.value) params.set('account_id', accountSelect.value);
     if (boardSelect?.value) params.set('board', boardSelect.value);
     if (stageSelect?.value) params.set('stage', stageSelect.value);
     if (clusterToggle?.checked) params.set('in_cluster', '1');
     params.set('sort', currentSort.startsWith('velocity') ? 'velocity' : 'saves');
-    params.set('limit', '500'); // Fetch ample scope for client pagination & deep slicing
+    params.set('limit', '500');
 
     try {
       const res = await fetch(`/api/pinarchive/pins?${params.toString()}`, { signal: AbortSignal.timeout(8000) });
@@ -2002,6 +2083,11 @@ TASK:
       if (!json.success) throw new Error(json.error || 'Failed to load pins');
 
       rawPins = json.pins || [];
+      rawAccounts = json.accounts || [];
+
+      if (!accountSelect?.value) {
+        populateAccountFilter(rawAccounts);
+      }
 
       if (!boardSelect?.value) {
         populateBoardFilter(rawPins);
@@ -2032,7 +2118,7 @@ TASK:
       return;
     }
 
-    const headers = ['Pin ID', 'Title', 'Board', 'Category', 'Strategy Matrix', 'Saves', 'Repins', 'Velocity', 'Virality %', 'Stage', 'Anomaly', 'Canonical Cluster', 'Pinterest Link', 'Created At'];
+    const headers = ['Pin ID', 'Title', 'Account', 'Board', 'Strategy Matrix', '24h Growth', '3d Growth', '7d Growth', 'Total Saves', 'Repins', 'Velocity', 'Virality %', 'Pinterest Link', 'Created At'];
     const rows = filteredPins.map((p) => {
       const saves = Number(p.saves || 0);
       const repins = Number(p.repins || 0);
@@ -2040,16 +2126,16 @@ TASK:
       return [
         p.pin_id,
         `"${(p.title || '').replace(/"/g, '""')}"`,
+        `"${(p.account_username || '').replace(/"/g, '""')}"`,
         `"${(p.board_name || '').replace(/"/g, '""')}"`,
-        `"${(p.seo_category || '').replace(/"/g, '""')}"`,
         getPinStrategy(p),
+        Number(p.delta_saves_24h || 0),
+        Number(p.delta_saves_3d || 0),
+        Number(p.delta_saves_7d || 0),
         saves,
         repins,
         p.velocity || 0,
         virality,
-        p.stage || 'DORMANT',
-        p.anomaly || 'NONE',
-        p.canonical_pin_id || '',
         `"https://www.pinterest.com/pin/${p.pin_id}/"`,
         p.created_at_pinterest || '',
       ];
@@ -2060,7 +2146,7 @@ TASK:
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `pinarchive-winning-intelligence-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `pinarchive-delta-growth-${activeTimeframe}-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -2069,6 +2155,28 @@ TASK:
 
   function init() {
     loadPins();
+
+    // Growth Timeframe Slicer Pills (24h / 3d / 7d / all)
+    document.querySelectorAll<HTMLButtonElement>('[data-timeframe]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        activeTimeframe = (btn.getAttribute('data-timeframe') || '24h') as any;
+        document.querySelectorAll<HTMLButtonElement>('[data-timeframe]').forEach((b) => {
+          b.className = 'timeframe-pill px-3 py-1.5 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0';
+        });
+        btn.className = 'timeframe-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-primary text-primary-foreground shadow-2xs transition-all cursor-pointer shrink-0';
+
+        // Auto align sort
+        if (activeTimeframe === '24h') currentSort = 'delta_24h_desc';
+        else if (activeTimeframe === '3d') currentSort = 'delta_3d_desc';
+        else if (activeTimeframe === '7d') currentSort = 'delta_7d_desc';
+        else currentSort = 'saves_desc';
+
+        const sortSelect = document.getElementById('pins-sort-select') as HTMLSelectElement | null;
+        if (sortSelect) sortSelect.value = currentSort;
+
+        applyActiveFilters();
+      });
+    });
 
     // View Switcher Buttons
     const gridBtn = document.getElementById('view-grid-btn');
@@ -2111,15 +2219,16 @@ TASK:
       btn.addEventListener('click', () => {
         activeQuickFilter = btn.getAttribute('data-quick-filter') || 'all';
         document.querySelectorAll<HTMLButtonElement>('[data-quick-filter]').forEach((b) => {
-          b.className = 'quick-pill px-3 py-1 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0';
+          b.className = 'quick-pill px-2.5 py-1 rounded-lg text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0';
         });
-        btn.className = 'quick-pill active px-3 py-1 rounded-xl text-xs font-bold bg-primary text-primary-foreground transition-all cursor-pointer shrink-0';
+        btn.className = 'quick-pill active px-2.5 py-1 rounded-lg text-xs font-bold bg-muted text-foreground transition-all cursor-pointer shrink-0';
         applyActiveFilters();
       });
     });
 
     // Filter controls
     const searchInput = document.getElementById('filter-search-input');
+    const accountSelect = document.getElementById('filter-account-select');
     const boardSelect = document.getElementById('filter-board-select');
     const stageSelect = document.getElementById('filter-stage-select');
     const clusterToggle = document.getElementById('filter-cluster-toggle');
@@ -2135,6 +2244,7 @@ TASK:
       });
     }
 
+    if (accountSelect) accountSelect.addEventListener('change', () => applyActiveFilters());
     if (boardSelect) boardSelect.addEventListener('change', loadPins);
     if (stageSelect) stageSelect.addEventListener('change', loadPins);
     if (clusterToggle) clusterToggle.addEventListener('change', loadPins);
@@ -2142,14 +2252,17 @@ TASK:
     if (clearBtn) {
       clearBtn.addEventListener('click', () => {
         if (searchInput) (searchInput as HTMLInputElement).value = '';
+        if (accountSelect) (accountSelect as HTMLSelectElement).value = '';
         if (boardSelect) (boardSelect as HTMLSelectElement).value = '';
         if (stageSelect) (stageSelect as HTMLSelectElement).value = '';
         if (clusterToggle) (clusterToggle as HTMLInputElement).checked = false;
         activeQuickFilter = 'all';
-        document.querySelectorAll<HTMLButtonElement>('[data-quick-filter]').forEach((b) => {
-          b.className = b.getAttribute('data-quick-filter') === 'all'
-            ? 'quick-pill active px-3 py-1 rounded-xl text-xs font-bold bg-primary text-primary-foreground transition-all cursor-pointer shrink-0'
-            : 'quick-pill px-3 py-1 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0';
+        activeTimeframe = '24h';
+        currentSort = 'delta_24h_desc';
+        document.querySelectorAll<HTMLButtonElement>('[data-timeframe]').forEach((b) => {
+          b.className = b.getAttribute('data-timeframe') === '24h'
+            ? 'timeframe-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-primary text-primary-foreground shadow-2xs transition-all cursor-pointer shrink-0'
+            : 'timeframe-pill px-3 py-1.5 rounded-xl text-xs font-semibold bg-background border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shrink-0';
         });
         loadPins();
       });
@@ -2193,7 +2306,9 @@ TASK:
       th.addEventListener('click', () => {
         const sortKey = th.getAttribute('data-sort');
         if (!sortKey) return;
-        if (currentSort === `${sortKey}_desc`) {
+        if (sortKey === 'delta') {
+          currentSort = currentSort === `delta_${activeTimeframe}_desc` || currentSort === 'delta_desc' ? 'delta_asc' : `delta_${activeTimeframe}_desc`;
+        } else if (currentSort === `${sortKey}_desc`) {
           currentSort = `${sortKey}_asc`;
         } else {
           currentSort = `${sortKey}_desc`;

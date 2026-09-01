@@ -61,7 +61,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return json({ success: false, error: 'Invalid account_id format.' }, 422);
   }
 
-  // New Server-Paginated RPC Mode for Account Pins Page
+  // Server-Paginated RPC Mode for Account Pins Page
   if (searchParams.get('mode') === 'page') {
     if (!accountId) {
       return json({ success: false, error: 'account_id is required for mode=page.' }, 422);
@@ -104,6 +104,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         return {
           id: p.id,
           pin_id: p.pin_id,
+          account_id: p.account_id,
           title: p.title,
           image_url: p.image_url,
           link: p.link,
@@ -157,9 +158,22 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const risA = Number(wsSettings?.pin_filter_rising_age_days ?? 14);
     const risS = Number(wsSettings?.pin_filter_rising_saves ?? 34);
 
+    // 2. Load accounts list for multi-account workspace mapping
+    const { data: accountsData } = await db
+      .from('pa_accounts')
+      .select('id, username, status, follower_count, pins_count')
+      .eq('workspace_id', ws)
+      .order('username', { ascending: true });
+
+    const accounts = Array.isArray(accountsData) ? accountsData : [];
+    const accountMap = new Map<string, string>();
+    accounts.forEach((acc) => {
+      accountMap.set(acc.id, acc.username);
+    });
+
     let query = db
       .from('pa_pins')
-      .select('id, pin_id, title, image_url, link, saves, repins, comments, share_count, velocity, annotations, seo_category, canonical_pin_id, archived_at, board_name, board_id, dominant_color, node_id, is_video, created_at_pinterest, notes, notes_updated_at')
+      .select('id, pin_id, account_id, title, image_url, link, saves, repins, comments, share_count, velocity, annotations, seo_category, canonical_pin_id, archived_at, board_name, board_id, dominant_color, node_id, is_video, created_at_pinterest, notes, notes_updated_at')
       .eq('workspace_id', ws);
 
     if (accountId) {
@@ -207,38 +221,84 @@ export const GET: APIRoute = async ({ request, locals }) => {
           .select('pin_ref, recorded_at, saves, repins, comments, shares, reactions_total')
           .in('pin_ref', chunk)
           .order('recorded_at', { ascending: false })
-          .limit(chunk.length * 5);
+          .limit(chunk.length * 15);
 
         if (Array.isArray(metricsData)) {
           for (const m of metricsData) {
             const list = metricsMap.get(m.pin_ref) || [];
-            if (list.length < 2) list.push(m);
+            list.push(m);
             metricsMap.set(m.pin_ref, list);
           }
         }
       }
 
-      for (const p of pins) {
-        const snaps = metricsMap.get(p.id) || [];
-        let deltaSaves = 0;
-        let daysBetween = 1;
-        if (snaps.length >= 2) {
-          deltaSaves = Number(snaps[0].saves || 0) - Number(snaps[1].saves || 0);
-          const t0 = new Date(snaps[0].recorded_at).getTime();
-          const t1 = new Date(snaps[1].recorded_at).getTime();
-          daysBetween = Math.max(0.01, (t0 - t1) / 86400000);
-        }
+      const now = Date.now();
+      const oneDayMs = 86400000;
+      const threeDaysMs = oneDayMs * 3;
+      const sevenDaysMs = oneDayMs * 7;
 
-        const ageDays = Math.max(0, (Date.now() - new Date(p.created_at_pinterest || p.archived_at || Date.now()).getTime()) / 86400000);
+      for (const p of pins) {
+        p.account_username = p.account_id ? accountMap.get(p.account_id) || null : null;
+        const snaps = metricsMap.get(p.id) || [];
+        const currentSaves = Number(p.saves || 0);
+        const currentRepins = Number(p.repins || 0);
         const velocity = Number(p.velocity || 0);
 
-        const stage = computePinStage(velocity, deltaSaves, ageDays);
-        const anomaly = computePinAnomaly(deltaSaves, velocity, daysBetween);
+        let deltaSaves24h = Math.round(velocity * 1);
+        let deltaSaves3d = Math.round(velocity * 3);
+        let deltaSaves7d = Math.round(velocity * 7);
+        let deltaRepins24h = Math.round(velocity * 0.5);
+        let deltaRepins7d = Math.round(velocity * 3.5);
+
+        if (snaps.length >= 2) {
+          const t0 = new Date(snaps[0].recorded_at).getTime();
+          const s0 = Number(snaps[0].saves || 0);
+          const r0 = Number(snaps[0].repins || 0);
+
+          // Find snap closest to ~24h ago
+          const snap24h = snaps.find((s) => (t0 - new Date(s.recorded_at).getTime()) >= oneDayMs * 0.75);
+          if (snap24h) {
+            deltaSaves24h = Math.max(0, s0 - Number(snap24h.saves || 0));
+            deltaRepins24h = Math.max(0, r0 - Number(snap24h.repins || 0));
+          } else {
+            const deltaRecent = Math.max(0, s0 - Number(snaps[1].saves || 0));
+            const daysDiff = Math.max(0.01, (t0 - new Date(snaps[1].recorded_at).getTime()) / oneDayMs);
+            deltaSaves24h = Math.max(0, Math.round(deltaRecent / daysDiff));
+            deltaRepins24h = Math.max(0, Math.round((r0 - Number(snaps[1].repins || 0)) / daysDiff));
+          }
+
+          // Find snap closest to ~3d ago
+          const snap3d = snaps.find((s) => (t0 - new Date(s.recorded_at).getTime()) >= threeDaysMs * 0.75);
+          if (snap3d) {
+            deltaSaves3d = Math.max(0, s0 - Number(snap3d.saves || 0));
+          } else {
+            deltaSaves3d = Math.max(deltaSaves24h, Math.round(deltaSaves24h * 3));
+          }
+
+          // Find snap closest to ~7d ago
+          const snap7d = snaps.find((s) => (t0 - new Date(s.recorded_at).getTime()) >= sevenDaysMs * 0.75) || snaps[snaps.length - 1];
+          if (snap7d && snap7d !== snaps[0]) {
+            deltaSaves7d = Math.max(0, s0 - Number(snap7d.saves || 0));
+            deltaRepins7d = Math.max(0, r0 - Number(snap7d.repins || 0));
+          } else {
+            deltaSaves7d = Math.max(deltaSaves3d, Math.round(deltaSaves24h * 7));
+            deltaRepins7d = Math.max(deltaRepins24h, Math.round(deltaRepins24h * 7));
+          }
+        }
+
+        const ageDays = Math.max(0, (now - new Date(p.created_at_pinterest || p.archived_at || now).getTime()) / oneDayMs);
+        const stage = computePinStage(velocity, deltaSaves24h, ageDays);
+        const anomaly = computePinAnomaly(deltaSaves24h, velocity, 1);
 
         p.age_days = Math.round(ageDays * 10) / 10;
         p.stage = stage;
         p.anomaly = anomaly;
-        p.delta_saves = deltaSaves;
+        p.delta_saves = deltaSaves24h;
+        p.delta_saves_24h = deltaSaves24h;
+        p.delta_saves_3d = deltaSaves3d;
+        p.delta_saves_7d = deltaSaves7d;
+        p.delta_repins_24h = deltaRepins24h;
+        p.delta_repins_7d = deltaRepins7d;
       }
     }
 
@@ -247,6 +307,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return json({
       success: true,
       pins: filteredPins,
+      accounts,
       count: filteredPins.length,
       sort: sortCol,
       filters: { minSaves, minRepins, risingAgeDays: risA, risingSaves: risS },
