@@ -452,9 +452,9 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
           saves: Math.max(Number(p.saves || 0), existing?.saves || 0),
           repins: Math.max(Number(p.repins || 0), existing?.repins || 0),
           comments: Math.max(Number(p.comments || 0), existing?.comments || 0),
-          reactions: p.reactions === undefined
-            ? (existing?.reactions ?? {})
-            : (typeof p.reactions === 'object' && p.reactions !== null ? p.reactions : (existing?.reactions ?? {})),
+          reactions: (p.reactions && typeof (p.reactions as any)?.total === 'number' && (p.reactions as any)?.total > 0)
+            ? p.reactions
+            : (existing?.reactions && typeof (existing.reactions as any)?.total === 'number' && (existing.reactions as any)?.total > 0 ? existing.reactions : (p.reactions ?? existing?.reactions ?? {})),
           velocity: Number(p.velocity || 0),
           promoted: p.promoted !== undefined ? Boolean(p.promoted) : (existing?.promoted ?? false),
           last_updated_at: fetchedAt,
@@ -508,7 +508,10 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
           const curRepins = Number(up.repins || 0);
           const curShares = Number(up.share_count || 0);
           const curComments = Number(up.comments || 0);
-          const curReactions = Number((up.reactions as any)?.total || 0);
+          const curReactions = Math.max(
+            Number((up.reactions as any)?.total || 0),
+            Number((existing?.reactions as any)?.total || 0)
+          );
 
           const isAdvanced =
             !existing ||
