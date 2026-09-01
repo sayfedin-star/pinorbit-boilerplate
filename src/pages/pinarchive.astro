@@ -810,6 +810,20 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
             </label>
           </div>
 
+          <!-- Run Discover Pins Immediately Checkbox -->
+          <div class="rounded-xl bg-muted/40 border border-border/80 p-3 flex items-start gap-2.5">
+            <input
+              id="run-discovery-now-checkbox"
+              type="checkbox"
+              checked
+              class="mt-0.5 rounded accent-primary h-4 w-4 cursor-pointer"
+            />
+            <label for="run-discovery-now-checkbox" class="text-xs text-foreground cursor-pointer select-none">
+              <span class="font-bold block">🧠 Run Discover Pins immediately</span>
+              <span class="text-[11px] text-muted-foreground block">Dispatches the discovery pipeline to fetch and archive the creator's latest viral pins right away.</span>
+            </label>
+          </div>
+
           <div id="add-creator-error" class="hidden text-xs text-rose-500 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-xl font-medium"></div>
 
           <div class="flex items-center justify-end gap-2 pt-3 border-t border-border">
@@ -1069,7 +1083,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
   let selectedInterval = 'all';
   let isCompactNumbers = localStorage.getItem('pa_num_fmt') === 'compact';
   let isCompactDensity = localStorage.getItem('pa_density') === 'compact';
-  let competitorUsernames = new Set<string>();
+  let competitorMap = new Map<string, { id: string; username: string }>();
 
   async function loadCompetitorUsernames() {
     try {
@@ -1080,7 +1094,15 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       if (res.ok) {
         const json = await res.json();
         if (json.competitors && Array.isArray(json.competitors)) {
-          competitorUsernames = new Set(json.competitors.map((c: any) => String(c.username || '').toLowerCase()));
+          competitorMap.clear();
+          for (const c of json.competitors) {
+            if (c.username) {
+              competitorMap.set(String(c.username).toLowerCase().trim(), {
+                id: c.id,
+                username: c.username,
+              });
+            }
+          }
         }
       }
     } catch (e) {
@@ -1517,9 +1539,11 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
           dynamicCells += `<td class="${padClass} text-[11px] text-muted-foreground max-w-[180px] truncate" title="${escapeHtml(acc.last_result || '')}">${escapeHtml(acc.last_result || '—')}</td>`;
         }
 
-        const isCompetitor = competitorUsernames.has((acc.username || '').toLowerCase());
+        const compInfo = competitorMap.get((acc.username || '').toLowerCase().trim());
+        const isCompetitor = Boolean(compInfo);
+        const compHref = compInfo?.id ? `/competitors/details?id=${encodeURIComponent(compInfo.id)}` : '/competitors';
         const compBadge = isCompetitor
-          ? `<a href="/competitors" title="Tracked in Competitor Intelligence" class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md text-[9.5px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors shadow-2xs">
+          ? `<a href="${compHref}" title="View @${escapeHtml(acc.username)} in Competitor Intelligence" class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md text-[9.5px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors shadow-2xs">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
               <span>Comp</span>
             </a>`
@@ -1583,9 +1607,9 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
               <div class="inline-flex items-center justify-end gap-1.5">
                 ${isCompetitor ? `
                   <a
-                    href="/competitors"
+                    href="${compHref}"
                     class="inline-flex items-center justify-center h-7 w-7 rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-colors shadow-2xs"
-                    title="View in Competitor Intelligence"
+                    title="View @${escapeHtml(acc.username)} in Competitor Intelligence"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
                   </a>
@@ -2781,6 +2805,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       const usernameInput = document.getElementById('new-creator-username') as HTMLInputElement | null;
       const intervalSelect = document.getElementById('new-creator-interval') as HTMLSelectElement | null;
       const syncCheckbox = document.getElementById('sync-to-competitors-checkbox') as HTMLInputElement | null;
+      const runDiscoveryCheckbox = document.getElementById('run-discovery-now-checkbox') as HTMLInputElement | null;
       const errorDiv = document.getElementById('add-creator-error');
       const submitBtn = document.getElementById('submit-add-creator-btn') as HTMLButtonElement | null;
 
@@ -2788,6 +2813,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         if (form) form.reset();
         if (intervalSelect) intervalSelect.value = '1';
         if (syncCheckbox) syncCheckbox.checked = true;
+        if (runDiscoveryCheckbox) runDiscoveryCheckbox.checked = true;
         if (errorDiv) {
           errorDiv.textContent = '';
           errorDiv.classList.add('hidden');
@@ -2824,6 +2850,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         const wsId = root?.getAttribute('data-workspace-id');
         const intervalVal = Number(intervalSelect?.value || 1);
         const syncToComp = Boolean(syncCheckbox?.checked);
+        const runDiscovery = Boolean(runDiscoveryCheckbox?.checked);
 
         if (submitBtn) {
           submitBtn.disabled = true;
@@ -2864,7 +2891,24 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
             }
           }
 
-          toast(`Started tracking @${cleanUser} in PinArchive!`);
+          // 3. Optionally dispatch initial Discover Pins immediately
+          if (runDiscovery) {
+            try {
+              await fetch('/api/pinarchive/accounts-gas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'run_now',
+                  workspace_id: wsId,
+                  usernames: [cleanUser],
+                }),
+              });
+            } catch (gasErr) {
+              console.warn('Discover pins immediate dispatch deferred:', gasErr);
+            }
+          }
+
+          toast(`Started tracking @${cleanUser} in PinArchive${runDiscovery ? ' and dispatched Discover Pins' : ''}!`);
           closeModal();
           loadOverview(1);
         } catch (err: any) {
