@@ -797,6 +797,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
           </div>
 
           <!-- Cross-Module Sync Checkbox -->
+          <!-- Cross-Module Sync & Immediate Scraping Checkbox -->
           <div class="rounded-xl bg-muted/40 border border-border/80 p-3 flex items-start gap-2.5">
             <input
               id="sync-to-competitors-checkbox"
@@ -805,8 +806,8 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
               class="mt-0.5 rounded accent-primary h-4 w-4 cursor-pointer"
             />
             <label for="sync-to-competitors-checkbox" class="text-xs text-foreground cursor-pointer select-none">
-              <span class="font-bold block">Also track in Competitor Intelligence</span>
-              <span class="text-[11px] text-muted-foreground block">Syncs profile reach, follower velocity, and snapshot analytics automatically.</span>
+              <span class="font-bold block">🎯 Also track & scrape in Competitor Intelligence</span>
+              <span class="text-[11px] text-muted-foreground block">Adds creator to Competitors DB and triggers immediate profile metrics scraping.</span>
             </label>
           </div>
 
@@ -820,7 +821,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
             />
             <label for="run-discovery-now-checkbox" class="text-xs text-foreground cursor-pointer select-none">
               <span class="font-bold block">🧠 Run Discover Pins immediately</span>
-              <span class="text-[11px] text-muted-foreground block">Dispatches the discovery pipeline to fetch and archive the creator's latest viral pins right away.</span>
+              <span class="text-[11px] text-muted-foreground block">Dispatches the PinArchive discovery pipeline to fetch and archive viral candidate pins right away.</span>
             </label>
           </div>
 
@@ -2325,7 +2326,23 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
           });
           const json = await res.json();
           if (res.ok && json.success) {
-            toast(`Sent @${username} to Competitor Intelligence!`);
+            toast(`Sent @${username} to Competitor Intelligence & dispatched scraper!`);
+            const compId = json.competitor?.id || json.competitors?.[0]?.id;
+            // Dispatch immediate scraping for this competitor
+            fetch('/api/admin/competitor-ops', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'dispatch',
+                workspace_id: wsId,
+                competitor_id: compId || undefined,
+                target_username: username,
+                trigger: 'pinarchive_send',
+                force: true,
+              }),
+            }).catch(console.warn);
+
+            loadOverview(1);
           } else {
             toast(json.error || 'Failed to send account to Competitor Intelligence', 'error');
           }
@@ -2579,7 +2596,22 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         });
         const json = await res.json();
         if (res.ok && json.success) {
-          toast(`Sent ${json.count || selectedUsernames.length} account(s) to Competitor Intelligence!`);
+          toast(`Sent ${json.count || selectedUsernames.length} account(s) to Competitor Intelligence & dispatched scrapers!`);
+          const compIds = (json.competitors || []).map((c: any) => c.id).filter(Boolean);
+          // Dispatch immediate scraping for the selected competitors
+          fetch('/api/admin/competitor-ops', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'dispatch',
+              workspace_id: wsId,
+              ids: compIds,
+              trigger: 'pinarchive_bulk_send',
+              force: true,
+            }),
+          }).catch(console.warn);
+
+          loadOverview(1);
         } else {
           toast(json.error || 'Failed to send accounts to Competitor Intelligence', 'error');
         }
@@ -2874,10 +2906,10 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
             throw new Error(paJson.error || 'Failed to add account to PinArchive');
           }
 
-          // 2. Optionally sync to Competitor Intelligence
+          // 2. Optionally sync to Competitor Intelligence & dispatch immediate scraper
           if (syncToComp) {
             try {
-              await fetch('/api/admin/competitors', {
+              const compRes = await fetch('/api/admin/competitors', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -2886,8 +2918,24 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
                   account_type: 'competitor',
                 }),
               });
+              const compJson = await compRes.json();
+              const compId = compJson?.competitor?.id || compJson?.competitors?.[0]?.id;
+
+              // Immediately dispatch Competitor Scraper workflow on GitHub Actions
+              fetch('/api/admin/competitor-ops', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'dispatch',
+                  workspace_id: wsId,
+                  competitor_id: compId || undefined,
+                  target_username: cleanUser,
+                  trigger: 'creator_modal',
+                  force: true,
+                }),
+              }).catch(console.warn);
             } catch (compErr) {
-              console.warn('Competitor sync deferred:', compErr);
+              console.warn('Competitor sync/dispatch deferred:', compErr);
             }
           }
 
@@ -2908,7 +2956,13 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
             }
           }
 
-          toast(`Started tracking @${cleanUser} in PinArchive${runDiscovery ? ' and dispatched Discover Pins' : ''}!`);
+          const toastDetails = [
+            'PinArchive added',
+            runDiscovery ? 'Discover Pins dispatched' : null,
+            syncToComp ? 'Competitor Scraper dispatched' : null,
+          ].filter(Boolean).join(' • ');
+
+          toast(`Started tracking @${cleanUser}! (${toastDetails})`);
           closeModal();
           loadOverview(1);
         } catch (err: any) {
