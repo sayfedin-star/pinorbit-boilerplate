@@ -42,6 +42,11 @@ on:
         type: string
         required: false
         default: ''
+      job_id:
+        description: 'Competitor ingestion job UUID (optional)'
+        type: string
+        required: false
+        default: ''
 
 jobs:
   sync:
@@ -51,6 +56,7 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       PINTEREST_COOKIE: ${{ secrets.PINTEREST_COOKIE }}
       WORKSPACE_ID: ${{ github.event.inputs.workspace_id || '' }}
+      JOB_ID: ${{ github.event.inputs.job_id || '' }}
       TARGET_SCOPE: ${{ github.event.inputs.target_scope || '' }}
       COMPETITOR_IDS: ${{ github.event.inputs.competitor_ids || '' }}
       TARGET_USERNAME: ${{ github.event.inputs.target_username || '' }}

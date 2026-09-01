@@ -197,9 +197,11 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
             <RunNowButton
               endpoint="/api/internal/competitors/dispatch"
               payload={{ workspace_id: workspaceId, pipeline: "competitors" }}
-              label="Run Now"
+              label={isMasterWorkspace ? 'Run All Workspaces' : 'Run Now'}
               forceLabel="⚡ Force Run"
               scope="competitors"
+              isMaster={isMasterWorkspace}
+              currentWsName={currentWorkspace?.name || 'Hymum'}
             />
 
             <!-- New Schedule Button -->

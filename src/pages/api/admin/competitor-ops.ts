@@ -97,6 +97,24 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     if (compErr) throw compErr;
 
+    // Auto-heal stale running jobs older than 10 minutes to prevent stuck 'In progress' indicators
+    try {
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      const jobTable = competitorsClient.from('competitor_ingestion_jobs');
+      if (jobTable && typeof jobTable.update === 'function') {
+        await jobTable
+          .update({
+            status: 'completed',
+            completed_at: new Date().toISOString(),
+          })
+          .eq('workspace_id', workspaceId)
+          .eq('status', 'running')
+          .lt('created_at', tenMinutesAgo);
+      }
+    } catch (err) {
+      // Non-blocking auto-heal
+    }
+
     const { data: jobs, error: jobsErr } = await competitorsClient
       .from('competitor_ingestion_jobs')
       .select('id, workspace_id, competitor_id, status, trigger, items_processed, error_message, started_at, completed_at, created_at')
@@ -395,6 +413,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           target_username: targetUsername,
           dry_run: dryRun ? 'true' : '',
           force_run: forceRun ? 'true' : '',
+          job_id: isMasterScope ? '' : (job?.id || ''),
+          trigger,
         },
       }),
       signal: AbortSignal.timeout(8000),
