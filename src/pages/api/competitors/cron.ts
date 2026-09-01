@@ -747,8 +747,9 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     await compAdmin
       .from('competitor_pipeline_settings')
       .update({
+        cron_expression: null,
         fastcron_job_id: null,
-        schedule_status: 'pending',
+        schedule_status: 'disabled',
         updated_at: new Date().toISOString(),
       })
       .eq('workspace_id', workspaceId);
