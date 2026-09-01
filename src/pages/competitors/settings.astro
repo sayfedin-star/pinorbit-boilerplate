@@ -1266,15 +1266,20 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
 
     paceVal.textContent = `${activeCount} Active Schedule${activeCount === 1 ? '' : 's'} · ~${activeCount * 7} Runs / Week`;
     if (paceDesc) {
-      paceDesc.textContent = `Schedules synchronized with FastCron (${loadedTokens.length} token${loadedTokens.length === 1 ? '' : 's'} in vault).`;
+      const tokCount = loadedTokens.length;
+      paceDesc.textContent = `Schedules synchronized with FastCron (${tokCount} token${tokCount === 1 ? '' : 's'} in vault).`;
     }
   }
 
   async function loadSchedules() {
     try {
       const res = await fetchAPI('/api/competitors/schedules');
-      if (res.success) {
+      if (res.success || Array.isArray(res.schedules)) {
         loadedSchedules = res.schedules || [];
+        if (Array.isArray(res.tokens) && res.tokens.length > 0 && loadedTokens.length === 0) {
+          loadedTokens = res.tokens;
+          renderTokens();
+        }
         renderSchedules();
         updateCadenceBanner();
       }
@@ -1301,10 +1306,10 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
           ${escHtml(t.name)}
           ${t.is_default ? '<span class="ml-1 text-[9px] bg-primary/20 text-primary px-1 py-0.2 rounded font-semibold">default</span>' : ''}
         </td>
-        <td class="p-2 font-mono text-[10px] text-muted-foreground">${escHtml(t.masked_token)}</td>
+        <td class="p-2 font-mono text-[10px] text-muted-foreground">${escHtml(t.masked_token || t.token_masked || '••••••••')}</td>
         <td class="p-2">
-          <span class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[9px] font-bold ${t.is_active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-muted text-muted-foreground'}">
-            ${t.is_active ? 'Active' : 'Disabled'}
+          <span class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[9px] font-bold ${t.is_active !== false ? 'bg-emerald-500/10 text-emerald-500' : 'bg-muted text-muted-foreground'}">
+            ${t.is_active !== false ? 'Active' : 'Disabled'}
           </span>
         </td>
         <td class="p-2 text-right">
@@ -1315,19 +1320,23 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
 
     if (select) {
       select.innerHTML = `<option value="">Default (Workspace / Environment)</option>` +
-        loadedTokens.map((t: any) => `<option value="${t.id}">${escHtml(t.name)} (${escHtml(t.masked_token)})</option>`).join('');
+        loadedTokens.map((t: any) => `<option value="${t.id}">${escHtml(t.name)} (${escHtml(t.masked_token || t.token_masked || '••••••••')})</option>`).join('');
     }
   }
 
   async function loadTokens() {
     try {
       const res = await fetchAPI('/api/competitors/tokens');
-      if (res.success) {
-        loadedTokens = res.tokens || [];
-        renderTokens();
-      }
+      const tokenList = Array.isArray(res) ? res : (res?.tokens || []);
+      loadedTokens = tokenList;
+      renderTokens();
+      updateCadenceBanner();
     } catch (err: any) {
       console.warn('[Competitor Tokens] Load error:', err);
+      const tbody = $('tokens-table-rows');
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-rose-500 font-semibold">Failed to load tokens</td></tr>`;
+      }
     }
   }
 
@@ -2024,6 +2033,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
   // ─── Global State Loader ──────────────────────────────────────────────────
   async function loadAllState() {
     await Promise.all([loadSchedules(), loadTokens()]);
+    updateCadenceBanner();
 
     try {
       const [opsRes, cookiesRes] = await Promise.all([
@@ -2163,9 +2173,11 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     const statusEl = $('token-status-msg');
     if (statusEl) statusEl.textContent = 'Testing connection...';
     try {
-      await fetchAPI('/api/competitors/tokens');
-      if (statusEl) statusEl.textContent = '✓ Connection healthy';
+      const res = await fetchAPI('/api/competitors/tokens');
+      const count = Array.isArray(res) ? res.length : (res?.tokens?.length || 0);
+      if (statusEl) statusEl.textContent = `✓ Connection healthy (${count} token${count === 1 ? '' : 's'})`;
       toast('FastCron token registry connection verified', 'success');
+      await loadTokens();
     } catch (err: any) {
       if (statusEl) statusEl.textContent = '⚠ Connection error';
       toast(`Connection check failed: ${err.message}`, 'error');
