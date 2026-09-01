@@ -433,7 +433,7 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       expect(json.updated).toBe(2);
-      expect(updatePayload).toEqual({ ingest_enabled: false });
+      expect(updatePayload).toEqual({ ingest_enabled: false, status: 'paused' });
       expect(scopedWsId).toBe(mockWsId);
       expect(scopedInIds).toEqual([mockAccId1, mockAccId2]);
     });

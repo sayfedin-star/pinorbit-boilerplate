@@ -3897,5 +3897,9 @@ import ProviderBadge from '../../components/cron/ProviderBadge.astro';
     });
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 </script>

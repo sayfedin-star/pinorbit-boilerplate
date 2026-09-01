@@ -1957,10 +1957,16 @@ import Layout from '../../layouts/Layout.astro';
   }
 
   // ─── Initialization ───
-  document.addEventListener('DOMContentLoaded', () => {
+  function initCompetitorDetails() {
     buildSnapColVisibilityMenu();
     setupSnapColVisibilityToggle();
     attachLoadBoardsBtnHandler();
     loadDetails();
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCompetitorDetails);
+  } else {
+    initCompetitorDetails();
+  }
 </script>

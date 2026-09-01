@@ -991,7 +991,7 @@ const analyticsTabs = [
     if (drawer) drawer.classList.add('hidden');
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
+  function initAnalytics() {
     // Window selector buttons
     document.querySelectorAll('#global-window-toggles .window-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -1419,6 +1419,12 @@ const analyticsTabs = [
     }
 
     loadConnections();
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAnalytics);
+  } else {
+    initAnalytics();
+  }
 </script>
 

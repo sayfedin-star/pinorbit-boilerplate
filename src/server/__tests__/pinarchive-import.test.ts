@@ -395,7 +395,7 @@ describe('PinArchive Competitor Import & Bridge Test Suite', () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       expect(json.imported).toBe(1);
-      expect(insertedRowData.interval_days).toBeUndefined();
+      expect(insertedRowData.interval_days).toBe(1);
       expect(insertedRowData.status).toBe('active');
       expect(insertedRowData.ingest_enabled).toBe(true);
 
