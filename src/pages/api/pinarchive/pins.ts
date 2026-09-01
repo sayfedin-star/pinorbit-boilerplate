@@ -73,6 +73,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const pageSize = Math.min(Math.max(isNaN(pageSizeRaw) ? 50 : pageSizeRaw, 1), 100);
     const page = Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1);
     const offset = (page - 1) * pageSize;
+    const maxSavesRaw = searchParams.get('max_saves');
+    const maxSaves = maxSavesRaw !== null && maxSavesRaw !== '' && !isNaN(Number(maxSavesRaw)) ? Number(maxSavesRaw) : null;
+    const minSavesRaw = searchParams.get('min_saves');
+    const minSavesRpc = minSavesRaw !== null && minSavesRaw !== '' && !isNaN(Number(minSavesRaw)) ? Number(minSavesRaw) : null;
 
     try {
       const { data, error } = await db.rpc('pa_account_pins_page', {
@@ -85,6 +89,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
         p_asc: asc,
         p_limit: pageSize,
         p_offset: offset,
+        p_max_saves: maxSaves,
+        p_min_saves: minSavesRpc,
       });
 
       if (error) {
@@ -329,6 +335,101 @@ export const GET: APIRoute = async ({ request, locals }) => {
       count: filteredPins.length,
       sort: sortCol,
       filters: { minSaves, minRepins, risingAgeDays: risA, risingSaves: risS },
+    });
+  } catch (e: any) {
+    return json({ success: false, error: e.message || 'Internal Server Error' }, 500);
+  }
+};
+
+export const DELETE: APIRoute = async ({ request, locals }) => {
+  const user = locals.user;
+  const schedulingClient = locals.supabase;
+  if (!user || !schedulingClient) {
+    return json({ success: false, error: 'Unauthorized: missing session' }, 401);
+  }
+
+  let body: any = {};
+  try {
+    body = await request.json();
+  } catch {
+    return json({ success: false, error: 'Invalid JSON payload.' }, 400);
+  }
+
+  const workspaceId = body.workspace_id || locals.activeWorkspaceId;
+  if (!workspaceId || !UUID_REGEX.test(workspaceId)) {
+    return json({ success: false, error: 'Invalid or missing workspace identifier.' }, 400);
+  }
+
+  let wsCtx;
+  try {
+    wsCtx = await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
+  } catch (e: any) {
+    return json({ success: false, error: e.message || 'Forbidden: Admin access required' }, errorStatus(e));
+  }
+
+  const accountId = body.account_id?.trim();
+  if (accountId && !UUID_REGEX.test(accountId)) {
+    return json({ success: false, error: 'Invalid account_id format.' }, 422);
+  }
+
+  const maxSaves = body.max_saves !== undefined && body.max_saves !== null && body.max_saves !== '' ? Number(body.max_saves) : undefined;
+  const pinIds = Array.isArray(body.pin_ids) ? body.pin_ids.map((id: any) => String(id).trim()).filter(Boolean) : undefined;
+
+  if (maxSaves === undefined && (!pinIds || pinIds.length === 0)) {
+    return json({ success: false, error: 'Either pin_ids array or max_saves threshold must be provided.' }, 400);
+  }
+
+  if (maxSaves !== undefined && (!Number.isInteger(maxSaves) || maxSaves < 0 || maxSaves > 10000000)) {
+    return json({ success: false, error: 'max_saves must be an integer between 0 and 10000000.' }, 422);
+  }
+
+  try {
+    const db = dbClients.getPinArchive(locals.runtime?.env);
+    let deleteQuery = db.from('pa_pins').delete({ count: 'exact' }).eq('workspace_id', wsCtx.workspaceId);
+
+    if (accountId) {
+      deleteQuery = deleteQuery.eq('account_id', accountId);
+    }
+
+    if (maxSaves !== undefined) {
+      deleteQuery = deleteQuery.lte('saves', maxSaves);
+    } else if (pinIds && pinIds.length > 0) {
+      const areUuids = pinIds.every((id: string) => UUID_REGEX.test(id));
+      if (areUuids) {
+        deleteQuery = deleteQuery.in('id', pinIds);
+      } else {
+        deleteQuery = deleteQuery.in('pin_id', pinIds);
+      }
+    }
+
+    const { count: deletedCount, error: delErr } = await deleteQuery;
+
+    if (delErr) {
+      return json({ success: false, error: delErr.message }, 500);
+    }
+
+    // Recalculate remaining pins_count for account if accountId is present
+    let remainingCount = 0;
+    if (accountId) {
+      const { count } = await db
+        .from('pa_pins')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', wsCtx.workspaceId)
+        .eq('account_id', accountId);
+
+      remainingCount = count ?? 0;
+      await db
+        .from('pa_accounts')
+        .update({ pins_count: remainingCount })
+        .eq('workspace_id', wsCtx.workspaceId)
+        .eq('id', accountId);
+    }
+
+    return json({
+      success: true,
+      deleted_count: deletedCount ?? 0,
+      remaining_count: remainingCount,
+      workspace_id: wsCtx.workspaceId,
     });
   } catch (e: any) {
     return json({ success: false, error: e.message || 'Internal Server Error' }, 500);

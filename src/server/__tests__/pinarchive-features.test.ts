@@ -117,6 +117,8 @@ describe('PinArchive Features & RPCs Suite', () => {
         p_asc: false,
         p_limit: 50,
         p_offset: 0,
+        p_max_saves: null,
+        p_min_saves: null,
       });
 
       const json = await res.json();

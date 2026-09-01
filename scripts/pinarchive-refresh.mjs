@@ -419,7 +419,7 @@ async function main() {
   // Load workspace settings to map gating controls
   const settingsMap = new Map();
   try {
-    const wsSettings = await supaQuery('pa_workspace_settings', 'select=workspace_id,ingest_enabled,paused_account_policy,refresh_max_pins,discovery_stop_pages,audit_sweep_enabled,daily_sheet_sync_enabled,github_schedule_enabled');
+    const wsSettings = await supaQuery('pa_workspace_settings', 'select=workspace_id,ingest_enabled,paused_account_policy,refresh_max_pins,refresh_min_saves,discovery_stop_pages,audit_sweep_enabled,daily_sheet_sync_enabled,github_schedule_enabled');
     if (Array.isArray(wsSettings)) {
       for (const s of wsSettings) {
         settingsMap.set(s.workspace_id, s);
@@ -529,6 +529,16 @@ async function main() {
     const cap = configuredCap > 0 ? configuredCap : Number.MAX_SAFE_INTEGER;
     const effectiveCap = Math.min(cap, 10000);
 
+    // Refresh Min Saves Gate: env REFRESH_MIN_SAVES -> else DB setting -> else 0 (all)
+    const envMinSavesRaw = process.env.REFRESH_MIN_SAVES !== undefined && process.env.REFRESH_MIN_SAVES.trim() !== ''
+      ? parseInt(process.env.REFRESH_MIN_SAVES, 10)
+      : null;
+    const settingsRefreshMinSaves = typeof wsSetting?.refresh_min_saves === 'number' ? wsSetting.refresh_min_saves : null;
+    const effectiveMinSaves = envMinSavesRaw !== null && !isNaN(envMinSavesRaw)
+      ? Math.max(0, envMinSavesRaw)
+      : (settingsRefreshMinSaves !== null && !isNaN(settingsRefreshMinSaves) ? Math.max(0, settingsRefreshMinSaves) : 0);
+    const savesFilterQuery = effectiveMinSaves > 0 ? `&saves=gte.${effectiveMinSaves}` : '';
+
     // True pagination loop (1000 per page)
     const allPins = [];
     let offset = 0;
@@ -537,7 +547,7 @@ async function main() {
       const fetchLimit = Math.min(PAGE, effectiveCap - allPins.length);
       const chunk = await supaQuery(
         'pa_pins',
-        `select=pin_id,saves,repins,comments,share_count,reactions,annotations,seo_category,canonical_pin_id,seo_alt_text,board_pin_count,board_last_modified_at,archived_at,title,description,link,utm_link,domain,board_name,board_id,created_at_pinterest,image_url,dominant_color,image_signature,node_id,is_video,velocity&workspace_id=eq.${acc.workspace_id}&account_id=eq.${acc.id}&order=last_updated_at.asc&limit=${fetchLimit}&offset=${offset}`
+        `select=pin_id,saves,repins,comments,share_count,reactions,annotations,seo_category,canonical_pin_id,seo_alt_text,board_pin_count,board_last_modified_at,archived_at,title,description,link,utm_link,domain,board_name,board_id,created_at_pinterest,image_url,dominant_color,image_signature,node_id,is_video,velocity&workspace_id=eq.${acc.workspace_id}&account_id=eq.${acc.id}${savesFilterQuery}&order=last_updated_at.asc&limit=${fetchLimit}&offset=${offset}`
       );
       if (!Array.isArray(chunk) || chunk.length === 0) break;
       allPins.push(...chunk);
@@ -548,7 +558,7 @@ async function main() {
     const pins = isTargetedRun ? allPins.filter((_, idx) => idx % SHARD_COUNT === REFRESH_SHARD) : allPins;
 
     if (!pins.length) continue;
-    console.log(`${acc.username}: ${pins.length} pins to refresh (shard ${REFRESH_SHARD + 1}/${SHARD_COUNT} of ${allPins.length} total)`);
+    console.log(`${acc.username}: ${pins.length} pins to refresh (min saves: ${effectiveMinSaves > 0 ? effectiveMinSaves : 'all'}, shard ${REFRESH_SHARD + 1}/${SHARD_COUNT} of ${allPins.length} total)`);
 
     let consecutiveErrors = 0;
     let rateLimitCooldownUntil = 0;

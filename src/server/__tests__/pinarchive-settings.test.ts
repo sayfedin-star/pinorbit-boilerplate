@@ -83,6 +83,7 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(json.pin_filter_min_repins).toBe(0);
       expect(json.pin_filter_rising_age_days).toBe(14);
       expect(json.pin_filter_rising_saves).toBe(34);
+      expect(json.refresh_min_saves).toBe(0);
       expect(json.discovery_stop_pages).toBe(3);
       expect(json.discovery_max_pages).toBe(50);
       expect(json.audit_sweep_enabled).toBe(true);
@@ -106,6 +107,7 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
                 pin_filter_min_repins: 100,
                 pin_filter_rising_age_days: 10,
                 pin_filter_rising_saves: 50,
+                refresh_min_saves: 25,
                 discovery_stop_pages: 5,
                 discovery_max_pages: 150,
                 audit_sweep_enabled: true,
@@ -128,6 +130,7 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.success).toBe(true);
+      expect(json.refresh_min_saves).toBe(25);
       expect(json.workspace_id).toBe(mockWsId);
       expect(json.ingest_enabled).toBe(false);
       expect(json.paused_account_policy).toBe('accept');

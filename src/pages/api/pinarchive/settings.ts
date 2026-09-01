@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS = {
   pin_filter_rising_age_days: 14,
   pin_filter_rising_saves: 34,
   refresh_max_pins: 0,
+  refresh_min_saves: 0,
   discovery_stop_pages: 3,
   discovery_max_pages: 50,
   audit_sweep_enabled: true,
@@ -39,6 +40,7 @@ const ALLOWED_PATCH_KEYS = new Set([
   'pin_filter_rising_age_days',
   'pin_filter_rising_saves',
   'refresh_max_pins',
+  'refresh_min_saves',
   'discovery_stop_pages',
   'discovery_max_pages',
   'audit_sweep_enabled',
@@ -102,6 +104,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       pin_filter_rising_age_days: settings.pin_filter_rising_age_days ?? DEFAULT_SETTINGS.pin_filter_rising_age_days,
       pin_filter_rising_saves: settings.pin_filter_rising_saves ?? DEFAULT_SETTINGS.pin_filter_rising_saves,
       refresh_max_pins: settings.refresh_max_pins ?? DEFAULT_SETTINGS.refresh_max_pins,
+      refresh_min_saves: Number(settings.refresh_min_saves ?? DEFAULT_SETTINGS.refresh_min_saves),
       discovery_stop_pages: Number(settings.discovery_stop_pages ?? DEFAULT_SETTINGS.discovery_stop_pages),
       discovery_max_pages: Number(settings.discovery_max_pages ?? DEFAULT_SETTINGS.discovery_max_pages),
       audit_sweep_enabled: settings.audit_sweep_enabled ?? DEFAULT_SETTINGS.audit_sweep_enabled,
@@ -214,6 +217,14 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
     }
   }
 
+  // Validate refresh_min_saves
+  if (body.refresh_min_saves !== undefined) {
+    const rms = Number(body.refresh_min_saves);
+    if (!Number.isInteger(rms) || rms < 0 || rms > 1000000) {
+      return json({ success: false, error: 'refresh_min_saves must be an integer between 0 and 1000000.' }, 422);
+    }
+  }
+
   // Validate discovery_stop_pages
   if (body.discovery_stop_pages !== undefined) {
     const dsp = Number(body.discovery_stop_pages);
@@ -296,6 +307,10 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
         body.refresh_max_pins !== undefined
           ? Number(body.refresh_max_pins)
           : (existing?.refresh_max_pins ?? DEFAULT_SETTINGS.refresh_max_pins),
+      refresh_min_saves:
+        body.refresh_min_saves !== undefined
+          ? Number(body.refresh_min_saves)
+          : (existing?.refresh_min_saves ?? DEFAULT_SETTINGS.refresh_min_saves),
       discovery_stop_pages:
         body.discovery_stop_pages !== undefined
           ? Number(body.discovery_stop_pages)
@@ -340,6 +355,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
       pin_filter_rising_age_days: saved.pin_filter_rising_age_days,
       pin_filter_rising_saves: saved.pin_filter_rising_saves,
       refresh_max_pins: saved.refresh_max_pins ?? DEFAULT_SETTINGS.refresh_max_pins,
+      refresh_min_saves: saved.refresh_min_saves ?? DEFAULT_SETTINGS.refresh_min_saves,
       discovery_stop_pages: Number(saved.discovery_stop_pages ?? DEFAULT_SETTINGS.discovery_stop_pages),
       discovery_max_pages: Number(saved.discovery_max_pages ?? DEFAULT_SETTINGS.discovery_max_pages),
       audit_sweep_enabled: saved.audit_sweep_enabled ?? DEFAULT_SETTINGS.audit_sweep_enabled,

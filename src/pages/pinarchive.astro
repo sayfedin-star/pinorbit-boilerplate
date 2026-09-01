@@ -271,7 +271,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
             <span class="text-xs font-bold text-foreground">🛡️ Ingestion Engine &amp; Gate Policy</span>
             <span class="text-[10px] text-muted-foreground">Controls how incoming scraping runs are accepted</span>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
             <!-- Master Ingest Switch -->
             <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 flex flex-col justify-between shadow-2xs hover:border-primary/30 transition-all">
               <div class="flex items-center justify-between">
@@ -331,6 +331,25 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
                   class="w-full rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:border-primary focus:outline-none"
                 />
                 <span class="text-xs font-semibold text-muted-foreground">pins</span>
+              </div>
+            </div>
+
+            <!-- Refresh Min Saves -->
+            <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 flex flex-col justify-between shadow-2xs hover:border-primary/30 transition-all">
+              <div class="flex items-center justify-between">
+                <label for="setting-refresh-min-saves" class="text-xs font-bold text-foreground">Refresh Min Saves</label>
+                <span class="text-[10px] text-muted-foreground font-semibold">0 = all</span>
+              </div>
+              <div class="mt-2 flex items-center gap-1.5">
+                <input
+                  id="setting-refresh-min-saves"
+                  type="number"
+                  min="0"
+                  max="1000000"
+                  value="0"
+                  class="w-full rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:border-primary focus:outline-none"
+                />
+                <span class="text-xs font-semibold text-muted-foreground">saves</span>
               </div>
             </div>
           </div>
@@ -1607,6 +1626,8 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       if (risingAgeInp) risingAgeInp.value = String(json.pin_filter_rising_age_days ?? 14);
       if (risingSavesInp) risingSavesInp.value = String(json.pin_filter_rising_saves ?? 34);
       if (refreshMaxPinsInp) refreshMaxPinsInp.value = String(json.refresh_max_pins ?? 0);
+      const refreshMinSavesInp = document.getElementById('setting-refresh-min-saves') as HTMLInputElement | null;
+      if (refreshMinSavesInp) refreshMinSavesInp.value = String(json.refresh_min_saves ?? 0);
       if (discoveryMaxInp) discoveryMaxInp.value = String(json.discovery_max_pages ?? 50);
       if (discoveryStopInp) discoveryStopInp.value = String(json.discovery_stop_pages ?? 3);
       if (auditSweepCb) {
@@ -1691,7 +1712,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
     const reevaluateBtn = document.getElementById('reevaluate-candidates-btn') as HTMLButtonElement | null;
     const roleBadge = document.getElementById('settings-role-badge');
     const inputs = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
-      '#setting-ingest-enabled, #setting-paused-policy, #setting-max-batch, #setting-refresh-max-pins, #setting-min-saves, #setting-min-repins, #setting-rising-age, #setting-rising-saves, #setting-discovery-max-pages, #setting-discovery-stop-pages, #setting-audit-sweep-enabled, #setting-daily-sheet-sync, #setting-github-schedule'
+      '#setting-ingest-enabled, #setting-paused-policy, #setting-max-batch, #setting-refresh-max-pins, #setting-refresh-min-saves, #setting-min-saves, #setting-min-repins, #setting-rising-age, #setting-rising-saves, #setting-discovery-max-pages, #setting-discovery-stop-pages, #setting-audit-sweep-enabled, #setting-daily-sheet-sync, #setting-github-schedule'
     );
     inputs.forEach((el) => { el.disabled = true; });
     if (saveBtn) { saveBtn.disabled = true; saveBtn.classList.add('hidden'); }
@@ -1704,6 +1725,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
     const policySel = document.getElementById('setting-paused-policy') as HTMLSelectElement | null;
     const maxBatchInp = document.getElementById('setting-max-batch') as HTMLInputElement | null;
     const refreshMaxPinsInp = document.getElementById('setting-refresh-max-pins') as HTMLInputElement | null;
+    const refreshMinSavesInp = document.getElementById('setting-refresh-min-saves') as HTMLInputElement | null;
     const minSavesInp = document.getElementById('setting-min-saves') as HTMLInputElement | null;
     const minRepinsInp = document.getElementById('setting-min-repins') as HTMLInputElement | null;
     const risingAgeInp = document.getElementById('setting-rising-age') as HTMLInputElement | null;
@@ -1734,6 +1756,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
           paused_account_policy: policySel.value,
           max_batch_pins: parseInt(maxBatchInp.value, 10) || 500,
           refresh_max_pins: parseInt(refreshMaxPinsInp?.value || '0', 10) || 0,
+          refresh_min_saves: parseInt(refreshMinSavesInp?.value || '0', 10) || 0,
           pin_filter_min_saves: parseInt(minSavesInp.value, 10) || 0,
           pin_filter_min_repins: parseInt(minRepinsInp.value, 10) || 0,
           pin_filter_rising_age_days: Number.isInteger(parseInt(risingAgeInp.value, 10)) ? parseInt(risingAgeInp.value, 10) : 14,
