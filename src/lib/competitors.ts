@@ -409,6 +409,7 @@ function matchesWorkspace(entityWsId?: string, targetWsId?: string): boolean {
 
 /**
  * Fetch all tracked competitors for a workspace.
+ * Routes to /api/admin/competitors in browser context or falls back to mock data.
  */
 export async function getCompetitors(workspaceId?: string): Promise<Competitor[]> {
   if (!isSupabaseConfigured || !supabase) {
@@ -418,53 +419,21 @@ export async function getCompetitors(workspaceId?: string): Promise<Competitor[]
   }
 
   try {
-    let query = supabase
-      .from('competitors')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (workspaceId) {
-      query = query.eq('workspace_id', workspaceId);
+    if (typeof window !== 'undefined') {
+      const url = `/api/admin/competitors${workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : ''}`;
+      const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (Array.isArray(data.competitors)) {
+          return data.competitors;
+        }
+      }
     }
-
-    const { data: competitors, error } = await query;
-
-    if (error || !competitors || competitors.length === 0) {
-      if (error) console.warn('Supabase competitors query failed, falling back to mock state:', error);
-      return workspaceId
-        ? mockCompetitors.filter((c) => matchesWorkspace(c.workspace_id, workspaceId))
-        : [...mockCompetitors];
-    }
-
-    // Attach board count & strategy age scoped to workspace competitors
-    const competitorIds = competitors.map((c) => c.id);
-    let boards: Array<{ competitor_id: string; board_created_at: string | null }> = [];
-    if (competitorIds.length > 0) {
-      const { data: bData } = await supabase
-        .from('competitor_boards')
-        .select('competitor_id, board_created_at')
-        .in('competitor_id', competitorIds);
-      boards = (bData as any) || [];
-    }
-
-    const result: Competitor[] = competitors.map((c) => {
-      const compBoards = boards.filter((b) => b.competitor_id === c.id);
-      const boardsCount = compBoards.length;
-      const { days: strategyAgeDays, oldestBoardDate } = calculateStrategyAge(compBoards as any);
-
-      return {
-        ...c,
-        profile_reach: Number(c.profile_reach) || 0,
-        profile_views: Number(c.profile_views) || 0,
-        boards_count: boardsCount,
-        strategy_age_days: strategyAgeDays,
-        oldest_board_date: oldestBoardDate,
-      };
-    });
-
-    return result;
+    return workspaceId
+      ? mockCompetitors.filter((c) => matchesWorkspace(c.workspace_id, workspaceId))
+      : [...mockCompetitors];
   } catch (err) {
-    console.error('Error fetching competitors:', err);
+    console.warn('Competitors API query failed, falling back to mock state:', err);
     return workspaceId
       ? mockCompetitors.filter((c) => !c.workspace_id || c.workspace_id === workspaceId)
       : [...mockCompetitors];
@@ -473,12 +442,14 @@ export async function getCompetitors(workspaceId?: string): Promise<Competitor[]
 
 /**
  * Fetch detailed information for a single competitor including snapshots and boards.
+ * Routes to /api/admin/competitors?id=... in browser context or falls back to mock data.
  */
 export async function getCompetitorDetails(competitorId: string): Promise<{
   competitor: Competitor | null;
   snapshots: CompetitorSnapshot[];
   boards: CompetitorBoard[];
   deltas: CompetitorDeltaStats;
+  chartSnapshots: CompetitorSnapshot[];
 }> {
   if (!isSupabaseConfigured || !supabase) {
     const competitor = mockCompetitors.find((c) => c.id === competitorId) || null;
@@ -495,130 +466,46 @@ export async function getCompetitorDetails(competitorId: string): Promise<{
       competitor.boards_count = boards.length;
     }
 
-    return { competitor, snapshots, boards, deltas };
+    return { competitor, snapshots, boards, deltas, chartSnapshots: snapshots };
   }
 
   try {
-    // Fetch competitor profile, raw snapshots (for history log), and boards in parallel.
-    // Daily rollup is fetched separately so we can apply the fallback logic cleanly.
-    const [compRes, rawSnapRes, boardRes, dailySnapRes] = await Promise.all([
-      supabase.from('competitors').select('*').eq('id', competitorId).single(),
-      // Raw snapshots — always fetched; used for the intraday history log table (recorded_at DESC)
-      supabase
-        .from('competitor_snapshots')
-        .select('*')
-        .eq('competitor_id', competitorId)
-        .order('recorded_at', { ascending: false })
-        .limit(60),
-      supabase
-        .from('competitor_boards')
-        .select('*')
-        .eq('competitor_id', competitorId)
-        .order('last_pinned_at', { ascending: false }),
-      // Daily rollup — primary source for growth chart and trend indicators
-      supabase
-        .from('competitor_daily_snapshots')
-        .select('*')
-        .eq('competitor_id', competitorId)
-        .order('snapshot_date', { ascending: true }),
-    ]);
-
-    const competitor = compRes.data as Competitor | null;
-    const rawSnapshots = (rawSnapRes.data || []) as CompetitorSnapshot[];
-    const boards = (boardRes.data || []) as CompetitorBoard[];
-    const dailyRows = (dailySnapRes.data || []) as CompetitorDailySnapshot[];
-
-    if (competitor) {
-      competitor.profile_reach = Number(competitor.profile_reach) || 0;
-      competitor.profile_views = Number(competitor.profile_views) || 0;
-      const { days: strategyAgeDays, oldestBoardDate } = calculateStrategyAge(boards);
-      competitor.strategy_age_days = strategyAgeDays;
-      competitor.oldest_board_date = oldestBoardDate;
-      competitor.boards_count = boards.length;
+    if (typeof window !== 'undefined') {
+      const res = await fetch(`/api/admin/competitors?id=${encodeURIComponent(competitorId)}`, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return {
+          competitor: data.competitor || null,
+          snapshots: data.snapshots || [],
+          boards: data.boards || [],
+          deltas: data.deltas || calculateCompetitorDeltas({ profile_reach: 0, profile_views: 0, follower_count: 0, pin_count: 0 }),
+          chartSnapshots: data.chartSnapshots || data.snapshots || [],
+        };
+      }
     }
-
-    // --- Chart data strategy ---
-    // Primary: competitor_daily_snapshots (one canonical row per day, ordered ASC)
-    // Fallback: competitor_snapshots grouped ascending (when daily table is empty)
-    let chartSnapshots: CompetitorSnapshot[];
-
-    if (dailyRows.length > 0) {
-      // Normalise daily rows into CompetitorSnapshot shape so chart rendering requires no changes
-      chartSnapshots = dailyRows.map((d) => ({
-        id: d.id,
-        competitor_id: d.competitor_id,
-        profile_reach: Number(d.profile_reach) || 0,
-        profile_views: Number(d.profile_views) || 0,
-        follower_count: Number(d.follower_count) || 0,
-        pin_count: Number(d.pin_count) || 0,
-        // Map snapshot_date (DATE) to recorded_at (TIMESTAMPTZ) expected by chart logic
-        recorded_at: d.snapshot_date + 'T00:00:00.000Z',
-      }));
-    } else {
-      // Fallback: use raw snapshots in chronological order for chart rendering
-      chartSnapshots = [...rawSnapshots].sort(
-        (a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()
-      );
-    }
-
-    // Deltas are computed from chart snapshots (most recent two data points)
-    const prevSnap =
-      chartSnapshots.length > 1 ? chartSnapshots[chartSnapshots.length - 2] : undefined;
-    const deltas = competitor
-      ? calculateCompetitorDeltas(competitor, prevSnap)
-      : calculateCompetitorDeltas({
-          profile_reach: 0,
-          profile_views: 0,
-          follower_count: 0,
-          pin_count: 0,
-        });
-
-    // Return:
-    //   snapshots → chart data (daily rollup primary, raw fallback)
-    //   rawSnapshots are not in the return shape but the page's history log
-    //   table already re-fetches them via renderSnapshotsLogTable() which reads
-    //   from snapshotsList (populated from this same snapshots field).
-    //   To keep the raw history log working correctly we return raw snapshots
-    //   DESC so the table renders newest-first.
-    return {
-      competitor,
-      snapshots: rawSnapshots, // raw snapshots (DESC) for history log table
-      boards,
-      deltas,
-      // Expose chart data separately via the extended shape below
-      chartSnapshots,
-    } as {
-      competitor: Competitor | null;
-      snapshots: CompetitorSnapshot[];
-      boards: CompetitorBoard[];
-      deltas: CompetitorDeltaStats;
-      chartSnapshots: CompetitorSnapshot[];
-    };
-  } catch (err) {
-    console.error('Error fetching competitor details:', err);
     return {
       competitor: null,
       snapshots: [],
       boards: [],
-      deltas: calculateCompetitorDeltas({
-        profile_reach: 0,
-        profile_views: 0,
-        follower_count: 0,
-        pin_count: 0,
-      }),
+      deltas: calculateCompetitorDeltas({ profile_reach: 0, profile_views: 0, follower_count: 0, pin_count: 0 }),
       chartSnapshots: [],
-    } as {
-      competitor: Competitor | null;
-      snapshots: CompetitorSnapshot[];
-      boards: CompetitorBoard[];
-      deltas: CompetitorDeltaStats;
-      chartSnapshots: CompetitorSnapshot[];
+    };
+  } catch (err) {
+    console.warn('Competitor details API query failed:', err);
+    return {
+      competitor: null,
+      snapshots: [],
+      boards: [],
+      deltas: calculateCompetitorDeltas({ profile_reach: 0, profile_views: 0, follower_count: 0, pin_count: 0 }),
+      chartSnapshots: [],
     };
   }
 }
 
 /**
- * Add a new competitor.
+ * Add a new competitor via server admin API.
  */
 export async function addCompetitor(data: {
   username: string;
@@ -663,35 +550,30 @@ export async function addCompetitor(data: {
     return newComp;
   }
 
-  const { data: user } = await supabase.auth.getUser();
-  const userId = user?.user?.id || null;
-
-  const { data: created, error } = await supabase
-    .from('competitors')
-    .insert([
-      {
+  if (typeof window !== 'undefined') {
+    const res = await fetch('/api/admin/competitors', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         workspace_id: targetWsId,
-        user_id: userId,
         username: cleanUsername,
         full_name: cleanUsername,
         niche: data.niche || 'General',
         notes: data.notes || '',
         account_type: accountType,
         tags: tagsArr,
-      },
-    ])
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(error.message);
+      }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(d.error || `Failed to add competitor: HTTP ${res.status}`);
+    return d.competitor;
   }
 
-  return created;
+  throw new Error('addCompetitor must be executed in browser context or via server API');
 }
 
 /**
- * Update an existing competitor's profile metadata.
+ * Update an existing competitor's profile metadata via server admin API.
  */
 export async function updateCompetitor(
   id: string,
@@ -725,44 +607,30 @@ export async function updateCompetitor(
     return mockCompetitors[idx];
   }
 
-  const updatePayload: Record<string, any> = {};
-  if (data.full_name !== undefined) updatePayload.full_name = data.full_name;
-  if (data.username !== undefined) updatePayload.username = data.username.trim().replace(/^@/, '').toLowerCase();
-  if (data.account_type !== undefined) updatePayload.account_type = data.account_type;
-  if (data.niche !== undefined) updatePayload.niche = data.niche;
-  if (tagsArr !== undefined) updatePayload.tags = tagsArr;
-
-  let updateQuery = supabase
-    .from('competitors')
-    .update(updatePayload)
-    .eq('id', id);
-
-  if (workspaceId) {
-    updateQuery = updateQuery.eq('workspace_id', workspaceId);
+  if (typeof window !== 'undefined') {
+    const res = await fetch('/api/admin/competitors', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        ...(workspaceId ? { workspace_id: workspaceId } : {}),
+        ...(data.full_name !== undefined ? { full_name: data.full_name } : {}),
+        ...(data.username !== undefined ? { username: data.username.trim().replace(/^@/, '').toLowerCase() } : {}),
+        ...(data.account_type !== undefined ? { account_type: data.account_type } : {}),
+        ...(data.niche !== undefined ? { niche: data.niche } : {}),
+        ...(tagsArr !== undefined ? { tags: tagsArr } : {}),
+      }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(d.error || `Failed to update competitor: HTTP ${res.status}`);
+    return d.competitor;
   }
 
-  const { error: updateErr } = await updateQuery;
-
-  if (updateErr) throw new Error(updateErr.message);
-
-  let fetchQuery = supabase
-    .from('competitors')
-    .select('*')
-    .eq('id', id);
-
-  if (workspaceId) {
-    fetchQuery = fetchQuery.eq('workspace_id', workspaceId);
-  }
-
-  const { data: updated, error: fetchErr } = await fetchQuery.single();
-
-  if (fetchErr || !updated) throw new Error(fetchErr?.message || 'Failed to fetch updated competitor');
-
-  return updated as Competitor;
+  throw new Error('updateCompetitor must be executed in browser context or via server API');
 }
 
 /**
- * Delete a competitor.
+ * Delete a competitor via server admin API.
  */
 export async function deleteCompetitor(id: string, workspaceId?: string): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) {
@@ -772,18 +640,24 @@ export async function deleteCompetitor(id: string, workspaceId?: string): Promis
     return true;
   }
 
-  let deleteQuery = supabase.from('competitors').delete().eq('id', id);
-  if (workspaceId) {
-    deleteQuery = deleteQuery.eq('workspace_id', workspaceId);
+  if (typeof window !== 'undefined') {
+    const res = await fetch('/api/admin/competitors', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...(workspaceId ? { workspace_id: workspaceId } : {}) }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.error || `Failed to delete competitor: HTTP ${res.status}`);
+    }
+    return true;
   }
 
-  const { error } = await deleteQuery;
-  if (error) throw new Error(error.message);
-  return true;
+  throw new Error('deleteCompetitor must be executed in browser context or via server API');
 }
 
 /**
- * Delete an individual competitor snapshot record.
+ * Delete an individual competitor snapshot record via server admin API.
  */
 export async function deleteCompetitorSnapshot(snapshotId: string, competitorId?: string, workspaceId?: string): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) {
@@ -793,16 +667,25 @@ export async function deleteCompetitorSnapshot(snapshotId: string, competitorId?
     return true;
   }
 
-  let deleteQuery = supabase.from('competitor_snapshots').delete().eq('id', snapshotId);
-  if (competitorId) {
-    deleteQuery = deleteQuery.eq('competitor_id', competitorId);
+  if (typeof window !== 'undefined') {
+    const res = await fetch('/api/admin/competitors/snapshot', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        snapshot_id: snapshotId,
+        ...(competitorId ? { competitor_id: competitorId } : {}),
+        ...(workspaceId ? { workspace_id: workspaceId } : {}),
+      }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.error || `Failed to delete competitor snapshot: HTTP ${res.status}`);
+    }
+    return true;
   }
 
-  const { error } = await deleteQuery;
-  if (error) throw new Error(error.message);
-  return true;
+  throw new Error('deleteCompetitorSnapshot must be executed in browser context or via server API');
 }
-
 
 /**
  * Ingest DevTools JSON payload for a target competitor.
@@ -891,115 +774,34 @@ export async function ingestDevToolsPayload(
     }
   }
 
-  // Supabase implementation
+  // Server API route implementation
   try {
-    if (parsed.type === 'user_profile' && parsed.profileData) {
-      const { full_name, profile_reach, profile_views, follower_count, pin_count, avatar_url, website_url, domain_verified, last_pin_at } = parsed.profileData;
-
-      // Update competitors table
-      let updateQuery = supabase
-        .from('competitors')
-        .update({
-          full_name,
-          profile_reach,
-          profile_views,
-          follower_count,
-          pin_count,
-          ...(avatar_url ? { avatar_url } : {}),
-          ...(website_url !== undefined ? { website_url } : {}),
-          ...(domain_verified !== undefined ? { domain_verified } : {}),
-          ...(last_pin_at !== undefined ? { last_pin_at } : {}),
-          last_checked_at: new Date().toISOString(),
-        })
-        .eq('id', competitorId);
-
-      if (workspaceId) {
-        updateQuery = updateQuery.eq('workspace_id', workspaceId);
-      }
-
-      const { error: updateErr } = await updateQuery;
-      if (updateErr) throw new Error(updateErr.message);
-
-      // Insert snapshot record
-      await supabase.from('competitor_snapshots').insert([
-        {
+    if (typeof window !== 'undefined') {
+      const res = await fetch('/api/admin/competitors/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           competitor_id: competitorId,
-          profile_reach,
-          profile_views,
-          follower_count,
-          pin_count,
-        },
-      ]);
-
-      return {
-        success: true,
-        type: 'user_profile',
-        message: `Successfully parsed & saved User Profile data for competitor!`,
-      };
-    }
-
-    if (parsed.type === 'user_boards' && parsed.boardsData) {
-      for (const b of parsed.boardsData) {
-        await supabase.from('competitor_boards').upsert(
-          [
-            {
-              competitor_id: competitorId,
-              ...(workspaceId ? { workspace_id: workspaceId } : {}),
-              board_id: b.board_id,
-              name: b.name,
-              description: b.description,
-              url: b.url,
-              pin_count: b.pin_count,
-              follower_count: b.follower_count,
-              board_created_at: b.board_created_at,
-              last_pinned_at: b.last_pinned_at,
-              updated_at: new Date().toISOString(),
-            },
-          ],
-          { onConflict: 'competitor_id,board_id' }
-        );
+          payload: payloadText,
+          ...(workspaceId ? { workspace_id: workspaceId } : {}),
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.success) {
+        return {
+          success: true,
+          type: parsed.type,
+          message: d.message || `Successfully ingested ${parsed.type} via server API!`,
+        };
       }
-
-      let updateQuery = supabase
-        .from('competitors')
-        .update({ last_checked_at: new Date().toISOString() })
-        .eq('id', competitorId);
-
-      if (workspaceId) {
-        updateQuery = updateQuery.eq('workspace_id', workspaceId);
-      }
-
-      await updateQuery;
-
-      return {
-        success: true,
-        type: 'user_boards',
-        message: `Successfully upserted ${parsed.boardsData.length} boards into DB!`,
-      };
     }
+    return { success: false, type: parsed.type, message: 'Failed to persist competitor payload via server API.' };
   } catch (err: any) {
-    console.warn('Supabase competitors query failed, falling back to mock state:', err);
-    const comp = mockCompetitors.find((c) => c.id === competitorId);
-    if (comp && parsed.type === 'user_profile' && parsed.profileData) {
-      comp.full_name = parsed.profileData.full_name || comp.full_name;
-      comp.profile_reach = parsed.profileData.profile_reach ?? comp.profile_reach;
-      comp.profile_views = parsed.profileData.profile_views ?? comp.profile_views;
-      comp.follower_count = parsed.profileData.follower_count ?? comp.follower_count;
-      comp.pin_count = parsed.profileData.pin_count ?? comp.pin_count;
-      if (parsed.profileData.avatar_url) comp.avatar_url = parsed.profileData.avatar_url;
-      comp.last_checked_at = new Date().toISOString();
-      return {
-        success: true,
-        type: 'user_profile',
-        message: `Successfully parsed User Profile (fallback)!`,
-      };
-    }
+    console.warn('Competitor ingest API failed, falling back to mock state:', err);
     return {
       success: false,
       type: parsed.type,
-      message: err.message || 'Failed to persist competitor payload.',
+      message: err?.message || 'Failed to persist competitor payload.',
     };
   }
-
-  return { success: false, type: 'unknown', message: 'Failed to process payload.' };
 }

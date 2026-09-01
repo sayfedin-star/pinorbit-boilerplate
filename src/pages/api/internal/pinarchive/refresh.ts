@@ -6,9 +6,9 @@ import { validateUserSession } from '../../../../server/auth/session';
 import * as webhookSecrets from '../../../../server/services/webhook-secrets';
 import { isProductionEnv, isKnownDefaultIngestSecret } from '../../../../server/db/clients';
 import { timingSafeEqual } from '../../../../server/lib/timing-safe';
+import { USERNAME_REGEX } from '../../../../lib/validation/pinterest';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const USERNAME_REGEX = /^[a-zA-Z0-9_]{1,30}$/;
 
 const json = (o: any, s = 200) =>
   new Response(JSON.stringify(o), {

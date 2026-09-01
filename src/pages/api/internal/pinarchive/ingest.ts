@@ -3,6 +3,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { dbClients, isKnownDefaultIngestSecret, isProductionEnv } from '../../../../server/db/clients';
 import { getEffectiveSecret, verifyIngestSecret } from '../../../../server/services/webhook-secrets';
+import { USERNAME_REGEX } from '../../../../lib/validation/pinterest';
 
 /**
  * Server-Only Internal PinArchive Ingest Endpoint.
@@ -43,7 +44,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
 
   // 2. Validate workspace_id
   if (!payload || !payload.workspace_id || typeof payload.workspace_id !== 'string') {

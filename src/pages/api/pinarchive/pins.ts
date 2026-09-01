@@ -79,26 +79,73 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const minSavesRpc = minSavesRaw !== null && minSavesRaw !== '' && !isNaN(Number(minSavesRaw)) ? Number(minSavesRaw) : null;
 
     try {
-      const { data, error } = await db.rpc('pa_account_pins_page', {
-        p_workspace_id: ws,
-        p_account_id: accountId,
-        p_q: q || null,
-        p_board: board || null,
-        p_stage: stageFilter || null,
-        p_sort: sort,
-        p_asc: asc,
-        p_limit: pageSize,
-        p_offset: offset,
-        p_max_saves: maxSaves,
-        p_min_saves: minSavesRpc,
-      });
+      let rows: any[] = [];
+      let total = 0;
+      let rpcSucceeded = false;
 
-      if (error) {
-        return json({ success: false, error: error.message }, 500);
+      try {
+        const { data, error } = await db.rpc('pa_account_pins_page', {
+          p_workspace_id: ws,
+          p_account_id: accountId,
+          p_q: q || null,
+          p_board: board || null,
+          p_stage: stageFilter || null,
+          p_sort: sort,
+          p_asc: asc,
+          p_limit: pageSize,
+          p_offset: offset,
+          p_max_saves: maxSaves,
+          p_min_saves: minSavesRpc,
+        });
+
+        if (!error && Array.isArray(data)) {
+          rows = data;
+          total = rows.length > 0 ? Number(rows[0].total_count || 0) : 0;
+          rpcSucceeded = true;
+        } else if (error) {
+          console.warn('[pins:mode=page] RPC pa_account_pins_page returned error, using fallback query:', error.message);
+        }
+      } catch (rpcErr: any) {
+        console.warn('[pins:mode=page] RPC pa_account_pins_page threw error, using fallback query:', rpcErr?.message || rpcErr);
       }
 
-      const rows = Array.isArray(data) ? data : [];
-      const total = rows.length > 0 ? Number(rows[0].total_count || 0) : 0;
+      if (!rpcSucceeded) {
+        // FALLBACK: Standard PostgREST range query on pa_pins
+        let fallbackQuery = db
+          .from('pa_pins')
+          .select('*', { count: 'exact' })
+          .eq('workspace_id', ws)
+          .eq('account_id', accountId);
+
+        if (q) {
+          fallbackQuery = fallbackQuery.or(`title.ilike.%${q}%,description.ilike.%${q}%,pin_id.ilike.%${q}%`);
+        }
+        if (board) {
+          fallbackQuery = fallbackQuery.eq('board_name', board);
+        }
+        if (maxSaves !== null) {
+          fallbackQuery = fallbackQuery.lte('saves', maxSaves);
+        }
+        if (minSavesRpc !== null) {
+          fallbackQuery = fallbackQuery.gte('saves', minSavesRpc);
+        }
+
+        const sortColumn = ['saves', 'repins', 'comments', 'velocity', 'created_at_pinterest', 'archived_at'].includes(sort)
+          ? sort
+          : 'saves';
+
+        fallbackQuery = fallbackQuery
+          .order(sortColumn, { ascending: asc })
+          .range(offset, offset + pageSize - 1);
+
+        const { data: fallbackData, count: fallbackCount, error: fallbackError } = await fallbackQuery;
+        if (fallbackError) {
+          return json({ success: false, error: fallbackError.message }, 500);
+        }
+
+        rows = Array.isArray(fallbackData) ? fallbackData : [];
+        total = fallbackCount ?? rows.length;
+      }
 
       const pins = rows.map((p: any) => {
         const deltaSaves = Number(p.delta_saves || 0);
