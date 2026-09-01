@@ -89,6 +89,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const now = Date.now();
     const ONE_DAY_MS = 24 * 3600 * 1000;
+    const THREE_DAYS_MS = 3 * ONE_DAY_MS;
+    const SEVEN_DAYS_MS = 7 * ONE_DAY_MS;
+
     const currentSaves = Number(pin.saves || 0);
     const currentRepins = Number(pin.repins || 0);
 
@@ -101,46 +104,27 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     if (snapsDesc.length >= 2) {
       const latestSnap = snapsDesc[0];
-      const latestTime = new Date(latestSnap.recorded_at).getTime();
+      const t0 = new Date(latestSnap.recorded_at).getTime();
       const latestS = Number(latestSnap.saves || currentSaves);
       const latestR = Number(latestSnap.repins || currentRepins);
-      const ageSinceLastSnap = now - latestTime;
 
-      if (ageSinceLastSnap <= 48 * 3600 * 1000) {
-        const snap24h = [...snapsDesc].reverse().find((s) => (now - new Date(s.recorded_at).getTime()) <= 28 * 3600 * 1000);
-        if (snap24h && snap24h !== latestSnap) {
-          deltaSaves24h = Math.max(0, latestS - Number(snap24h.saves || 0));
-          deltaRepins24h = Math.max(0, latestR - Number(snap24h.repins || 0));
-        } else if (snapsDesc.length >= 2 && (latestTime - new Date(snapsDesc[1].recorded_at).getTime()) <= ONE_DAY_MS) {
-          deltaSaves24h = Math.max(0, latestS - Number(snapsDesc[1].saves || 0));
-          deltaRepins24h = Math.max(0, latestR - Number(snapsDesc[1].repins || 0));
-        }
+      const findBaselineSnap = (targetMs: number) => {
+        const prior = snapsDesc.find((s) => (t0 - new Date(s.recorded_at).getTime()) >= targetMs * 0.75);
+        return prior || snapsDesc[snapsDesc.length - 1];
+      };
 
-        const snap3d = [...snapsDesc].reverse().find((s) => (now - new Date(s.recorded_at).getTime()) <= 76 * 3600 * 1000);
-        if (snap3d && snap3d !== latestSnap) {
-          deltaSaves3d = Math.max(deltaSaves24h, latestS - Number(snap3d.saves || 0));
-        } else {
-          deltaSaves3d = deltaSaves24h;
-        }
+      const snap24h = findBaselineSnap(ONE_DAY_MS);
+      const snap3d = findBaselineSnap(THREE_DAYS_MS);
+      const snap7d = findBaselineSnap(SEVEN_DAYS_MS);
 
-        const snap7d = [...snapsDesc].reverse().find((s) => (now - new Date(s.recorded_at).getTime()) <= 172 * 3600 * 1000);
-        if (snap7d && snap7d !== latestSnap) {
-          deltaSaves7d = Math.max(deltaSaves3d, latestS - Number(snap7d.saves || 0));
-          deltaRepins7d = Math.max(deltaRepins24h, latestR - Number(snap7d.repins || 0));
-        } else {
-          deltaSaves7d = deltaSaves3d;
-          deltaRepins7d = deltaRepins24h;
-        }
-      } else if (ageSinceLastSnap <= 7 * ONE_DAY_MS) {
-        deltaSaves24h = 0;
-        deltaSaves3d = 0;
-        const oldestSnap = snapsDesc[snapsDesc.length - 1];
-        deltaSaves7d = Math.max(0, latestS - Number(oldestSnap.saves || 0));
-        deltaRepins7d = Math.max(0, latestR - Number(oldestSnap.repins || 0));
-      }
+      deltaSaves24h = Math.max(0, latestS - Number(snap24h.saves || 0));
+      deltaSaves3d = Math.max(deltaSaves24h, latestS - Number(snap3d.saves || 0));
+      deltaSaves7d = Math.max(deltaSaves3d, latestS - Number(snap7d.saves || 0));
+
+      deltaRepins24h = Math.max(0, latestR - Number(snap24h.repins || 0));
+      deltaRepins7d = Math.max(deltaRepins24h, latestR - Number(snap7d.repins || 0));
 
       const prior = snapsDesc[1];
-      const t0 = new Date(latestSnap.recorded_at).getTime();
       const t1 = new Date(prior.recorded_at).getTime();
       daysBetween = Math.max(0.01, (t0 - t1) / 86400000);
     }
