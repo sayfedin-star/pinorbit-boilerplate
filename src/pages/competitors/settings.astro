@@ -35,33 +35,74 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
 ---
 
 <Layout title="Competitor Intelligence Settings" description="Closed-loop control plane for Pinterest competitor ingestion, credential vault, pipeline schedules, and live job auditing.">
-  <div id="competitors-settings-root" data-workspace-id={workspaceId} data-is-master={isMasterWorkspace ? 'true' : 'false'}>
+  <div id="competitors-settings-root" data-workspace-id={workspaceId} data-is-master={isMasterWorkspace ? 'true' : 'false'} class="space-y-6 max-w-7xl mx-auto pb-12">
 
-  <!-- ═══ Navigation & Header ═══ -->
-  <div class="mb-6">
-    <div class="mb-3">
+  <!-- ═══ Navigation & Top Header ═══ -->
+  <div class="space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
       <a href="/competitors" class="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         <span>Back to Competitors</span>
       </a>
+
+      <!-- Quick Action Controls -->
+      <div class="flex items-center gap-2">
+        <button
+          id="btn-toggle-all-collapse"
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-all shadow-xs cursor-pointer"
+          title="Expand or collapse all console sections"
+        >
+          <svg id="collapse-all-icon" class="h-3.5 w-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          <span id="collapse-all-text">Collapse All</span>
+        </button>
+
+        <button
+          id="refresh-all-btn"
+          title="Refresh all console state"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-all shadow-xs cursor-pointer"
+        >
+          <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+          <span>Refresh</span>
+        </button>
+      </div>
     </div>
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <SectionHeader
         title="Competitor Operations Console"
         description="Unified management for Pinterest ingestion schedules, credential vault, pipeline parameters, and background sync jobs."
       />
-      <div class="flex items-center gap-2.5 self-start sm:self-auto">
-        <button id="refresh-all-btn" title="Refresh all settings"
-          class="inline-flex items-center justify-center rounded-xl border border-border bg-card p-2.5 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-all">
-          <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
-        </button>
-      </div>
+    </div>
+
+    <!-- ═══ Quick Anchor Navigation Pills ═══ -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
+      <a href="#sec-schedules" class="inline-flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-xl border border-border/80 bg-card hover:bg-muted font-medium text-foreground transition-colors shadow-2xs">
+        <span>⚡</span><span>Schedules</span>
+        <span id="nav-schedules-badge" class="rounded-full bg-primary/10 text-primary px-1.5 py-0.2 text-[10px] font-bold">1</span>
+      </a>
+      <a href="#sec-pipeline" class="inline-flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-xl border border-border/80 bg-card hover:bg-muted font-medium text-foreground transition-colors shadow-2xs">
+        <span>⚙️</span><span>Pipeline</span>
+        <span id="nav-pipeline-badge" class="rounded-full bg-emerald-500/10 text-emerald-500 px-1.5 py-0.2 text-[10px] font-bold">Active</span>
+      </a>
+      <a href="#sec-vault" class="inline-flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-xl border border-border/80 bg-card hover:bg-muted font-medium text-foreground transition-colors shadow-2xs">
+        <span>🔐</span><span>Vault</span>
+        <span id="nav-vault-badge" class="rounded-full bg-muted text-muted-foreground px-1.5 py-0.2 text-[10px] font-bold">1</span>
+      </a>
+      <a href="#sec-matrix" class="inline-flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-xl border border-border/80 bg-card hover:bg-muted font-medium text-foreground transition-colors shadow-2xs">
+        <span>🎯</span><span>Matrix</span>
+        <span id="nav-matrix-badge" class="rounded-full bg-primary/10 text-primary px-1.5 py-0.2 text-[10px] font-bold">3</span>
+      </a>
+      <a href="#sec-jobs" class="inline-flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-xl border border-border/80 bg-card hover:bg-muted font-medium text-foreground transition-colors shadow-2xs">
+        <span>📋</span><span>Audit Logs</span>
+        <span id="nav-jobs-badge" class="rounded-full bg-muted text-muted-foreground px-1.5 py-0.2 text-[10px] font-bold">15</span>
+      </a>
     </div>
   </div>
 
   {isMasterWorkspace && (
     <!-- ═══ 👑 Master Workspace (Global Orchestrator) Banner ═══ -->
-    <div class="mb-6 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-xs">
+    <div class="rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-xs">
       <div class="flex items-center gap-3.5">
         <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xl shadow-2xs">
           👑
@@ -79,287 +120,264 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     </div>
   )}
 
-  <div class="space-y-8">
-    <!-- ═══ SECTION 0: Automation Schedules & Cron Provider ═══ -->
-    <div class="space-y-6">
-
-      <!-- Side-by-Side Cards: Schedules (65%) & FastCron Tokens (35%) -->
-      <div class="flex flex-col lg:flex-row gap-6">
-
-        <!-- Left: FastCron API Tokens (35%) -->
-        <div class="lg:w-[35%] rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm flex flex-col justify-between">
-          <div class="space-y-3">
-            <div class="flex items-center justify-between border-b border-border/80 pb-3 gap-2">
-              <div class="flex items-center gap-2">
-                <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                </div>
-                <div>
-                  <h3 class="text-xs font-bold text-foreground">FastCron API Tokens</h3>
-                  <p class="text-[10px] text-muted-foreground">Workspace token registry</p>
-                </div>
-              </div>
-              <button
-                id="btn-add-token"
-                type="button"
-                class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer"
-              >
-                + Add Token
-              </button>
-            </div>
-
-            <div class="overflow-x-auto">
-              <table class="w-full text-xs">
-                <thead>
-                  <tr class="text-left border-b border-border text-muted-foreground text-[10px] font-bold">
-                    <th class="p-2">NAME</th>
-                    <th class="p-2">KEY</th>
-                    <th class="p-2">STATUS</th>
-                    <th class="p-2 text-right">ACTION</th>
-                  </tr>
-                </thead>
-                <tbody id="tokens-table-rows">
-                  <tr>
-                    <td colspan="4" class="p-4 text-center text-muted-foreground">Loading tokens...</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="pt-3 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
-            <div class="flex items-center gap-1.5">
-              <span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
-              <span id="token-status-msg" class="text-emerald-500 font-medium text-[10px]">✓ Connection healthy</span>
-            </div>
-            <button
-              id="btn-ping-tokens"
-              type="button"
-              class="text-[10px] font-semibold text-muted-foreground hover:text-foreground underline cursor-pointer"
-            >
-              Test Connection
-            </button>
-          </div>
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <!-- ═══ SECTION 0: FastCron API Tokens & Provider ═══ -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="sec-tokens-provider" class="collapsible-card rounded-2xl border border-border bg-card shadow-sm transition-all overflow-hidden">
+    <div class="collapsible-header flex items-center justify-between p-5 cursor-pointer select-none hover:bg-muted/30 transition-colors border-b border-border/60" data-target="body-tokens-provider">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+          <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         </div>
-
-        <!-- Right: Global Cron Provider Badge & Quick Overview (65%) -->
-        <div class="lg:w-[65%] rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm flex flex-col justify-between">
-          <div class="space-y-3">
-            <div class="flex items-center justify-between border-b border-border/80 pb-3">
-              <div class="flex items-center gap-2">
-                <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                </div>
-                <div>
-                  <h3 class="text-xs font-bold text-foreground">Global Cron Engine & Orchestration</h3>
-                  <p class="text-[10px] text-muted-foreground">Provider is set in Settings &gt; Workspace, tokens are isolated per project</p>
-                </div>
-              </div>
-              <ProviderBadge workspaceId={workspaceId} />
-            </div>
-
-            <p class="text-xs text-muted-foreground leading-relaxed">
-              PinOrbit triggers background scraping workers using stateless cron dispatches. Each schedule emits an authenticated payload to the internal ingestion endpoint (<code class="text-[11px] text-primary font-mono">/api/internal/competitors/dispatch</code>) with an encrypted webhook secret token.
-            </p>
-          </div>
-
-          <div class="pt-3 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
-            <span class="flex items-center gap-1.5 text-[10px]">
-              <span class="inline-block h-2 w-2 rounded-full bg-primary"></span>
-              Encrypted AES-GCM vault security active
-            </span>
-            <a href="/settings" class="text-[10px] font-semibold text-primary hover:underline">Settings &gt; Workspace →</a>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- ═══ Multi-Schedule Table & Controls (P1/P4 Parity) ═══ -->
-      <div class="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm">
-        
-        <!-- Header Controls -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-4">
-          <div class="flex items-center gap-3">
-            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-pink-500/10 text-pink-500 border border-pink-500/20 shadow-2xs">
-              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <h2 class="text-sm font-bold text-foreground">Posting Schedules &amp; Automation</h2>
-                <span id="comp-cron-global-badge" class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground">Active Multi-Schedule</span>
-              </div>
-              <p class="text-xs text-muted-foreground mt-0.5">Manage multi-schedule competitor scraping, profile metrics refresh, and change detection</p>
-            </div>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2">
-            <!-- Run Now Button -->
-            <RunNowButton
-              endpoint="/api/internal/competitors/dispatch"
-              payload={{ workspace_id: workspaceId, pipeline: "competitors" }}
-              label={isMasterWorkspace ? 'Run All Workspaces' : 'Run Now'}
-              forceLabel="⚡ Force Run"
-              scope="competitors"
-              isMaster={isMasterWorkspace}
-              currentWsName={currentWorkspace?.name || 'Hymum'}
-            />
-
-            <!-- New Schedule Button -->
-            <button
-              id="btn-add-competitor-schedule"
-              type="button"
-              class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-2xs hover:bg-primary/90 transition-all cursor-pointer"
-            >
-              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              <span>+ New Schedule</span>
-            </button>
-
-            <!-- Batch Actions Dropdown -->
-            <div class="relative inline-block text-left" id="comp-batch-dropdown-container">
-              <button
-                id="btn-comp-batch"
-                type="button"
-                class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs cursor-pointer"
-              >
-                <svg class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                <span>Batch</span>
-                <span id="comp-batch-sel-count" class="hidden rounded-full bg-primary/20 text-primary px-1.5 py-0.2 text-[10px] font-bold">0</span>
-                <svg class="h-3 w-3 text-muted-foreground ml-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-              </button>
-
-              <div id="comp-sched-batch-menu" class="hidden absolute right-0 mt-1 w-56 rounded-2xl border border-border bg-card shadow-xl z-50 py-1 text-xs divide-y divide-border/80">
-                <div class="py-1">
-                  <button type="button" id="comp-batch-act-select-all" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-foreground cursor-pointer">
-                    <svg class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                    <span>Select all</span>
-                  </button>
-                </div>
-                <div class="py-1">
-                  <button type="button" id="comp-batch-act-run" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-primary font-semibold cursor-pointer">
-                    <svg class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    <span>Run Selected Now</span>
-                  </button>
-                  <button type="button" id="comp-batch-act-enable" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-emerald-600 dark:text-emerald-400 cursor-pointer">
-                    <svg class="h-3.5 w-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                    <span>Resume / Enable Selected</span>
-                  </button>
-                  <button type="button" id="comp-batch-act-disable" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-amber-600 dark:text-amber-400 cursor-pointer">
-                    <svg class="h-3.5 w-3.5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    <span>Pause / Disable Selected</span>
-                  </button>
-                </div>
-                <div class="py-1">
-                  <button type="button" id="comp-batch-act-export" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-muted-foreground hover:text-foreground cursor-pointer">
-                    <svg class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    <span>Export Selected (JSON)</span>
-                  </button>
-                  <button type="button" id="comp-batch-act-delete" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-rose-500 font-semibold cursor-pointer">
-                    <svg class="h-3.5 w-3.5 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    <span>Delete Selected</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Sync Missing Button -->
-            <button
-              id="btn-comp-sync-missing"
-              type="button"
-              class="inline-flex items-center gap-1 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs cursor-pointer"
-            >
-              <span>Sync Missing</span>
-            </button>
-
-            <!-- Refresh Button -->
-            <button
-              id="btn-comp-refresh-schedules"
-              type="button"
-              class="inline-flex items-center gap-1 rounded-xl border border-border bg-background p-2 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-2xs cursor-pointer"
-              title="Refresh schedule telemetry"
-            >
-              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Cadence Analyzer Banner -->
-        <div id="comp-sched-pace-box" class="rounded-xl border border-border/80 bg-background/50 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div>
           <div class="flex items-center gap-2">
-            <span class="text-primary font-bold">⚡ Automation Cadence:</span>
-            <span id="comp-sched-pace-val" class="font-semibold text-foreground">Calculating cadence...</span>
+            <h2 class="text-sm font-bold text-foreground">FastCron API Tokens &amp; Orchestration Engine</h2>
+            <span id="token-status-msg" class="text-emerald-500 font-semibold text-[11px]">✓ Connection healthy</span>
           </div>
-          <div class="text-[11px] text-muted-foreground" id="comp-sched-pace-desc">
-            FastCron controls ingestion schedules independently across configured timezones.
-          </div>
+          <p class="text-xs text-muted-foreground">Workspace token vault registry and isolated webhook dispatch routing.</p>
         </div>
-
-        <!-- Multi-Schedule Table -->
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs text-left" id="competitor-schedules-table">
-            <thead>
-              <tr class="border-b border-border bg-muted/30 text-muted-foreground text-[10px] font-bold">
-                <th class="p-3 w-8">
-                  <input type="checkbox" id="comp-sched-select-all" class="h-3.5 w-3.5 rounded border-border text-primary cursor-pointer" />
-                </th>
-                <th class="p-3">SCHEDULE &amp; STATUS</th>
-                <th class="p-3">SCHEDULE &amp; CADENCE</th>
-                <th class="p-3">NEXT RUN</th>
-                <th class="p-3">LAST RUN</th>
-                <th class="p-3">FASTCRON TOKEN</th>
-                <th class="p-3 text-right">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody id="competitor-schedules-rows" class="divide-y divide-border/60">
-              <tr>
-                <td colspan="7" class="p-6 text-center text-muted-foreground">Loading competitor automation schedules...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
       </div>
-
+      <div class="flex items-center gap-2">
+        <button
+          id="btn-add-token"
+          type="button"
+          onclick="event.stopPropagation()"
+          class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer"
+        >
+          + Add Token
+        </button>
+        <div class="chevron-icon h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-transform duration-200">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
     </div>
 
-    <!-- ═══ SECTION 1: Pipeline Settings ═══ -->
-    <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5 mb-5">
-        <div>
-          <h2 class="text-base font-bold text-foreground flex items-center gap-2">
-            <span>⚙️</span>
-            <span>Pipeline Ingestion Controls</span>
-          </h2>
-          <p class="text-xs text-muted-foreground mt-0.5">Configure global automation parameters, dry-run safety modes, and retry boundaries.</p>
+    <div id="body-tokens-provider" class="collapsible-body p-5 space-y-4">
+      <div class="flex flex-col lg:flex-row gap-5">
+        <!-- Left: FastCron API Tokens (45%) -->
+        <div class="lg:w-[45%] rounded-xl border border-border bg-background/60 p-4 space-y-3">
+          <div class="flex items-center justify-between border-b border-border/60 pb-2.5">
+            <span class="text-xs font-bold text-foreground">Registered API Tokens</span>
+            <button id="btn-ping-tokens" type="button" class="text-[11px] font-semibold text-primary hover:underline cursor-pointer">Test Connection</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead>
+                <tr class="text-left border-b border-border text-muted-foreground text-[10px] font-bold">
+                  <th class="py-2 px-2">NAME</th>
+                  <th class="py-2 px-2">KEY</th>
+                  <th class="py-2 px-2">STATUS</th>
+                  <th class="py-2 px-2 text-right">ACTION</th>
+                </tr>
+              </thead>
+              <tbody id="tokens-table-rows" class="divide-y divide-border/60">
+                <tr><td colspan="4" class="p-3 text-center text-muted-foreground">Loading tokens…</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div class="flex items-center gap-2.5">
-          <RunNowButton
-            endpoint="/api/admin/competitor-ops"
-            payload={{ scope: isMasterWorkspace ? 'all' : 'current' }}
-            forcePayload={{ scope: isMasterWorkspace ? 'all' : 'current', force: true }}
-            label={isMasterWorkspace ? 'Run All Workspaces' : 'Run Full Update'}
-            forceLabel="⚡ Force Run"
-            size="md"
-            variant="primary"
-            buttonId="comp-settings-run-full-update"
-            scope="competitors"
-            isMaster={isMasterWorkspace}
-            currentWsName={currentWorkspace?.name || 'Hymum'}
-          />
+
+        <!-- Right: Global Cron Engine (55%) -->
+        <div class="lg:w-[55%] rounded-xl border border-border bg-background/60 p-4 flex flex-col justify-between space-y-3">
+          <div class="space-y-2">
+            <div class="flex items-center justify-between border-b border-border/60 pb-2.5">
+              <span class="text-xs font-bold text-foreground">Global Cron Engine &amp; Dispatch Routing</span>
+              <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">● FastCron Active</span>
+            </div>
+            <p class="text-xs text-muted-foreground leading-relaxed">
+              PinOrbit triggers background scraping workers using stateless cron dispatches. Each schedule emits an authenticated payload to the internal ingestion endpoint (<code class="font-mono text-foreground text-[11px]">/api/internal/competitors/dispatch</code>) with an encrypted webhook secret token.
+            </p>
+          </div>
+          <div class="flex items-center justify-between text-xs pt-2 border-t border-border/60">
+            <span class="inline-flex items-center gap-1.5 text-muted-foreground text-[11px]">
+              <span class="h-2 w-2 rounded-full bg-emerald-500"></span> Encrypted AES-GCM vault security active
+            </span>
+            <a href="/settings/workspace" class="font-semibold text-primary hover:underline text-[11px]">Settings &gt; Workspace &rarr;</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <!-- ═══ SECTION 1: Posting Schedules & Automation ═══ -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="sec-schedules" class="collapsible-card rounded-2xl border border-border bg-card shadow-sm transition-all overflow-hidden">
+    <div class="collapsible-header flex items-center justify-between p-5 cursor-pointer select-none hover:bg-muted/30 transition-colors border-b border-border/60" data-target="body-schedules">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-pink-500/10 text-pink-500 border border-pink-500/20">
+          <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-bold text-foreground">Posting Schedules &amp; Automation</h2>
+            <span id="comp-cron-global-badge" class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Active Multi-Schedule</span>
+          </div>
+          <p class="text-xs text-muted-foreground">Manage multi-schedule competitor scraping, profile metrics refresh, and change detection.</p>
         </div>
       </div>
 
+      <div class="flex items-center gap-2" onclick="event.stopPropagation()">
+        <!-- Run Now Button with Dual Scope Selector -->
+        <RunNowButton
+          endpoint="/api/internal/competitors/dispatch"
+          payload={{ workspace_id: workspaceId, pipeline: "competitors" }}
+          label={isMasterWorkspace ? 'Run All Workspaces' : 'Run Now'}
+          forceLabel="⚡ Force Run"
+          scope="competitors"
+          isMaster={isMasterWorkspace}
+          currentWsName={currentWorkspace?.name || 'Hymum'}
+        />
+
+        <button
+          id="btn-add-competitor-schedule"
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all cursor-pointer"
+        >
+          <span>+ New Schedule</span>
+        </button>
+
+        <div class="relative inline-block text-left" id="comp-batch-dropdown-container">
+          <button
+            type="button"
+            id="btn-comp-batch"
+            class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-xs cursor-pointer"
+          >
+            <span>Batch</span>
+            <span id="comp-batch-sel-count" class="hidden rounded-full bg-primary/20 text-primary px-1.5 py-0.2 text-[10px] font-bold">0</span>
+            <svg class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div id="comp-sched-batch-menu" class="hidden absolute right-0 mt-1 w-56 rounded-2xl border border-border bg-card shadow-xl z-50 py-1 text-xs divide-y divide-border/80">
+            <div class="p-1">
+              <button type="button" id="comp-batch-act-select-all" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-foreground cursor-pointer rounded-lg">
+                <svg class="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <span>Select All</span>
+              </button>
+            </div>
+            <div class="p-1 space-y-0.5">
+              <button type="button" id="comp-batch-act-run" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-primary font-semibold cursor-pointer rounded-lg">
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>Run Now</span>
+              </button>
+              <button type="button" id="comp-batch-act-enable" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-emerald-600 dark:text-emerald-400 cursor-pointer rounded-lg">
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>Enable Selected</span>
+              </button>
+              <button type="button" id="comp-batch-act-disable" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-amber-600 dark:text-amber-400 cursor-pointer rounded-lg">
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                <span>Disable Selected</span>
+              </button>
+            </div>
+            <div class="p-1 space-y-0.5">
+              <button type="button" id="comp-batch-act-export" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg">
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Export JSON</span>
+              </button>
+              <button type="button" id="comp-batch-act-delete" class="w-full text-left px-3 py-1.5 hover:bg-muted flex items-center gap-2 text-rose-500 font-semibold cursor-pointer rounded-lg">
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                <span>Delete Selected</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button
+          id="btn-comp-sync-missing"
+          type="button"
+          class="inline-flex items-center gap-1 rounded-xl border border-border bg-card px-2.5 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-all shadow-xs cursor-pointer"
+          title="Auto-create and sync missing default schedules"
+        >
+          Sync Missing
+        </button>
+
+        <button
+          id="btn-comp-refresh-schedules"
+          type="button"
+          class="inline-flex items-center justify-center rounded-xl border border-border bg-card p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-all shadow-xs cursor-pointer"
+          title="Refresh schedule telemetry"
+        >
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+        </button>
+
+        <div class="chevron-icon h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-transform duration-200 cursor-pointer" onclick="this.closest('.collapsible-header').click()">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div id="body-schedules" class="collapsible-body p-5 space-y-4">
+      <!-- Pacing Cadence Banner -->
+      <div id="comp-sched-pace-box" class="rounded-xl border border-border/80 bg-background/50 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="text-amber-500">⚡</span>
+          <span class="font-bold text-muted-foreground">Automation Cadence:</span>
+          <span id="comp-sched-pace-val" class="font-semibold text-foreground">1 Active Schedule · ~7 Runs / Week</span>
+        </div>
+        <div class="text-[11px] text-muted-foreground" id="comp-sched-pace-desc">
+          Schedules synchronized with FastCron (1 token in vault).
+        </div>
+      </div>
+
+      <!-- Schedules Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs text-left" id="competitor-schedules-table">
+          <thead>
+            <tr class="border-b border-border text-muted-foreground text-[10px] font-bold">
+              <th class="p-3 w-8">
+                <input type="checkbox" id="comp-sched-select-all" class="h-3.5 w-3.5 rounded border-border text-primary cursor-pointer" />
+              </th>
+              <th class="p-3">SCHEDULE &amp; STATUS</th>
+              <th class="p-3">SCHEDULE &amp; CADENCE</th>
+              <th class="p-3">NEXT RUN</th>
+              <th class="p-3">LAST RUN</th>
+              <th class="p-3">FASTCRON TOKEN</th>
+              <th class="p-3 text-right">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody id="competitor-schedules-rows" class="divide-y divide-border/60">
+            <tr><td colspan="7" class="p-6 text-center text-muted-foreground">Loading schedules…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <!-- ═══ SECTION 2: Pipeline Ingestion Controls ═══ -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="sec-pipeline" class="collapsible-card rounded-2xl border border-border bg-card shadow-sm transition-all overflow-hidden">
+    <div class="collapsible-header flex items-center justify-between p-5 cursor-pointer select-none hover:bg-muted/30 transition-colors border-b border-border/60" data-target="body-pipeline">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500 border border-purple-500/20">
+          <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-bold text-foreground">Pipeline Ingestion Controls</h2>
+            <span id="pipeline-status-badge" class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Active</span>
+            <span id="kek-badge" class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground">🔑 KEK Active</span>
+          </div>
+          <p class="text-xs text-muted-foreground">Configure global automation parameters, dry-run safety modes, and retry boundaries.</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <div class="chevron-icon h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-transform duration-200">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div id="body-pipeline" class="collapsible-body p-5">
       <form id="pipeline-settings-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Pipeline Switch -->
-        <div class="flex flex-col justify-between rounded-xl border border-border bg-background p-4">
+        <div class="flex flex-col justify-between rounded-xl border border-border bg-background/60 p-4">
           <div>
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-foreground">Pipeline Status</span>
-              <div class="flex items-center gap-1.5">
-                <span id="kek-badge" class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground">🔑 KEK —</span>
-                <span id="pipeline-status-badge" class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500">Active</span>
-              </div>
+              <span class="text-xs font-bold text-foreground">Pipeline Engine</span>
+              <span class="text-[10px] text-muted-foreground">Master Gate</span>
             </div>
-            <p class="text-[11px] text-muted-foreground mt-1">When disabled, automated cron runs and background workers cleanly skip execution.</p>
+            <p class="text-[11px] text-muted-foreground mt-1">When disabled, automated cron runs and workers cleanly skip execution.</p>
           </div>
           <div class="mt-4 flex items-center gap-2">
             <input type="checkbox" id="pipe-is-enabled" class="h-4 w-4 rounded accent-primary cursor-pointer" checked />
@@ -368,13 +386,13 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         </div>
 
         <!-- Dry Run Switch -->
-        <div class="flex flex-col justify-between rounded-xl border border-border bg-background p-4">
+        <div class="flex flex-col justify-between rounded-xl border border-border bg-background/60 p-4">
           <div>
             <div class="flex items-center justify-between">
               <span class="text-xs font-bold text-foreground">Dry-Run Simulation</span>
               <span id="dry-run-status-badge" class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground">Off</span>
             </div>
-            <p class="text-[11px] text-muted-foreground mt-1">Queries Pinterest API & rotates cookies but commits zero database writes.</p>
+            <p class="text-[11px] text-muted-foreground mt-1">Queries Pinterest API &amp; rotates cookies but commits zero database writes.</p>
           </div>
           <div class="mt-4 flex items-center gap-2">
             <input type="checkbox" id="pipe-dry-run" class="h-4 w-4 rounded accent-amber-500 cursor-pointer" />
@@ -383,7 +401,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         </div>
 
         <!-- GitHub Actions Daily Schedule (02:00 UTC) -->
-        <div class="flex flex-col justify-between rounded-xl border border-border bg-background p-4">
+        <div class="flex flex-col justify-between rounded-xl border border-border bg-background/60 p-4">
           <div>
             <div class="flex items-center justify-between">
               <span class="text-xs font-bold text-foreground">GitHub Actions Cron</span>
@@ -398,43 +416,62 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         </div>
 
         <!-- Max Retries & Save -->
-        <div class="flex flex-col justify-between rounded-xl border border-border bg-background p-4">
+        <div class="flex flex-col justify-between rounded-xl border border-border bg-background/60 p-4">
           <div>
             <span class="text-xs font-bold text-foreground">Network Max Retries</span>
             <p class="text-[11px] text-muted-foreground mt-1">Exponential backoff ceiling per competitor fetch attempt (1–10).</p>
           </div>
-          <div class="mt-4 flex items-center gap-3">
+          <div class="mt-4 flex items-center gap-2.5">
             <input type="number" id="pipe-max-retries" min="1" max="10" value="3"
-              class="w-20 rounded-xl border border-border bg-card py-1.5 px-3 text-xs font-semibold text-foreground focus:border-primary focus:outline-none" />
+              class="w-18 rounded-xl border border-border bg-card py-1.5 px-3 text-xs font-semibold text-foreground focus:border-primary focus:outline-none" />
             <button type="submit" id="btn-save-pipeline"
-              class="rounded-xl border border-border bg-card px-4 py-1.5 text-xs font-semibold text-foreground shadow-xs hover:bg-muted transition-all">
+              class="flex-1 rounded-xl bg-primary text-primary-foreground px-3 py-1.5 text-xs font-semibold shadow-xs hover:bg-primary/90 transition-all cursor-pointer">
               Save Settings
             </button>
           </div>
         </div>
       </form>
     </div>
+  </div>
 
-    <!-- ═══ SECTION 2: Pinterest Cookies (Vault) ═══ -->
-    <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5 mb-5">
-        <div>
-          <h2 class="text-base font-bold text-foreground flex items-center gap-2">
-            <span>🔐</span>
-            <span>Pinterest Session Vault</span>
-          </h2>
-          <p class="text-xs text-muted-foreground mt-0.5">Encrypted at rest using AES-GCM and workspace KEK. Used for authenticated Pinterest scraping.</p>
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <!-- ═══ SECTION 3: Pinterest Session Vault ═══ -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="sec-vault" class="collapsible-card rounded-2xl border border-border bg-card shadow-sm transition-all overflow-hidden">
+    <div class="collapsible-header flex items-center justify-between p-5 cursor-pointer select-none hover:bg-muted/30 transition-colors border-b border-border/60" data-target="body-vault">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+          <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         </div>
-        <button id="open-add-cookie-modal"
-          class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-md hover:bg-emerald-500 transition-all self-start sm:self-auto">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>Add Cookie</span>
-        </button>
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-bold text-foreground">Pinterest Session Vault</h2>
+            <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">AES-GCM Encrypted</span>
+          </div>
+          <p class="text-xs text-muted-foreground">Encrypted at rest using AES-GCM and workspace KEK. Used for authenticated Pinterest scraping.</p>
+        </div>
       </div>
 
+      <div class="flex items-center gap-2">
+        <button
+          id="open-add-cookie-modal"
+          type="button"
+          onclick="event.stopPropagation()"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-500 transition-all cursor-pointer"
+        >
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Add Cookie</span>
+        </button>
+        <div class="chevron-icon h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-transform duration-200">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div id="body-vault" class="collapsible-body p-5">
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs text-muted-foreground" id="cookies-table">
-          <thead class="border-b border-border bg-muted/60 text-foreground font-semibold">
+          <thead class="border-b border-border bg-muted/40 text-foreground font-semibold">
             <tr>
               <th scope="col" class="py-3 px-4">Vault Identifier</th>
               <th scope="col" class="py-3 px-4">Security Level</th>
@@ -451,30 +488,117 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         </table>
       </div>
     </div>
+  </div>
 
-    <!-- ═══ SECTION 3: Per-Competitor Controls ═══ -->
-    <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5 mb-5">
-        <div>
-          <h2 class="text-base font-bold text-foreground flex items-center gap-2">
-            <span>🎯</span>
-            <span>Per-Competitor Ingestion Matrix</span>
-          </h2>
-          <p class="text-xs text-muted-foreground mt-0.5">Toggle active tracking per profile, configure update cadence, or dispatch targeted syncs.</p>
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <!-- ═══ SECTION 4: Per-Competitor Ingestion Matrix ═══ -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="sec-matrix" class="collapsible-card rounded-2xl border border-border bg-card shadow-sm transition-all overflow-hidden">
+    <div class="collapsible-header flex items-center justify-between p-5 cursor-pointer select-none hover:bg-muted/30 transition-colors border-b border-border/60" data-target="body-matrix">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20">
+          <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
         </div>
-        <span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary self-start sm:self-auto" id="competitor-matrix-count">0 Tracked</span>
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-bold text-foreground">Per-Competitor Ingestion Matrix</h2>
+            <span class="rounded-full bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-[10px] font-bold text-primary" id="competitor-matrix-count">3 Tracked</span>
+          </div>
+          <p class="text-xs text-muted-foreground">Toggle active tracking per profile, configure update cadence, or dispatch targeted syncs.</p>
+        </div>
       </div>
 
+      <div class="flex items-center gap-2">
+        <div class="chevron-icon h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-transform duration-200">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div id="body-matrix" class="collapsible-body p-5 space-y-4">
+      <!-- Matrix Filter Toolbar -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs bg-muted/20 p-3 rounded-xl border border-border/60">
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Search input -->
+          <div class="relative flex-1 sm:w-64">
+            <svg class="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input
+              type="text"
+              id="matrix-search-input"
+              placeholder="Search competitor @username or name..."
+              class="w-full rounded-xl border border-border bg-card pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+            />
+          </div>
+
+          <!-- Status Filters -->
+          <div class="flex items-center rounded-xl border border-border bg-card p-0.5" id="matrix-status-filters">
+            <button type="button" class="matrix-filter-btn px-2.5 py-1 rounded-lg font-semibold bg-primary text-primary-foreground text-[11px] cursor-pointer" data-filter="all">All</button>
+            <button type="button" class="matrix-filter-btn px-2.5 py-1 rounded-lg font-semibold text-muted-foreground hover:text-foreground text-[11px] cursor-pointer" data-filter="active">Active</button>
+            <button type="button" class="matrix-filter-btn px-2.5 py-1 rounded-lg font-semibold text-muted-foreground hover:text-foreground text-[11px] cursor-pointer" data-filter="paused">Paused</button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 self-end sm:self-auto">
+          <!-- Columns Dropdown -->
+          <div class="relative inline-block text-left" id="matrix-cols-dropdown-container">
+            <button
+              type="button"
+              id="matrix-cols-btn"
+              class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer"
+            >
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+              <span>Columns</span>
+              <svg class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div id="matrix-cols-menu" class="hidden absolute right-0 mt-1 w-48 rounded-2xl border border-border bg-card shadow-xl z-50 p-2 text-xs space-y-1">
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted cursor-pointer">
+                <input type="checkbox" class="rounded accent-primary h-3.5 w-3.5" data-col="profile" checked disabled />
+                <span>Profile Handle</span>
+              </label>
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted cursor-pointer">
+                <input type="checkbox" class="matrix-col-toggle rounded accent-primary h-3.5 w-3.5" data-col="tracking" checked />
+                <span>Tracking State</span>
+              </label>
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted cursor-pointer">
+                <input type="checkbox" class="matrix-col-toggle rounded accent-primary h-3.5 w-3.5" data-col="cadence" checked />
+                <span>Update Cadence</span>
+              </label>
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted cursor-pointer">
+                <input type="checkbox" class="matrix-col-toggle rounded accent-primary h-3.5 w-3.5" data-col="audience" checked />
+                <span>Audience &amp; Reach</span>
+              </label>
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted cursor-pointer">
+                <input type="checkbox" class="matrix-col-toggle rounded accent-primary h-3.5 w-3.5" data-col="last_checked" checked />
+                <span>Last Checked</span>
+              </label>
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted cursor-pointer">
+                <input type="checkbox" class="matrix-col-toggle rounded accent-primary h-3.5 w-3.5" data-col="actions" checked />
+                <span>Targeted Actions</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Page size selector -->
+          <select id="matrix-page-size" class="rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground focus:border-primary focus:outline-none cursor-pointer">
+            <option value="5">5 per page</option>
+            <option value="10" selected>10 per page</option>
+            <option value="25">25 per page</option>
+            <option value="50">50 per page</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Matrix Table -->
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs text-muted-foreground" id="competitors-matrix-table">
-          <thead class="border-b border-border bg-muted/60 text-foreground font-semibold">
-            <tr>
-              <th scope="col" class="py-3 px-4">Competitor Profile</th>
-              <th scope="col" class="py-3 px-4">Tracking State</th>
-              <th scope="col" class="py-3 px-4">Update Cadence</th>
-              <th scope="col" class="py-3 px-4">Current Audience</th>
-              <th scope="col" class="py-3 px-4">Last Checked</th>
-              <th scope="col" class="py-3 px-4 text-right">Targeted Actions</th>
+          <thead class="border-b border-border bg-muted/40 text-foreground font-semibold">
+            <tr id="matrix-table-headers">
+              <th scope="col" class="py-3 px-4" data-col="profile">Competitor Profile</th>
+              <th scope="col" class="py-3 px-4" data-col="tracking">Tracking State</th>
+              <th scope="col" class="py-3 px-4" data-col="cadence">Update Cadence</th>
+              <th scope="col" class="py-3 px-4" data-col="audience">Current Audience</th>
+              <th scope="col" class="py-3 px-4" data-col="last_checked">Last Checked</th>
+              <th scope="col" class="py-3 px-4 text-right" data-col="actions">Targeted Actions</th>
             </tr>
           </thead>
           <tbody id="competitors-matrix-body" class="divide-y divide-border bg-card">
@@ -482,32 +606,137 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
           </tbody>
         </table>
       </div>
-    </div>
 
-    <!-- ═══ SECTION 4: Recent Ingestion Jobs ═══ -->
-    <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5 mb-5">
+      <!-- Matrix Pagination Footer -->
+      <div id="matrix-pagination-footer" class="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground pt-2 border-t border-border/60">
+        <span id="matrix-pagination-summary">Showing 1 to 3 of 3 competitors</span>
+        <div class="flex items-center gap-1.5" id="matrix-pagination-controls">
+          <button id="matrix-prev-page" class="rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">Prev</button>
+          <span id="matrix-page-indicator" class="font-semibold text-foreground px-2">Page 1 of 1</span>
+          <button id="matrix-next-page" class="rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <!-- ═══ SECTION 5: Recent Ingestion Jobs & Live Audit ═══ -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="sec-jobs" class="collapsible-card rounded-2xl border border-border bg-card shadow-sm transition-all overflow-hidden">
+    <div class="collapsible-header flex items-center justify-between p-5 cursor-pointer select-none hover:bg-muted/30 transition-colors border-b border-border/60" data-target="body-jobs">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+          <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
         <div>
-          <h2 class="text-base font-bold text-foreground flex items-center gap-2">
-            <span>📋</span>
-            <span>Recent Ingestion Jobs & Live Audit</span>
-          </h2>
-          <p class="text-xs text-muted-foreground mt-0.5">Audit log of the last 15 ingestion runs with status codes, items processed, and error telemetry.</p>
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-bold text-foreground">Recent Ingestion Jobs &amp; Live Audit</h2>
+            <span class="rounded-full bg-muted border border-border px-2.5 py-0.5 text-[10px] font-bold text-muted-foreground" id="jobs-count-badge">15 Recorded</span>
+          </div>
+          <p class="text-xs text-muted-foreground">Audit log of ingestion runs with telemetry status codes, items processed, duration, and auto-healed runs.</p>
         </div>
       </div>
 
+      <div class="flex items-center gap-2">
+        <div class="chevron-icon h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-transform duration-200">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div id="body-jobs" class="collapsible-body p-5 space-y-4">
+      <!-- Jobs Filter & Search Toolbar -->
+      <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 text-xs bg-muted/20 p-3 rounded-xl border border-border/60">
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Status Filters -->
+          <div class="flex items-center rounded-xl border border-border bg-card p-0.5" id="jobs-status-filters">
+            <button type="button" class="jobs-filter-btn px-2.5 py-1 rounded-lg font-semibold bg-primary text-primary-foreground text-[11px] cursor-pointer" data-status="all">All</button>
+            <button type="button" class="jobs-filter-btn px-2.5 py-1 rounded-lg font-semibold text-muted-foreground hover:text-foreground text-[11px] cursor-pointer" data-status="completed">Completed</button>
+            <button type="button" class="jobs-filter-btn px-2.5 py-1 rounded-lg font-semibold text-muted-foreground hover:text-foreground text-[11px] cursor-pointer" data-status="running">Running</button>
+            <button type="button" class="jobs-filter-btn px-2.5 py-1 rounded-lg font-semibold text-muted-foreground hover:text-foreground text-[11px] cursor-pointer" data-status="failed">Failed</button>
+          </div>
+
+          <!-- Trigger Select Filter -->
+          <select id="jobs-trigger-filter" class="rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground focus:border-primary focus:outline-none cursor-pointer">
+            <option value="all">All Triggers</option>
+            <option value="cron">🕐 Cron</option>
+            <option value="manual">⚙️ Manual</option>
+            <option value="run_now">⚡ Run Now</option>
+            <option value="full">🧹 Full</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-2 self-end lg:self-auto">
+          <!-- Columns Dropdown -->
+          <div class="relative inline-block text-left" id="jobs-cols-dropdown-container">
+            <button
+              type="button"
+              id="jobs-cols-btn"
+              class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer"
+            >
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+              <span>Columns</span>
+              <svg class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div id="jobs-cols-menu" class="hidden absolute right-0 mt-1 w-48 rounded-2xl border border-border bg-card shadow-xl z-50 p-2 text-xs space-y-1">
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted cursor-pointer">
+                <input type="checkbox" class="rounded accent-primary h-3.5 w-3.5" data-col="id" checked disabled />
+                <span>Job ID</span>
+              </label>
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted cursor-pointer">
+                <input type="checkbox" class="jobs-col-toggle rounded accent-primary h-3.5 w-3.5" data-col="scope" checked />
+                <span>Target Scope</span>
+              </label>
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted cursor-pointer">
+                <input type="checkbox" class="jobs-col-toggle rounded accent-primary h-3.5 w-3.5" data-col="status" checked />
+                <span>Status</span>
+              </label>
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted cursor-pointer">
+                <input type="checkbox" class="jobs-col-toggle rounded accent-primary h-3.5 w-3.5" data-col="items" checked />
+                <span>Items Processed</span>
+              </label>
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted cursor-pointer">
+                <input type="checkbox" class="jobs-col-toggle rounded accent-primary h-3.5 w-3.5" data-col="started" checked />
+                <span>Started At</span>
+              </label>
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted cursor-pointer">
+                <input type="checkbox" class="jobs-col-toggle rounded accent-primary h-3.5 w-3.5" data-col="completed" checked />
+                <span>Completed At</span>
+              </label>
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted cursor-pointer">
+                <input type="checkbox" class="jobs-col-toggle rounded accent-primary h-3.5 w-3.5" data-col="duration" checked />
+                <span>Processing Time</span>
+              </label>
+              <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted cursor-pointer">
+                <input type="checkbox" class="jobs-col-toggle rounded accent-primary h-3.5 w-3.5" data-col="telemetry" checked />
+                <span>Telemetry / Errors</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Page Size Selector -->
+          <select id="jobs-page-size" class="rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground focus:border-primary focus:outline-none cursor-pointer">
+            <option value="5">5 per page</option>
+            <option value="10" selected>10 per page</option>
+            <option value="15">15 per page</option>
+            <option value="25">25 per page</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Jobs Table -->
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs text-muted-foreground" id="jobs-table">
-          <thead class="border-b border-border bg-muted/60 text-foreground font-semibold">
-            <tr>
-              <th scope="col" class="py-3 px-4">Job ID</th>
-              <th scope="col" class="py-3 px-4">Target Scope</th>
-              <th scope="col" class="py-3 px-4">Status</th>
-              <th scope="col" class="py-3 px-4">Items Processed</th>
-              <th scope="col" class="py-3 px-4">Started At</th>
-              <th scope="col" class="py-3 px-4">Completed At</th>
-              <th scope="col" class="py-3 px-4 cursor-help" title="Script processing time (CI overhead excluded)">Processing</th>
-              <th scope="col" class="py-3 px-4">Telemetry / Errors</th>
+          <thead class="border-b border-border bg-muted/40 text-foreground font-semibold">
+            <tr id="jobs-table-headers">
+              <th scope="col" class="py-3 px-4" data-col="id">Job ID</th>
+              <th scope="col" class="py-3 px-4" data-col="scope">Target Scope</th>
+              <th scope="col" class="py-3 px-4" data-col="status">Status</th>
+              <th scope="col" class="py-3 px-4" data-col="items">Items Processed</th>
+              <th scope="col" class="py-3 px-4" data-col="started">Started At</th>
+              <th scope="col" class="py-3 px-4" data-col="completed">Completed At</th>
+              <th scope="col" class="py-3 px-4 cursor-help" data-col="duration" title="Script processing time (CI overhead excluded)">Processing</th>
+              <th scope="col" class="py-3 px-4" data-col="telemetry">Telemetry / Errors</th>
             </tr>
           </thead>
           <tbody id="jobs-table-body" class="divide-y divide-border bg-card">
@@ -515,10 +744,22 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
           </tbody>
         </table>
       </div>
+
+      <!-- Jobs Pagination Footer -->
+      <div id="jobs-pagination-footer" class="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground pt-2 border-t border-border/60">
+        <span id="jobs-pagination-summary">Showing 1 to 10 of 15 jobs</span>
+        <div class="flex items-center gap-1.5" id="jobs-pagination-controls">
+          <button id="jobs-prev-page" class="rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">Prev</button>
+          <span id="jobs-page-indicator" class="font-semibold text-foreground px-2">Page 1 of 2</span>
+          <button id="jobs-next-page" class="rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">Next</button>
+        </div>
+      </div>
     </div>
   </div>
 
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
   <!-- ═══ MODAL: Add Cookie ═══ -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
   <div id="add-cookie-modal" class="overlay-root fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4" aria-modal="true" role="dialog">
     <div class="fixed inset-0" data-close></div>
     <div class="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 z-10">
@@ -530,7 +771,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
           <h3 class="text-base font-bold text-foreground">Add Encrypted Pinterest Cookie</h3>
         </div>
         <button data-close class="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="18" x2="18" y2="18"/></svg>
         </button>
       </div>
 
@@ -540,8 +781,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         <div class="space-y-1.5">
           <label for="cookie-value-input" class="block text-xs font-semibold text-foreground">Cookie String *</label>
           <textarea id="cookie-value-input" required rows="4" placeholder="Paste Pinterest session cookie (e.g. _pinterest_sess=...; auth_token=...)"
-            class="w-full rounded-xl border border-border bg-background py-2 px-3 font-mono text-[11px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"></textarea>
-          <p class="text-[10px] text-muted-foreground">Payload is encrypted client-side / at-rest via AES-GCM before database write. Raw string is never exposed.</p>
+            class="w-full rounded-xl border border-border bg-background p-3 text-xs font-mono text-foreground focus:border-primary focus:outline-none"></textarea>
         </div>
 
         <div class="space-y-1.5">
@@ -551,22 +791,22 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         </div>
 
         <div class="flex items-center justify-end gap-3 border-t border-border pt-4">
-          <button type="button" data-close class="rounded-xl border border-border px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground">Cancel</button>
-          <button type="submit" class="rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-semibold text-white shadow-md hover:bg-emerald-500 transition-all">Save (Encrypted)</button>
+          <button type="button" data-close class="rounded-xl border border-border px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer">Cancel</button>
+          <button type="submit" class="rounded-xl bg-emerald-600 px-5 py-2 text-xs font-semibold text-white shadow-md hover:bg-emerald-500 transition-all cursor-pointer">Save (Encrypted)</button>
         </div>
       </form>
     </div>
   </div>
 
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
   <!-- ═══ MODAL: Add FastCron Token ═══ -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
   <div id="comp-token-modal" class="overlay-root fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4" aria-modal="true" role="dialog">
     <div class="fixed inset-0" data-close></div>
     <div class="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4 z-10">
       <div class="flex items-center justify-between border-b border-border pb-3">
         <h3 class="text-base font-bold text-foreground">Add FastCron API Token</h3>
-        <button data-close class="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
-          ✕
-        </button>
+        <button data-close class="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground">✕</button>
       </div>
       <div id="comp-token-error" class="hidden rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-500"></div>
       <form id="comp-token-form" class="space-y-4 text-xs">
@@ -606,7 +846,9 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     </div>
   </div>
 
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
   <!-- ═══ MODAL: Custom Multi-Tab Schedule Builder ═══ -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
   <dialog id="comp-schedule-modal" class="rounded-2xl border border-border bg-card text-foreground shadow-2xl p-0 w-full max-w-[620px] backdrop:bg-black/70">
     <div class="p-5 space-y-4">
       <div class="flex items-center justify-between border-b border-border pb-3">
@@ -632,8 +874,8 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
 
         <!-- Tabs -->
         <div class="flex border-b border-border gap-2">
-          <button type="button" id="comp-tab-btn-simple" class="px-3 py-1.5 font-bold border-b-2 border-primary text-primary transition-all">Simple Time</button>
-          <button type="button" id="comp-tab-btn-raw" class="px-3 py-1.5 font-semibold text-muted-foreground hover:text-foreground transition-all">Raw Cron (5-Part)</button>
+          <button type="button" id="comp-tab-btn-simple" class="px-3 py-1.5 font-bold border-b-2 border-primary text-primary transition-all cursor-pointer">Simple Time</button>
+          <button type="button" id="comp-tab-btn-raw" class="px-3 py-1.5 font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer">Raw Cron (5-Part)</button>
         </div>
 
         <!-- Simple Tab -->
@@ -697,7 +939,9 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     </div>
   </dialog>
 
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
   <!-- ═══ MODAL: Execution Logs Modal ═══ -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
   <dialog id="comp-logs-modal" class="rounded-2xl border border-border bg-card text-foreground shadow-2xl p-0 w-full max-w-[640px] backdrop:bg-black/70">
     <div class="p-5 space-y-4">
       <div class="flex items-center justify-between border-b border-border pb-3">
@@ -725,7 +969,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
       </div>
 
       <div class="flex justify-end pt-2 border-t border-border">
-        <button type="button" onclick="document.getElementById('comp-logs-modal').close()" class="rounded-xl border border-border bg-background px-4 py-1.5 font-semibold text-foreground hover:bg-muted transition-all text-xs">Close</button>
+        <button type="button" onclick="document.getElementById('comp-logs-modal').close()" class="rounded-xl border border-border bg-background px-4 py-1.5 font-semibold text-foreground hover:bg-muted transition-all text-xs cursor-pointer">Close</button>
       </div>
     </div>
   </dialog>
@@ -805,6 +1049,67 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
       const modal = target.closest('.overlay-root') as HTMLElement;
       if (modal) hideModal(modal);
     }
+  });
+
+  // ─── Collapsible Cards Architecture ────────────────────────────────────────
+  let collapsedSections: Record<string, boolean> = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('po_comp_ops_collapsed') || '{}');
+    } catch {
+      return {};
+    }
+  })();
+
+  function updateCollapseUI() {
+    document.querySelectorAll('.collapsible-card').forEach((card) => {
+      const header = card.querySelector('.collapsible-header') as HTMLElement;
+      const targetId = header?.getAttribute('data-target');
+      if (!targetId) return;
+      const body = document.getElementById(targetId);
+      const chevron = header.querySelector('.chevron-icon') as HTMLElement;
+      const isCollapsed = Boolean(collapsedSections[targetId]);
+
+      if (body) {
+        if (isCollapsed) {
+          body.classList.add('hidden');
+          chevron?.classList.add('rotate-180');
+        } else {
+          body.classList.remove('hidden');
+          chevron?.classList.remove('rotate-180');
+        }
+      }
+    });
+
+    const anyExpanded = Object.values(collapsedSections).some(c => !c);
+    const collapseAllText = $('collapse-all-text');
+    const collapseAllIcon = $('collapse-all-icon');
+    if (collapseAllText) {
+      collapseAllText.textContent = anyExpanded ? 'Collapse All' : 'Expand All';
+    }
+    if (collapseAllIcon) {
+      if (anyExpanded) collapseAllIcon.classList.remove('rotate-180');
+      else collapseAllIcon.classList.add('rotate-180');
+    }
+  }
+
+  document.querySelectorAll('.collapsible-header').forEach((header) => {
+    header.addEventListener('click', () => {
+      const targetId = header.getAttribute('data-target');
+      if (!targetId) return;
+      collapsedSections[targetId] = !collapsedSections[targetId];
+      localStorage.setItem('po_comp_ops_collapsed', JSON.stringify(collapsedSections));
+      updateCollapseUI();
+    });
+  });
+
+  $('btn-toggle-all-collapse')?.addEventListener('click', () => {
+    const anyExpanded = Object.values(collapsedSections).some(c => !c);
+    const allTargets = ['body-tokens-provider', 'body-schedules', 'body-pipeline', 'body-vault', 'body-matrix', 'body-jobs'];
+    allTargets.forEach(t => {
+      collapsedSections[t] = anyExpanded;
+    });
+    localStorage.setItem('po_comp_ops_collapsed', JSON.stringify(collapsedSections));
+    updateCollapseUI();
   });
 
   // ─── Multi-Schedule State ──────────────────────────────────────────────────
@@ -917,24 +1222,24 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
         </td>
         <td class="p-3 text-right">
           <div class="flex items-center justify-end gap-1.5">
-            <button data-act-run="${s.id}" class="rounded-lg p-1.5 text-primary hover:bg-primary/10 transition-all" title="Run Now">
+            <button data-act-run="${s.id}" class="rounded-lg p-1.5 text-primary hover:bg-primary/10 transition-all cursor-pointer" title="Run Now">
               <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             </button>
-            <button data-act-pause="${s.id}" data-paused="${isPaused}" class="rounded-lg p-1.5 ${isPaused ? 'text-emerald-500 hover:bg-emerald-500/10' : 'text-amber-500 hover:bg-amber-500/10'} transition-all" title="${isPaused ? 'Resume' : 'Pause'}">
+            <button data-act-pause="${s.id}" data-paused="${isPaused}" class="rounded-lg p-1.5 ${isPaused ? 'text-emerald-500 hover:bg-emerald-500/10' : 'text-amber-500 hover:bg-amber-500/10'} transition-all cursor-pointer" title="${isPaused ? 'Resume' : 'Pause'}">
               <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 ${isPaused ? '<polygon points="5 3 19 12 5 21 5 3"/>' : '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>'}
               </svg>
             </button>
-            <button data-act-clone="${s.id}" class="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all" title="Clone Schedule">
+            <button data-act-clone="${s.id}" class="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all cursor-pointer" title="Clone Schedule">
               <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
             </button>
-            <button data-act-logs="${s.id}" class="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all" title="Execution Logs">
+            <button data-act-logs="${s.id}" class="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all cursor-pointer" title="Execution Logs">
               <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             </button>
-            <button data-act-edit="${s.id}" class="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all" title="Edit Schedule">
+            <button data-act-edit="${s.id}" class="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all cursor-pointer" title="Edit Schedule">
               <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
-            <button data-act-delete="${s.id}" class="rounded-lg p-1.5 text-rose-500 hover:bg-rose-500/10 transition-all" title="Delete Schedule">
+            <button data-act-delete="${s.id}" class="rounded-lg p-1.5 text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer" title="Delete Schedule">
               <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             </button>
           </div>
@@ -947,216 +1252,153 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     const paceVal = $('comp-sched-pace-val');
     const paceDesc = $('comp-sched-pace-desc');
     const globalBadge = $('comp-cron-global-badge');
+    const navBadge = $('nav-schedules-badge');
     if (!paceVal) return;
 
-    const activeCount = loadedSchedules.filter((s) => s.status === 'active' && !s.paused).length;
-    const totalWeeklyRuns = activeCount * 7; // assuming daily averages
-
-    paceVal.textContent = `${activeCount} Active Schedule${activeCount === 1 ? '' : 's'} · ~${totalWeeklyRuns} Runs / Week`;
-    if (paceDesc) {
-      paceDesc.textContent = activeCount > 0
-        ? `Schedules synchronized with FastCron (${loadedTokens.length} token${loadedTokens.length === 1 ? '' : 's'} in vault).`
-        : 'No active schedules running. Add a schedule to enable automated background scraping.';
-    }
-
+    const activeCount = loadedSchedules.filter((s) => !s.paused && s.status !== 'paused').length;
+    if (navBadge) navBadge.textContent = String(activeCount);
     if (globalBadge) {
+      globalBadge.textContent = `${activeCount} Active Schedule${activeCount === 1 ? '' : 's'}`;
       globalBadge.className = activeCount > 0
         ? 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
         : 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground';
-      globalBadge.textContent = activeCount > 0 ? `${activeCount} Active` : 'No Active Schedules';
+    }
+
+    paceVal.textContent = `${activeCount} Active Schedule${activeCount === 1 ? '' : 's'} · ~${activeCount * 7} Runs / Week`;
+    if (paceDesc) {
+      const tokCount = loadedTokens.length;
+      paceDesc.textContent = `Schedules synchronized with FastCron (${tokCount} token${tokCount === 1 ? '' : 's'} in vault).`;
     }
   }
 
   async function loadSchedules() {
     try {
       const res = await fetchAPI('/api/competitors/schedules');
-      loadedSchedules = res.schedules || [];
-      renderSchedules();
-      updateCadenceBanner();
+      if (res.success || Array.isArray(res.schedules)) {
+        loadedSchedules = res.schedules || [];
+        if (Array.isArray(res.tokens) && res.tokens.length > 0 && loadedTokens.length === 0) {
+          loadedTokens = res.tokens;
+          renderTokens();
+        }
+        renderSchedules();
+        updateCadenceBanner();
+      }
     } catch (err: any) {
-      const tbody = $('competitor-schedules-rows');
-      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-rose-500">Failed to load schedules: ${escHtml(err.message)}</td></tr>`;
+      console.warn('[Competitor Schedules] Load error:', err);
+    }
+  }
+
+  // ─── Render Tokens ────────────────────────────────────────────────────────
+  function renderTokens() {
+    const tbody = $('tokens-table-rows');
+    const select = $('comp-f-sched-token') as HTMLSelectElement;
+    if (!tbody) return;
+
+    if (loadedTokens.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-muted-foreground">No custom tokens configured</td></tr>`;
+      if (select) select.innerHTML = `<option value="">Default (Workspace / Environment)</option>`;
+      return;
+    }
+
+    tbody.innerHTML = loadedTokens.map((t: any) => `
+      <tr class="hover:bg-muted/30 transition-colors">
+        <td class="p-2 font-bold text-foreground">
+          ${escHtml(t.name)}
+          ${t.is_default ? '<span class="ml-1 text-[9px] bg-primary/20 text-primary px-1 py-0.2 rounded font-semibold">default</span>' : ''}
+        </td>
+        <td class="p-2 font-mono text-[10px] text-muted-foreground">${escHtml(t.masked_token || t.token_masked || '••••••••')}</td>
+        <td class="p-2">
+          <span class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[9px] font-bold ${t.is_active !== false ? 'bg-emerald-500/10 text-emerald-500' : 'bg-muted text-muted-foreground'}">
+            ${t.is_active !== false ? 'Active' : 'Disabled'}
+          </span>
+        </td>
+        <td class="p-2 text-right">
+          <button data-token-id="${t.id}" class="token-del text-rose-500 hover:text-rose-600 font-semibold cursor-pointer text-[10px]">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+
+    if (select) {
+      select.innerHTML = `<option value="">Default (Workspace / Environment)</option>` +
+        loadedTokens.map((t: any) => `<option value="${t.id}">${escHtml(t.name)} (${escHtml(t.masked_token || t.token_masked || '••••••••')})</option>`).join('');
     }
   }
 
   async function loadTokens() {
-    const tbody = $('tokens-table-rows');
-    const schedTokenSelect = $('comp-f-sched-token') as HTMLSelectElement;
     try {
       const res = await fetchAPI('/api/competitors/tokens');
-      loadedTokens = Array.isArray(res) ? res : [];
-      if (!tbody) return;
-
-      if (loadedTokens.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-muted-foreground text-[11px]">No FastCron tokens registered. Click "+ Add Token" above.</td></tr>`;
-      } else {
-        tbody.innerHTML = loadedTokens.map((t: any) => {
-          const isDefault = Boolean(t.is_default);
-          const defaultBadge = isDefault
-            ? `<span class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[9px] font-bold bg-emerald-500/10 text-emerald-500">Default</span>`
-            : `<span class="text-muted-foreground text-[9px]">Active</span>`;
-          const delBtn = t.source === 'env'
-            ? `<span class="text-[9px] text-muted-foreground">Server</span>`
-            : `<button data-token-id="${t.id}" class="token-del text-rose-500 hover:text-rose-400 font-semibold text-[10px] cursor-pointer">Delete</button>`;
-
-          return `<tr class="hover:bg-muted/30 transition-colors border-b border-border/60">
-            <td class="p-2 font-semibold text-foreground text-[11px]">${escHtml(t.name)}</td>
-            <td class="p-2 font-mono text-muted-foreground text-[10px]">${escHtml(t.masked_token)}</td>
-            <td class="p-2">${defaultBadge}</td>
-            <td class="p-2 text-right">${delBtn}</td>
-          </tr>`;
-        }).join('');
-      }
-
-      if (schedTokenSelect) {
-        schedTokenSelect.innerHTML = `<option value="">Default (Workspace / Environment)</option>` +
-          loadedTokens.map((t: any) => `<option value="${t.id || ''}">${escHtml(t.name)} (${escHtml(t.masked_token)}) ${t.is_default ? '★ Default' : ''}</option>`).join('');
-      }
+      const tokenList = Array.isArray(res) ? res : (res?.tokens || []);
+      loadedTokens = tokenList;
+      renderTokens();
+      updateCadenceBanner();
     } catch (err: any) {
-      if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-rose-500 text-[11px]">Failed to load tokens</td></tr>`;
+      console.warn('[Competitor Tokens] Load error:', err);
+      const tbody = $('tokens-table-rows');
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-rose-500 font-semibold">Failed to load tokens</td></tr>`;
+      }
     }
   }
 
-  // ─── Table Delegated Actions ──────────────────────────────────────────────
-  $('competitor-schedules-rows')?.addEventListener('click', async (e) => {
-    const target = e.target as HTMLElement;
-    const runId = target.closest('[data-act-run]')?.getAttribute('data-act-run');
-    const pauseId = target.closest('[data-act-pause]')?.getAttribute('data-act-pause');
-    const isPaused = target.closest('[data-act-pause]')?.getAttribute('data-paused') === 'true';
-    const cloneId = target.closest('[data-act-clone]')?.getAttribute('data-act-clone');
-    const logsId = target.closest('[data-act-logs]')?.getAttribute('data-act-logs');
-    const editId = target.closest('[data-act-edit]')?.getAttribute('data-act-edit');
-    const delId = target.closest('[data-act-delete]')?.getAttribute('data-act-delete');
-
-    if (runId) {
-      try {
-        await fetchAPI('/api/competitors/schedules/bulk', {
-          method: 'POST',
-          body: JSON.stringify({ action: 'run', ids: [runId] }),
-        });
-        toast('Manual execution triggered', 'success');
-        await loadSchedules();
-      } catch (err: any) {
-        toast(`Run failed: ${err.message}`, 'error');
-      }
-    } else if (pauseId) {
-      try {
-        await fetchAPI(`/api/competitors/schedules/${pauseId}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: isPaused ? 'active' : 'paused' }),
-        });
-        toast(isPaused ? 'Schedule resumed' : 'Schedule paused', 'info');
-        await loadSchedules();
-      } catch (err: any) {
-        toast(`Failed: ${err.message}`, 'error');
-      }
-    } else if (cloneId) {
-      try {
-        await fetchAPI('/api/competitors/schedules/bulk', {
-          method: 'POST',
-          body: JSON.stringify({ action: 'clone', ids: [cloneId] }),
-        });
-        toast('Schedule cloned', 'success');
-        await loadSchedules();
-      } catch (err: any) {
-        toast(`Clone failed: ${err.message}`, 'error');
-      }
-    } else if (logsId) {
-      const sched = loadedSchedules.find((s) => s.id === logsId);
-      if (sched) {
-        const titleEl = $('comp-logs-job-subtitle');
-        const tbody = $('comp-logs-table-rows');
-        if (titleEl) titleEl.textContent = `${sched.label || 'Schedule'} (#${sched.fastcron_job_id || sched.id.slice(0, 8)})`;
-        if (tbody) {
-          const logs: any[] = sched.cron_logs || [];
-          tbody.innerHTML = logs.length === 0
-            ? `<tr><td colspan="4" class="p-4 text-center text-muted-foreground">No recent execution logs found.</td></tr>`
-            : logs.map((l: any) => `<tr class="border-b border-border/60">
-                <td class="p-2 font-mono">${escHtml(l.date || '—')}</td>
-                <td class="p-2 font-bold ${l.status === 'OK' || l.status === 'success' ? 'text-emerald-500' : 'text-amber-500'}">${escHtml(l.status || 'OK')}</td>
-                <td class="p-2">${l.http_status_code ? `<span class="rounded px-1 py-0.2 text-[9px] font-bold ${l.http_status_code === 202 || l.http_status_code === 200 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}">HTTP ${l.http_status_code}</span>` : '—'}</td>
-                <td class="p-2 text-right font-mono text-muted-foreground">${l.duration ? l.duration + 's' : '—'}</td>
-              </tr>`).join('');
-        }
-        ( $('comp-logs-modal') as HTMLDialogElement )?.showModal();
-      }
-    } else if (editId) {
-      const sched = loadedSchedules.find((s) => s.id === editId);
-      if (sched) {
-        ( $('comp-f-sched-id') as HTMLInputElement ).value = sched.id;
-        ( $('comp-f-sched-label') as HTMLInputElement ).value = sched.label || '';
-        ( $('comp-f-sched-tz') as HTMLSelectElement ).value = sched.timezone || 'UTC';
-        ( $('comp-f-sched-token') as HTMLSelectElement ).value = sched.fastcron_token_id || '';
-        ( $('comp-f-sched-enabled') as HTMLInputElement ).checked = sched.status === 'active';
-        ( $('comp-f-raw-cron') as HTMLInputElement ).value = sched.expression || '0 2 * * *';
-        ( $('comp-schedule-modal-title') as HTMLElement ).textContent = `Edit Schedule (${sched.label || sched.id.slice(0, 8)})`;
-        setBuilderTab('raw');
-        ( $('comp-schedule-modal') as HTMLDialogElement )?.showModal();
-      }
-    } else if (delId) {
-      if (!confirm('Are you sure you want to delete this competitor schedule?')) return;
-      try {
-        await fetchAPI(`/api/competitors/schedules/${delId}`, { method: 'DELETE' });
-        toast('Schedule deleted', 'info');
-        await loadSchedules();
-      } catch (err: any) {
-        toast(`Delete failed: ${err.message}`, 'error');
-      }
+  // ─── Batch Actions for Schedules ───────────────────────────────────────────
+  function updateBatchCount() {
+    const badge = $('comp-batch-sel-count');
+    if (!badge) return;
+    if (selectedScheduleIds.size > 0) {
+      badge.textContent = String(selectedScheduleIds.size);
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
     }
+  }
+
+  $('btn-comp-batch')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    $('comp-sched-batch-menu')?.classList.toggle('hidden');
   });
 
-  // ─── Checkbox Selections & Batch Actions ──────────────────────────────────
+  document.addEventListener('click', () => {
+    $('comp-sched-batch-menu')?.classList.add('hidden');
+    $('matrix-cols-menu')?.classList.add('hidden');
+    $('jobs-cols-menu')?.classList.add('hidden');
+  });
+
   $('comp-sched-select-all')?.addEventListener('change', (e) => {
     const checked = (e.target as HTMLInputElement).checked;
-    selectedScheduleIds.clear();
     if (checked) {
       loadedSchedules.forEach((s) => selectedScheduleIds.add(s.id));
+    } else {
+      selectedScheduleIds.clear();
     }
-    renderSchedules();
     updateBatchCount();
+    renderSchedules();
   });
 
   $('competitor-schedules-rows')?.addEventListener('change', (e) => {
     const target = e.target as HTMLInputElement;
     const schedId = target.getAttribute('data-sched-select');
-    if (schedId) {
-      if (target.checked) selectedScheduleIds.add(schedId);
-      else selectedScheduleIds.delete(schedId);
-      updateBatchCount();
-    }
+    if (!schedId) return;
+    if (target.checked) selectedScheduleIds.add(schedId);
+    else selectedScheduleIds.delete(schedId);
+    updateBatchCount();
+    const allCb = $('comp-sched-select-all') as HTMLInputElement;
+    if (allCb) allCb.checked = selectedScheduleIds.size === loadedSchedules.length && loadedSchedules.length > 0;
   });
-
-  function updateBatchCount() {
-    const cnt = $('comp-batch-sel-count');
-    if (cnt) {
-      cnt.textContent = String(selectedScheduleIds.size);
-      cnt.classList.toggle('hidden', selectedScheduleIds.size === 0);
-    }
-  }
-
-  // Batch menu toggle
-  const batchBtn = $('btn-comp-batch');
-  const batchMenu = $('comp-sched-batch-menu');
-  batchBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    batchMenu?.classList.toggle('hidden');
-  });
-  document.addEventListener('click', () => batchMenu?.classList.add('hidden'));
 
   $('comp-batch-act-select-all')?.addEventListener('click', () => {
     loadedSchedules.forEach((s) => selectedScheduleIds.add(s.id));
-    renderSchedules();
     updateBatchCount();
+    renderSchedules();
   });
 
   $('comp-batch-act-run')?.addEventListener('click', async () => {
     if (selectedScheduleIds.size === 0) return;
     try {
-      await fetchAPI('/api/competitors/schedules/bulk', {
+      const res = await fetchAPI('/api/competitors/schedules/bulk', {
         method: 'POST',
-        body: JSON.stringify({ action: 'run', ids: Array.from(selectedScheduleIds) }),
+        body: JSON.stringify({ action: 'run_now', ids: Array.from(selectedScheduleIds) }),
       });
-      toast(`Triggered run for ${selectedScheduleIds.size} schedules`, 'success');
+      toast(`Dispatched ${selectedScheduleIds.size} schedules`, 'success');
       await loadSchedules();
     } catch (err: any) {
       toast(`Batch run failed: ${err.message}`, 'error');
@@ -1168,14 +1410,12 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     try {
       await fetchAPI('/api/competitors/schedules/bulk', {
         method: 'POST',
-        body: JSON.stringify({ action: 'resume', ids: Array.from(selectedScheduleIds) }),
+        body: JSON.stringify({ action: 'enable', ids: Array.from(selectedScheduleIds) }),
       });
-      toast(`Resumed ${selectedScheduleIds.size} schedules`, 'success');
-      selectedScheduleIds.clear();
-      updateBatchCount();
+      toast(`Enabled ${selectedScheduleIds.size} schedules`, 'success');
       await loadSchedules();
     } catch (err: any) {
-      toast(`Batch resume failed: ${err.message}`, 'error');
+      toast(`Batch enable failed: ${err.message}`, 'error');
     }
   });
 
@@ -1184,14 +1424,12 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     try {
       await fetchAPI('/api/competitors/schedules/bulk', {
         method: 'POST',
-        body: JSON.stringify({ action: 'pause', ids: Array.from(selectedScheduleIds) }),
+        body: JSON.stringify({ action: 'disable', ids: Array.from(selectedScheduleIds) }),
       });
-      toast(`Paused ${selectedScheduleIds.size} schedules`, 'info');
-      selectedScheduleIds.clear();
-      updateBatchCount();
+      toast(`Disabled ${selectedScheduleIds.size} schedules`, 'info');
       await loadSchedules();
     } catch (err: any) {
-      toast(`Batch pause failed: ${err.message}`, 'error');
+      toast(`Batch disable failed: ${err.message}`, 'error');
     }
   });
 
@@ -1290,7 +1528,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     await loadSchedules();
   });
 
-  // ─── Existing Pipeline Controls, Cookies Vault & Competitor Matrix ─────────
+  // ─── Pipeline Settings & Cookies ──────────────────────────────────────────
   function renderPipelineSettings(settings: any, kekActive: boolean) {
     const isEnabled = settings?.is_enabled ?? true;
     const dryRun = settings?.dry_run ?? false;
@@ -1299,155 +1537,319 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
 
     ( $('pipe-is-enabled') as HTMLInputElement ).checked = isEnabled;
     ( $('pipe-dry-run') as HTMLInputElement ).checked = dryRun;
+    if ($('pipe-github-schedule')) ( $('pipe-github-schedule') as HTMLInputElement ).checked = githubScheduleEnabled;
     ( $('pipe-max-retries') as HTMLInputElement ).value = String(maxRetries);
-    if ($('pipe-github-schedule')) {
-      ( $('pipe-github-schedule') as HTMLInputElement ).checked = githubScheduleEnabled;
+
+    const kekBadge = $('kek-badge');
+    if (kekBadge) {
+      kekBadge.textContent = kekActive ? '🔑 KEK Active' : '⚠ KEK Missing';
+      kekBadge.className = kekActive
+        ? 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+        : 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20';
+    }
+
+    const pStatusBadge = $('pipeline-status-badge');
+    const navPipeBadge = $('nav-pipeline-badge');
+    if (pStatusBadge) {
+      pStatusBadge.textContent = isEnabled ? 'Active' : 'Disabled';
+      pStatusBadge.className = isEnabled
+        ? 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+        : 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground';
+    }
+    if (navPipeBadge) {
+      navPipeBadge.textContent = isEnabled ? 'Active' : 'Disabled';
+      navPipeBadge.className = isEnabled
+        ? 'rounded-full bg-emerald-500/10 text-emerald-500 px-1.5 py-0.2 text-[10px] font-bold'
+        : 'rounded-full bg-muted text-muted-foreground px-1.5 py-0.2 text-[10px] font-bold';
+    }
+
+    const dryBadge = $('dry-run-status-badge');
+    if (dryBadge) {
+      dryBadge.textContent = dryRun ? 'Active' : 'Off';
+      dryBadge.className = dryRun
+        ? 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20'
+        : 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground';
     }
 
     const ghBadge = $('gh-schedule-status-badge');
     if (ghBadge) {
-      if (githubScheduleEnabled) {
-        ghBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500';
-        ghBadge.textContent = 'Active';
-      } else {
-        ghBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground';
-        ghBadge.textContent = 'Off';
-      }
-    }
-
-    const kekBadge = $('kek-badge');
-    if (kekActive) {
-      kekBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/30';
-      kekBadge.textContent = '🔑 KEK Active';
-    } else {
-      kekBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/30';
-      kekBadge.textContent = '🔑 KEK Inactive';
-    }
-
-    const pipeBadge = $('pipeline-status-badge');
-    if (isEnabled) {
-      pipeBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500';
-      pipeBadge.textContent = 'Active';
-    } else {
-      pipeBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-rose-500/10 text-rose-500';
-      pipeBadge.textContent = 'Disabled';
-    }
-
-    const dryBadge = $('dry-run-status-badge');
-    if (dryRun) {
-      dryBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-500';
-      dryBadge.textContent = 'Active';
-    } else {
-      dryBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground';
-      dryBadge.textContent = 'Off';
+      ghBadge.textContent = githubScheduleEnabled ? 'Active' : 'Off';
+      ghBadge.className = githubScheduleEnabled
+        ? 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+        : 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground';
     }
   }
 
   function renderCookies(cookies: any[]) {
     const tbody = $('cookies-table-body');
+    const navVaultBadge = $('nav-vault-badge');
+    if (navVaultBadge) navVaultBadge.textContent = String(cookies?.length || 0);
+
     if (!cookies || cookies.length === 0) {
       tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-muted-foreground">
-        <div class="flex flex-col items-center justify-center gap-1.5">
-          <span class="text-base">🔓</span>
-          <span class="font-medium text-xs">No Pinterest cookies stored in vault</span>
-          <span class="text-[11px] text-muted-foreground/80">Add an active session cookie to enable automated background ingestion.</span>
-        </div>
+        No active Pinterest session cookies in vault. Add a session cookie to enable authenticated scraping.
       </td></tr>`;
       return;
     }
 
-    tbody.innerHTML = cookies.map((c: any) => {
-      const maskedId = c.id.slice(0, 8) + '••••' + c.id.slice(-4);
-      const isActive = c.is_active !== false;
-      const created = c.created_at ? new Date(c.created_at).toLocaleDateString() : '—';
-      const expires = c.expires_at ? new Date(c.expires_at).toLocaleDateString() : 'No expiry set';
-
-      return `<tr class="hover:bg-muted/30 transition-colors">
-        <td class="py-3 px-4 font-mono font-bold text-foreground text-[11px]">${escHtml(maskedId)}</td>
+    tbody.innerHTML = cookies.map((c: any) => `
+      <tr class="hover:bg-muted/30 transition-colors">
+        <td class="py-3 px-4 font-mono text-foreground font-semibold text-[11px]">${escHtml(c.masked_value || '••••••••')}</td>
         <td class="py-3 px-4">
-          <span class="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-500">
+          <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
             🔒 Encrypted (AES-GCM)
           </span>
         </td>
         <td class="py-3 px-4">
           <label class="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" class="sr-only peer ck-toggle" data-id="${c.id}" ${isActive ? 'checked' : ''} />
+            <input type="checkbox" class="sr-only peer ck-toggle" data-id="${c.id}" ${c.is_active ? 'checked' : ''} />
             <div class="w-8 h-4 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
           </label>
         </td>
         <td class="py-3 px-4 text-[11px]">${timeAgo(c.last_used_at)}</td>
-        <td class="py-3 px-4 text-[11px]">${escHtml(expires)}</td>
-        <td class="py-3 px-4 text-[11px]">${escHtml(created)}</td>
+        <td class="py-3 px-4 text-[11px]">${c.expires_at ? new Date(c.expires_at).toLocaleDateString() : '—'}</td>
+        <td class="py-3 px-4 text-[11px]">${new Date(c.created_at).toLocaleDateString()}</td>
         <td class="py-3 px-4 text-right">
-          <button data-id="${c.id}" class="ck-del rounded-lg p-1.5 text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 transition-all" title="Delete Cookie">
+          <button data-id="${c.id}" class="ck-del text-rose-500 hover:text-rose-600 font-semibold p-1 cursor-pointer" title="Delete cookie from vault">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           </button>
         </td>
-      </tr>`;
-    }).join('');
+      </tr>`).join('');
+  }
+
+  // ─── Competitor Matrix: State, Filtering, Column Visibility & Pagination ───
+  let cachedCompetitors: any[] = [];
+  let matrixFilter = 'all';
+  let matrixSearch = '';
+  let matrixPage = 1;
+  let matrixPageSize = 10;
+  let matrixCols: Record<string, boolean> = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('po_comp_matrix_cols') || '{"profile":true,"tracking":true,"cadence":true,"audience":true,"last_checked":true,"actions":true}');
+    } catch {
+      return { profile: true, tracking: true, cadence: true, audience: true, last_checked: true, actions: true };
+    }
+  })();
+
+  function updateMatrixColsUI() {
+    document.querySelectorAll('.matrix-col-toggle').forEach((cb: any) => {
+      const col = cb.getAttribute('data-col');
+      if (col && matrixCols[col] !== undefined) {
+        cb.checked = Boolean(matrixCols[col]);
+      }
+    });
+
+    document.querySelectorAll('#matrix-table-headers th').forEach((th: any) => {
+      const col = th.getAttribute('data-col');
+      if (col && matrixCols[col] === false) th.classList.add('hidden');
+      else th.classList.remove('hidden');
+    });
   }
 
   function renderCompetitorsMatrix(competitors: any[]) {
-    const tbody = $('competitors-matrix-body');
-    $('competitor-matrix-count').textContent = `${competitors?.length || 0} Tracked`;
+    cachedCompetitors = competitors || [];
+    const countBadge = $('competitor-matrix-count');
+    const navMatrixBadge = $('nav-matrix-badge');
+    if (countBadge) countBadge.textContent = `${cachedCompetitors.length} Tracked`;
+    if (navMatrixBadge) navMatrixBadge.textContent = String(cachedCompetitors.length);
 
-    if (!competitors || competitors.length === 0) {
+    applyMatrixView();
+  }
+
+  function applyMatrixView() {
+    const tbody = $('competitors-matrix-body');
+    if (!tbody) return;
+
+    updateMatrixColsUI();
+
+    // 1. Filter
+    let filtered = cachedCompetitors.filter((c: any) => {
+      const s = Array.isArray(c.competitor_settings) ? c.competitor_settings[0] : c.competitor_settings;
+      const isActive = c.is_active !== undefined ? Boolean(c.is_active) : Boolean(s?.is_active ?? true);
+
+      if (matrixFilter === 'active' && !isActive) return false;
+      if (matrixFilter === 'paused' && isActive) return false;
+
+      if (matrixSearch) {
+        const q = matrixSearch.toLowerCase();
+        const username = String(c.username || '').toLowerCase();
+        const fullName = String(c.full_name || '').toLowerCase();
+        if (!username.includes(q) && !fullName.includes(q)) return false;
+      }
+      return true;
+    });
+
+    // 2. Paginate
+    const totalItems = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / matrixPageSize));
+    if (matrixPage > totalPages) matrixPage = totalPages;
+    const startIdx = (matrixPage - 1) * matrixPageSize;
+    const pageItems = filtered.slice(startIdx, startIdx + matrixPageSize);
+
+    // Update pagination footer
+    const summaryEl = $('matrix-pagination-summary');
+    const indicatorEl = $('matrix-page-indicator');
+    const prevBtn = $('matrix-prev-page') as HTMLButtonElement;
+    const nextBtn = $('matrix-next-page') as HTMLButtonElement;
+
+    if (summaryEl) {
+      summaryEl.textContent = totalItems === 0
+        ? 'No competitors match filter'
+        : `Showing ${startIdx + 1} to ${Math.min(startIdx + matrixPageSize, totalItems)} of ${totalItems} competitors`;
+    }
+    if (indicatorEl) indicatorEl.textContent = `Page ${matrixPage} of ${totalPages}`;
+    if (prevBtn) prevBtn.disabled = matrixPage <= 1;
+    if (nextBtn) nextBtn.disabled = matrixPage >= totalPages;
+
+    if (pageItems.length === 0) {
       tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-muted-foreground">
-        No tracked competitors found in this workspace. Add competitors from the main Competitors tab.
+        ${cachedCompetitors.length === 0 ? 'No tracked competitors found in this workspace.' : 'No competitors matching current search filters.'}
       </td></tr>`;
       return;
     }
 
-    tbody.innerHTML = competitors.map((c: any) => {
+    tbody.innerHTML = pageItems.map((c: any) => {
       const s = Array.isArray(c.competitor_settings) ? c.competitor_settings[0] : c.competitor_settings;
       const isActive = c.is_active !== undefined ? Boolean(c.is_active) : Boolean(s?.is_active ?? true);
       const freq = s?.update_frequency_hours ?? 24;
       const reach = fmtCompact(c.profile_reach || 0);
       const followers = fmtCompact(c.follower_count || 0);
 
+      const colProfile = `<td class="py-3 px-4" data-col="profile">
+        <div class="flex items-center gap-2.5">
+          ${c.avatar_url ? `<img src="${escHtml(c.avatar_url)}" alt="" class="h-7 w-7 rounded-full object-cover border border-border" />` : `<div class="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs">@</div>`}
+          <div>
+            <div class="font-semibold text-foreground text-xs">@${escHtml(c.username)}</div>
+            <div class="text-[10px] text-muted-foreground">${escHtml(c.full_name || 'Competitor')}</div>
+          </div>
+        </div>
+      </td>`;
+
+      const colTracking = `<td class="py-3 px-4 ${matrixCols.tracking === false ? 'hidden' : ''}" data-col="tracking">
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" class="sr-only peer comp-active" data-id="${c.id}" ${isActive ? 'checked' : ''} />
+          <div class="w-8 h-4 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
+        </label>
+      </td>`;
+
+      const colCadence = `<td class="py-3 px-4 ${matrixCols.cadence === false ? 'hidden' : ''}" data-col="cadence">
+        <select data-id="${c.id}" class="comp-freq rounded-lg border border-border bg-background py-1 px-2 text-[11px] font-semibold text-foreground focus:border-primary focus:outline-none cursor-pointer">
+          <option value="6" ${freq === 6 ? 'selected' : ''}>Every 6h</option>
+          <option value="12" ${freq === 12 ? 'selected' : ''}>Every 12h</option>
+          <option value="24" ${freq === 24 ? 'selected' : ''}>Every 24h (Daily)</option>
+          <option value="48" ${freq === 48 ? 'selected' : ''}>Every 48h (2 Days)</option>
+          <option value="168" ${freq === 168 ? 'selected' : ''}>Weekly</option>
+        </select>
+      </td>`;
+
+      const colAudience = `<td class="py-3 px-4 ${matrixCols.audience === false ? 'hidden' : ''}" data-col="audience">
+        <div class="flex flex-col text-xs">
+          <span class="font-semibold text-foreground">${followers} <span class="text-[10px] text-muted-foreground font-normal">followers</span></span>
+          <span class="text-[10px] text-muted-foreground">${reach} views/mo</span>
+        </div>
+      </td>`;
+
+      const colLastChecked = `<td class="py-3 px-4 text-[11px] ${matrixCols.last_checked === false ? 'hidden' : ''}" data-col="last_checked">${timeAgo(c.last_checked_at)}</td>`;
+
+      const colActions = `<td class="py-3 px-4 text-right ${matrixCols.actions === false ? 'hidden' : ''}" data-col="actions">
+        <button data-id="${c.id}" data-username="${escHtml(c.username)}"
+          class="update-now inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted transition-all cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          <span>Scrape Now</span>
+        </button>
+      </td>`;
+
       return `<tr class="hover:bg-muted/30 transition-colors">
-        <td class="py-3 px-4">
-          <div class="flex items-center gap-2.5">
-            ${c.avatar_url ? `<img src="${escHtml(c.avatar_url)}" alt="" class="h-7 w-7 rounded-full object-cover border border-border" />` : `<div class="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs">@</div>`}
-            <div>
-              <div class="font-semibold text-foreground text-xs">@${escHtml(c.username)}</div>
-              <div class="text-[10px] text-muted-foreground">${escHtml(c.full_name || 'Competitor')}</div>
-            </div>
-          </div>
-        </td>
-        <td class="py-3 px-4">
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" class="sr-only peer comp-active" data-id="${c.id}" ${isActive ? 'checked' : ''} />
-            <div class="w-8 h-4 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
-          </label>
-        </td>
-        <td class="py-3 px-4">
-          <div class="flex items-center gap-1.5">
-            <select data-id="${c.id}" class="comp-freq rounded-lg border border-border bg-background py-1 px-2 text-[11px] font-semibold text-foreground focus:border-primary focus:outline-none">
-              <option value="6" ${freq === 6 ? 'selected' : ''}>Every 6h</option>
-              <option value="12" ${freq === 12 ? 'selected' : ''}>Every 12h</option>
-              <option value="24" ${freq === 24 ? 'selected' : ''}>Every 24h (Daily)</option>
-              <option value="48" ${freq === 48 ? 'selected' : ''}>Every 48h (2 Days)</option>
-              <option value="168" ${freq === 168 ? 'selected' : ''}>Weekly</option>
-            </select>
-          </div>
-        </td>
-        <td class="py-3 px-4">
-          <div class="flex flex-col text-xs">
-            <span class="font-semibold text-foreground">${followers} <span class="text-[10px] text-muted-foreground font-normal">followers</span></span>
-            <span class="text-[10px] text-muted-foreground">${reach} views/mo</span>
-          </div>
-        </td>
-        <td class="py-3 px-4 text-[11px]">${timeAgo(c.last_checked_at)}</td>
-        <td class="py-3 px-4 text-right">
-          <button data-id="${c.id}" data-username="${escHtml(c.username)}"
-            class="update-now inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            <span>Scrape Now</span>
-          </button>
-        </td>
+        ${colProfile}
+        ${colTracking}
+        ${colCadence}
+        ${colAudience}
+        ${colLastChecked}
+        ${colActions}
       </tr>`;
     }).join('');
+  }
+
+  // Matrix Event Listeners
+  $('matrix-search-input')?.addEventListener('input', (e) => {
+    matrixSearch = (e.target as HTMLInputElement).value.trim();
+    matrixPage = 1;
+    applyMatrixView();
+  });
+
+  document.querySelectorAll('.matrix-filter-btn').forEach((btn: any) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.matrix-filter-btn').forEach((b: any) => {
+        b.className = 'matrix-filter-btn px-2.5 py-1 rounded-lg font-semibold text-muted-foreground hover:text-foreground text-[11px] cursor-pointer';
+      });
+      btn.className = 'matrix-filter-btn px-2.5 py-1 rounded-lg font-semibold bg-primary text-primary-foreground text-[11px] cursor-pointer';
+      matrixFilter = btn.getAttribute('data-filter') || 'all';
+      matrixPage = 1;
+      applyMatrixView();
+    });
+  });
+
+  $('matrix-page-size')?.addEventListener('change', (e) => {
+    matrixPageSize = Number((e.target as HTMLSelectElement).value || 10);
+    matrixPage = 1;
+    applyMatrixView();
+  });
+
+  $('matrix-prev-page')?.addEventListener('click', () => {
+    if (matrixPage > 1) {
+      matrixPage--;
+      applyMatrixView();
+    }
+  });
+
+  $('matrix-next-page')?.addEventListener('click', () => {
+    matrixPage++;
+    applyMatrixView();
+  });
+
+  $('matrix-cols-btn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    $('matrix-cols-menu')?.classList.toggle('hidden');
+  });
+
+  document.querySelectorAll('.matrix-col-toggle').forEach((cb: any) => {
+    cb.addEventListener('change', () => {
+      const col = cb.getAttribute('data-col');
+      if (col) {
+        matrixCols[col] = cb.checked;
+        localStorage.setItem('po_comp_matrix_cols', JSON.stringify(matrixCols));
+        applyMatrixView();
+      }
+    });
+  });
+
+  // ─── Recent Jobs & Live Audit: State, Filtering, Column Visibility & Pagination ─
+  let cachedJobs: any[] = [];
+  let jobsStatusFilter = 'all';
+  let jobsTriggerFilter = 'all';
+  let jobsPage = 1;
+  let jobsPageSize = 10;
+  let jobsCols: Record<string, boolean> = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('po_comp_jobs_cols') || '{"id":true,"scope":true,"status":true,"items":true,"started":true,"completed":true,"duration":true,"telemetry":true}');
+    } catch {
+      return { id: true, scope: true, status: true, items: true, started: true, completed: true, duration: true, telemetry: true };
+    }
+  })();
+
+  function updateJobsColsUI() {
+    document.querySelectorAll('.jobs-col-toggle').forEach((cb: any) => {
+      const col = cb.getAttribute('data-col');
+      if (col && jobsCols[col] !== undefined) {
+        cb.checked = Boolean(jobsCols[col]);
+      }
+    });
+
+    document.querySelectorAll('#jobs-table-headers th').forEach((th: any) => {
+      const col = th.getAttribute('data-col');
+      if (col && jobsCols[col] === false) th.classList.add('hidden');
+      else th.classList.remove('hidden');
+    });
   }
 
   function renderTriggerBadge(trigger?: string | null): string {
@@ -1473,15 +1875,58 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
   }
 
   function renderJobs(jobs: any[]) {
+    cachedJobs = jobs || [];
+    const countBadge = $('jobs-count-badge');
+    const navJobsBadge = $('nav-jobs-badge');
+    if (countBadge) countBadge.textContent = `${cachedJobs.length} Recorded`;
+    if (navJobsBadge) navJobsBadge.textContent = String(cachedJobs.length);
+
+    applyJobsView();
+  }
+
+  function applyJobsView() {
     const tbody = $('jobs-table-body');
-    if (!jobs || jobs.length === 0) {
+    if (!tbody) return;
+
+    updateJobsColsUI();
+
+    // 1. Filter
+    let filtered = cachedJobs.filter((j: any) => {
+      if (jobsStatusFilter !== 'all' && j.status !== jobsStatusFilter) return false;
+      if (jobsTriggerFilter !== 'all' && String(j.trigger || 'manual').toLowerCase() !== jobsTriggerFilter) return false;
+      return true;
+    });
+
+    // 2. Paginate
+    const totalItems = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / jobsPageSize));
+    if (jobsPage > totalPages) jobsPage = totalPages;
+    const startIdx = (jobsPage - 1) * jobsPageSize;
+    const pageItems = filtered.slice(startIdx, startIdx + jobsPageSize);
+
+    // Update pagination footer
+    const summaryEl = $('jobs-pagination-summary');
+    const indicatorEl = $('jobs-page-indicator');
+    const prevBtn = $('jobs-prev-page') as HTMLButtonElement;
+    const nextBtn = $('jobs-next-page') as HTMLButtonElement;
+
+    if (summaryEl) {
+      summaryEl.textContent = totalItems === 0
+        ? 'No ingestion jobs match filter'
+        : `Showing ${startIdx + 1} to ${Math.min(startIdx + jobsPageSize, totalItems)} of ${totalItems} jobs`;
+    }
+    if (indicatorEl) indicatorEl.textContent = `Page ${jobsPage} of ${totalPages}`;
+    if (prevBtn) prevBtn.disabled = jobsPage <= 1;
+    if (nextBtn) nextBtn.disabled = jobsPage >= totalPages;
+
+    if (pageItems.length === 0) {
       tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-muted-foreground">
-        No recent ingestion jobs recorded yet.
+        ${cachedJobs.length === 0 ? 'No recent ingestion jobs recorded yet.' : 'No jobs matching current status/trigger filters.'}
       </td></tr>`;
       return;
     }
 
-    tbody.innerHTML = jobs.map((j: any) => {
+    tbody.innerHTML = pageItems.map((j: any) => {
       const statusColors: Record<string, string> = {
         completed: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
         failed: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
@@ -1501,30 +1946,94 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
 
       const err = j.error_message ? `<span class="text-rose-500 font-mono text-[10px]" title="${escHtml(j.error_message)}">${escHtml(j.error_message.slice(0, 30))}…</span>` : '<span class="text-muted-foreground/60">—</span>';
 
+      const colId = `<td class="py-3 px-4 font-mono font-bold text-foreground text-[11px]" data-col="id">#${escHtml(shortId)}</td>`;
+      const colScope = `<td class="py-3 px-4 ${jobsCols.scope === false ? 'hidden' : ''}" data-col="scope">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="font-semibold text-foreground text-[11px]">${escHtml(scopeLabel)}</span>
+          ${triggerBadge}
+        </div>
+      </td>`;
+      const colStatus = `<td class="py-3 px-4 ${jobsCols.status === false ? 'hidden' : ''}" data-col="status">
+        <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold border ${pillClass}">
+          ${escHtml(j.status)}
+        </span>
+      </td>`;
+      const colItems = `<td class="py-3 px-4 font-mono text-foreground font-semibold text-[11px] ${jobsCols.items === false ? 'hidden' : ''}" data-col="items">${j.items_processed ?? 0}</td>`;
+      const colStarted = `<td class="py-3 px-4 ${jobsCols.started === false ? 'hidden' : ''}" data-col="started">${startedHtml}</td>`;
+      const colCompleted = `<td class="py-3 px-4 ${jobsCols.completed === false ? 'hidden' : ''}" data-col="completed">${completedHtml}</td>`;
+      const colDuration = `<td class="py-3 px-4 font-mono text-foreground font-semibold text-[11px] ${jobsCols.duration === false ? 'hidden' : ''}" data-col="duration">${escHtml(durationStr)}</td>`;
+      const colTelemetry = `<td class="py-3 px-4 text-[11px] ${jobsCols.telemetry === false ? 'hidden' : ''}" data-col="telemetry">${err}</td>`;
+
       return `<tr class="hover:bg-muted/30 transition-colors">
-        <td class="py-3 px-4 font-mono font-bold text-foreground text-[11px]">#${escHtml(shortId)}</td>
-        <td class="py-3 px-4">
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="font-semibold text-foreground text-[11px]">${escHtml(scopeLabel)}</span>
-            ${triggerBadge}
-          </div>
-        </td>
-        <td class="py-3 px-4">
-          <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold border ${pillClass}">
-            ${escHtml(j.status)}
-          </span>
-        </td>
-        <td class="py-3 px-4 font-mono text-foreground font-semibold text-[11px]">${j.items_processed ?? 0}</td>
-        <td class="py-3 px-4">${startedHtml}</td>
-        <td class="py-3 px-4">${completedHtml}</td>
-        <td class="py-3 px-4 font-mono text-foreground font-semibold text-[11px]">${escHtml(durationStr)}</td>
-        <td class="py-3 px-4 text-[11px]">${err}</td>
+        ${colId}
+        ${colScope}
+        ${colStatus}
+        ${colItems}
+        ${colStarted}
+        ${colCompleted}
+        ${colDuration}
+        ${colTelemetry}
       </tr>`;
     }).join('');
   }
 
+  // Jobs Event Listeners
+  document.querySelectorAll('.jobs-filter-btn').forEach((btn: any) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.jobs-filter-btn').forEach((b: any) => {
+        b.className = 'jobs-filter-btn px-2.5 py-1 rounded-lg font-semibold text-muted-foreground hover:text-foreground text-[11px] cursor-pointer';
+      });
+      btn.className = 'jobs-filter-btn px-2.5 py-1 rounded-lg font-semibold bg-primary text-primary-foreground text-[11px] cursor-pointer';
+      jobsStatusFilter = btn.getAttribute('data-status') || 'all';
+      jobsPage = 1;
+      applyJobsView();
+    });
+  });
+
+  $('jobs-trigger-filter')?.addEventListener('change', (e) => {
+    jobsTriggerFilter = (e.target as HTMLSelectElement).value;
+    jobsPage = 1;
+    applyJobsView();
+  });
+
+  $('jobs-page-size')?.addEventListener('change', (e) => {
+    jobsPageSize = Number((e.target as HTMLSelectElement).value || 10);
+    jobsPage = 1;
+    applyJobsView();
+  });
+
+  $('jobs-prev-page')?.addEventListener('click', () => {
+    if (jobsPage > 1) {
+      jobsPage--;
+      applyJobsView();
+    }
+  });
+
+  $('jobs-next-page')?.addEventListener('click', () => {
+    jobsPage++;
+    applyJobsView();
+  });
+
+  $('jobs-cols-btn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    $('jobs-cols-menu')?.classList.toggle('hidden');
+  });
+
+  document.querySelectorAll('.jobs-col-toggle').forEach((cb: any) => {
+    cb.addEventListener('change', () => {
+      const col = cb.getAttribute('data-col');
+      if (col) {
+        jobsCols[col] = cb.checked;
+        localStorage.setItem('po_comp_jobs_cols', JSON.stringify(jobsCols));
+        applyJobsView();
+      }
+    });
+  });
+
+  // ─── Global State Loader ──────────────────────────────────────────────────
   async function loadAllState() {
     await Promise.all([loadSchedules(), loadTokens()]);
+    updateCadenceBanner();
 
     try {
       const [opsRes, cookiesRes] = await Promise.all([
@@ -1572,25 +2081,6 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
       }
     } catch (err: any) {
       toast(`Failed to save settings: ${err.message}`, 'error');
-    }
-  });
-
-  $('btn-run-full-update')?.addEventListener('click', async () => {
-    const isMaster = document.getElementById('competitors-settings-root')?.getAttribute('data-is-master') === 'true';
-    const confirmMsg = isMaster
-      ? '👑 Master Workspace: Trigger immediate competitor ingestion run across ALL workspaces?'
-      : 'Trigger immediate full workspace competitor ingestion run?';
-    if (!confirm(confirmMsg)) return;
-    try {
-      const res = await fetchAPI('/api/admin/competitor-ops', {
-        method: 'POST',
-        body: JSON.stringify({ scope: isMaster ? 'all' : 'current' }),
-      });
-      const scopeLabel = res.is_master_scope ? 'all workspaces' : 'workspace';
-      toast(`🚀 Ingestion workflow dispatched for ${scopeLabel} (#${res.job_id?.slice(0, 8)})`, 'success');
-      await loadAllState();
-    } catch (err: any) {
-      toast(`Dispatch failed: ${err.message}`, 'error');
     }
   });
 
@@ -1683,9 +2173,11 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
     const statusEl = $('token-status-msg');
     if (statusEl) statusEl.textContent = 'Testing connection...';
     try {
-      await fetchAPI('/api/competitors/tokens');
-      if (statusEl) statusEl.textContent = '✓ Connection healthy';
+      const res = await fetchAPI('/api/competitors/tokens');
+      const count = Array.isArray(res) ? res.length : (res?.tokens?.length || 0);
+      if (statusEl) statusEl.textContent = `✓ Connection healthy (${count} token${count === 1 ? '' : 's'})`;
       toast('FastCron token registry connection verified', 'success');
+      await loadTokens();
     } catch (err: any) {
       if (statusEl) statusEl.textContent = '⚠ Connection error';
       toast(`Connection check failed: ${err.message}`, 'error');
@@ -1791,9 +2283,10 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Create a schedule via Configure
   // Listen for audit timestamp display preference changes
   window.addEventListener('pinorbit_audit_ts_mode_changed', () => {
     renderSchedules();
-    renderJobs(cachedJobs);
+    applyJobsView();
   });
 
-  // Initial load
+  // Initial load & collapse state setup
+  updateCollapseUI();
   loadAllState();
 </script>
