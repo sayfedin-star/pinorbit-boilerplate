@@ -102,13 +102,6 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
           </p>
         </div>
       </div>
-      <button
-        id="open-architecture-guide-banner-btn"
-        type="button"
-        class="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white px-3.5 py-2 text-xs font-bold transition-all self-start sm:self-auto cursor-pointer shadow-2xs"
-      >
-        <span>📖 Automation Architecture</span>
-      </button>
     </div>
   )}
 
@@ -272,176 +265,169 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       </div>
 
       <!-- Modern Collapsible Form Body -->
-      <div id="settings-panel-body" class="hidden p-5 sm:p-6 bg-card space-y-6">
+      <div id="settings-panel-body" class="hidden p-5 sm:p-6 bg-card space-y-5">
         
-        <!-- ═══ 1. Primary Qualification Cards (3 Bento Cards) ═══ -->
-        <div>
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold uppercase tracking-wider text-muted-foreground">🎯 Qualification Criteria (OR Rules)</span>
-              <span class="text-[11px] text-muted-foreground">Thresholds required for automatic pin preservation</span>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            
-            <!-- Card 1: Star Performers (Min Saves) -->
-            <div class="rounded-2xl border border-emerald-500/30 bg-gradient-to-b from-emerald-500/5 via-card to-card p-4.5 shadow-2xs hover:border-emerald-500/50 transition-all flex flex-col justify-between group">
-              <div>
-                <div class="flex items-center justify-between mb-2">
-                  <span class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                    <span>🌟 Star Performers</span>
-                  </span>
-                  <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    Saves Rule
-                  </span>
+        <!-- ═══ 2-Column Bento Grid: Qualification Criteria (Left) + Automation Routines (Right) ═══ -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          
+          <!-- LEFT CARD (col-span-7): Single Qualification Criteria Card with 3 Stacked Rows -->
+          <div class="lg:col-span-7 rounded-2xl border border-border/80 bg-gradient-to-b from-card via-card to-background/50 p-4.5 sm:p-5 shadow-xs flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-center justify-between pb-3 border-b border-border/60 mb-3.5">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-foreground">🎯 Qualification Criteria (OR Rules)</span>
+                  <span class="text-[10px] text-muted-foreground font-medium">Automatic pin preservation thresholds</span>
                 </div>
-                <p class="text-[11px] text-muted-foreground leading-relaxed">
-                  Pins with high cumulative saves across all creator boards qualify immediately.
-                </p>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  OR Logic
+                </span>
               </div>
 
-              <div class="mt-4 pt-3 border-t border-border/60 flex items-center justify-between gap-3">
-                <label for="setting-min-saves" class="text-xs font-semibold text-foreground whitespace-nowrap">Min Saves:</label>
-                <div class="flex items-center gap-1.5 w-32">
-                  <input id="setting-min-saves" type="number" min="0" value="25" class="w-full rounded-xl border border-border bg-background px-3 py-1.5 text-sm font-bold text-foreground focus:border-emerald-500 focus:outline-none text-right font-mono" />
-                  <span class="text-xs text-muted-foreground font-medium">saves</span>
+              <!-- 3 Stacked Criteria Rows -->
+              <div class="space-y-2.5">
+                
+                <!-- Row 1: Star Performers (Min Saves) -->
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5 hover:border-emerald-500/40 transition-all">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-500/20">🌟</span>
+                    <div class="min-w-0">
+                      <div class="text-xs font-bold text-foreground truncate">Star Performers (Saves)</div>
+                      <div class="text-[10px] text-muted-foreground truncate">High cumulative saves across all boards</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <label for="setting-min-saves" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Min:</label>
+                    <input id="setting-min-saves" type="number" min="0" value="25" class="w-16 rounded-xl border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground text-center font-mono focus:border-emerald-500 focus:outline-none shadow-2xs" />
+                    <span class="text-[11px] font-medium text-muted-foreground">saves</span>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <!-- Card 2: High Virality (Min Repins) -->
-            <div class="rounded-2xl border border-blue-500/30 bg-gradient-to-b from-blue-500/5 via-card to-card p-4.5 shadow-2xs hover:border-blue-500/50 transition-all flex flex-col justify-between group">
-              <div>
-                <div class="flex items-center justify-between mb-2">
-                  <span class="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400">
-                    <span>🔁 High Virality</span>
-                  </span>
-                  <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                    Repins Rule
-                  </span>
+                <!-- Row 2: High Virality (Min Repins) -->
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-blue-500/25 bg-blue-500/5 hover:border-blue-500/40 transition-all">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400 text-xs font-bold border border-blue-500/20">🔁</span>
+                    <div class="min-w-0">
+                      <div class="text-xs font-bold text-foreground truncate">High Virality (Repins)</div>
+                      <div class="text-[10px] text-muted-foreground truncate">Viral repin distribution across Pinterest</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <label for="setting-min-repins" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Min:</label>
+                    <input id="setting-min-repins" type="number" min="0" value="25" class="w-16 rounded-xl border border-border bg-background px-2.5 py-1 text-xs font-bold text-foreground text-center font-mono focus:border-blue-500 focus:outline-none shadow-2xs" />
+                    <span class="text-[11px] font-medium text-muted-foreground">repins</span>
+                  </div>
                 </div>
-                <p class="text-[11px] text-muted-foreground leading-relaxed">
-                  Pins with viral repin distribution across Pinterest networks qualify immediately.
-                </p>
-              </div>
 
-              <div class="mt-4 pt-3 border-t border-border/60 flex items-center justify-between gap-3">
-                <label for="setting-min-repins" class="text-xs font-semibold text-foreground whitespace-nowrap">Min Repins:</label>
-                <div class="flex items-center gap-1.5 w-32">
-                  <input id="setting-min-repins" type="number" min="0" value="25" class="w-full rounded-xl border border-border bg-background px-3 py-1.5 text-sm font-bold text-foreground focus:border-blue-500 focus:outline-none text-right font-mono" />
-                  <span class="text-xs text-muted-foreground font-medium">repins</span>
+                <!-- Row 3: Fast Risers (Velocity Rule) -->
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-amber-500/25 bg-amber-500/5 hover:border-amber-500/40 transition-all">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs font-bold border border-amber-500/20">🚀</span>
+                    <div class="min-w-0">
+                      <div class="text-xs font-bold text-foreground truncate">Fast Risers (Velocity)</div>
+                      <div class="text-[10px] text-muted-foreground truncate">Fresh viral pins growing rapidly early on</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1 shrink-0">
+                    <span class="text-xs text-muted-foreground font-mono">&lt;</span>
+                    <input id="setting-rising-age" type="number" min="1" max="90" value="14" class="w-11 rounded-xl border border-border bg-background px-1 py-1 text-xs font-bold text-foreground text-center font-mono focus:border-amber-500 focus:outline-none shadow-2xs" title="Max age in days" />
+                    <span class="text-[10px] text-muted-foreground">d &amp; &ge;</span>
+                    <input id="setting-rising-saves" type="number" min="1" value="20" class="w-13 rounded-xl border border-border bg-background px-1.5 py-1 text-xs font-bold text-foreground text-center font-mono focus:border-amber-500 focus:outline-none shadow-2xs" title="Min saves within age limit" />
+                    <span class="text-[11px] font-medium text-muted-foreground">saves</span>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <!-- Card 3: Fast Risers (Velocity Rule) -->
-            <div class="rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/5 via-card to-card p-4.5 shadow-2xs hover:border-amber-500/50 transition-all flex flex-col justify-between group">
-              <div>
-                <div class="flex items-center justify-between mb-2">
-                  <span class="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
-                    <span>🚀 Fast Risers</span>
-                  </span>
-                  <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                    Velocity Rule
-                  </span>
-                </div>
-                <p class="text-[11px] text-muted-foreground leading-relaxed">
-                  Fresh pins showing rapid early growth qualify before reaching lifetime thresholds.
-                </p>
-              </div>
-
-              <div class="mt-4 pt-3 border-t border-border/60 flex items-center justify-between gap-2">
-                <label for="setting-rising-saves" class="text-xs font-semibold text-foreground whitespace-nowrap">Criteria:</label>
-                <div class="flex items-center gap-1.5">
-                  <span class="text-xs text-muted-foreground font-mono">&lt;</span>
-                  <input id="setting-rising-age" type="number" min="1" max="90" value="14" class="w-12 rounded-xl border border-border bg-background px-2 py-1.5 text-xs font-bold text-foreground text-center font-mono" title="Max age in days" />
-                  <span class="text-[11px] text-muted-foreground">days &amp; &ge;</span>
-                  <input id="setting-rising-saves" type="number" min="1" value="20" class="w-14 rounded-xl border border-border bg-background px-2 py-1.5 text-xs font-bold text-foreground text-center font-mono" title="Min saves within age limit" />
-                  <span class="text-xs text-muted-foreground font-medium">saves</span>
-                </div>
               </div>
             </div>
 
-          </div>
-
-          <!-- ═══ Interactive Logic Explanation Bar (100% English) ═══ -->
-          <div id="pinarchive-logic-bar" class="mt-3.5 rounded-xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-3 sm:px-4 flex items-center justify-between gap-3 shadow-2xs">
-            <div class="flex items-center gap-2.5">
-              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-primary/20 text-primary text-xs font-bold shadow-2xs">
-                💡
-              </span>
-              <p class="text-xs text-foreground font-medium">
-                <strong class="text-primary font-bold">OR Condition Active:</strong> Any pin matching <span class="underline decoration-primary/50 underline-offset-2 font-bold">ANY single rule above</span> will be automatically preserved, ranked, and synced to Supabase &amp; Google Sheets.
+            <!-- Dynamic Logic Explanation Bar (100% English) -->
+            <div id="pinarchive-logic-bar" class="rounded-xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-2.5 sm:px-3 flex items-center gap-2 text-[11px] text-foreground shadow-2xs">
+              <span class="flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-lg bg-primary/20 text-primary text-xs font-bold">💡</span>
+              <p class="leading-tight">
+                <strong class="text-primary font-bold">OR Condition Active:</strong> Any pin matching <span class="underline decoration-primary/50 underline-offset-2 font-bold">ANY single rule above</span> is automatically preserved to DB &amp; Sheets.
               </p>
             </div>
-            <span class="hidden md:inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground whitespace-nowrap bg-background/80 px-2.5 py-1 rounded-lg border border-border/60">
-              <span>Auto-Evaluated on Ingest</span>
-            </span>
-          </div>
-        </div>
-
-        <!-- ═══ 2. Automation, Discovery & Schedule Settings ═══ -->
-        <div class="pt-4 border-t border-border/60">
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold uppercase tracking-wider text-muted-foreground">⚡ Automation Routines</span>
-              <span class="text-[11px] text-muted-foreground">Scheduled sweeps and pipeline triggers</span>
-            </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            <!-- Monthly Sweep -->
-            <div class="rounded-xl border border-border/80 bg-background/60 p-3.5 flex flex-col justify-between shadow-2xs hover:border-primary/30 transition-all">
-              <div class="flex items-center justify-between">
-                <label for="setting-audit-sweep-enabled" class="text-xs font-bold text-foreground flex items-center gap-1.5">
-                  <span>🗓️ Monthly Audit Sweep</span>
-                </label>
-                <span id="setting-audit-sweep-label" class="text-xs font-bold text-emerald-500">Active</span>
+          <!-- RIGHT CARD (col-span-5): Automation Routines in 3 Stacked Rows with High-Contrast Switches -->
+          <div class="lg:col-span-5 rounded-2xl border border-border/80 bg-gradient-to-b from-card via-card to-background/50 p-4.5 sm:p-5 shadow-xs flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-center justify-between pb-3 border-b border-border/60 mb-3.5">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-foreground">⚡ Automation Routines</span>
+                  <span class="text-[10px] text-muted-foreground font-medium">Pipeline &amp; sync triggers</span>
+                </div>
               </div>
-              <div class="mt-2.5 flex items-center justify-between">
-                <span class="text-[11px] text-muted-foreground">Day-1 02:00 UTC full scan</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input id="setting-audit-sweep-enabled" type="checkbox" checked class="sr-only peer" />
-                  <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
-                </label>
+
+              <!-- 3 Stacked Routine Rows -->
+              <div class="space-y-2.5">
+                
+                <!-- Row 1: Monthly Audit Sweep -->
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/70 bg-background/60 hover:border-primary/30 transition-all">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground text-xs border border-border/60">🗓️</span>
+                    <div class="min-w-0">
+                      <div class="text-xs font-bold text-foreground">Monthly Audit Sweep</div>
+                      <div class="text-[10px] text-muted-foreground">Day-1 02:00 UTC full deep scan</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2.5 shrink-0">
+                    <span id="setting-audit-sweep-label" class="text-xs font-bold text-emerald-500">Active</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input id="setting-audit-sweep-enabled" type="checkbox" checked class="sr-only peer" />
+                      <div class="w-10 h-5.5 bg-zinc-200 dark:bg-zinc-700 border border-zinc-300 dark:border-zinc-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 dark:after:border-zinc-600 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all after:shadow-sm peer-checked:bg-emerald-500 peer-checked:border-emerald-500"></div>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Row 2: Daily Pipeline Cron -->
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/70 bg-background/60 hover:border-primary/30 transition-all">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground text-xs border border-border/60">⏰</span>
+                    <div class="min-w-0">
+                      <div class="text-xs font-bold text-foreground">Daily Pipeline Cron</div>
+                      <div class="text-[10px] text-muted-foreground">Daily @ 07:00 UTC schedule</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2.5 shrink-0">
+                    <span id="setting-github-schedule-label" class="text-xs font-bold text-emerald-500">Active</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input id="setting-github-schedule" type="checkbox" checked class="sr-only peer" />
+                      <div class="w-10 h-5.5 bg-zinc-200 dark:bg-zinc-700 border border-zinc-300 dark:border-zinc-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 dark:after:border-zinc-600 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all after:shadow-sm peer-checked:bg-emerald-500 peer-checked:border-emerald-500"></div>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Row 3: Google Sheet Sync -->
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/70 bg-background/60 hover:border-primary/30 transition-all">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground text-xs border border-border/60">📑</span>
+                    <div class="min-w-0">
+                      <div class="text-xs font-bold text-foreground">Google Sheet Sync</div>
+                      <div class="text-[10px] text-muted-foreground">Sheets → DB 2-way sync</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2.5 shrink-0">
+                    <span id="setting-daily-sheet-sync-label" class="text-xs font-bold text-muted-foreground">Off</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input id="setting-daily-sheet-sync" type="checkbox" class="sr-only peer" />
+                      <div class="w-10 h-5.5 bg-zinc-200 dark:bg-zinc-700 border border-zinc-300 dark:border-zinc-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 dark:after:border-zinc-600 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all after:shadow-sm peer-checked:bg-emerald-500 peer-checked:border-emerald-500"></div>
+                    </label>
+                  </div>
+                </div>
+
               </div>
             </div>
 
-            <!-- GitHub Daily Cron -->
-            <div class="rounded-xl border border-border/80 bg-background/60 p-3.5 flex flex-col justify-between shadow-2xs hover:border-primary/30 transition-all">
-              <div class="flex items-center justify-between">
-                <label for="setting-github-schedule" class="text-xs font-bold text-foreground flex items-center gap-1.5">
-                  <span>⏰ Daily Pipeline Cron</span>
-                </label>
-                <span id="setting-github-schedule-label" class="text-xs font-bold text-emerald-500">Active</span>
+            <!-- Transparency status in right card footer -->
+            <div class="rounded-xl border border-border/60 bg-muted/30 p-2.5 flex items-center justify-between text-[11px] text-muted-foreground">
+              <div class="flex items-center gap-1.5">
+                <span id="pipeline-gh-status-dot" class="h-2 w-2 rounded-full bg-primary"></span>
+                <span id="pipeline-gh-status-text">Daily @ 07:00 UTC</span>
               </div>
-              <div class="mt-2.5 flex items-center justify-between">
-                <span class="text-[11px] text-muted-foreground">Daily @ 07:00 UTC</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input id="setting-github-schedule" type="checkbox" checked class="sr-only peer" />
-                  <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
-                </label>
-              </div>
-            </div>
-
-            <!-- Daily Sheet Sync -->
-            <div class="rounded-xl border border-border/80 bg-background/60 p-3.5 flex flex-col justify-between shadow-2xs hover:border-primary/30 transition-all">
-              <div class="flex items-center justify-between">
-                <label for="setting-daily-sheet-sync" class="text-xs font-bold text-foreground flex items-center gap-1.5">
-                  <span>📑 Google Sheet Sync</span>
-                </label>
-                <span id="setting-daily-sheet-sync-label" class="text-xs font-bold text-muted-foreground">Off</span>
-              </div>
-              <div class="mt-2.5 flex items-center justify-between">
-                <span class="text-[11px] text-muted-foreground">Sheets → DB 2-way sync</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input id="setting-daily-sheet-sync" type="checkbox" class="sr-only peer" />
-                  <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
-                </label>
-              </div>
+              <span id="transparency-cost-estimate">Estimating…</span>
             </div>
           </div>
+
         </div>
 
         <!-- ═══ 3. Collapsible Advanced Scraper Limits ═══ -->
@@ -466,7 +452,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
                   <span class="text-[10px] text-muted-foreground">Accept runs</span>
                   <label class="relative inline-flex items-center cursor-pointer">
                     <input id="setting-ingest-enabled" type="checkbox" checked class="sr-only peer" />
-                    <div class="w-7 h-4 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                    <div class="w-9 h-5 bg-zinc-200 dark:bg-zinc-700 border border-zinc-300 dark:border-zinc-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 dark:after:border-zinc-600 after:border after:rounded-full after:h-4 after:w-4 after:transition-all after:shadow-sm peer-checked:bg-emerald-500 peer-checked:border-emerald-500"></div>
                   </label>
                 </div>
               </div>
@@ -523,22 +509,6 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
             </div>
           </div>
         </details>
-
-        <!-- ═══ 4. Transparency & Workload Estimation ═══ -->
-        <div class="rounded-xl border border-border/80 bg-muted/30 p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-muted-foreground">
-          <div class="flex items-center gap-2">
-            <span id="pipeline-gh-status-dot" class="h-2 w-2 rounded-full bg-primary"></span>
-            <span id="pipeline-gh-status-text">Daily Pipeline: <strong class="text-foreground">Daily @ 07:00 UTC</strong></span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-            <span>Monthly Audit Sweep: <strong class="text-foreground">Day 1 @ 02:00 UTC</strong></span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="h-2 w-2 rounded-full bg-amber-500"></span>
-            <span id="transparency-cost-estimate">Estimating workload…</span>
-          </div>
-        </div>
 
       </div>
     </section>
@@ -1729,6 +1699,55 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
     });
   }
 
+  function setupToggleSwitchListeners() {
+    const auditSweepCb = document.getElementById('setting-audit-sweep-enabled') as HTMLInputElement | null;
+    const auditSweepLabel = document.getElementById('setting-audit-sweep-label');
+    auditSweepCb?.addEventListener('change', () => {
+      if (auditSweepLabel) {
+        auditSweepLabel.textContent = auditSweepCb.checked ? 'Active' : 'Off';
+        auditSweepLabel.className = `text-xs font-bold ${auditSweepCb.checked ? 'text-emerald-500' : 'text-muted-foreground'}`;
+      }
+    });
+
+    const githubScheduleCb = document.getElementById('setting-github-schedule') as HTMLInputElement | null;
+    const githubScheduleLabel = document.getElementById('setting-github-schedule-label');
+    const ghStatusDot = document.getElementById('pipeline-gh-status-dot');
+    const ghStatusText = document.getElementById('pipeline-gh-status-text');
+    githubScheduleCb?.addEventListener('change', () => {
+      if (githubScheduleLabel) {
+        githubScheduleLabel.textContent = githubScheduleCb.checked ? 'Active' : 'Off';
+        githubScheduleLabel.className = `text-xs font-bold ${githubScheduleCb.checked ? 'text-emerald-500' : 'text-muted-foreground'}`;
+      }
+      if (ghStatusDot && ghStatusText) {
+        if (githubScheduleCb.checked) {
+          ghStatusDot.className = 'h-2 w-2 rounded-full bg-primary';
+          ghStatusText.textContent = 'Daily @ 07:00 UTC';
+        } else {
+          ghStatusDot.className = 'h-2 w-2 rounded-full bg-amber-500';
+          ghStatusText.textContent = 'Off (FastCron Only)';
+        }
+      }
+    });
+
+    const dailySheetSyncCb = document.getElementById('setting-daily-sheet-sync') as HTMLInputElement | null;
+    const dailySheetSyncLabel = document.getElementById('setting-daily-sheet-sync-label');
+    dailySheetSyncCb?.addEventListener('change', () => {
+      if (dailySheetSyncLabel) {
+        dailySheetSyncLabel.textContent = dailySheetSyncCb.checked ? 'Active' : 'Off';
+        dailySheetSyncLabel.className = `text-xs font-bold ${dailySheetSyncCb.checked ? 'text-emerald-500' : 'text-muted-foreground'}`;
+      }
+    });
+
+    const masterIngestCb = document.getElementById('setting-ingest-enabled') as HTMLInputElement | null;
+    const masterIngestLabel = document.getElementById('setting-ingest-label');
+    masterIngestCb?.addEventListener('change', () => {
+      if (masterIngestLabel) {
+        masterIngestLabel.textContent = masterIngestCb.checked ? 'Active' : 'Paused';
+        masterIngestLabel.className = `text-[11px] font-bold ${masterIngestCb.checked ? 'text-emerald-500' : 'text-rose-500'}`;
+      }
+    });
+  }
+
   function setupSettingsCollapse() {
     const toggleBtn = document.getElementById('toggle-settings-collapse-btn');
     const panelBody = document.getElementById('settings-panel-body');
@@ -2343,6 +2362,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
     setupColVisibilityToggle();
     setupSettingsCollapse();
     setupLogicBarListeners();
+    setupToggleSwitchListeners();
     setupReevaluateButton();
     setupBulkActionButtons();
     document.getElementById('save-ingest-settings-btn')?.addEventListener('click', saveSettings);
