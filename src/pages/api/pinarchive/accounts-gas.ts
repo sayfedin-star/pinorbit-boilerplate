@@ -4,9 +4,9 @@ import { assertWorkspaceAccess } from '../../../server/auth/workspace-guard';
 import { dbClients } from '../../../server/db/clients';
 import { promoteCandidates } from '../../../server/services/promotion-service';
 import { errorStatus } from '../../../server/lib/http-error';
+import { USERNAME_REGEX } from '../../../lib/validation/pinterest';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const USERNAME_REGEX = /^[a-zA-Z0-9_]{1,30}$/;
 
 const json = (o: any, s = 200) =>
   new Response(JSON.stringify(o), {
