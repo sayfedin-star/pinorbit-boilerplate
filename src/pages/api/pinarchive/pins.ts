@@ -252,54 +252,26 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
         if (snaps.length >= 2) {
           const latestSnap = snaps[0];
-          const latestTime = new Date(latestSnap.recorded_at).getTime();
-          const latestS = Number(latestSnap.saves || currentSaves);
-          const latestR = Number(latestSnap.repins || currentRepins);
+          const t0 = new Date(latestSnap.recorded_at).getTime();
+          const s0 = Number(latestSnap.saves || currentSaves);
+          const r0 = Number(latestSnap.repins || currentRepins);
 
-          // Only calculate real-time window if the latest snapshot was taken in the last 48 hours
-          const ageSinceLastSnap = now - latestTime;
+          // Helper: Find baseline snapshot recorded on or before targetMs ago from t0
+          const findBaselineSnap = (targetMs: number) => {
+            const prior = snaps.find((s) => (t0 - new Date(s.recorded_at).getTime()) >= targetMs * 0.75);
+            return prior || snaps[snaps.length - 1];
+          };
 
-          if (ageSinceLastSnap <= 48 * 3600 * 1000) {
-            // 1. 24-Hour Delta: earliest snapshot within last 28 hours
-            const snap24h = [...snaps].reverse().find((s) => (now - new Date(s.recorded_at).getTime()) <= 28 * 3600 * 1000);
-            if (snap24h && snap24h !== latestSnap) {
-              deltaSaves24h = Math.max(0, latestS - Number(snap24h.saves || 0));
-              deltaRepins24h = Math.max(0, latestR - Number(snap24h.repins || 0));
-            } else if (snaps.length >= 2 && (latestTime - new Date(snaps[1].recorded_at).getTime()) <= ONE_DAY_MS) {
-              deltaSaves24h = Math.max(0, latestS - Number(snaps[1].saves || 0));
-              deltaRepins24h = Math.max(0, latestR - Number(snaps[1].repins || 0));
-            }
+          const snap24h = findBaselineSnap(ONE_DAY_MS);
+          const snap3d = findBaselineSnap(THREE_DAYS_MS);
+          const snap7d = findBaselineSnap(SEVEN_DAYS_MS);
 
-            // 2. 3-Day Delta: earliest snapshot within last 76 hours
-            const snap3d = [...snaps].reverse().find((s) => (now - new Date(s.recorded_at).getTime()) <= 76 * 3600 * 1000);
-            if (snap3d && snap3d !== latestSnap) {
-              deltaSaves3d = Math.max(deltaSaves24h, latestS - Number(snap3d.saves || 0));
-            } else {
-              deltaSaves3d = deltaSaves24h;
-            }
+          deltaSaves24h = Math.max(0, s0 - Number(snap24h.saves || 0));
+          deltaSaves3d = Math.max(deltaSaves24h, s0 - Number(snap3d.saves || 0));
+          deltaSaves7d = Math.max(deltaSaves3d, s0 - Number(snap7d.saves || 0));
 
-            // 3. 7-Day Delta: earliest snapshot within last 172 hours
-            const snap7d = [...snaps].reverse().find((s) => (now - new Date(s.recorded_at).getTime()) <= 172 * 3600 * 1000);
-            if (snap7d && snap7d !== latestSnap) {
-              deltaSaves7d = Math.max(deltaSaves3d, latestS - Number(snap7d.saves || 0));
-              deltaRepins7d = Math.max(deltaRepins24h, latestR - Number(snap7d.repins || 0));
-            } else {
-              deltaSaves7d = deltaSaves3d;
-              deltaRepins7d = deltaRepins24h;
-            }
-          } else if (ageSinceLastSnap <= SEVEN_DAYS_MS) {
-            // Pin refreshed within the past 7 days, but no update in the last 24h/3d
-            deltaSaves24h = 0;
-            deltaSaves3d = 0;
-            const oldestSnap = snaps[snaps.length - 1];
-            deltaSaves7d = Math.max(0, latestS - Number(oldestSnap.saves || 0));
-            deltaRepins7d = Math.max(0, latestR - Number(oldestSnap.repins || 0));
-          } else {
-            // No recent updates in the last 7 days
-            deltaSaves24h = 0;
-            deltaSaves3d = 0;
-            deltaSaves7d = 0;
-          }
+          deltaRepins24h = Math.max(0, r0 - Number(snap24h.repins || 0));
+          deltaRepins7d = Math.max(deltaRepins24h, r0 - Number(snap7d.repins || 0));
         }
 
         // Strict Guarantee: Delta cannot exceed total current saves
