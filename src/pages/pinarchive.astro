@@ -1069,6 +1069,24 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
   let selectedInterval = 'all';
   let isCompactNumbers = localStorage.getItem('pa_num_fmt') === 'compact';
   let isCompactDensity = localStorage.getItem('pa_density') === 'compact';
+  let competitorUsernames = new Set<string>();
+
+  async function loadCompetitorUsernames() {
+    try {
+      const root = document.getElementById('pinarchive-page-root');
+      const wsId = root?.getAttribute('data-workspace-id');
+      const url = wsId ? `/api/admin/competitors?workspace_id=${encodeURIComponent(wsId)}` : '/api/admin/competitors';
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.competitors && Array.isArray(json.competitors)) {
+          competitorUsernames = new Set(json.competitors.map((c: any) => String(c.username || '').toLowerCase()));
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load competitor usernames for PinArchive cross-badging:', e);
+    }
+  }
 
   function escapeHtml(str?: string | null): string {
     if (!str) return '';
@@ -1499,6 +1517,14 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
           dynamicCells += `<td class="${padClass} text-[11px] text-muted-foreground max-w-[180px] truncate" title="${escapeHtml(acc.last_result || '')}">${escapeHtml(acc.last_result || '—')}</td>`;
         }
 
+        const isCompetitor = competitorUsernames.has((acc.username || '').toLowerCase());
+        const compBadge = isCompetitor
+          ? `<a href="/competitors" title="Tracked in Competitor Intelligence" class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md text-[9.5px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors shadow-2xs">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+              <span>Comp</span>
+            </a>`
+          : '';
+
         return `
           <tr class="${isChecked ? 'bg-primary/5 font-medium' : 'hover:bg-muted/40'} transition-colors group">
             <td class="${padClass} text-center w-10">
@@ -1526,6 +1552,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
                     <a href="https://www.pinterest.com/${escapeHtml(acc.username)}/" target="_blank" rel="noopener noreferrer" class="text-muted-foreground/60 hover:text-primary transition-colors p-0.5" title="View on Pinterest">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     </a>
+                    ${compBadge}
                     <span class="text-[9.5px] font-bold uppercase px-1.5 py-0.2 rounded-full ${
                       isActive
                         ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
@@ -1554,14 +1581,24 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
             </td>
             <td class="${padClass} text-right">
               <div class="inline-flex items-center justify-end gap-1.5">
-                <button
-                  type="button"
-                  data-send-to-comp-user="${escapeHtml(acc.username)}"
-                  class="inline-flex items-center justify-center h-7 w-7 rounded-xl border border-border bg-background hover:border-emerald-500/50 hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer shadow-2xs"
-                  title="Track in Competitor Intelligence"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
-                </button>
+                ${isCompetitor ? `
+                  <a
+                    href="/competitors"
+                    class="inline-flex items-center justify-center h-7 w-7 rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-colors shadow-2xs"
+                    title="View in Competitor Intelligence"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+                  </a>
+                ` : `
+                  <button
+                    type="button"
+                    data-send-to-comp-user="${escapeHtml(acc.username)}"
+                    class="inline-flex items-center justify-center h-7 w-7 rounded-xl border border-border bg-background hover:border-emerald-500/50 hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer shadow-2xs"
+                    title="Track in Competitor Intelligence"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+                  </button>
+                `}
                 <a
                   href="/pinarchive/account/${encodeURIComponent(acc.username)}"
                   class="inline-flex items-center gap-1 rounded-xl border border-border bg-background hover:bg-muted/80 text-foreground px-2.5 py-1 text-xs font-semibold shadow-2xs hover:border-primary/40 transition-all"
@@ -1684,7 +1721,10 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       const wsId = root?.getAttribute('data-workspace-id');
       const url = wsId ? `/api/pinarchive/overview?workspace_id=${encodeURIComponent(wsId)}` : '/api/pinarchive/overview';
 
-      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      const [res] = await Promise.all([
+        fetch(url, { signal: AbortSignal.timeout(8000) }),
+        loadCompetitorUsernames(),
+      ]);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Failed to load overview');

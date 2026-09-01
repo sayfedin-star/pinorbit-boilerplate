@@ -2254,7 +2254,25 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
       renderKPIs();
       renderTable();
       buildColVisibilityMenu();
-      $('updated-at').textContent = `Synced ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      
+      // Compute actual last database sync time from competitors
+      let latestSyncIso: string | null = null;
+      for (const c of competitorsList) {
+        if (c.last_checked_at) {
+          if (!latestSyncIso || c.last_checked_at > latestSyncIso) {
+            latestSyncIso = c.last_checked_at;
+          }
+        }
+      }
+
+      if (latestSyncIso) {
+        const syncTimeAgo = timeAgo(latestSyncIso);
+        const exactTime = new Date(latestSyncIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        $('updated-at').textContent = `Synced ${syncTimeAgo} (${exactTime})`;
+        $('updated-at').title = `Last automated database sync: ${new Date(latestSyncIso).toLocaleString()}`;
+      } else {
+        $('updated-at').textContent = `Synced ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      }
     } catch (err: any) {
       toast(`Failed to load data: ${err.message}`, 'error');
     }
