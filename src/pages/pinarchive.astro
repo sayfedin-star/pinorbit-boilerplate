@@ -61,6 +61,16 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         <span>📖 How It Works</span>
       </button>
 
+      <!-- Track Creator / Add Account Button -->
+      <button
+        id="open-add-creator-modal"
+        type="button"
+        class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Track Creator</span>
+      </button>
+
       <!-- Quick Navigation Toolbar -->
       <div class="flex items-center rounded-xl border border-border/80 bg-card p-0.5 shadow-xs">
         <button id="pa-refresh-btn" title="Refresh PinArchive overview data"
@@ -102,13 +112,6 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
           </p>
         </div>
       </div>
-      <button
-        id="open-architecture-guide-banner-btn"
-        type="button"
-        class="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white px-3.5 py-2 text-xs font-bold transition-all self-start sm:self-auto cursor-pointer shadow-2xs"
-      >
-        <span>📖 Automation Architecture</span>
-      </button>
     </div>
   )}
 
@@ -212,24 +215,33 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       </div>
     </div>
 
-    <!-- ═══ PinArchive Ingestion & Archive Rules (Ultra-clean modern card) ═══ -->
-    <section class="rounded-2xl border border-border/80 bg-card/60 backdrop-blur-sm shadow-xs overflow-hidden transition-all duration-200" aria-labelledby="ingest-settings-heading">
+    <!-- ═══ PinArchive Ingestion & Archive Rules (Modern Bento Visual Rules) ═══ -->
+    <section class="rounded-2xl border border-border/80 bg-card/70 backdrop-blur-sm shadow-xs overflow-hidden transition-all duration-200" aria-labelledby="ingest-settings-heading">
       
-      <!-- Minimalist Header Strip -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 sm:px-5 sm:py-3 bg-muted/20 border-b border-border/70">
-        <div class="flex flex-wrap items-center gap-2.5">
-          <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-muted text-foreground border border-border/60 shadow-2xs">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <!-- Header Strip -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 sm:px-6 sm:py-3.5 bg-muted/20 border-b border-border/70">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-2xs">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/>
+            </svg>
           </div>
-          <h2 id="ingest-settings-heading" class="text-xs sm:text-sm font-bold text-foreground">
-            PinArchive Ingestion &amp; Archive Rules
-          </h2>
-          <span id="settings-summary-badge" class="text-[10px] font-bold px-2 py-0.2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            🟢 Ingest Active
-          </span>
-          <span id="settings-role-badge" class="hidden text-[10px] font-semibold px-2 py-0.2 rounded-full bg-muted text-muted-foreground">
-            Admin Only
-          </span>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 id="ingest-settings-heading" class="text-sm font-bold text-foreground">
+                Pin Qualification &amp; Ingest Rules
+              </h2>
+              <span id="settings-summary-badge" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                🟢 Ingest Active
+              </span>
+              <span id="settings-role-badge" class="hidden text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                Admin Only
+              </span>
+            </div>
+            <p class="text-[11px] text-muted-foreground mt-0.5">
+              Multi-tier criteria to automatically qualify, rank, and archive winning creator pins.
+            </p>
+          </div>
         </div>
 
         <div class="flex items-center gap-2 self-start sm:self-auto flex-wrap">
@@ -237,23 +249,24 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
           <button
             id="reevaluate-candidates-btn"
             type="button"
-            class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-border bg-background hover:bg-muted text-foreground px-3 text-xs font-semibold shadow-2xs transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            class="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/80 bg-background hover:bg-muted text-foreground px-3.5 text-xs font-semibold shadow-2xs hover:border-primary/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             title="Re-evaluate candidate pins against current rules"
           >
             <svg id="reevaluate-icon" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
-            <span id="reevaluate-btn-text">Re-evaluate Now</span>
+            <span id="reevaluate-btn-text">Re-evaluate Candidates</span>
           </button>
           <button
             id="save-ingest-settings-btn"
             type="button"
-            class="inline-flex h-8 items-center gap-1.5 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            class="inline-flex h-9 items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-4 text-xs font-bold shadow-xs hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ring-1 ring-emerald-400/30"
           >
-            <span>Save Settings</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            <span>Save Rules</span>
           </button>
           <button
             id="toggle-settings-collapse-btn"
             type="button"
-            class="inline-flex h-8 items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted px-2.5 rounded-xl transition-colors cursor-pointer"
+            class="inline-flex h-9 items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted px-3 rounded-xl transition-colors cursor-pointer"
             title="Toggle settings visibility"
           >
             <span id="settings-collapse-text">Configure</span>
@@ -263,267 +276,295 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       </div>
 
       <!-- Modern Collapsible Form Body -->
-      <div id="settings-panel-body" class="hidden p-5 bg-card space-y-5">
+      <div id="settings-panel-body" class="hidden p-5 sm:p-6 bg-card space-y-5">
         
-        <!-- Section 1: Ingestion Engine & Gate Controls -->
-        <div class="space-y-2.5">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-foreground">🛡️ Ingestion Engine &amp; Gate Policy</span>
-            <span class="text-[10px] text-muted-foreground">Controls how incoming scraping runs are accepted</span>
+        <!-- ═══ 2-Column Bento Grid: Qualification Criteria (Left) + Automation Routines (Right) ═══ -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          
+          <!-- LEFT CARD (col-span-7): Single Qualification Criteria Card with 3 Polished Tier Rows -->
+          <div class="lg:col-span-7 rounded-2xl border border-border/80 bg-gradient-to-b from-card via-card to-background/50 p-4.5 sm:p-5 shadow-xs flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-center justify-between pb-3 border-b border-border/60 mb-3.5">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-foreground">🎯 Qualification Criteria (OR Rules)</span>
+                  <span class="text-[10px] text-muted-foreground font-medium">Automatic pin preservation thresholds</span>
+                </div>
+                <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/25">
+                  OR Logic
+                </span>
+              </div>
+
+              <!-- 3 Stacked Tier Rows -->
+              <div class="space-y-3">
+                
+                <!-- Row 1: Star Performers (Min Saves) -->
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5 hover:border-emerald-500/45 transition-all group">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-sm font-bold border border-emerald-500/25 shadow-2xs group-hover:scale-105 transition-transform">
+                      🌟
+                    </div>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-foreground truncate">Star Performers (Saves)</span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Tier 1</span>
+                      </div>
+                      <div class="text-[10px] text-muted-foreground truncate mt-0.5">High cumulative saves across all creator boards</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <label for="setting-min-saves" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Min:</label>
+                    <div class="flex items-center rounded-xl border border-border bg-background px-2 py-1 shadow-2xs focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                      <input id="setting-min-saves" type="number" min="0" value="25" class="w-14 bg-transparent text-xs font-bold text-foreground text-center font-mono focus:outline-none" />
+                      <span class="text-[10px] font-semibold text-muted-foreground pl-1">saves</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Row 2: High Virality (Min Repins) -->
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-blue-500/25 bg-blue-500/5 hover:border-blue-500/45 transition-all group">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 text-sm font-bold border border-blue-500/25 shadow-2xs group-hover:scale-105 transition-transform">
+                      🔁
+                    </div>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-foreground truncate">High Virality (Repins)</span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">Tier 2</span>
+                      </div>
+                      <div class="text-[10px] text-muted-foreground truncate mt-0.5">Viral repin distribution across Pinterest networks</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <label for="setting-min-repins" class="text-xs font-semibold text-muted-foreground whitespace-nowrap">Min:</label>
+                    <div class="flex items-center rounded-xl border border-border bg-background px-2 py-1 shadow-2xs focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20">
+                      <input id="setting-min-repins" type="number" min="0" value="25" class="w-14 bg-transparent text-xs font-bold text-foreground text-center font-mono focus:outline-none" />
+                      <span class="text-[10px] font-semibold text-muted-foreground pl-1">repins</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Row 3: Fast Risers (Velocity Rule) -->
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-amber-500/25 bg-amber-500/5 hover:border-amber-500/45 transition-all group">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 text-sm font-bold border border-amber-500/25 shadow-2xs group-hover:scale-105 transition-transform">
+                      🚀
+                    </div>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-foreground truncate">Fast Risers (Velocity)</span>
+                        <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">Tier 3</span>
+                      </div>
+                      <div class="text-[10px] text-muted-foreground truncate mt-0.5">Fresh pins showing rapid early engagement growth</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <div class="flex items-center rounded-xl border border-border bg-background px-2 py-1 shadow-2xs focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-500/20 gap-1">
+                      <span class="text-[11px] text-muted-foreground font-mono">&lt;</span>
+                      <input id="setting-rising-age" type="number" min="1" max="90" value="14" class="w-7 bg-transparent text-xs font-bold text-foreground text-center font-mono focus:outline-none" title="Max age in days" />
+                      <span class="text-[10px] text-muted-foreground">d</span>
+                      <span class="text-[10px] text-muted-foreground font-bold">&amp; &ge;</span>
+                      <input id="setting-rising-saves" type="number" min="1" value="20" class="w-8 bg-transparent text-xs font-bold text-foreground text-center font-mono focus:outline-none" title="Min saves within age limit" />
+                      <span class="text-[10px] font-semibold text-muted-foreground">saves</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Dynamic Logic Explanation Bar (100% English) -->
+            <div id="pinarchive-logic-bar" class="rounded-xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-3 sm:px-4 flex items-center justify-between gap-3 shadow-2xs">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="relative flex h-2.5 w-2.5 shrink-0">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                </span>
+                <p class="text-[11px] text-foreground font-medium leading-snug">
+                  <strong class="text-primary font-bold">OR Condition Active:</strong> Any pin matching <span class="underline decoration-primary/50 underline-offset-2 font-bold">ANY single rule above</span> will be automatically preserved, ranked, and synced to Supabase &amp; Google Sheets.
+                </p>
+              </div>
+              <span class="hidden md:inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap bg-background/80 px-2 py-0.5 rounded-md border border-border/60">
+                Auto-Evaluated
+              </span>
+            </div>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
-            <!-- Master Ingest Switch -->
-            <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 flex flex-col justify-between shadow-2xs hover:border-primary/30 transition-all">
-              <div class="flex items-center justify-between">
-                <label for="setting-ingest-enabled" class="text-xs font-bold text-foreground">Master Switch</label>
-                <span id="setting-ingest-label" class="text-[11px] font-bold text-emerald-500">Active</span>
+
+          <!-- RIGHT CARD (col-span-5): Automation Routines with Pixel-Perfect Standard Switches -->
+          <div class="lg:col-span-5 rounded-2xl border border-border/80 bg-gradient-to-b from-card via-card to-background/50 p-4.5 sm:p-5 shadow-xs flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-center justify-between pb-3 border-b border-border/60 mb-3.5">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-foreground">⚡ Automation Routines</span>
+                  <span class="text-[10px] text-muted-foreground font-medium">Pipeline &amp; sync schedules</span>
+                </div>
               </div>
-              <div class="mt-3 flex items-center justify-between">
-                <span class="text-[11px] text-muted-foreground">Accept incoming runs</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input id="setting-ingest-enabled" type="checkbox" checked class="sr-only peer" />
-                  <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
-                </label>
+
+              <!-- 3 Stacked Routine Rows -->
+              <div class="space-y-3">
+                
+                <!-- Row 1: Monthly Audit Sweep -->
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/70 bg-background/60 hover:border-primary/30 transition-all group">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground text-sm border border-border/60 shadow-2xs group-hover:scale-105 transition-transform">
+                      🗓️
+                    </div>
+                    <div class="min-w-0">
+                      <div class="text-xs font-bold text-foreground truncate">Monthly Audit Sweep</div>
+                      <div class="text-[10px] text-muted-foreground truncate mt-0.5">Day-1 02:00 UTC · Full deep account scan</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2.5 shrink-0">
+                    <span id="setting-audit-sweep-label" class="text-xs font-bold text-emerald-500">Active</span>
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                      <input id="setting-audit-sweep-enabled" type="checkbox" checked class="sr-only peer" />
+                      <div class="w-11 h-6 bg-zinc-300 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:bg-emerald-500"></div>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Row 2: Daily Pipeline Cron -->
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/70 bg-background/60 hover:border-primary/30 transition-all group">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground text-sm border border-border/60 shadow-2xs group-hover:scale-105 transition-transform">
+                      ⏰
+                    </div>
+                    <div class="min-w-0">
+                      <div class="text-xs font-bold text-foreground truncate">Daily Pipeline Cron</div>
+                      <div class="text-[10px] text-muted-foreground truncate mt-0.5">Daily @ 07:00 UTC · FastCron + Matrix</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2.5 shrink-0">
+                    <span id="setting-github-schedule-label" class="text-xs font-bold text-emerald-500">Active</span>
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                      <input id="setting-github-schedule" type="checkbox" checked class="sr-only peer" />
+                      <div class="w-11 h-6 bg-zinc-300 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:bg-emerald-500"></div>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Row 3: Google Sheet Sync -->
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/70 bg-background/60 hover:border-primary/30 transition-all group">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground text-sm border border-border/60 shadow-2xs group-hover:scale-105 transition-transform">
+                      📑
+                    </div>
+                    <div class="min-w-0">
+                      <div class="text-xs font-bold text-foreground truncate">Google Sheet Sync</div>
+                      <div class="text-[10px] text-muted-foreground truncate mt-0.5">Sheets ⇄ Supabase DB 2-way sync</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2.5 shrink-0">
+                    <span id="setting-daily-sheet-sync-label" class="text-xs font-bold text-muted-foreground">Off</span>
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                      <input id="setting-daily-sheet-sync" type="checkbox" class="sr-only peer" />
+                      <div class="w-11 h-6 bg-zinc-300 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:bg-emerald-500"></div>
+                    </label>
+                  </div>
+                </div>
+
               </div>
             </div>
 
-            <!-- Paused Account Policy -->
-            <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 flex flex-col justify-between shadow-2xs hover:border-primary/30 transition-all">
-              <label for="setting-paused-policy" class="text-xs font-bold text-foreground">Paused Account Policy</label>
-              <select
-                id="setting-paused-policy"
-                class="mt-2 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none focus:border-primary transition-colors cursor-pointer"
-              >
-                <option value="reject">Reject Ingest (Disabled)</option>
-                <option value="accept">Allow Ingest Silently</option>
-              </select>
-            </div>
-
-            <!-- Max Batch Pins -->
-            <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 flex flex-col justify-between shadow-2xs hover:border-primary/30 transition-all">
-              <label for="setting-max-batch" class="text-xs font-bold text-foreground">Max Batch Pins</label>
-              <div class="mt-2 flex items-center gap-1.5">
-                <input
-                  id="setting-max-batch"
-                  type="number"
-                  min="10"
-                  max="5000"
-                  value="500"
-                  class="w-full rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:border-primary focus:outline-none"
-                />
-                <span class="text-xs font-semibold text-muted-foreground">pins</span>
+            <!-- Transparency status in right card footer -->
+            <div class="rounded-xl border border-border/60 bg-muted/30 p-2.5 sm:px-3 flex items-center justify-between text-[11px] text-muted-foreground shadow-2xs">
+              <div class="flex items-center gap-2">
+                <span id="pipeline-gh-status-dot" class="h-2 w-2 rounded-full bg-primary"></span>
+                <span id="pipeline-gh-status-text">Daily @ 07:00 UTC</span>
               </div>
+              <span id="transparency-cost-estimate" class="font-medium">Estimating…</span>
             </div>
+          </div>
 
-            <!-- Refresh Max Pins -->
-            <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 flex flex-col justify-between shadow-2xs hover:border-primary/30 transition-all">
-              <div class="flex items-center justify-between">
+        </div>
+
+        <!-- ═══ 3. Collapsible Advanced Scraper Limits ═══ -->
+        <details class="group rounded-xl border border-border/60 bg-muted/20 overflow-hidden transition-all">
+          <summary class="flex items-center justify-between p-3.5 text-xs font-bold text-muted-foreground hover:text-foreground cursor-pointer select-none bg-muted/30">
+            <div class="flex items-center gap-2">
+              <span>⚙️ Advanced Scraper Limits &amp; Engine Controls</span>
+              <span class="text-[10px] font-normal text-muted-foreground">(Batch sizing, Early-Stop depth, and refresh caps)</span>
+            </div>
+            <svg class="h-4 w-4 transition-transform group-open:rotate-180 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+
+          <div class="p-4 space-y-4 bg-background/50 border-t border-border/60">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+              <!-- Master Switch -->
+              <div class="rounded-xl border border-border/80 bg-card p-3 flex flex-col justify-between shadow-2xs">
+                <div class="flex items-center justify-between">
+                  <label for="setting-ingest-enabled" class="text-xs font-bold text-foreground">Master Ingest</label>
+                  <span id="setting-ingest-label" class="text-[11px] font-bold text-emerald-500">Active</span>
+                </div>
+                <div class="mt-2 flex items-center justify-between">
+                  <span class="text-[10px] text-muted-foreground">Accept runs</span>
+                  <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input id="setting-ingest-enabled" type="checkbox" checked class="sr-only peer" />
+                    <div class="w-9 h-5 bg-zinc-300 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all after:shadow-xs peer-checked:bg-emerald-500"></div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Paused Account Policy -->
+              <div class="rounded-xl border border-border/80 bg-card p-3 flex flex-col justify-between shadow-2xs">
+                <label for="setting-paused-policy" class="text-xs font-bold text-foreground">Paused Policy</label>
+                <select id="setting-paused-policy" class="mt-2 w-full rounded-lg border border-border bg-background px-2 py-1 text-xs font-medium text-foreground focus:border-primary">
+                  <option value="reject">Reject (Disabled)</option>
+                  <option value="accept">Allow Silently</option>
+                </select>
+              </div>
+
+              <!-- Max Batch Pins -->
+              <div class="rounded-xl border border-border/80 bg-card p-3 flex flex-col justify-between shadow-2xs">
+                <label for="setting-max-batch" class="text-xs font-bold text-foreground">Max Batch Pins</label>
+                <div class="mt-2 flex items-center gap-1.5">
+                  <input id="setting-max-batch" type="number" min="10" max="5000" value="500" class="w-full rounded-lg border border-border bg-background px-2 py-1 text-xs font-bold text-foreground font-mono" />
+                  <span class="text-[10px] text-muted-foreground">pins</span>
+                </div>
+              </div>
+
+              <!-- Discovery Max Pages -->
+              <div class="rounded-xl border border-border/80 bg-card p-3 flex flex-col justify-between shadow-2xs">
+                <label for="setting-discovery-max-pages" class="text-xs font-bold text-foreground">Discovery Max Pages</label>
+                <div class="mt-2 flex items-center gap-1.5">
+                  <input id="setting-discovery-max-pages" type="number" min="1" max="500" value="50" class="w-full rounded-lg border border-border bg-background px-2 py-1 text-xs font-bold text-foreground font-mono" />
+                  <span class="text-[10px] text-muted-foreground">pages</span>
+                </div>
+              </div>
+
+              <!-- Discovery Stop (Early-Stop) -->
+              <div class="rounded-xl border border-border/80 bg-card p-3 flex flex-col justify-between shadow-2xs">
+                <label for="setting-discovery-stop-pages" class="text-xs font-bold text-foreground">Early-Stop Pages</label>
+                <div class="mt-2 flex items-center gap-1.5">
+                  <input id="setting-discovery-stop-pages" type="number" min="1" max="10" value="3" class="w-full rounded-lg border border-border bg-background px-2 py-1 text-xs font-bold text-foreground font-mono" />
+                  <span class="text-[10px] text-muted-foreground">pages</span>
+                </div>
+              </div>
+
+              <!-- Refresh Max Pins -->
+              <div class="rounded-xl border border-border/80 bg-card p-3 flex flex-col justify-between shadow-2xs">
                 <label for="setting-refresh-max-pins" class="text-xs font-bold text-foreground">Refresh Max Pins</label>
-                <span class="text-[10px] text-muted-foreground font-semibold">0 = unlimited</span>
-              </div>
-              <div class="mt-2 flex items-center gap-1.5">
-                <input
-                  id="setting-refresh-max-pins"
-                  type="number"
-                  min="0"
-                  max="10000"
-                  value="0"
-                  class="w-full rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:border-primary focus:outline-none"
-                />
-                <span class="text-xs font-semibold text-muted-foreground">pins</span>
+                <div class="mt-2 flex items-center gap-1.5">
+                  <input id="setting-refresh-max-pins" type="number" min="0" max="10000" value="0" class="w-full rounded-lg border border-border bg-background px-2 py-1 text-xs font-bold text-foreground font-mono" />
+                  <span class="text-[10px] text-muted-foreground">(0=all)</span>
+                </div>
               </div>
             </div>
 
             <!-- Refresh Min Saves -->
-            <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 flex flex-col justify-between shadow-2xs hover:border-primary/30 transition-all">
-              <div class="flex items-center justify-between">
-                <label for="setting-refresh-min-saves" class="text-xs font-bold text-foreground">Refresh Min Saves</label>
-                <span class="text-[10px] text-muted-foreground font-semibold">0 = all</span>
-              </div>
-              <div class="mt-2 flex items-center gap-1.5">
-                <input
-                  id="setting-refresh-min-saves"
-                  type="number"
-                  min="0"
-                  max="1000000"
-                  value="0"
-                  class="w-full rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:border-primary focus:outline-none"
-                />
-                <span class="text-xs font-semibold text-muted-foreground">saves</span>
-              </div>
+            <div class="hidden">
+              <input id="setting-refresh-min-saves" type="number" value="0" />
             </div>
           </div>
-        </div>
+        </details>
 
-        <!-- Section 2: Pin Promotion Criteria (OR logic) -->
-        <div class="space-y-2.5">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-foreground">🎯 Pin Promotion Criteria (OR logic)</span>
-              <span class="text-[10px] text-muted-foreground">Any criteria matched promotes candidate to archive</span>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            <!-- Min Saves -->
-            <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 space-y-1.5 shadow-2xs hover:border-emerald-500/30 transition-all">
-              <div class="flex items-center justify-between">
-                <label for="setting-min-saves" class="text-xs font-bold text-foreground">Min Saves Threshold</label>
-                <span class="text-[10px] font-semibold text-emerald-500">Saves Rule</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <input id="setting-min-saves" type="number" min="0" value="0" class="w-full rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:border-primary focus:outline-none" />
-                <span class="text-xs text-muted-foreground font-medium">saves</span>
-              </div>
-            </div>
-
-            <!-- Min Repins -->
-            <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 space-y-1.5 shadow-2xs hover:border-blue-500/30 transition-all">
-              <div class="flex items-center justify-between">
-                <label for="setting-min-repins" class="text-xs font-bold text-foreground">Min Repins Threshold</label>
-                <span class="text-[10px] font-semibold text-blue-500">Repins Rule</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <input id="setting-min-repins" type="number" min="0" value="0" class="w-full rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:border-primary focus:outline-none" />
-                <span class="text-xs text-muted-foreground font-medium">repins</span>
-              </div>
-            </div>
-
-            <!-- Rising Pin -->
-            <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 space-y-1.5 shadow-2xs hover:border-amber-500/30 transition-all">
-              <div class="flex items-center justify-between">
-                <label for="setting-rising-saves" class="text-xs font-bold text-foreground">Rising Velocity Pin</label>
-                <span class="text-[10px] font-semibold text-amber-500">Velocity Rule</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="text-[11px] text-muted-foreground">&lt;</span>
-                <input id="setting-rising-age" type="number" min="1" max="90" value="14" class="w-14 rounded-lg border border-border bg-card px-2 py-1 text-xs font-bold text-foreground" />
-                <span class="text-[11px] text-muted-foreground">days &amp; &ge;</span>
-                <input id="setting-rising-saves" type="number" min="1" value="34" class="w-16 rounded-lg border border-border bg-card px-2 py-1 text-xs font-bold text-foreground" />
-                <span class="text-xs text-muted-foreground font-medium">saves</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Section 3: Automation, Sweeps & Sheet Sync -->
-        <div class="space-y-2.5">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-foreground">⚡ Automation &amp; Discovery Routines</span>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
-            <!-- Card 1: Discovery Max Pages -->
-            <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 flex flex-col justify-between shadow-2xs hover:border-primary/30 transition-all">
-              <label for="setting-discovery-max-pages" class="text-xs font-bold text-foreground">Discovery Max Pages</label>
-              <div class="mt-2 flex items-center gap-1.5">
-                <input
-                  id="setting-discovery-max-pages"
-                  type="number"
-                  min="1"
-                  max="250"
-                  value="50"
-                  class="w-full rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:border-primary focus:outline-none"
-                />
-                <span class="text-[11px] font-medium text-muted-foreground">pages</span>
-              </div>
-              <span class="text-[10px] text-muted-foreground mt-1">Max pages/run (up to 250)</span>
-            </div>
-
-            <!-- Card 2: Discovery Stop -->
-            <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 flex flex-col justify-between shadow-2xs">
-              <label for="setting-discovery-stop-pages" class="text-xs font-bold text-foreground">Discovery Stop</label>
-              <div class="mt-2 flex items-center gap-1.5">
-                <input
-                  id="setting-discovery-stop-pages"
-                  type="number"
-                  min="1"
-                  max="10"
-                  value="3"
-                  class="w-full rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:outline-none"
-                />
-                <span class="text-[11px] font-medium text-muted-foreground">pages</span>
-              </div>
-              <span class="text-[10px] text-muted-foreground mt-1">Stop after K all-known pages</span>
-            </div>
-
-            <!-- Card 2: Monthly Sweep -->
-            <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 flex flex-col justify-between shadow-2xs">
-              <div class="flex items-center justify-between">
-                <label for="setting-audit-sweep-enabled" class="text-xs font-bold text-foreground">Monthly Sweep</label>
-                <span id="setting-audit-sweep-label" class="text-xs font-bold text-emerald-500">Active</span>
-              </div>
-              <div class="mt-2 flex items-center justify-between">
-                <span class="text-[11px] text-muted-foreground">Day-1 02:00 full scan</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input id="setting-audit-sweep-enabled" type="checkbox" checked class="sr-only peer" />
-                  <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
-                </label>
-              </div>
-              <span class="text-[10px] text-muted-foreground mt-1">Audit sweep enabled</span>
-            </div>
-
-            <!-- Card 3: Daily Sheet Sync -->
-            <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 flex flex-col justify-between shadow-2xs">
-              <div class="flex items-center justify-between">
-                <label for="setting-daily-sheet-sync" class="text-xs font-bold text-foreground">Daily Sheet Sync</label>
-                <span id="setting-daily-sheet-sync-label" class="text-xs font-bold text-muted-foreground">Off</span>
-              </div>
-              <div class="mt-2 flex items-center justify-between">
-                <span class="text-[11px] text-muted-foreground">Sheets → DB daily sync</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input id="setting-daily-sheet-sync" type="checkbox" class="sr-only peer" />
-                  <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
-                </label>
-              </div>
-              <span class="text-[10px] text-muted-foreground mt-1">Sync manually edited rows</span>
-            </div>
-
-            <!-- Card 4: GitHub Actions Daily Schedule (07:00 UTC) -->
-            <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 flex flex-col justify-between shadow-2xs">
-              <div class="flex items-center justify-between">
-                <label for="setting-github-schedule" class="text-xs font-bold text-foreground">GitHub Daily Cron</label>
-                <span id="setting-github-schedule-label" class="text-xs font-bold text-emerald-500">Active</span>
-              </div>
-              <div class="mt-2 flex items-center justify-between">
-                <span class="text-[11px] text-muted-foreground">Daily @ 07:00 UTC trigger</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input id="setting-github-schedule" type="checkbox" checked class="sr-only peer" />
-                  <div class="w-8 h-4.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
-                </label>
-              </div>
-              <span class="text-[10px] text-muted-foreground mt-1">Toggle off to use FastCron only</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Transparency Box -->
-        <div class="rounded-xl border border-border/80 bg-muted/30 p-3.5 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-foreground">Pipeline Transparency &amp; Cost Estimation</span>
-            <span class="text-[10px] font-semibold text-muted-foreground">Automated Serverless Workload</span>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs text-muted-foreground">
-            <div class="flex items-center gap-2">
-              <span id="pipeline-gh-status-dot" class="h-1.5 w-1.5 rounded-full bg-primary"></span>
-              <span id="pipeline-gh-status-text">Daily Pipeline: <strong class="text-foreground">Daily @ 07:00 UTC</strong></span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-              <span>Monthly Audit Sweep: <strong class="text-foreground">Day 1 @ 02:00 UTC</strong></span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-              <span id="transparency-cost-estimate">Estimating workload…</span>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
 
     <!-- ═══ View A: Accounts Table with 2-Tier Controls ═══ -->
-    <section class="mb-8 rounded-2xl border border-border bg-card overflow-hidden shadow-xs" aria-labelledby="accounts-section-heading">
+    <section class="mb-8 rounded-2xl border border-border bg-card shadow-xs relative" aria-labelledby="accounts-section-heading">
       
       <!-- Tier 1: View Navigation & Display Controls -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border px-5 py-3 bg-muted/20">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border px-5 py-3 bg-muted/20 rounded-t-2xl">
         
         <!-- Left: Status Tabs -->
         <div class="flex items-center gap-1 bg-muted/70 p-1 rounded-xl border border-border/60 overflow-x-auto">
@@ -559,7 +600,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
                 <span>Columns</span>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
-              <div id="pa-col-visibility-menu" class="hidden absolute right-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-border bg-card shadow-lg p-2 space-y-0.5"></div>
+              <div id="pa-col-visibility-menu" class="hidden absolute right-0 top-full mt-1.5 z-50 w-56 rounded-2xl border border-border bg-card shadow-xl p-2.5 space-y-1"></div>
             </div>
           </div>
 
@@ -623,6 +664,35 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
             <span>🧠 Discover Pins</span>
           </button>
 
+          <!-- Bulk Interval Dropdown -->
+          <div class="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2 py-0.5 shadow-2xs">
+            <span class="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">⏱ Set Interval:</span>
+            <select
+              id="bulk-interval-select"
+              class="bg-transparent text-xs font-bold text-foreground py-1 px-1 focus:outline-none cursor-pointer"
+              title="Change scrape interval for selected accounts"
+            >
+              <option value="" disabled selected>Select…</option>
+              <option value="1">1 day (Daily) - Default</option>
+              <option value="2">2 days</option>
+              <option value="3">3 days</option>
+              <option value="5">5 days</option>
+              <option value="7">7 days (Weekly)</option>
+              <option value="14">14 days (Bi-weekly)</option>
+              <option value="30">30 days (Monthly)</option>
+            </select>
+          </div>
+
+          <button
+            id="send-selected-to-competitors-btn"
+            type="button"
+            class="h-8 inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-3 text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+            title="Track Selected in Competitor Intelligence"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+            <span>🎯 Send to Competitors</span>
+          </button>
+
           <button
             id="gas-bulk-pause-btn"
             type="button"
@@ -673,6 +743,109 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         </table>
       </div>
     </section>
+
+    <!-- ═══ Add Creator Account Modal ═══ -->
+    <div id="add-creator-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+      <div class="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between border-b border-border pb-3">
+          <div class="flex items-center gap-3">
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+            </span>
+            <div>
+              <h3 class="text-base font-bold text-foreground">Track Pinterest Creator</h3>
+              <p class="text-xs text-muted-foreground">Add account to PinArchive Ingestion Pipeline</p>
+            </div>
+          </div>
+          <button id="close-add-creator-modal-btn" type="button" class="text-muted-foreground hover:text-foreground text-sm p-1 cursor-pointer">✕</button>
+        </div>
+
+        <form id="add-creator-form" class="space-y-4">
+          <div class="space-y-1.5">
+            <label for="new-creator-username" class="block text-xs font-bold text-foreground">
+              Pinterest Handle or Profile URL <span class="text-rose-500">*</span>
+            </label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-mono text-xs">@</span>
+              <input
+                id="new-creator-username"
+                type="text"
+                required
+                placeholder="pinterest_creator or url"
+                class="w-full rounded-xl border border-border bg-background py-2 pl-7 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
+              />
+            </div>
+            <p class="text-[11px] text-muted-foreground">e.g. <code>cicisafriajit</code> or <code>https://www.pinterest.com/cicisafriajit/</code></p>
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="new-creator-interval" class="block text-xs font-bold text-foreground">
+              Discovery / Ingest Interval
+            </label>
+            <select
+              id="new-creator-interval"
+              class="w-full rounded-xl border border-border bg-background p-2 text-xs font-semibold text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs cursor-pointer"
+            >
+              <option value="1" selected>1 day (Daily) - Recommended</option>
+              <option value="2">2 days</option>
+              <option value="3">3 days</option>
+              <option value="5">5 days</option>
+              <option value="7">7 days (Weekly)</option>
+              <option value="14">14 days (Bi-weekly)</option>
+              <option value="30">30 days (Monthly)</option>
+            </select>
+          </div>
+
+          <!-- Cross-Module Sync Checkbox -->
+          <!-- Cross-Module Sync & Immediate Scraping Checkbox -->
+          <div class="rounded-xl bg-muted/40 border border-border/80 p-3 flex items-start gap-2.5">
+            <input
+              id="sync-to-competitors-checkbox"
+              type="checkbox"
+              checked
+              class="mt-0.5 rounded accent-primary h-4 w-4 cursor-pointer"
+            />
+            <label for="sync-to-competitors-checkbox" class="text-xs text-foreground cursor-pointer select-none">
+              <span class="font-bold block">🎯 Also track & scrape in Competitor Intelligence</span>
+              <span class="text-[11px] text-muted-foreground block">Adds creator to Competitors DB and triggers immediate profile metrics scraping.</span>
+            </label>
+          </div>
+
+          <!-- Run Discover Pins Immediately Checkbox -->
+          <div class="rounded-xl bg-muted/40 border border-border/80 p-3 flex items-start gap-2.5">
+            <input
+              id="run-discovery-now-checkbox"
+              type="checkbox"
+              checked
+              class="mt-0.5 rounded accent-primary h-4 w-4 cursor-pointer"
+            />
+            <label for="run-discovery-now-checkbox" class="text-xs text-foreground cursor-pointer select-none">
+              <span class="font-bold block">🧠 Run Discover Pins immediately</span>
+              <span class="text-[11px] text-muted-foreground block">Dispatches the PinArchive discovery pipeline to fetch and archive viral candidate pins right away.</span>
+            </label>
+          </div>
+
+          <div id="add-creator-error" class="hidden text-xs text-rose-500 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-xl font-medium"></div>
+
+          <div class="flex items-center justify-end gap-2 pt-3 border-t border-border">
+            <button
+              id="cancel-add-creator-modal-btn"
+              type="button"
+              class="rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              id="submit-add-creator-btn"
+              type="submit"
+              class="inline-flex items-center gap-1.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 text-xs font-bold shadow-sm transition-all cursor-pointer"
+            >
+              <span>+ Track Creator</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <!-- ═══ Delete Accounts Confirmation Modal ═══ -->
     <div id="delete-accounts-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
@@ -911,6 +1084,32 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
   let selectedInterval = 'all';
   let isCompactNumbers = localStorage.getItem('pa_num_fmt') === 'compact';
   let isCompactDensity = localStorage.getItem('pa_density') === 'compact';
+  let competitorMap = new Map<string, { id: string; username: string }>();
+
+  async function loadCompetitorUsernames() {
+    try {
+      const root = document.getElementById('pinarchive-page-root');
+      const wsId = root?.getAttribute('data-workspace-id');
+      const url = wsId ? `/api/admin/competitors?workspace_id=${encodeURIComponent(wsId)}` : '/api/admin/competitors';
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.competitors && Array.isArray(json.competitors)) {
+          competitorMap.clear();
+          for (const c of json.competitors) {
+            if (c.username) {
+              competitorMap.set(String(c.username).toLowerCase().trim(), {
+                id: c.id,
+                username: c.username,
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load competitor usernames for PinArchive cross-badging:', e);
+    }
+  }
 
   function escapeHtml(str?: string | null): string {
     if (!str) return '';
@@ -1037,14 +1236,14 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
 
     // Status filter
     if (activeStatusTab === 'active') {
-      filtered = filtered.filter(a => a.status === 'active');
+      filtered = filtered.filter(a => a.status === 'active' && a.ingest_enabled !== false);
     } else if (activeStatusTab === 'paused') {
-      filtered = filtered.filter(a => a.status === 'paused');
+      filtered = filtered.filter(a => a.status === 'paused' || a.ingest_enabled === false);
     }
 
     // Interval filter
     if (selectedInterval !== 'all') {
-      filtered = filtered.filter(a => String(a.interval_days || 3) === selectedInterval);
+      filtered = filtered.filter(a => String(a.interval_days || 1) === selectedInterval);
     }
 
     // Search filter
@@ -1114,15 +1313,15 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
     const colMenu = document.getElementById('pa-col-visibility-menu');
     if (!colMenu) return;
     colMenu.innerHTML = `
-      <div class="flex items-center justify-between pb-1 px-1 border-b border-border/80 text-[11px] font-semibold text-muted-foreground">
+      <div class="flex items-center justify-between pb-2 px-1 border-b border-border/80 text-[11px] font-bold text-muted-foreground">
         <span>Toggle Columns</span>
-        <button id="reset-pa-cols-btn" class="text-primary hover:underline text-[10px]">Reset</button>
+        <button id="reset-pa-cols-btn" class="text-primary hover:underline text-[11px] font-bold cursor-pointer">Reset</button>
       </div>
-      <div class="space-y-0.5 max-h-60 overflow-y-auto pt-1">
+      <div class="space-y-1 max-h-72 overflow-y-auto pt-1.5 pr-1">
         ${COLUMN_DEFS.map(
           (c) => `
-          <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-muted/60 transition-colors text-xs font-medium text-foreground">
-            <input type="checkbox" class="rounded accent-primary h-3.5 w-3.5" data-pa-col-key="${c.key}" ${colVisible[c.key] ? 'checked' : ''} />
+          <label class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-muted/70 transition-colors text-xs font-semibold text-foreground select-none">
+            <input type="checkbox" class="rounded-md accent-primary h-4 w-4 cursor-pointer" data-pa-col-key="${c.key}" ${colVisible[c.key] ? 'checked' : ''} />
             <span>${c.label}</span>
           </label>`
         ).join('')}
@@ -1263,20 +1462,24 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         }
 
         if (colVisible.interval_days) {
-          const currentDays = Number(acc.interval_days || 3);
+          const currentDays = Number(acc.interval_days || 1);
           dynamicCells += `
             <td class="${padClass} font-medium text-foreground">
               <div class="relative inline-flex items-center">
                 <select
                   class="interval-select appearance-none cursor-pointer inline-flex items-center gap-1 pl-2 pr-5 py-0.5 rounded-lg bg-muted hover:bg-muted/80 text-[11px] font-bold border border-border/60 transition-colors focus:ring-1 focus:ring-primary focus:outline-none shadow-2xs"
                   data-username="${escapeHtml(acc.username || '')}"
+                  data-account-id="${escapeHtml(acc.id || '')}"
                   data-prev-days="${currentDays}"
                   title="Click to change discovery interval"
                 >
                   <option value="1" ${currentDays === 1 ? 'selected' : ''}>1d</option>
+                  <option value="2" ${currentDays === 2 ? 'selected' : ''}>2d</option>
                   <option value="3" ${currentDays === 3 ? 'selected' : ''}>3d</option>
+                  <option value="5" ${currentDays === 5 ? 'selected' : ''}>5d</option>
                   <option value="7" ${currentDays === 7 ? 'selected' : ''}>7d</option>
                   <option value="14" ${currentDays === 14 ? 'selected' : ''}>14d</option>
+                  <option value="30" ${currentDays === 30 ? 'selected' : ''}>30d</option>
                 </select>
                 <div class="pointer-events-none absolute right-1.5 flex items-center text-muted-foreground">
                   <svg class="h-2.5 w-2.5" viewBox="0 0 20 20" fill="currentColor">
@@ -1337,6 +1540,16 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
           dynamicCells += `<td class="${padClass} text-[11px] text-muted-foreground max-w-[180px] truncate" title="${escapeHtml(acc.last_result || '')}">${escapeHtml(acc.last_result || '—')}</td>`;
         }
 
+        const compInfo = competitorMap.get((acc.username || '').toLowerCase().trim());
+        const isCompetitor = Boolean(compInfo);
+        const compHref = compInfo?.id ? `/competitors/details?id=${encodeURIComponent(compInfo.id)}` : '/competitors';
+        const compBadge = isCompetitor
+          ? `<a href="${compHref}" title="View @${escapeHtml(acc.username)} in Competitor Intelligence" class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md text-[9.5px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors shadow-2xs">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+              <span>Comp</span>
+            </a>`
+          : '';
+
         return `
           <tr class="${isChecked ? 'bg-primary/5 font-medium' : 'hover:bg-muted/40'} transition-colors group">
             <td class="${padClass} text-center w-10">
@@ -1364,6 +1577,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
                     <a href="https://www.pinterest.com/${escapeHtml(acc.username)}/" target="_blank" rel="noopener noreferrer" class="text-muted-foreground/60 hover:text-primary transition-colors p-0.5" title="View on Pinterest">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     </a>
+                    ${compBadge}
                     <span class="text-[9.5px] font-bold uppercase px-1.5 py-0.2 rounded-full ${
                       isActive
                         ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
@@ -1379,19 +1593,37 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
             </td>
             ${dynamicCells}
             <td class="${padClass} text-center">
-              <label class="relative inline-flex items-center cursor-pointer">
+              <label class="relative inline-flex items-center cursor-pointer shrink-0">
                 <input
                   type="checkbox"
                   data-acc-ingest-toggle="${escapeHtml(acc.id)}"
-                  ${acc.ingest_enabled !== false ? 'checked' : ''}
+                  ${isActive ? 'checked' : ''}
                   class="sr-only peer"
                   id="toggle-ingest-${escapeHtml(acc.id)}"
                 />
-                <div class="w-7 h-4 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                <div class="w-9 h-5 bg-zinc-300 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all after:shadow-xs peer-checked:bg-emerald-500"></div>
               </label>
             </td>
             <td class="${padClass} text-right">
               <div class="inline-flex items-center justify-end gap-1.5">
+                ${isCompetitor ? `
+                  <a
+                    href="${compHref}"
+                    class="inline-flex items-center justify-center h-7 w-7 rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-colors shadow-2xs"
+                    title="View @${escapeHtml(acc.username)} in Competitor Intelligence"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+                  </a>
+                ` : `
+                  <button
+                    type="button"
+                    data-send-to-comp-user="${escapeHtml(acc.username)}"
+                    class="inline-flex items-center justify-center h-7 w-7 rounded-xl border border-border bg-background hover:border-emerald-500/50 hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer shadow-2xs"
+                    title="Track in Competitor Intelligence"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+                  </button>
+                `}
                 <a
                   href="/pinarchive/account/${encodeURIComponent(acc.username)}"
                   class="inline-flex items-center gap-1 rounded-xl border border-border bg-background hover:bg-muted/80 text-foreground px-2.5 py-1 text-xs font-semibold shadow-2xs hover:border-primary/40 transition-all"
@@ -1419,6 +1651,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
     attachAccountIngestToggleListeners();
     attachSingleDeleteListeners();
     attachIntervalChangeListeners();
+    attachSendToCompetitorListeners();
 
     // Copy handle listeners
     tbody.querySelectorAll<HTMLElement>('[data-pa-copy-handle]').forEach(btn => {
@@ -1513,7 +1746,10 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       const wsId = root?.getAttribute('data-workspace-id');
       const url = wsId ? `/api/pinarchive/overview?workspace_id=${encodeURIComponent(wsId)}` : '/api/pinarchive/overview';
 
-      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      const [res] = await Promise.all([
+        fetch(url, { signal: AbortSignal.timeout(8000) }),
+        loadCompetitorUsernames(),
+      ]);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Failed to load overview');
@@ -1668,6 +1904,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       }
 
       updateCostEstimate();
+      updateLogicBar();
     } catch (e) {
       if (retries > 0) {
         setTimeout(() => loadSettings(retries - 1), 1500);
@@ -1675,6 +1912,82 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       }
       console.error('Failed to load settings:', e);
     }
+  }
+
+  function updateLogicBar() {
+    const minSaves = parseInt((document.getElementById('setting-min-saves') as HTMLInputElement)?.value || '0', 10);
+    const minRepins = parseInt((document.getElementById('setting-min-repins') as HTMLInputElement)?.value || '0', 10);
+    const risingAge = parseInt((document.getElementById('setting-rising-age') as HTMLInputElement)?.value || '14', 10);
+    const risingSaves = parseInt((document.getElementById('setting-rising-saves') as HTMLInputElement)?.value || '20', 10);
+    const logicBar = document.getElementById('pinarchive-logic-bar');
+    if (!logicBar) return;
+
+    const parts = [];
+    if (minSaves > 0) parts.push(`≥${minSaves} saves`);
+    if (minRepins > 0) parts.push(`≥${minRepins} repins`);
+    if (risingAge > 0 && risingSaves > 0) parts.push(`<${risingAge}d & ≥${risingSaves} saves`);
+
+    const summaryStr = parts.length > 0 ? parts.join(' OR ') : 'Active rules';
+    const descEl = logicBar.querySelector('p');
+    if (descEl) {
+      descEl.innerHTML = `<strong class="text-primary font-bold">OR Condition Active (${summaryStr}):</strong> Any pin matching <span class="underline decoration-primary/50 underline-offset-2 font-bold">ANY single rule above</span> will be automatically preserved, ranked, and synced to Supabase &amp; Google Sheets.`;
+    }
+  }
+
+  function setupLogicBarListeners() {
+    const inputs = document.querySelectorAll('#setting-min-saves, #setting-min-repins, #setting-rising-age, #setting-rising-saves');
+    inputs.forEach(el => {
+      el.addEventListener('input', updateLogicBar);
+    });
+  }
+
+  function setupToggleSwitchListeners() {
+    const auditSweepCb = document.getElementById('setting-audit-sweep-enabled') as HTMLInputElement | null;
+    const auditSweepLabel = document.getElementById('setting-audit-sweep-label');
+    auditSweepCb?.addEventListener('change', () => {
+      if (auditSweepLabel) {
+        auditSweepLabel.textContent = auditSweepCb.checked ? 'Active' : 'Off';
+        auditSweepLabel.className = `text-xs font-bold ${auditSweepCb.checked ? 'text-emerald-500' : 'text-muted-foreground'}`;
+      }
+    });
+
+    const githubScheduleCb = document.getElementById('setting-github-schedule') as HTMLInputElement | null;
+    const githubScheduleLabel = document.getElementById('setting-github-schedule-label');
+    const ghStatusDot = document.getElementById('pipeline-gh-status-dot');
+    const ghStatusText = document.getElementById('pipeline-gh-status-text');
+    githubScheduleCb?.addEventListener('change', () => {
+      if (githubScheduleLabel) {
+        githubScheduleLabel.textContent = githubScheduleCb.checked ? 'Active' : 'Off';
+        githubScheduleLabel.className = `text-xs font-bold ${githubScheduleCb.checked ? 'text-emerald-500' : 'text-muted-foreground'}`;
+      }
+      if (ghStatusDot && ghStatusText) {
+        if (githubScheduleCb.checked) {
+          ghStatusDot.className = 'h-2 w-2 rounded-full bg-primary';
+          ghStatusText.textContent = 'Daily @ 07:00 UTC';
+        } else {
+          ghStatusDot.className = 'h-2 w-2 rounded-full bg-amber-500';
+          ghStatusText.textContent = 'Off (FastCron Only)';
+        }
+      }
+    });
+
+    const dailySheetSyncCb = document.getElementById('setting-daily-sheet-sync') as HTMLInputElement | null;
+    const dailySheetSyncLabel = document.getElementById('setting-daily-sheet-sync-label');
+    dailySheetSyncCb?.addEventListener('change', () => {
+      if (dailySheetSyncLabel) {
+        dailySheetSyncLabel.textContent = dailySheetSyncCb.checked ? 'Active' : 'Off';
+        dailySheetSyncLabel.className = `text-xs font-bold ${dailySheetSyncCb.checked ? 'text-emerald-500' : 'text-muted-foreground'}`;
+      }
+    });
+
+    const masterIngestCb = document.getElementById('setting-ingest-enabled') as HTMLInputElement | null;
+    const masterIngestLabel = document.getElementById('setting-ingest-label');
+    masterIngestCb?.addEventListener('change', () => {
+      if (masterIngestLabel) {
+        masterIngestLabel.textContent = masterIngestCb.checked ? 'Active' : 'Paused';
+        masterIngestLabel.className = `text-[11px] font-bold ${masterIngestCb.checked ? 'text-emerald-500' : 'text-rose-500'}`;
+      }
+    });
   }
 
   function setupSettingsCollapse() {
@@ -1822,6 +2135,11 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         return;
       }
 
+      const confirmed = confirm(
+        'Re-evaluate Candidate Pins?\n\nThis will scan all candidate pins against the active qualification rules (saves, repins, velocity) and synchronize qualified pins to Google Sheets. Do you want to proceed?'
+      );
+      if (!confirmed) return;
+
       btn.disabled = true;
       if (icon) icon.classList.add('animate-spin');
       if (text) text.textContent = 'Re-evaluating...';
@@ -1848,7 +2166,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         toast(err?.message || 'Network error triggering re-evaluation', 'error');
       } finally {
         if (icon) icon.classList.remove('animate-spin');
-        if (text) text.textContent = 'Re-evaluate Now';
+        if (text) text.textContent = 'Re-evaluate Candidates';
         btn.disabled = false;
       }
     });
@@ -1863,26 +2181,42 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         const enabled = cb.checked;
         cb.disabled = true;
 
+        const root = document.getElementById('pinarchive-page-root');
+        const wsId = root?.getAttribute('data-workspace-id');
+
         try {
           const res = await fetch('/api/pinarchive/accounts-ingest-toggle', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ account_ids: [id], ingest_enabled: enabled }),
+            body: JSON.stringify({
+              workspace_id: wsId,
+              account_ids: [id],
+              ingest_enabled: enabled,
+            }),
           });
 
           if (res.status === 403) {
             cb.checked = !enabled;
-            alert('Admin access required to toggle account ingestion.');
+            toast('Admin access required to toggle account ingestion.', 'error');
             return;
           }
 
           const json = await res.json();
           if (!res.ok || !json.success) {
             cb.checked = !enabled;
-            alert(json.error || 'Failed to update account ingest status.');
+            toast(json.error || 'Failed to update account ingest status.', 'error');
+          } else {
+            const target = rawAccounts.find(a => a.id === id);
+            if (target) {
+              target.ingest_enabled = enabled;
+              target.status = enabled ? 'active' : 'paused';
+            }
+            toast(`@${target?.username || 'Account'} is now ${enabled ? 'active' : 'paused'}`);
+            filterAndRenderAccounts();
           }
-        } catch {
+        } catch (e: any) {
           cb.checked = !enabled;
+          toast(e.message || 'Error updating account status', 'error');
         } finally {
           cb.disabled = false;
         }
@@ -1925,16 +2259,24 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
     document.querySelectorAll<HTMLSelectElement>('.interval-select').forEach((sel) => {
       sel.addEventListener('change', async () => {
         const username = sel.getAttribute('data-username');
+        const accountId = sel.getAttribute('data-account-id');
         const prevDays = sel.getAttribute('data-prev-days');
         const newDays = parseInt(sel.value, 10);
-        if (!username || !newDays) return;
+        if (!newDays) return;
 
         sel.disabled = true;
         try {
+          const root = document.getElementById('pinarchive-page-root');
+          const wsId = root?.getAttribute('data-workspace-id');
           const res = await fetch('/api/pinarchive/accounts-interval', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, interval_days: newDays }),
+            body: JSON.stringify({
+              workspace_id: wsId,
+              account_id: accountId || undefined,
+              username: username || undefined,
+              interval_days: newDays,
+            }),
           });
           const json = await res.json();
           if (!res.ok || !json.success) {
@@ -1942,13 +2284,78 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
             toast(json.error || 'Failed to update interval', 'error');
           } else {
             sel.setAttribute('data-prev-days', String(newDays));
-            toast(`Discovery interval for @${username} set to ${newDays}d`);
+            // Update in local array
+            const target = rawAccounts.find(a => (accountId && a.id === accountId) || (username && a.username === username));
+            if (target) {
+              target.interval_days = newDays;
+              if (json.next_run_dates && (json.next_run_dates[target.id] || json.next_run_dates[target.username])) {
+                target.next_run_at = json.next_run_dates[target.id] || json.next_run_dates[target.username];
+              }
+            }
+            toast(`Discovery interval for @${username || 'account'} set to ${newDays}d`);
+            renderTable();
           }
         } catch (e: any) {
           sel.value = prevDays || '3';
           toast(e.message || 'Error updating interval', 'error');
         } finally {
           sel.disabled = false;
+        }
+      });
+    });
+  }
+
+  // ─── Send to Competitor Intelligence (Single Row) ─────────────────────────
+  function attachSendToCompetitorListeners() {
+    document.querySelectorAll<HTMLButtonElement>('[data-send-to-comp-user]').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const username = btn.getAttribute('data-send-to-comp-user');
+        if (!username) return;
+
+        const confirmed = confirm(`Track @${username} in Competitor Intelligence?`);
+        if (!confirmed) return;
+
+        const root = document.getElementById('pinarchive-page-root');
+        const wsId = root?.getAttribute('data-workspace-id');
+
+        btn.disabled = true;
+        try {
+          const res = await fetch('/api/admin/competitors', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workspace_id: wsId,
+              username,
+              account_type: 'competitor',
+            }),
+          });
+          const json = await res.json();
+          if (res.ok && json.success) {
+            toast(`Sent @${username} to Competitor Intelligence & dispatched scraper!`);
+            const compId = json.competitor?.id || json.competitors?.[0]?.id;
+            // Dispatch immediate scraping for this competitor
+            fetch('/api/admin/competitor-ops', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'dispatch',
+                workspace_id: wsId,
+                competitor_id: compId || undefined,
+                target_username: username,
+                trigger: 'pinarchive_send',
+                force: true,
+              }),
+            }).catch(console.warn);
+
+            loadOverview(1);
+          } else {
+            toast(json.error || 'Failed to send account to Competitor Intelligence', 'error');
+          }
+        } catch (err: any) {
+          toast(err.message || 'Network error', 'error');
+        } finally {
+          btn.disabled = false;
         }
       });
     });
@@ -2002,6 +2409,51 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       openDeleteAccountsModal(Array.from(selectedAccounts));
     });
 
+    // Bulk Interval Change Listener
+    const bulkIntervalSelect = document.getElementById('bulk-interval-select') as HTMLSelectElement | null;
+    bulkIntervalSelect?.addEventListener('change', async () => {
+      const newDays = parseInt(bulkIntervalSelect.value, 10);
+      if (!newDays || selectedAccounts.size === 0) return;
+      const count = selectedAccounts.size;
+      const confirmed = confirm(`Change scrape interval to ${newDays} day(s) for ${count} selected account(s)?`);
+      if (!confirmed) {
+        bulkIntervalSelect.value = '';
+        return;
+      }
+
+      bulkIntervalSelect.disabled = true;
+      try {
+        const root = document.getElementById('pinarchive-page-root');
+        const wsId = root?.getAttribute('data-workspace-id');
+        const res = await fetch('/api/pinarchive/accounts-interval', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspace_id: wsId,
+            account_ids: Array.from(selectedAccounts),
+            interval_days: newDays,
+          }),
+        });
+        const json = await res.json();
+        if (res.ok && json.success) {
+          toast(`Discovery interval set to ${newDays}d for ${count} account(s)!`);
+          rawAccounts.forEach(a => {
+            if (selectedAccounts.has(a.id)) {
+              a.interval_days = newDays;
+            }
+          });
+          filterAndRenderAccounts();
+        } else {
+          toast(json.error || 'Failed to update interval', 'error');
+        }
+      } catch (err: any) {
+        toast(err.message || 'Network error', 'error');
+      } finally {
+        bulkIntervalSelect.disabled = false;
+        bulkIntervalSelect.value = '';
+      }
+    });
+
     document.getElementById('gas-bulk-run-btn')?.addEventListener('click', async () => {
       if (selectedAccounts.size === 0) return;
       const root = document.getElementById('pinarchive-page-root');
@@ -2020,6 +2472,9 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         toast('No valid accounts selected', 'error');
         return;
       }
+
+      const confirmed = confirm(`Run Pin Discovery on Pinterest for ${selectedUsernames.length} selected account(s)?`);
+      if (!confirmed) return;
 
       const btn = document.getElementById('gas-bulk-run-btn') as HTMLButtonElement | null;
       const originalText = btn?.innerHTML || '<span>🧠 Discover Pins</span>';
@@ -2079,6 +2534,9 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         return;
       }
 
+      const confirmed = confirm(`Run Fast Metrics Refresh for ${selectedUsernames.length} selected account(s)?`);
+      if (!confirmed) return;
+
       const icon = document.getElementById('refresh-selected-icon');
       const textSpan = document.getElementById('refresh-selected-btn-text');
       const btn = document.getElementById('refresh-selected-accounts-btn') as HTMLButtonElement | null;
@@ -2112,18 +2570,93 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       }
     });
 
+    // Send Selected to Competitor Intelligence
+    document.getElementById('send-selected-to-competitors-btn')?.addEventListener('click', async () => {
+      if (selectedAccounts.size === 0) return;
+      const count = selectedAccounts.size;
+      const confirmed = confirm(`Send ${count} selected creator account(s) to Competitor Intelligence?`);
+      if (!confirmed) return;
+
+      const root = document.getElementById('pinarchive-page-root');
+      const wsId = root?.getAttribute('data-workspace-id');
+
+      const selectedUsernames = rawAccounts
+        .filter(a => selectedAccounts.has(a.id))
+        .map(a => a.username)
+        .filter(Boolean);
+
+      if (selectedUsernames.length === 0) return;
+
+      const btn = document.getElementById('send-selected-to-competitors-btn') as HTMLButtonElement | null;
+      if (btn) btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/admin/competitors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspace_id: wsId,
+            competitors: selectedUsernames,
+            account_type: 'competitor',
+          }),
+        });
+        const json = await res.json();
+        if (res.ok && json.success) {
+          toast(`Sent ${json.count || selectedUsernames.length} account(s) to Competitor Intelligence & dispatched scrapers!`);
+          const compIds = (json.competitors || []).map((c: any) => c.id).filter(Boolean);
+          // Dispatch immediate scraping for the selected competitors
+          fetch('/api/admin/competitor-ops', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'dispatch',
+              workspace_id: wsId,
+              ids: compIds,
+              trigger: 'pinarchive_bulk_send',
+              force: true,
+            }),
+          }).catch(console.warn);
+
+          loadOverview(1);
+        } else {
+          toast(json.error || 'Failed to send accounts to Competitor Intelligence', 'error');
+        }
+      } catch (err: any) {
+        toast(err.message || 'Network error', 'error');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+
     document.getElementById('gas-bulk-pause-btn')?.addEventListener('click', async () => {
       if (selectedAccounts.size === 0) return;
+      const count = selectedAccounts.size;
+      const confirmed = confirm(`Pause ingestion for ${count} selected account(s)?`);
+      if (!confirmed) return;
+
+      const root = document.getElementById('pinarchive-page-root');
+      const wsId = root?.getAttribute('data-workspace-id');
+
       try {
         const res = await fetch('/api/pinarchive/accounts-ingest-toggle', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ account_ids: Array.from(selectedAccounts), ingest_enabled: false }),
+          body: JSON.stringify({
+            workspace_id: wsId,
+            account_ids: Array.from(selectedAccounts),
+            ingest_enabled: false,
+          }),
         });
         const json = await res.json();
         if (res.ok && json.success) {
-          toast(`Paused ingestion for ${selectedAccounts.size} account(s)`);
-          loadOverview(false as any);
+          toast(`Paused ingestion for ${count} account(s)`);
+          rawAccounts.forEach(a => {
+            if (selectedAccounts.has(a.id)) {
+              a.ingest_enabled = false;
+              a.status = 'paused';
+            }
+          });
+          filterAndRenderAccounts();
         } else {
           toast(json.error || 'Failed to pause accounts', 'error');
         }
@@ -2134,16 +2667,33 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
 
     document.getElementById('gas-bulk-resume-btn')?.addEventListener('click', async () => {
       if (selectedAccounts.size === 0) return;
+      const count = selectedAccounts.size;
+      const confirmed = confirm(`Resume ingestion for ${count} selected account(s)?`);
+      if (!confirmed) return;
+
+      const root = document.getElementById('pinarchive-page-root');
+      const wsId = root?.getAttribute('data-workspace-id');
+
       try {
         const res = await fetch('/api/pinarchive/accounts-ingest-toggle', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ account_ids: Array.from(selectedAccounts), ingest_enabled: true }),
+          body: JSON.stringify({
+            workspace_id: wsId,
+            account_ids: Array.from(selectedAccounts),
+            ingest_enabled: true,
+          }),
         });
         const json = await res.json();
         if (res.ok && json.success) {
-          toast(`Resumed ingestion for ${selectedAccounts.size} account(s)`);
-          loadOverview(false as any);
+          toast(`Resumed ingestion for ${count} account(s)`);
+          rawAccounts.forEach(a => {
+            if (selectedAccounts.has(a.id)) {
+              a.ingest_enabled = true;
+              a.status = 'active';
+            }
+          });
+          filterAndRenderAccounts();
         } else {
           toast(json.error || 'Failed to resume accounts', 'error');
         }
@@ -2274,6 +2824,167 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       tabBtnMatrix?.addEventListener('click', () => switchTab(tabBtnMatrix, tabViewMatrix));
     }
     setupArchitectureGuideModal();
+
+    // ─── Add Creator Account Modal Controls ──────────────────────────────────
+    function cleanPinterestUsername(input: string): string {
+      let u = String(input || '').trim();
+      u = u.replace(/^(https?:\/\/)?(www\.)?pinterest\.[a-z.]+\//i, '');
+      u = u.replace(/\/.*$/, '');
+      u = u.replace(/^@+/, '').trim();
+      return u;
+    }
+
+    function setupAddCreatorModal() {
+      const modal = document.getElementById('add-creator-modal');
+      const openBtn = document.getElementById('open-add-creator-modal');
+      const closeBtn = document.getElementById('close-add-creator-modal-btn');
+      const cancelBtn = document.getElementById('cancel-add-creator-modal-btn');
+      const form = document.getElementById('add-creator-form') as HTMLFormElement | null;
+      const usernameInput = document.getElementById('new-creator-username') as HTMLInputElement | null;
+      const intervalSelect = document.getElementById('new-creator-interval') as HTMLSelectElement | null;
+      const syncCheckbox = document.getElementById('sync-to-competitors-checkbox') as HTMLInputElement | null;
+      const runDiscoveryCheckbox = document.getElementById('run-discovery-now-checkbox') as HTMLInputElement | null;
+      const errorDiv = document.getElementById('add-creator-error');
+      const submitBtn = document.getElementById('submit-add-creator-btn') as HTMLButtonElement | null;
+
+      function openModal() {
+        if (form) form.reset();
+        if (intervalSelect) intervalSelect.value = '1';
+        if (syncCheckbox) syncCheckbox.checked = true;
+        if (runDiscoveryCheckbox) runDiscoveryCheckbox.checked = true;
+        if (errorDiv) {
+          errorDiv.textContent = '';
+          errorDiv.classList.add('hidden');
+        }
+        modal?.classList.remove('hidden');
+        modal?.classList.add('flex');
+        usernameInput?.focus();
+      }
+
+      function closeModal() {
+        modal?.classList.add('hidden');
+        modal?.classList.remove('flex');
+      }
+
+      openBtn?.addEventListener('click', openModal);
+      closeBtn?.addEventListener('click', closeModal);
+      cancelBtn?.addEventListener('click', closeModal);
+
+      form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!usernameInput) return;
+        const rawUser = usernameInput.value.trim();
+        const cleanUser = cleanPinterestUsername(rawUser);
+
+        if (!cleanUser) {
+          if (errorDiv) {
+            errorDiv.textContent = 'Please enter a valid Pinterest username or URL.';
+            errorDiv.classList.remove('hidden');
+          }
+          return;
+        }
+
+        const root = document.getElementById('pinarchive-page-root');
+        const wsId = root?.getAttribute('data-workspace-id');
+        const intervalVal = Number(intervalSelect?.value || 1);
+        const syncToComp = Boolean(syncCheckbox?.checked);
+        const runDiscovery = Boolean(runDiscoveryCheckbox?.checked);
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Tracking…';
+        }
+        if (errorDiv) errorDiv.classList.add('hidden');
+
+        try {
+          // 1. Import into PinArchive
+          const paRes = await fetch('/api/pinarchive/accounts-import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workspace_id: wsId,
+              accounts: [{ username: cleanUser, interval_days: intervalVal }],
+              dispatch: false,
+            }),
+          });
+          const paJson = await paRes.json();
+          if (!paRes.ok || !paJson.success) {
+            throw new Error(paJson.error || 'Failed to add account to PinArchive');
+          }
+
+          // 2. Optionally sync to Competitor Intelligence & dispatch immediate scraper
+          if (syncToComp) {
+            try {
+              const compRes = await fetch('/api/admin/competitors', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  workspace_id: wsId,
+                  username: cleanUser,
+                  account_type: 'competitor',
+                }),
+              });
+              const compJson = await compRes.json();
+              const compId = compJson?.competitor?.id || compJson?.competitors?.[0]?.id;
+
+              // Immediately dispatch Competitor Scraper workflow on GitHub Actions
+              fetch('/api/admin/competitor-ops', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'dispatch',
+                  workspace_id: wsId,
+                  competitor_id: compId || undefined,
+                  target_username: cleanUser,
+                  trigger: 'creator_modal',
+                  force: true,
+                }),
+              }).catch(console.warn);
+            } catch (compErr) {
+              console.warn('Competitor sync/dispatch deferred:', compErr);
+            }
+          }
+
+          // 3. Optionally dispatch initial Discover Pins immediately
+          if (runDiscovery) {
+            try {
+              await fetch('/api/pinarchive/accounts-gas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'run_now',
+                  workspace_id: wsId,
+                  usernames: [cleanUser],
+                }),
+              });
+            } catch (gasErr) {
+              console.warn('Discover pins immediate dispatch deferred:', gasErr);
+            }
+          }
+
+          const toastDetails = [
+            'PinArchive added',
+            runDiscovery ? 'Discover Pins dispatched' : null,
+            syncToComp ? 'Competitor Scraper dispatched' : null,
+          ].filter(Boolean).join(' • ');
+
+          toast(`Started tracking @${cleanUser}! (${toastDetails})`);
+          closeModal();
+          loadOverview(1);
+        } catch (err: any) {
+          if (errorDiv) {
+            errorDiv.textContent = err.message || 'Error tracking creator';
+            errorDiv.classList.remove('hidden');
+          }
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span>+ Track Creator</span>';
+          }
+        }
+      });
+    }
+    setupAddCreatorModal();
   }
 
   // ─── Keyboard shortcut ────────────────────────────────────────────────────
@@ -2286,10 +2997,12 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
   });
 
   // ─── Initialization ───────────────────────────────────────────────────────
-  function initPinArchive() {
+  function initPinArchivePage() {
     buildColVisibilityMenu();
     setupColVisibilityToggle();
     setupSettingsCollapse();
+    setupLogicBarListeners();
+    setupToggleSwitchListeners();
     setupReevaluateButton();
     setupBulkActionButtons();
     document.getElementById('save-ingest-settings-btn')?.addEventListener('click', saveSettings);
@@ -2298,8 +3011,9 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPinArchive);
+    document.addEventListener('DOMContentLoaded', initPinArchivePage);
   } else {
-    initPinArchive();
+    initPinArchivePage();
   }
+  document.addEventListener('astro:page-load', initPinArchivePage);
 </script>

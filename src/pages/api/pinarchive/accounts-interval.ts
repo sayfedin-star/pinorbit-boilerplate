@@ -42,9 +42,12 @@ async function handleIntervalUpdate(request: Request, locals: any): Promise<Resp
 
   const username = body.username ? String(body.username).trim() : '';
   const accountId = body.account_id ? String(body.account_id).trim() : '';
+  const accountIds = Array.isArray(body.account_ids)
+    ? body.account_ids.map((id: any) => String(id).trim()).filter((id: string) => UUID_REGEX.test(id))
+    : [];
 
-  if (!username && !accountId) {
-    return json({ success: false, error: 'Either username or account_id is required.' }, 400);
+  if (!username && !accountId && accountIds.length === 0) {
+    return json({ success: false, error: 'Either username, account_id, or account_ids array is required.' }, 400);
   }
 
   let wsCtx;
@@ -58,30 +61,51 @@ async function handleIntervalUpdate(request: Request, locals: any): Promise<Resp
     const runtimeEnv = (locals as any)?.runtime?.env || (locals as any)?.runtimeEnv;
     const db = dbClients.getPinArchive(runtimeEnv);
 
-    let query = db
+    // 1. Fetch matching accounts to dynamically recalculate next_run_at
+    let selectQuery = db
       .from('pa_accounts')
-      .update({
-        interval_days: intervalDays,
-        updated_at: new Date().toISOString(),
-      })
+      .select('id, username, last_run_at, created_at')
       .eq('workspace_id', wsCtx.workspaceId);
 
-    if (accountId && UUID_REGEX.test(accountId)) {
-      query = query.eq('id', accountId);
+    if (accountIds.length > 0) {
+      selectQuery = selectQuery.in('id', accountIds);
+    } else if (accountId && UUID_REGEX.test(accountId)) {
+      selectQuery = selectQuery.eq('id', accountId);
     } else if (username) {
-      query = query.ilike('username', username);
+      selectQuery = selectQuery.ilike('username', username);
     }
 
-    const { error } = await query;
-    if (error) {
-      return json({ success: false, error: error.message }, 500);
+    const { data: accountsToUpdate, error: selectErr } = await selectQuery;
+    if (selectErr) {
+      return json({ success: false, error: selectErr.message }, 500);
+    }
+
+    if (!accountsToUpdate || accountsToUpdate.length === 0) {
+      return json({ success: false, error: 'No matching creator accounts found.' }, 404);
+    }
+
+    const updatedNextDates: Record<string, string> = {};
+
+    for (const acc of accountsToUpdate) {
+      const baseMs = acc.last_run_at ? new Date(acc.last_run_at).getTime() : (acc.created_at ? new Date(acc.created_at).getTime() : Date.now());
+      const nextRunIso = new Date(baseMs + intervalDays * 86400000).toISOString();
+      updatedNextDates[acc.id] = nextRunIso;
+
+      await db
+        .from('pa_accounts')
+        .update({
+          interval_days: intervalDays,
+          next_run_at: nextRunIso,
+        })
+        .eq('id', acc.id)
+        .eq('workspace_id', wsCtx.workspaceId);
     }
 
     return json({
       success: true,
-      username: username || undefined,
-      account_id: accountId || undefined,
+      count: accountsToUpdate.length,
       interval_days: intervalDays,
+      next_run_dates: updatedNextDates,
     });
   } catch (err: any) {
     return json({ success: false, error: err.message || 'Internal Server Error' }, 500);

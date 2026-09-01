@@ -125,15 +125,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
       const settingsTable = db.from('pa_workspace_settings');
       if (settingsTable && typeof settingsTable.select === 'function') {
         const { data: wsSettings } = await settingsTable
-          .select('cron_expression, schedule_status')
+          .select('cron_expression, schedule_status, fastcron_job_id')
           .eq('workspace_id', ws)
           .maybeSingle();
 
         const cronExpr = wsSettings?.cron_expression;
         const isPaused = wsSettings?.schedule_status === 'paused' || wsSettings?.schedule_status === 'disabled';
+        const hasJob = Boolean(wsSettings?.fastcron_job_id);
         const jobTimezone = 'UTC';
 
-        if (cronExpr && !isPaused) {
+        if (cronExpr && !isPaused && hasJob) {
           const nextDate = getNextCronDate(cronExpr, jobTimezone);
           if (nextDate) {
             activeNextRunIso = nextDate.toISOString();

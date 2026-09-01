@@ -618,6 +618,8 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
 
     const moreTagsCount = annotations.length > 4 ? annotations.length - 4 : 0;
 
+    const detailsUrl = `/pinarchive/details?id=${encodeURIComponent(pinId)}&from_account=${encodeURIComponent(username)}`;
+
     return `
       <div class="group rounded-xl border ${isChanged ? 'bg-emerald-500/[0.06] border-emerald-500/30' : 'border-border bg-card'} overflow-hidden shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between relative" data-pin-id="${escapeHtml(pinId)}">
         <div class="absolute top-2.5 right-2.5 z-20 bg-background/85 backdrop-blur-xs rounded-md p-1 border border-border/60 shadow-xs">
@@ -626,7 +628,7 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
         ${isChanged ? '<span class="absolute top-2 left-2 h-2 w-2 rounded-full bg-emerald-500 z-10"></span>' : ''}
         <div>
           <!-- Image preview -->
-          <a href="/pinarchive/details?id=${encodeURIComponent(pinId)}" class="relative w-full h-44 bg-muted/50 overflow-hidden flex items-center justify-center block">
+          <a href="${escapeHtml(detailsUrl)}" class="relative w-full h-44 bg-muted/50 overflow-hidden flex items-center justify-center block">
             ${imageUrl ? `
               <img
                 src="${escapeHtml(imageUrl)}"
@@ -658,7 +660,7 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
             </div>
 
             <div>
-              <a href="/pinarchive/details?id=${encodeURIComponent(pinId)}" class="block group/link">
+              <a href="${escapeHtml(detailsUrl)}" class="block group/link">
                 <h3 class="text-xs font-bold text-foreground line-clamp-2 group-hover/link:text-primary transition-colors" title="${escapeHtml(p.title || 'Untitled Pin')}">
                   ${escapeHtml(p.title || `Pin ${p.pin_id}`)}
                 </h3>
@@ -741,6 +743,8 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
     const deltaBadge = renderDeltaBadge(p.delta_saves, 'saves');
     const deltaRepinsBadge = renderDeltaBadge(p.delta_repins, 'repins');
 
+    const detailsUrl = `/pinarchive/details?id=${encodeURIComponent(pinId)}&from_account=${encodeURIComponent(username)}`;
+
     return `
       <tr class="${isChanged ? 'bg-emerald-500/[0.06]' : ''} hover:bg-muted/30 transition-colors" data-pin-id="${escapeHtml(pinId)}">
         <!-- Select Checkbox -->
@@ -750,7 +754,7 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
 
         <!-- Thumb -->
         <td class="py-2.5 px-3" data-col="preview">
-          <a href="/pinarchive/details?id=${encodeURIComponent(pinId)}" class="block h-10 w-10 rounded-lg overflow-hidden bg-muted/50 shrink-0">
+          <a href="${escapeHtml(detailsUrl)}" class="block h-10 w-10 rounded-lg overflow-hidden bg-muted/50 shrink-0">
             ${imageUrl ? `
               <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(p.title || 'Pin')}" loading="lazy" class="w-full h-full object-cover" />
             ` : `
@@ -761,7 +765,7 @@ const dotClass = isActive ? 'bg-emerald-500' : account.status === 'paused' ? 'bg
 
         <!-- Title -->
         <td class="py-2.5 px-4 max-w-[220px]" data-col="title">
-          <a href="/pinarchive/details?id=${encodeURIComponent(pinId)}" class="font-bold text-foreground hover:text-primary line-clamp-1 block transition-colors" title="${escapeHtml(p.title || 'Pin')}">
+          <a href="${escapeHtml(detailsUrl)}" class="font-bold text-foreground hover:text-primary line-clamp-1 block transition-colors" title="${escapeHtml(p.title || 'Pin')}">
             ${escapeHtml(p.title || `Pin ${p.pin_id}`)}
           </a>
           <span class="text-[10px] text-muted-foreground font-mono">ID: ${escapeHtml(p.pin_id)}</span>

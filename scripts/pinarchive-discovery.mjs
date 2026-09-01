@@ -334,13 +334,14 @@ function qualifies(pin, settings) {
 // ── Ingest API Push Helper ──
 async function pushToIngest(workspaceId, username, pins, followerCount, accountMeta) {
   if (!pins.length) return { ok: true, pushed: 0 };
+  const runType = IS_AUDIT_SWEEP ? 'audit_sweep' : 'backfill';
   const body = {
     run_id: crypto.randomUUID(),
     workspace_id: workspaceId,
     username,
     fetched_at: new Date().toISOString(),
-    run_type: 'backfill',
-    trigger: 'backfill',
+    run_type: runType,
+    trigger: runType,
     follower_count: typeof followerCount === 'number' ? followerCount : undefined,
     account_meta: accountMeta || { pins_count: pins.length, last_result: 'discovery' },
     pins,
@@ -492,6 +493,21 @@ async function main() {
     console.log(`Filtered by workspace ${DISCOVERY_WORKSPACE_ID}: ${accounts.length} account(s)`);
   }
 
+  // Monthly audit sweep gating check across targeted workspaces
+  if (IS_AUDIT_SWEEP) {
+    const targetWsIds = DISCOVERY_WORKSPACE_ID
+      ? [DISCOVERY_WORKSPACE_ID]
+      : Array.from(new Set(accounts.map(a => a.workspace_id)));
+    const anyAuditSweepEnabled = targetWsIds.some(wsId => {
+      const s = settingsMap.get(wsId);
+      return !s || s.audit_sweep_enabled !== false;
+    });
+    if (!anyAuditSweepEnabled) {
+      console.log('⏸️ Audit sweep is disabled across all target workspaces. Exiting cleanly (exit 0).');
+      return;
+    }
+  }
+
   // Sharding across runner matrix
   const shardedAccounts = accounts.filter((_, idx) => idx % SHARD_COUNT === DISCOVERY_SHARD);
   console.log(`Shard ${DISCOVERY_SHARD + 1}/${SHARD_COUNT}: Processing ${shardedAccounts.length} of ${accounts.length} total accounts.\n`);
@@ -507,6 +523,7 @@ async function main() {
     const wsSetting = settingsMap.get(acc.workspace_id) || {};
     const wsIngestEnabled = wsSetting.ingest_enabled ?? true;
     const wsGhScheduleEnabled = wsSetting.github_schedule_enabled ?? true;
+    const wsAuditSweepEnabled = wsSetting.audit_sweep_enabled !== false;
     const isGhScheduledEvent = (process.env.GITHUB_EVENT_NAME || '').trim().toLowerCase() === 'schedule';
     const pausedPolicy = wsSetting.paused_account_policy ?? 'reject';
     const discoveryStopPages = Number(wsSetting.discovery_stop_pages ?? 3);
@@ -517,6 +534,10 @@ async function main() {
     );
 
     // Gating checks
+    if (IS_AUDIT_SWEEP && !wsAuditSweepEnabled) {
+      console.log(`[SKIP] Workspace ${acc.workspace_id.slice(0, 8)} monthly audit sweep is disabled in settings.`);
+      continue;
+    }
     if (isGhScheduledEvent && !wsGhScheduleEnabled) {
       console.log(`[SKIP] Workspace ${acc.workspace_id.slice(0, 8)} GitHub Actions 07:00 UTC schedule is disabled (delegated to FastCron).`);
       continue;
@@ -765,7 +786,7 @@ async function main() {
     }
 
     // 6. Update pa_accounts metadata & next_run_at
-    const intervalDays = Number(acc.interval_days || 3);
+    const intervalDays = Number(acc.interval_days || 1);
     const nextRunAt = hasMore && cursor && !circuitBroken
       ? new Date().toISOString()
       : new Date(Date.now() + intervalDays * 86400000).toISOString();
@@ -785,7 +806,7 @@ async function main() {
     await supaInsert('pa_runs', {
       workspace_id: acc.workspace_id,
       account_id: acc.id,
-      trigger: 'backfill',
+      trigger: IS_AUDIT_SWEEP ? 'audit_sweep' : 'backfill',
       started_at: new Date().toISOString(),
       finished_at: new Date().toISOString(),
       pages_fetched: pageCount,
@@ -807,6 +828,7 @@ async function main() {
 }
 
 export {
+  main,
   mapDiscoveryPin,
   qualifies,
   buildDiscoveryUrl,

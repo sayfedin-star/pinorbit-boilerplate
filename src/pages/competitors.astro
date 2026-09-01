@@ -234,10 +234,10 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
   </div>
 
   <!-- ═══ Table Workspace & Enhanced Controls ═══ -->
-  <div class="rounded-2xl border border-border bg-card shadow-xs overflow-hidden mb-8">
+  <div class="rounded-2xl border border-border bg-card shadow-xs relative mb-8">
     
     <!-- Tier 1: View Navigation & Display Controls (Clean 2-sided alignment) -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border px-5 py-3 bg-muted/20">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border px-5 py-3 bg-muted/20 rounded-t-2xl">
       
       <!-- Left: Segmented Tabs -->
       <div class="flex items-center gap-1 bg-muted/70 p-1 rounded-xl border border-border/60 overflow-x-auto">
@@ -264,6 +264,14 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
 
           <div class="h-3.5 w-px bg-border my-auto"></div>
 
+          <!-- Name Format Toggle: Full / Handles Only -->
+          <button id="comp-name-format-toggle-btn" class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all" title="Toggle Display Name or Handles Only">
+            <span class="text-[10px] font-mono">@</span>
+            <span id="comp-name-format-label">Full Names</span>
+          </button>
+
+          <div class="h-3.5 w-px bg-border my-auto"></div>
+
           <!-- Density Toggle -->
           <button id="density-toggle-btn" class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all" title="Toggle Table Density (Comfortable / Compact)">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -279,12 +287,12 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
               <span>Columns</span>
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-            <div id="col-visibility-menu" class="hidden absolute right-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-border bg-card shadow-lg p-2 space-y-1">
-              <div class="flex items-center justify-between pb-1 px-1 border-b border-border/80 text-[11px] font-semibold text-muted-foreground">
+            <div id="col-visibility-menu" class="hidden absolute right-0 top-full mt-1.5 z-50 w-56 rounded-2xl border border-border bg-card shadow-xl p-2.5 space-y-1">
+              <div class="flex items-center justify-between pb-1 px-1 border-b border-border/80 text-[11px] font-bold text-muted-foreground">
                 <span>Toggle Columns</span>
-                <button id="reset-cols-btn" class="text-primary hover:underline text-[10px]">Reset</button>
+                <button id="reset-cols-btn" class="text-primary hover:underline text-[11px] font-bold">Reset</button>
               </div>
-              <div id="col-checkboxes-container" class="space-y-0.5 max-h-60 overflow-y-auto"></div>
+              <div id="col-checkboxes-container" class="space-y-0.5 max-h-72 overflow-y-auto"></div>
             </div>
           </div>
         </div>
@@ -715,6 +723,7 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
   let rowsPerPage = Number(localStorage.getItem('po_comp_rows') || 10);
   let isCompactNumbers = localStorage.getItem('po_comp_num_fmt') === 'compact';
   let isCompactDensity = localStorage.getItem('po_comp_density') !== 'comfortable';
+  let isHandleOnlyMode = localStorage.getItem('po_comp_name_mode') === 'handle';
   let archivedUsernames = new Set<string>();
   let hiddenProfileIds = new Set<string>();
 
@@ -1233,19 +1242,27 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
         profile: (() => {
           const isArchived = archivedUsernames.has((c.username || '').toLowerCase());
           const pinArchiveBadge = isArchived
-            ? `<a href="/pinarchive/account/${encodeURIComponent(c.username)}" title="Archived in PinArchive database" class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors">PinArchive</a>`
+            ? `<a href="/pinarchive/account/${encodeURIComponent(c.username)}" title="Archived in PinArchive database" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9.5px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors shadow-2xs">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
+                <span>Archive</span>
+              </a>`
             : '';
           const hiddenBadge = isHidden
             ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-bold bg-muted text-muted-foreground border border-border">Hidden</span>`
             : '';
+
+          const displayName = isHandleOnlyMode ? `@${escHtml(c.username)}` : escHtml(c.full_name || c.username);
+          const nameColorClass = isArchived
+            ? 'text-emerald-600 dark:text-emerald-400 font-bold hover:text-emerald-500'
+            : 'text-foreground hover:text-primary';
 
           return `<td class="${padClass}">
             <div class="flex items-center gap-3 ${isHidden ? 'opacity-65' : ''}">
               <img src="${avatar}" alt="${escHtml(c.username)}" loading="lazy" class="${avatarSize} rounded-xl object-cover border border-border shadow-2xs flex-shrink-0" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80'" />
               <div class="flex flex-col min-w-0">
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <a href="/competitors/details?id=${c.id}" aria-label="View detailed analytics for ${escHtml(c.full_name || c.username)}" class="text-xs font-bold text-foreground hover:text-primary transition-colors truncate text-left max-w-[200px] sm:max-w-[280px]">
-                    ${escHtml(c.full_name || c.username)}
+                  <a href="/competitors/details?id=${c.id}" aria-label="View detailed analytics for ${escHtml(c.full_name || c.username)}" class="text-xs font-bold ${nameColorClass} transition-colors truncate text-left max-w-[200px] sm:max-w-[280px]">
+                    ${displayName}
                   </a>
                   <a href="https://www.pinterest.com/${escHtml(c.username)}/" target="_blank" rel="noopener noreferrer" class="text-muted-foreground/60 hover:text-primary transition-colors p-0.5" title="Open Pinterest Profile in New Tab">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -1253,13 +1270,15 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
                   ${pinArchiveBadge}
                   ${hiddenBadge}
                 </div>
-                <div class="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <span>@${escHtml(c.username)}</span>
-                  <button data-copy-handle="${escHtml(c.username)}" class="opacity-40 hover:opacity-100 transition-opacity p-0.5" title="Copy username">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                  </button>
-                  ${isOwn ? '<span class="text-[10px] font-bold text-blue-500 ml-1">👤 My Brand</span>' : ''}
-                </div>
+                ${!isHandleOnlyMode ? `
+                  <div class="flex items-center gap-1 text-[11px] ${isArchived ? 'text-emerald-600/70 dark:text-emerald-400/70' : 'text-muted-foreground'}">
+                    <span>@${escHtml(c.username)}</span>
+                    <button data-copy-handle="${escHtml(c.username)}" class="opacity-40 hover:opacity-100 transition-opacity p-0.5" title="Copy username">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                    ${isOwn ? '<span class="text-[10px] font-bold text-blue-500 ml-1">👤 My Brand</span>' : ''}
+                  </div>
+                ` : (isOwn ? '<div class="text-[10px] font-bold text-blue-500">👤 My Brand</div>' : '')}
                 ${tagsHtml}
               </div>
             </div></td>`;
@@ -1592,6 +1611,21 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
     renderTable();
   });
   updateNumFormatUI();
+
+  // Name format toggle: Full Names vs Handles Only
+  const nameFormatToggleBtn = $('comp-name-format-toggle-btn'), nameFormatLabel = $('comp-name-format-label');
+  function updateNameFormatUI() {
+    if (nameFormatLabel) {
+      nameFormatLabel.textContent = isHandleOnlyMode ? 'Handles Only' : 'Full Names';
+    }
+  }
+  nameFormatToggleBtn?.addEventListener('click', () => {
+    isHandleOnlyMode = !isHandleOnlyMode;
+    localStorage.setItem('po_comp_name_mode', isHandleOnlyMode ? 'handle' : 'full');
+    updateNameFormatUI();
+    renderTable();
+  });
+  updateNameFormatUI();
 
   // ─── Column visibility menu ───────────────────────────────────────────────
   const colMenu = $('col-visibility-menu');
@@ -2220,7 +2254,25 @@ const cronDesc = rawExpr ? humanCron(rawExpr) : 'Configure automated scraping sc
       renderKPIs();
       renderTable();
       buildColVisibilityMenu();
-      $('updated-at').textContent = `Synced ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      
+      // Compute actual last database sync time from competitors
+      let latestSyncIso: string | null = null;
+      for (const c of competitorsList) {
+        if (c.last_checked_at) {
+          if (!latestSyncIso || c.last_checked_at > latestSyncIso) {
+            latestSyncIso = c.last_checked_at;
+          }
+        }
+      }
+
+      if (latestSyncIso) {
+        const syncTimeAgo = timeAgo(latestSyncIso);
+        const exactTime = new Date(latestSyncIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        $('updated-at').textContent = `Synced ${syncTimeAgo} (${exactTime})`;
+        $('updated-at').title = `Last automated database sync: ${new Date(latestSyncIso).toLocaleString()}`;
+      } else {
+        $('updated-at').textContent = `Synced ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      }
     } catch (err: any) {
       toast(`Failed to load data: ${err.message}`, 'error');
     }

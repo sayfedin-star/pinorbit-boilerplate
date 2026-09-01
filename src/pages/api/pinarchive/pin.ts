@@ -109,8 +109,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
       const latestR = Number(latestSnap.repins || currentRepins);
 
       const findBaselineSnap = (targetMs: number) => {
-        const prior = snapsDesc.find((s) => (t0 - new Date(s.recorded_at).getTime()) >= targetMs * 0.75);
-        return prior || snapsDesc[snapsDesc.length - 1];
+        let bestSnap = snapsDesc[snapsDesc.length - 1];
+        let minDiff = Infinity;
+        for (const s of snapsDesc) {
+          const elapsed = t0 - new Date(s.recorded_at).getTime();
+          const diff = Math.abs(elapsed - targetMs);
+          if (diff < minDiff) {
+            minDiff = diff;
+            bestSnap = s;
+          }
+        }
+        return bestSnap;
       };
 
       const snap24h = findBaselineSnap(ONE_DAY_MS);

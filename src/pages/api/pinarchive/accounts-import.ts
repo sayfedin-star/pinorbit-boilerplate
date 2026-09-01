@@ -97,6 +97,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const normalizedAccounts = rawAccounts.map((a: any) => ({
       username: String(a.username || '').trim().replace(/^@/, '').toLowerCase(),
       user_id: a.user_id ? String(a.user_id).trim() : undefined,
+      interval_days: a.interval_days ? Number(a.interval_days) : 1,
     })).filter(a => Boolean(a.username));
 
     const usernames = normalizedAccounts.map(a => a.username);
@@ -148,6 +149,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         continue;
       }
 
+      const intervalDays = Number((acc as any).interval_days || 1);
+
       // New Account -> Insert row into Project 4 pa_accounts
       const { data: newRow, error: insErr } = await pinArchive
         .from('pa_accounts')
@@ -157,6 +160,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             username: acc.username,
             status: 'active',
             ingest_enabled: true,
+            interval_days: intervalDays,
           },
           { onConflict: 'workspace_id,username', ignoreDuplicates: true }
         )
@@ -179,6 +183,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         username: acc.username,
         workspace_id: workspaceId,
         user_id: acc.user_id || '',
+        interval_days: intervalDays,
       });
 
       const itemResult: Record<string, any> = {
