@@ -138,21 +138,35 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
     const username = rawUsername;
     const fetchedAt = payload.fetched_at || new Date().toISOString();
     
-    // Deduplicate incoming pins by pin_id (taking the last occurrence)
+    // Deduplicate incoming pins by pin_id (merging fields within the batch)
     const rawPinsList: any[] = Array.isArray(payload.pins) ? payload.pins : [];
     const dedupedMap = new Map<string, any>();
     for (const p of rawPinsList) {
       const pid = String(p.pin_id || p.id || '').trim();
-      if (pid) {
+      if (!pid) continue;
+      const prev = dedupedMap.get(pid);
+      if (!prev) {
         dedupedMap.set(pid, p);
+      } else {
+        const mergedAnnotations = [...(prev.annotations || []), ...(p.annotations || [])];
+        dedupedMap.set(pid, {
+          ...prev,
+          ...p,
+          saves: Math.max(Number(p.saves || 0), Number(prev.saves || 0)),
+          repins: Math.max(Number(p.repins || 0), Number(prev.repins || 0)),
+          comments: Math.max(Number(p.comments || 0), Number(prev.comments || 0)),
+          share_count: Math.max(Number(p.share_count || 0), Number(prev.share_count || 0)),
+          annotations: mergedAnnotations.length > 0 ? mergedAnnotations : (p.annotations || prev.annotations),
+        });
       }
     }
     const rawPins = Array.from(dedupedMap.values());
     rawPins.sort((a: any, b: any) => {
+      const diffSaves = Number(b.saves || 0) - Number(a.saves || 0);
+      if (diffSaves !== 0) return diffSaves;
       const ta = new Date(a.created_at_pinterest || a.created_at || 0).getTime();
       const tb = new Date(b.created_at_pinterest || b.created_at || 0).getTime();
-      if (tb !== ta) return tb - ta;
-      return Number(b.saves || 0) - Number(a.saves || 0);
+      return tb - ta;
     });
 
     // Gating 3: Fetch current pa_accounts row before upsert
@@ -493,17 +507,27 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
           const curSaves = Number(up.saves || 0);
           const curRepins = Number(up.repins || 0);
           const curShares = Number(up.share_count || 0);
+          const curComments = Number(up.comments || 0);
+          const curReactions = Number((up.reactions as any)?.total || 0);
 
-          if (!existing || curSaves > existing.saves || curRepins > existing.repins) {
+          const isAdvanced =
+            !existing ||
+            curSaves > existing.saves ||
+            curRepins > existing.repins ||
+            curShares > (existing.share_count || 0) ||
+            curComments > existing.comments ||
+            curReactions > Number((existing.reactions as any)?.total || 0);
+
+          if (isAdvanced) {
             metricsToInsert.push({
               workspace_id: workspaceId,
               pin_ref: up.id,
               recorded_at: fetchedAt,
               saves: curSaves,
               repins: curRepins,
-              comments: Number(up.comments || 0),
+              comments: curComments,
               shares: curShares,
-              reactions_total: Number((up.reactions as any)?.total || 0),
+              reactions_total: curReactions,
             });
           }
         }

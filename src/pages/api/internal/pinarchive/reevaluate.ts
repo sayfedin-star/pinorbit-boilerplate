@@ -3,7 +3,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../../server/auth/workspace-guard';
 import { validateUserSession } from '../../../../server/auth/session';
-import { getEffectiveSecret } from '../../../../server/services/webhook-secrets';
+import { getEffectiveSecret, verifyIngestSecret } from '../../../../server/services/webhook-secrets';
 import { timingSafeEqual } from '../../../../server/lib/timing-safe';
 import { promoteCandidates } from '../../../../server/services/promotion-service';
 import { dbClients } from '../../../../server/db/clients';
@@ -65,10 +65,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const secretHeader = request.headers.get('x-ingest-secret');
   if (secretHeader) {
     try {
-      const eff = await getEffectiveSecret(workspaceId, runtimeEnv);
-      if (eff?.value && (await timingSafeEqual(secretHeader, eff.value))) {
+      const verification = await verifyIngestSecret(secretHeader, workspaceId, runtimeEnv);
+      if (verification.valid) {
         authPassed = true;
-        effectiveSecretValue = eff.value;
+        const eff = await getEffectiveSecret(workspaceId, runtimeEnv);
+        if (eff?.value) effectiveSecretValue = eff.value;
       }
     } catch {
       // Secret evaluation failed

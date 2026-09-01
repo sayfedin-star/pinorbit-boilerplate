@@ -13,7 +13,6 @@ const CFG = {
   PUSH_SLEEP_MS: 3000,
   CIRCUIT_BREAKER: 3,
   CONCURRENCY: 3,
-  MAX_PINS: parseInt(process.env.REFRESH_MAX_PINS || '0', 10) || 0,
 };
 
 const SHARD_COUNT = Math.max(1, parseInt(process.env.SHARD_COUNT || '1', 10) || 1);
@@ -628,9 +627,14 @@ async function main() {
           const ms = createdAt ? Date.now() - new Date(createdAt).getTime() : NaN;
           const ageDays = !Number.isFinite(ms) || ms <= 0 ? 1 : Math.max(1, Math.round(ms / (1000 * 60 * 60 * 24)));
 
+          const oldShares = Number(p.share_count) || 0;
+          const oldComments = Number(p.comments) || 0;
+
           if (
             fresh.saves !== oldSaves ||
             fresh.repins !== oldRepins ||
+            (fresh.share_count !== undefined && fresh.share_count !== oldShares) ||
+            (fresh.comments !== undefined && fresh.comments !== oldComments) ||
             newAnnotations.length > 0
           ) {
             const changedItem = {

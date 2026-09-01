@@ -52,30 +52,11 @@ async function handleCompetitorsDispatch(
 
   let workspaceId = rawWorkspaceId.trim();
 
-  // If workspaceId is not a full UUID (e.g. 8-char prefix), resolve it from Project 1 DB
   if (!UUID_REGEX.test(workspaceId)) {
-    try {
-      const admin = dbClients.getSchedulingAdmin(runtimeEnv);
-      const { data: allWs } = await admin
-        .from('workspaces')
-        .select('id');
-
-      const matched = Array.isArray(allWs) ? allWs.find((w: any) => String(w.id || '').toLowerCase().startsWith(workspaceId.toLowerCase())) : null;
-
-      if (matched?.id) {
-        workspaceId = matched.id;
-      } else {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Validation Error: valid workspace_id UUID is required.' }),
-          { status: 422, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-    } catch {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Validation Error: valid workspace_id UUID is required.' }),
-        { status: 422, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    return new Response(
+      JSON.stringify({ success: false, error: 'Validation Error: valid workspace_id UUID is required.' }),
+      { status: 422, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
 // 2. Authenticate via verifyIngestSecret (candidate-set verification)

@@ -89,7 +89,7 @@ export const competitorsDb = {
 
     query = query.order('created_at', { ascending: false });
 
-    if (options?.offset) {
+    if (typeof options?.offset === 'number') {
       query = query.range(options.offset, options.offset + (options.limit || 50) - 1);
     } else if (options?.limit) {
       query = query.limit(options.limit);
@@ -196,10 +196,13 @@ export const competitorsDb = {
     const client = dbClients.getCompetitors();
     const { data, error } = await client
       .from('competitors')
-      .upsert({
-        ...competitor,
-        workspace_id: workspaceId,
-      })
+      .upsert(
+        {
+          ...competitor,
+          workspace_id: workspaceId,
+        },
+        { onConflict: 'workspace_id,username' }
+      )
       .select()
       .single();
 

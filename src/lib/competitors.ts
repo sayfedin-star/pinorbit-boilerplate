@@ -924,7 +924,6 @@ export async function ingestDevToolsPayload(
       await supabase.from('competitor_snapshots').insert([
         {
           competitor_id: competitorId,
-          ...(workspaceId ? { workspace_id: workspaceId } : {}),
           profile_reach,
           profile_views,
           follower_count,
