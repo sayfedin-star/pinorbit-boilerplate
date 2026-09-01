@@ -97,6 +97,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const normalizedAccounts = rawAccounts.map((a: any) => ({
       username: String(a.username || '').trim().replace(/^@/, '').toLowerCase(),
       user_id: a.user_id ? String(a.user_id).trim() : undefined,
+      interval_days: a.interval_days ? Number(a.interval_days) : 1,
     })).filter(a => Boolean(a.username));
 
     const usernames = normalizedAccounts.map(a => a.username);

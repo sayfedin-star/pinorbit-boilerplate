@@ -235,7 +235,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (rows.length === 0) return json({ error: 'No valid usernames provided' }, 400);
 
-    const { data, error } = await g.ok!.db.from('competitors').insert(rows).select();
+    const { data, error } = await g.ok!.db
+      .from('competitors')
+      .upsert(rows, { onConflict: 'workspace_id,username' })
+      .select();
     if (error) return json({ error: error.message }, 500);
     return json({ success: true, count: data?.length || 0, competitors: data }, 201);
   }
@@ -243,13 +246,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Single creation
   const username = String(body.username || '').trim().replace(/^@/, '');
   if (!username) return json({ error: 'username required' }, 400);
-  const { data, error } = await g.ok!.db.from('competitors').insert({
-    workspace_id: g.ok!.ws, username,
-    full_name: body.full_name || username,
-    niche: body.niche || null, notes: body.notes || null,
-    tags: Array.isArray(body.tags) ? body.tags : String(body.tags || '').split(',').map((t: string) => t.trim()).filter(Boolean),
-    account_type: body.account_type || 'competitor', is_active: true,
-  }).select().single();
+  const { data, error } = await g.ok!.db
+    .from('competitors')
+    .upsert(
+      {
+        workspace_id: g.ok!.ws,
+        username,
+        full_name: body.full_name || username,
+        niche: body.niche || null,
+        notes: body.notes || null,
+        tags: Array.isArray(body.tags) ? body.tags : String(body.tags || '').split(',').map((t: string) => t.trim()).filter(Boolean),
+        account_type: body.account_type || 'competitor',
+        is_active: true,
+      },
+      { onConflict: 'workspace_id,username' }
+    )
+    .select()
+    .single();
   return error ? json({ error: error.message }, 500) : json({ success: true, competitor: data }, 201);
 };
 
