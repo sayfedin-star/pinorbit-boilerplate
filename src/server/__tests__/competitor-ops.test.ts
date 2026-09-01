@@ -324,15 +324,17 @@ describe('Competitor Ops Console API Endpoints', () => {
     });
 
     it('POST creates competitor in Competitors DB', async () => {
-      mockCompetitorsClient.from.mockReturnValue({
-        insert: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({
-              data: { id: 'comp-new', username: 'bitesizedbash', workspace_id: 'ws-123' },
-              error: null,
-            }),
+      const mockResult = {
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { id: 'comp-new', username: 'bitesizedbash', workspace_id: 'ws-123' },
+            error: null,
           }),
         }),
+      };
+      mockCompetitorsClient.from.mockReturnValue({
+        insert: vi.fn().mockReturnValue(mockResult),
+        upsert: vi.fn().mockReturnValue(mockResult),
       });
 
       const req = new Request('http://localhost/api/admin/competitors', {
