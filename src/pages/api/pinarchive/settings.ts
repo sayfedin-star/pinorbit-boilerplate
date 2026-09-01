@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS = {
   pin_filter_rising_saves: 34,
   refresh_max_pins: 0,
   discovery_stop_pages: 3,
+  discovery_max_pages: 50,
   audit_sweep_enabled: true,
   daily_sheet_sync_enabled: false,
   github_schedule_enabled: true,
@@ -39,6 +40,7 @@ const ALLOWED_PATCH_KEYS = new Set([
   'pin_filter_rising_saves',
   'refresh_max_pins',
   'discovery_stop_pages',
+  'discovery_max_pages',
   'audit_sweep_enabled',
   'daily_sheet_sync_enabled',
   'github_schedule_enabled',
@@ -101,6 +103,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       pin_filter_rising_saves: settings.pin_filter_rising_saves ?? DEFAULT_SETTINGS.pin_filter_rising_saves,
       refresh_max_pins: settings.refresh_max_pins ?? DEFAULT_SETTINGS.refresh_max_pins,
       discovery_stop_pages: Number(settings.discovery_stop_pages ?? DEFAULT_SETTINGS.discovery_stop_pages),
+      discovery_max_pages: Number(settings.discovery_max_pages ?? DEFAULT_SETTINGS.discovery_max_pages),
       audit_sweep_enabled: settings.audit_sweep_enabled ?? DEFAULT_SETTINGS.audit_sweep_enabled,
       daily_sheet_sync_enabled: settings.daily_sheet_sync_enabled ?? DEFAULT_SETTINGS.daily_sheet_sync_enabled,
       github_schedule_enabled: settings.github_schedule_enabled ?? DEFAULT_SETTINGS.github_schedule_enabled,
@@ -219,6 +222,14 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
     }
   }
 
+  // Validate discovery_max_pages
+  if (body.discovery_max_pages !== undefined) {
+    const dmp = Number(body.discovery_max_pages);
+    if (!Number.isInteger(dmp) || dmp < 1 || dmp > 500) {
+      return json({ success: false, error: 'discovery_max_pages must be an integer between 1 and 500.' }, 422);
+    }
+  }
+
   // Validate audit_sweep_enabled
   if (body.audit_sweep_enabled !== undefined && typeof body.audit_sweep_enabled !== 'boolean') {
     return json({ success: false, error: 'audit_sweep_enabled must be a boolean.' }, 422);
@@ -289,6 +300,10 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
         body.discovery_stop_pages !== undefined
           ? Number(body.discovery_stop_pages)
           : (existing?.discovery_stop_pages ?? DEFAULT_SETTINGS.discovery_stop_pages),
+      discovery_max_pages:
+        body.discovery_max_pages !== undefined
+          ? Number(body.discovery_max_pages)
+          : (existing?.discovery_max_pages ?? DEFAULT_SETTINGS.discovery_max_pages),
       audit_sweep_enabled:
         body.audit_sweep_enabled !== undefined
           ? body.audit_sweep_enabled
@@ -326,6 +341,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
       pin_filter_rising_saves: saved.pin_filter_rising_saves,
       refresh_max_pins: saved.refresh_max_pins ?? DEFAULT_SETTINGS.refresh_max_pins,
       discovery_stop_pages: Number(saved.discovery_stop_pages ?? DEFAULT_SETTINGS.discovery_stop_pages),
+      discovery_max_pages: Number(saved.discovery_max_pages ?? DEFAULT_SETTINGS.discovery_max_pages),
       audit_sweep_enabled: saved.audit_sweep_enabled ?? DEFAULT_SETTINGS.audit_sweep_enabled,
       daily_sheet_sync_enabled: saved.daily_sheet_sync_enabled ?? DEFAULT_SETTINGS.daily_sheet_sync_enabled,
       github_schedule_enabled: saved.github_schedule_enabled ?? DEFAULT_SETTINGS.github_schedule_enabled,

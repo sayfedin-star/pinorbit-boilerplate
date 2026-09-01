@@ -391,8 +391,25 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
           <div class="flex items-center gap-2">
             <span class="text-xs font-bold text-foreground">⚡ Automation &amp; Discovery Routines</span>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-            <!-- Card 1: Discovery Stop -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
+            <!-- Card 1: Discovery Max Pages -->
+            <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 flex flex-col justify-between shadow-2xs hover:border-primary/30 transition-all">
+              <label for="setting-discovery-max-pages" class="text-xs font-bold text-foreground">Discovery Max Pages</label>
+              <div class="mt-2 flex items-center gap-1.5">
+                <input
+                  id="setting-discovery-max-pages"
+                  type="number"
+                  min="1"
+                  max="250"
+                  value="50"
+                  class="w-full rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:border-primary focus:outline-none"
+                />
+                <span class="text-[11px] font-medium text-muted-foreground">pages</span>
+              </div>
+              <span class="text-[10px] text-muted-foreground mt-1">Max pages/run (up to 250)</span>
+            </div>
+
+            <!-- Card 2: Discovery Stop -->
             <div class="rounded-xl border border-border/80 bg-background/50 p-3.5 flex flex-col justify-between shadow-2xs">
               <label for="setting-discovery-stop-pages" class="text-xs font-bold text-foreground">Discovery Stop</label>
               <div class="mt-2 flex items-center gap-1.5">
@@ -1560,6 +1577,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       const risingAgeInp = document.getElementById('setting-rising-age') as HTMLInputElement | null;
       const risingSavesInp = document.getElementById('setting-rising-saves') as HTMLInputElement | null;
       const refreshMaxPinsInp = document.getElementById('setting-refresh-max-pins') as HTMLInputElement | null;
+      const discoveryMaxInp = document.getElementById('setting-discovery-max-pages') as HTMLInputElement | null;
       const discoveryStopInp = document.getElementById('setting-discovery-stop-pages') as HTMLInputElement | null;
       const auditSweepCb = document.getElementById('setting-audit-sweep-enabled') as HTMLInputElement | null;
       const auditSweepLabel = document.getElementById('setting-audit-sweep-label');
@@ -1589,6 +1607,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       if (risingAgeInp) risingAgeInp.value = String(json.pin_filter_rising_age_days ?? 14);
       if (risingSavesInp) risingSavesInp.value = String(json.pin_filter_rising_saves ?? 34);
       if (refreshMaxPinsInp) refreshMaxPinsInp.value = String(json.refresh_max_pins ?? 0);
+      if (discoveryMaxInp) discoveryMaxInp.value = String(json.discovery_max_pages ?? 50);
       if (discoveryStopInp) discoveryStopInp.value = String(json.discovery_stop_pages ?? 3);
       if (auditSweepCb) {
         auditSweepCb.checked = json.audit_sweep_enabled !== false;
@@ -1672,7 +1691,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
     const reevaluateBtn = document.getElementById('reevaluate-candidates-btn') as HTMLButtonElement | null;
     const roleBadge = document.getElementById('settings-role-badge');
     const inputs = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
-      '#setting-ingest-enabled, #setting-paused-policy, #setting-max-batch, #setting-refresh-max-pins, #setting-min-saves, #setting-min-repins, #setting-rising-age, #setting-rising-saves, #setting-discovery-stop-pages, #setting-audit-sweep-enabled, #setting-daily-sheet-sync, #setting-github-schedule'
+      '#setting-ingest-enabled, #setting-paused-policy, #setting-max-batch, #setting-refresh-max-pins, #setting-min-saves, #setting-min-repins, #setting-rising-age, #setting-rising-saves, #setting-discovery-max-pages, #setting-discovery-stop-pages, #setting-audit-sweep-enabled, #setting-daily-sheet-sync, #setting-github-schedule'
     );
     inputs.forEach((el) => { el.disabled = true; });
     if (saveBtn) { saveBtn.disabled = true; saveBtn.classList.add('hidden'); }
@@ -1689,6 +1708,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
     const minRepinsInp = document.getElementById('setting-min-repins') as HTMLInputElement | null;
     const risingAgeInp = document.getElementById('setting-rising-age') as HTMLInputElement | null;
     const risingSavesInp = document.getElementById('setting-rising-saves') as HTMLInputElement | null;
+    const discoveryMaxInp = document.getElementById('setting-discovery-max-pages') as HTMLInputElement | null;
     const discoveryStopInp = document.getElementById('setting-discovery-stop-pages') as HTMLInputElement | null;
     const auditSweepCb = document.getElementById('setting-audit-sweep-enabled') as HTMLInputElement | null;
     const dailySheetSyncCb = document.getElementById('setting-daily-sheet-sync') as HTMLInputElement | null;
@@ -1718,6 +1738,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
           pin_filter_min_repins: parseInt(minRepinsInp.value, 10) || 0,
           pin_filter_rising_age_days: Number.isInteger(parseInt(risingAgeInp.value, 10)) ? parseInt(risingAgeInp.value, 10) : 14,
           pin_filter_rising_saves: Number.isInteger(parseInt(risingSavesInp.value, 10)) ? parseInt(risingSavesInp.value, 10) : 34,
+          discovery_max_pages: parseInt(discoveryMaxInp?.value || '50', 10) || 50,
           discovery_stop_pages: parseInt(discoveryStopInp?.value || '3', 10) || 3,
           audit_sweep_enabled: auditSweepCb ? auditSweepCb.checked : true,
           daily_sheet_sync_enabled: dailySheetSyncCb ? dailySheetSyncCb.checked : false,

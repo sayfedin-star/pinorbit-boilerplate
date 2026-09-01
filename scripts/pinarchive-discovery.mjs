@@ -511,6 +511,10 @@ async function main() {
     const pausedPolicy = wsSetting.paused_account_policy ?? 'reject';
     const discoveryStopPages = Number(wsSetting.discovery_stop_pages ?? 3);
     const maxBatchPins = Math.min(Number(wsSetting.max_batch_pins || CFG.MAX_BATCH_PINS), 500);
+    const discoveryMaxPages = Math.min(
+      Math.max(1, Number(process.env.DISCOVERY_MAX_PAGES || wsSetting.discovery_max_pages || CFG.MAX_PAGES_DEFAULT)),
+      500
+    );
 
     // Gating checks
     if (isGhScheduledEvent && !wsGhScheduleEnabled) {
@@ -542,7 +546,7 @@ async function main() {
     }
 
     console.log(`\n==================================================`);
-    console.log(`🔍 Discovering Pins for @${acc.username} (Workspace: ${acc.workspace_id.slice(0, 8)})`);
+    console.log(`🔍 Discovering Pins for @${acc.username} (Workspace: ${acc.workspace_id.slice(0, 8)}, maxPages: ${discoveryMaxPages})`);
     grandSummary.accounts++;
 
     // 1. Fetch vault cookie for this workspace
@@ -593,7 +597,7 @@ async function main() {
     const qualifyingForDb = [];
     const allPinsForSheet = [];
 
-    while (hasMore && pageCount < CFG.MAX_PAGES_DEFAULT) {
+    while (hasMore && pageCount < discoveryMaxPages) {
       if (circuitBroken) break;
 
       if (Date.now() < rateLimitCooldownUntil) {

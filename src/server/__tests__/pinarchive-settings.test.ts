@@ -84,6 +84,7 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(json.pin_filter_rising_age_days).toBe(14);
       expect(json.pin_filter_rising_saves).toBe(34);
       expect(json.discovery_stop_pages).toBe(3);
+      expect(json.discovery_max_pages).toBe(50);
       expect(json.audit_sweep_enabled).toBe(true);
       expect(json.daily_sheet_sync_enabled).toBe(false);
       expect(json.github_schedule_enabled).toBe(true);
@@ -106,6 +107,7 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
                 pin_filter_rising_age_days: 10,
                 pin_filter_rising_saves: 50,
                 discovery_stop_pages: 5,
+                discovery_max_pages: 150,
                 audit_sweep_enabled: true,
                 daily_sheet_sync_enabled: true,
                 github_schedule_enabled: false,
@@ -135,6 +137,7 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
       expect(json.pin_filter_rising_age_days).toBe(10);
       expect(json.pin_filter_rising_saves).toBe(50);
       expect(json.discovery_stop_pages).toBe(5);
+      expect(json.discovery_max_pages).toBe(150);
       expect(json.audit_sweep_enabled).toBe(true);
       expect(json.daily_sheet_sync_enabled).toBe(true);
       expect(json.github_schedule_enabled).toBe(false);
@@ -268,6 +271,18 @@ describe('PinArchive Ingest Settings & Account Toggle API Suite', () => {
         locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
       } as any);
       expect(res8.status).toBe(422);
+
+      // Invalid discovery_max_pages > 500
+      const req9 = new Request('http://localhost:4321/api/pinarchive/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspace_id: mockWsId, discovery_max_pages: 999 }),
+      });
+      const res9 = await patchSettingsHandler({
+        request: req9,
+        locals: { user: mockUser, supabase: {}, activeWorkspaceId: mockWsId },
+      } as any);
+      expect(res9.status).toBe(422);
     });
 
     it('successfully upserts settings for admin and returns saved row', async () => {

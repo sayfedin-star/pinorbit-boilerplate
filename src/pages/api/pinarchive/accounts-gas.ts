@@ -124,6 +124,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return json({ success: false, error: 'GitHub dispatch token not configured on server.' }, 503);
       }
 
+      let maxPagesInput = body.max_pages ? String(body.max_pages) : '';
+      if (!maxPagesInput) {
+        const { data: wsSetting } = await db
+          .from('pa_workspace_settings')
+          .select('discovery_max_pages')
+          .eq('workspace_id', wsCtx.workspaceId)
+          .maybeSingle();
+        if (wsSetting?.discovery_max_pages) {
+          maxPagesInput = String(wsSetting.discovery_max_pages);
+        }
+      }
+
       const dispatchUrl = `https://api.github.com/repos/${githubRepo}/actions/workflows/pinarchive-pipeline.yml/dispatches`;
       const ghRes = await fetch(dispatchUrl, {
         method: 'POST',
@@ -140,6 +152,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             usernames: usernames.join(','),
             mode: 'all',
             force: 'true',
+            max_pages: maxPagesInput,
           },
         }),
         signal: AbortSignal.timeout(8000),
