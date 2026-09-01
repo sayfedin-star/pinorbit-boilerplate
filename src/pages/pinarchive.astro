@@ -551,10 +551,10 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
     </section>
 
     <!-- ═══ View A: Accounts Table with 2-Tier Controls ═══ -->
-    <section class="mb-8 rounded-2xl border border-border bg-card overflow-hidden shadow-xs" aria-labelledby="accounts-section-heading">
+    <section class="mb-8 rounded-2xl border border-border bg-card shadow-xs relative" aria-labelledby="accounts-section-heading">
       
       <!-- Tier 1: View Navigation & Display Controls -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border px-5 py-3 bg-muted/20">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border px-5 py-3 bg-muted/20 rounded-t-2xl">
         
         <!-- Left: Status Tabs -->
         <div class="flex items-center gap-1 bg-muted/70 p-1 rounded-xl border border-border/60 overflow-x-auto">
@@ -590,7 +590,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
                 <span>Columns</span>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
-              <div id="pa-col-visibility-menu" class="hidden absolute right-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-border bg-card shadow-lg p-2 space-y-0.5"></div>
+              <div id="pa-col-visibility-menu" class="hidden absolute right-0 top-full mt-1.5 z-50 w-56 rounded-2xl border border-border bg-card shadow-xl p-2.5 space-y-1"></div>
             </div>
           </div>
 
@@ -1164,15 +1164,15 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
     const colMenu = document.getElementById('pa-col-visibility-menu');
     if (!colMenu) return;
     colMenu.innerHTML = `
-      <div class="flex items-center justify-between pb-1 px-1 border-b border-border/80 text-[11px] font-semibold text-muted-foreground">
+      <div class="flex items-center justify-between pb-2 px-1 border-b border-border/80 text-[11px] font-bold text-muted-foreground">
         <span>Toggle Columns</span>
-        <button id="reset-pa-cols-btn" class="text-primary hover:underline text-[10px]">Reset</button>
+        <button id="reset-pa-cols-btn" class="text-primary hover:underline text-[11px] font-bold cursor-pointer">Reset</button>
       </div>
-      <div class="space-y-0.5 max-h-60 overflow-y-auto pt-1">
+      <div class="space-y-1 max-h-72 overflow-y-auto pt-1.5 pr-1">
         ${COLUMN_DEFS.map(
           (c) => `
-          <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-muted/60 transition-colors text-xs font-medium text-foreground">
-            <input type="checkbox" class="rounded accent-primary h-3.5 w-3.5" data-pa-col-key="${c.key}" ${colVisible[c.key] ? 'checked' : ''} />
+          <label class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-muted/70 transition-colors text-xs font-semibold text-foreground select-none">
+            <input type="checkbox" class="rounded-md accent-primary h-4 w-4 cursor-pointer" data-pa-col-key="${c.key}" ${colVisible[c.key] ? 'checked' : ''} />
             <span>${c.label}</span>
           </label>`
         ).join('')}
