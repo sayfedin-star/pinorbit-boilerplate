@@ -589,8 +589,9 @@ async function main() {
     let hasMore = true;
 
     // Watermark for early-stop: pins created after (last_run_at - 24h buffer).
-    // If account has never run or has zero known pins in DB, watermark is 0 (full sweep).
-    const watermarkMs = acc.last_run_at && knownPinIds.size > 0
+    // If account has never run, has zero known pins in DB, or is in backfill, watermark is 0.
+    const inBackfill = acc.backfill_status === 'in_progress';
+    const watermarkMs = acc.last_run_at && knownPinIds.size > 0 && !inBackfill
       ? new Date(acc.last_run_at).getTime() - 24 * 60 * 60 * 1000
       : 0;
 
@@ -698,7 +699,6 @@ async function main() {
       console.log(`📄 Page ${pageCount}: ${pagePins.length} pins fetched (${pageNewPinsCount} new, ${pagePins.length - pageNewPinsCount} known).`);
 
       // Early-stop check: stop after K consecutive pages of all-known pins
-      const inBackfill = acc.backfill_status === 'in_progress';
       if (pageNewPinsCount === 0 && knownPinIds.size > 0 && !IS_AUDIT_SWEEP && !inBackfill) {
         consecutiveKnownPages++;
         console.log(`⏳ Consecutive all-known pages: ${consecutiveKnownPages}/${discoveryStopPages}`);
