@@ -27,7 +27,7 @@ async function resolveKek(db) {
   const { data } = await db.from('competitor_kek').select('kek').limit(1).maybeSingle();
   if (data?.kek) return data.kek;
   const hex = crypto.randomBytes(32).toString('hex');
-  await db.from('competitor_kek').upsert({ id: true, kek: hex }, { onConflict: 'id' });
+  await db.from('competitor_kek').upsert({ id: true, kek: hex }, { onConflict: 'id', ignoreDuplicates: true });
   const { data: d2 } = await db.from('competitor_kek').select('kek').limit(1).maybeSingle();
   return d2?.kek || null;
 }
@@ -159,8 +159,8 @@ async function processWorkspace(db, wsId, kek, options = {}) {
         const userPayload = await userRes.json();
         const userData = userPayload?.resource_response?.data;
         if (userData) {
-          const profileViews = userData.profile_views || userData.monthly_views || 0;
-          const profileReach = userData.profile_reach || userData.monthly_views || profileViews;
+          const profileViews = userData.profile_views ?? userData.monthly_views ?? userData.profile_reach ?? 0;
+          const profileReach = userData.profile_reach ?? userData.profile_views ?? userData.monthly_views ?? 0;
           const followers = userData.follower_count || 0;
           const pins = userData.pin_count || 0;
           const fullName = userData.full_name || username;
@@ -260,9 +260,7 @@ async function main() {
   const kek = await resolveKek(db);
   if (!kek) { console.error('❌ KEK unavailable'); process.exit(1); }
 
-  const pipe = (await db.from('competitor_pipeline_settings').select('*').limit(1).maybeSingle()).data;
-  if (pipe && pipe.is_enabled === false && !process.env.FORCE_RUN) { console.log('⏸️ Pipeline disabled from dashboard.'); process.exit(0); }
-  const DRY_RUN = process.env.DRY_RUN === 'true' || pipe?.dry_run === true;
+  const DRY_RUN = process.env.DRY_RUN === 'true';
   if (DRY_RUN) console.log('⚠️ DRY_RUN mode — no writes will be performed.');
 
   // Parse Scope & Inputs
@@ -288,12 +286,22 @@ async function main() {
   const isGhScheduled = (process.env.EVENT_NAME || process.env.GITHUB_EVENT_NAME || '').trim().toLowerCase() === 'schedule';
   if (isGhScheduled) {
     try {
-      const { data: masterWs } = await db.from('workspaces').select('id, is_master').eq('is_master', true).maybeSingle();
-      if (masterWs?.id) {
-        const { data: masterPipe } = await db.from('competitor_pipeline_settings').select('github_schedule_enabled').eq('workspace_id', masterWs.id).maybeSingle();
-        if (masterPipe && masterPipe.github_schedule_enabled === false) {
-          console.log(`[GLOBAL SKIP] GitHub Actions 02:00 UTC schedule is globally disabled by Master Workspace (${masterWs.id.slice(0, 8)}). Exiting immediately.`);
-          return;
+      const p1Url = process.env.SCHEDULING_SUPABASE_URL || process.env.SUPABASE_URL || process.env.PUBLIC_SUPABASE_URL || '';
+      const p1Key = process.env.SCHEDULING_SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+      if (p1Url && p1Key) {
+        const p1Res = await fetch(`${p1Url}/rest/v1/workspaces?select=id,is_master&is_master=eq.true&limit=1`, {
+          headers: { apikey: p1Key, Authorization: `Bearer ${p1Key}`, Accept: 'application/json' },
+        });
+        if (p1Res.ok) {
+          const masterWorkspaces = await p1Res.json();
+          if (Array.isArray(masterWorkspaces) && masterWorkspaces.length > 0) {
+            const masterId = masterWorkspaces[0].id;
+            const { data: masterPipe } = await db.from('competitor_pipeline_settings').select('github_schedule_enabled').eq('workspace_id', masterId).maybeSingle();
+            if (masterPipe && masterPipe.github_schedule_enabled === false) {
+              console.log(`[GLOBAL SKIP] GitHub Actions 02:00 UTC schedule is globally disabled by Master Workspace (${masterId.slice(0, 8)}). Exiting immediately.`);
+              return;
+            }
+          }
         }
       }
     } catch (err) {

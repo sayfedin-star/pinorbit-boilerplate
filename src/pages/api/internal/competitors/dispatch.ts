@@ -56,15 +56,14 @@ async function handleCompetitorsDispatch(
   if (!UUID_REGEX.test(workspaceId)) {
     try {
       const admin = dbClients.getSchedulingAdmin(runtimeEnv);
-      const { data: wsMatch } = await admin
+      const { data: allWs } = await admin
         .from('workspaces')
-        .select('id')
-        .ilike('id', `${workspaceId}%`)
-        .limit(1)
-        .maybeSingle();
+        .select('id');
 
-      if (wsMatch?.id) {
-        workspaceId = wsMatch.id;
+      const matched = Array.isArray(allWs) ? allWs.find((w: any) => String(w.id || '').toLowerCase().startsWith(workspaceId.toLowerCase())) : null;
+
+      if (matched?.id) {
+        workspaceId = matched.id;
       } else {
         return new Response(
           JSON.stringify({ success: false, error: 'Validation Error: valid workspace_id UUID is required.' }),

@@ -148,6 +148,12 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
       }
     }
     const rawPins = Array.from(dedupedMap.values());
+    rawPins.sort((a: any, b: any) => {
+      const ta = new Date(a.created_at_pinterest || a.created_at || 0).getTime();
+      const tb = new Date(b.created_at_pinterest || b.created_at || 0).getTime();
+      if (tb !== ta) return tb - ta;
+      return Number(b.saves || 0) - Number(a.saves || 0);
+    });
 
     // Gating 3: Fetch current pa_accounts row before upsert
     const { data: existingAccount } = await pinArchive
@@ -166,7 +172,7 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
     }
 
     // Account status = 'paused' and policy = 'reject' -> write NOTHING
-    if (existingAccount && existingAccount.status === 'paused' && pausedAccountPolicy === 'reject') {
+    if (existingAccount && ['paused', 'cookie_expired', 'error'].includes(existingAccount.status) && pausedAccountPolicy === 'reject') {
       return new Response(
         JSON.stringify({ success: true, skipped: 'account_paused' }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -193,16 +199,19 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
       accountData.last_result = account_meta.last_result.trim();
     }
     if (payload.trigger === 'refresh') {
-      accountData.last_refresh_at = fetchedAt;
+      accountData.last_run_at = fetchedAt;
     }
-    if (payload.trigger !== 'refresh' && typeof account_meta.pins_count === 'number' && Number.isFinite(account_meta.pins_count)) {
-      accountData.pins_count = Math.max(0, Math.round(account_meta.pins_count));
+    if (typeof payload.follower_count === 'number' && Number.isFinite(payload.follower_count)) {
+      accountData.follower_count = Math.max(0, Math.round(payload.follower_count));
     }
-    if (typeof account_meta.promoted_count === 'number' && Number.isFinite(account_meta.promoted_count)) {
-      accountData.promoted_count = Math.max(0, Math.round(account_meta.promoted_count));
+    if (payload.trigger !== 'refresh') {
+      if (typeof account_meta.pins_count === 'number' && Number.isFinite(account_meta.pins_count)) {
+        accountData.pins_count = Math.max(0, Math.round(account_meta.pins_count));
+      }
+      if (typeof account_meta.promoted_count === 'number' && Number.isFinite(account_meta.promoted_count)) {
+        accountData.promoted_count = Math.max(0, Math.round(account_meta.promoted_count));
+      }
     }
-    if (typeof payload.follower_count === 'number') accountData.follower_count = payload.follower_count;
-    if (typeof account_meta.follower_count === 'number') accountData.follower_count = account_meta.follower_count;
     if (account_meta.sheet_id) accountData.sheet_id = account_meta.sheet_id;
 
     if (account_meta.status) accountData.status = account_meta.status;
@@ -227,7 +236,10 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
     const pinIds = pins.map((p: any) => String(p.pin_id || p.id || '')).filter(Boolean);
 
     // Phase C1: Atomic Ingest Write Mode (pa_ingest_pin_batch active)
-    const MONITOR = false;
+    let rpcHandled = false;
+    let pinsAddedCount = 0;
+    let pinsUpdatedCount = 0;
+
     if (pins.length > 0 && typeof pinArchive.rpc === 'function') {
       try {
         const s = (v: any) => (v === '' || v == null ? undefined : v); // '' → omitted → NULL → R4 keeps target (mirrors legacy ||)
@@ -268,27 +280,26 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
           if (p.archived_at !== undefined) row.archived_at = p.archived_at;
           return row;
         });
-        const { data: rpcData, error: rpcErr } = await pinArchive.rpc('pa_ingest_pin_batch', {
+        const rpcRes = await pinArchive.rpc('pa_ingest_pin_batch', {
           p_workspace_id: workspaceId,
           p_account_id: accountId,
           p_fetched_at: fetchedAt,
           p_pins: pinsPayload,
-          p_dry_run: MONITOR,
+          p_dry_run: false,
         });
-        if (rpcErr) {
-          console.error('[ingest-rpc] RPC error:', rpcErr);
-        } else {
-          console.log('[ingest-rpc]', rpcData);
+        if (rpcRes && !rpcRes.error && rpcRes.data && rpcRes.data.success !== false && typeof rpcRes.data.snapshots === 'number') {
+          rpcHandled = true;
+          pinsAddedCount = Number(rpcRes.data.added || 0);
+          pinsUpdatedCount = Number(rpcRes.data.updated || 0);
+        } else if (rpcRes?.error) {
+          console.warn('[ingest-rpc] RPC error, falling back to legacy manual upsert:', rpcRes.error.message);
         }
       } catch (dryErr: any) {
-        console.error('[ingest-rpc] Exception invoking pa_ingest_pin_batch:', dryErr);
+        console.warn('[ingest-rpc] Exception invoking pa_ingest_pin_batch, falling back to legacy manual upsert:', dryErr?.message || dryErr);
       }
     }
 
-    let pinsAddedCount = 0;
-    let pinsUpdatedCount = 0;
-
-    if (pins.length > 0) {
+    if (!rpcHandled && pins.length > 0) {
       // Fetch existing pin metric & enrichment state in chunks of 100 to avoid URI 414 errors
       const existingPins: any[] = [];
       const CHUNK_SIZE = 100;
@@ -439,7 +450,7 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{1,60}$/;
           ),
 
           // Preserved Enrichment & Direct Qualified Ingestion
-          archived_at: p.archived_at !== undefined ? p.archived_at : (existing?.archived_at || fetchedAt),
+          archived_at: existing?.archived_at || (p.archived_at !== undefined ? p.archived_at : fetchedAt),
           annotations: Array.from(mergedByName.values()),
           board_pin_count: p.board_pin_count ?? existing?.board_pin_count ?? null,
           board_last_modified_at: p.board_last_modified_at ?? existing?.board_last_modified_at ?? null,

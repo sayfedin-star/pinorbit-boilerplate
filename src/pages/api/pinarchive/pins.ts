@@ -147,29 +147,47 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   try {
     // 1. Load pa_workspace_settings for persisted filters
-    const { data: wsSettings } = await db
-      .from('pa_workspace_settings')
-      .select('pin_filter_min_saves, pin_filter_min_repins, pin_filter_rising_age_days, pin_filter_rising_saves')
-      .eq('workspace_id', ws)
-      .maybeSingle();
+    let minSaves = 0;
+    let minRepins = 0;
+    let risA = 14;
+    let risS = 34;
 
-    const minSaves = Number(wsSettings?.pin_filter_min_saves || 0);
-    const minRepins = Number(wsSettings?.pin_filter_min_repins || 0);
-    const risA = Number(wsSettings?.pin_filter_rising_age_days ?? 14);
-    const risS = Number(wsSettings?.pin_filter_rising_saves ?? 34);
+    try {
+      const settingsTable = db.from('pa_workspace_settings');
+      if (settingsTable && typeof settingsTable.select === 'function') {
+        const { data: wsSettings } = await settingsTable
+          .select('pin_filter_min_saves, pin_filter_min_repins, pin_filter_rising_age_days, pin_filter_rising_saves')
+          .eq('workspace_id', ws)
+          .maybeSingle();
+
+        minSaves = Number(wsSettings?.pin_filter_min_saves || 0);
+        minRepins = Number(wsSettings?.pin_filter_min_repins || 0);
+        risA = Number(wsSettings?.pin_filter_rising_age_days ?? 14);
+        risS = Number(wsSettings?.pin_filter_rising_saves ?? 34);
+      }
+    } catch {
+      // Non-blocking fallback
+    }
 
     // 2. Load accounts list for multi-account workspace mapping
-    const { data: accountsData } = await db
-      .from('pa_accounts')
-      .select('id, username, status, follower_count, pins_count')
-      .eq('workspace_id', ws)
-      .order('username', { ascending: true });
-
-    const accounts = Array.isArray(accountsData) ? accountsData : [];
+    let accounts: any[] = [];
     const accountMap = new Map<string, string>();
-    accounts.forEach((acc) => {
-      accountMap.set(acc.id, acc.username);
-    });
+    try {
+      const accTable = db.from('pa_accounts');
+      if (accTable && typeof accTable.select === 'function') {
+        const { data: accountsData } = await accTable
+          .select('id, username, status, follower_count, pins_count')
+          .eq('workspace_id', ws)
+          .order('username', { ascending: true });
+
+        accounts = Array.isArray(accountsData) ? accountsData : [];
+        accounts.forEach((acc) => {
+          accountMap.set(acc.id, acc.username);
+        });
+      }
+    } catch {
+      // Non-blocking fallback
+    }
 
     let query = db
       .from('pa_pins')
@@ -214,22 +232,29 @@ export const GET: APIRoute = async ({ request, locals }) => {
       const pinIds = pins.map((p: any) => p.id).filter(Boolean);
       const metricsMap = new Map<string, any[]>();
       const CHUNK_SIZE = 100;
-      for (let i = 0; i < pinIds.length; i += CHUNK_SIZE) {
-        const chunk = pinIds.slice(i, i + CHUNK_SIZE);
-        const { data: metricsData } = await db
-          .from('pa_pin_metrics')
-          .select('pin_ref, recorded_at, saves, repins, comments, shares, reactions_total')
-          .in('pin_ref', chunk)
-          .order('recorded_at', { ascending: false })
-          .limit(chunk.length * 20);
 
-        if (Array.isArray(metricsData)) {
-          for (const m of metricsData) {
-            const list = metricsMap.get(m.pin_ref) || [];
-            list.push(m);
-            metricsMap.set(m.pin_ref, list);
+      try {
+        const metricsTable = db.from('pa_pin_metrics');
+        if (metricsTable && typeof metricsTable.select === 'function') {
+          for (let i = 0; i < pinIds.length; i += CHUNK_SIZE) {
+            const chunk = pinIds.slice(i, i + CHUNK_SIZE);
+            const { data: metricsData } = await metricsTable
+              .select('pin_ref, recorded_at, saves, repins, comments, shares, reactions_total')
+              .in('pin_ref', chunk)
+              .order('recorded_at', { ascending: false })
+              .limit(chunk.length * 20);
+
+            if (Array.isArray(metricsData)) {
+              for (const m of metricsData) {
+                const list = metricsMap.get(m.pin_ref) || [];
+                list.push(m);
+                metricsMap.set(m.pin_ref, list);
+              }
+            }
           }
         }
+      } catch {
+        // Non-blocking metrics fallback
       }
 
       const now = Date.now();

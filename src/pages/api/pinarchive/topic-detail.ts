@@ -58,8 +58,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const rpcRes = await db.rpc('pa_topic_pins', {
       p_workspace_id: ws,
       p_name: name,
-      p_account_id: null,
-      p_board: null,
+      p_account_id: accountId,
+      p_board: board,
     });
 
     if (!rpcRes.error && Array.isArray(rpcRes.data)) {

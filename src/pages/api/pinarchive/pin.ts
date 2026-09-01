@@ -124,8 +124,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       deltaRepins24h = Math.max(0, latestR - Number(snap24h.repins || 0));
       deltaRepins7d = Math.max(deltaRepins24h, latestR - Number(snap7d.repins || 0));
 
-      const prior = snapsDesc[1];
-      const t1 = new Date(prior.recorded_at).getTime();
+      const t1 = new Date(snap24h.recorded_at).getTime();
       daysBetween = Math.max(0.01, (t0 - t1) / 86400000);
     }
 

@@ -794,8 +794,8 @@ export async function deleteCompetitorSnapshot(snapshotId: string, competitorId?
   }
 
   let deleteQuery = supabase.from('competitor_snapshots').delete().eq('id', snapshotId);
-  if (workspaceId) {
-    deleteQuery = deleteQuery.eq('workspace_id', workspaceId);
+  if (competitorId) {
+    deleteQuery = deleteQuery.eq('competitor_id', competitorId);
   }
 
   const { error } = await deleteQuery;

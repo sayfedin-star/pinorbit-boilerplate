@@ -84,87 +84,60 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Compute Recent Δ per account from its latest refresh run session (preserves delta without 5m global cutoff)
     let changedMap = new Map<string, number>();
     try {
-      const { data: recentRuns } = await db
-        .from('pa_runs')
-        .select('account_id, pins_updated, started_at')
-        .eq('workspace_id', ws)
-        .eq('trigger', 'refresh')
-        .order('started_at', { ascending: false })
-        .limit(300);
+      const runsTable = db.from('pa_runs');
+      if (runsTable && typeof runsTable.select === 'function') {
+        const { data: recentRuns } = await runsTable
+          .select('account_id, pins_updated, started_at')
+          .eq('workspace_id', ws)
+          .eq('trigger', 'refresh')
+          .order('started_at', { ascending: false })
+          .limit(300);
 
-      if (Array.isArray(recentRuns) && recentRuns.length > 0) {
-        const accountLatestTime = new Map<string, number>();
-        for (const r of recentRuns) {
-          if (!r.account_id || !r.started_at) continue;
-          const t = new Date(r.started_at).getTime();
-          if (!accountLatestTime.has(r.account_id) || t > accountLatestTime.get(r.account_id)!) {
-            accountLatestTime.set(r.account_id, t);
+        if (Array.isArray(recentRuns) && recentRuns.length > 0) {
+          const accountLatestTime = new Map<string, number>();
+          for (const r of recentRuns) {
+            if (!r.account_id || !r.started_at) continue;
+            const t = new Date(r.started_at).getTime();
+            if (!accountLatestTime.has(r.account_id) || t > accountLatestTime.get(r.account_id)!) {
+              accountLatestTime.set(r.account_id, t);
+            }
           }
-        }
 
-        for (const r of recentRuns) {
-          if (!r.account_id || !r.started_at) continue;
-          const latestT = accountLatestTime.get(r.account_id);
-          if (!latestT) continue;
-          const t = new Date(r.started_at).getTime();
-          // Aggregate batches from the same run session (within 45 minutes of account's latest run)
-          if (latestT - t <= 45 * 60 * 1000) {
-            changedMap.set(r.account_id, (changedMap.get(r.account_id) || 0) + Number(r.pins_updated || 0));
+          for (const r of recentRuns) {
+            if (!r.account_id || !r.started_at) continue;
+            const latestT = accountLatestTime.get(r.account_id);
+            if (!latestT) continue;
+            const t = new Date(r.started_at).getTime();
+            // Aggregate batches from the same run session (within 45 minutes of account's latest run)
+            if (latestT - t <= 45 * 60 * 1000) {
+              changedMap.set(r.account_id, (changedMap.get(r.account_id) || 0) + Number(r.pins_updated || 0));
+            }
           }
         }
       }
     } catch (err) {
       console.warn('Could not query pa_runs refresh delta:', err);
     }
-    // Derive active schedule next run for single source of truth
+
+    // Derive active schedule next run from persisted workspace settings
     let activeNextRunIso: string | null = null;
     try {
-      const { data: wsSettings } = await db
-        .from('pa_workspace_settings')
-        .select('cron_expression, schedule_status')
-        .eq('workspace_id', ws)
-        .maybeSingle();
+      const settingsTable = db.from('pa_workspace_settings');
+      if (settingsTable && typeof settingsTable.select === 'function') {
+        const { data: wsSettings } = await settingsTable
+          .select('cron_expression, schedule_status')
+          .eq('workspace_id', ws)
+          .maybeSingle();
 
-      let cronExpr = wsSettings?.cron_expression;
-      let isPaused = wsSettings?.schedule_status === 'paused' || wsSettings?.schedule_status === 'disabled';
-      let jobTimezone = 'UTC';
+        const cronExpr = wsSettings?.cron_expression;
+        const isPaused = wsSettings?.schedule_status === 'paused' || wsSettings?.schedule_status === 'disabled';
+        const jobTimezone = 'UTC';
 
-      // Fallback: If pa_workspace_settings has no cron_expression yet, query live FastCron tokens
-      if (!cronExpr) {
-        try {
-          const runtimeEnv = (locals as any)?.runtime?.env || (locals as any)?.runtimeEnv || process.env || {};
-          const tokenRes = await resolveToken({ workspaceId: ws }, 'pinarchive', runtimeEnv);
-          if (tokenRes?.token) {
-            const { fastcronCall } = await import('../../../server/lib/fastcron-client');
-            const { isMatchingPinArchiveJob } = await import('./cron');
-            const listRes = await fastcronCall('cron_list', { keyword: 'PinOrbit' }, tokenRes.token);
-            const list = Array.isArray(listRes.data) ? listRes.data : Array.isArray(listRes.data?.data) ? listRes.data.data : [];
-            const matchingJob = list.find((j: any) => isMatchingPinArchiveJob(j, ws) && j.status !== 'paused' && j.status !== 'disabled' && !j.paused)
-              || list.find((j: any) => isMatchingPinArchiveJob(j, ws));
-
-            if (matchingJob) {
-              cronExpr = matchingJob.expression || matchingJob.cron_expression;
-              isPaused = matchingJob.status === 'paused' || matchingJob.status === 'disabled' || matchingJob.paused;
-              jobTimezone = matchingJob.timezone || matchingJob.tz || 'UTC';
-              // Persist to pa_workspace_settings for future calls
-              await db.from('pa_workspace_settings').upsert({
-                workspace_id: ws,
-                cron_expression: cronExpr,
-                fastcron_job_id: String(matchingJob.id),
-                schedule_status: isPaused ? 'paused' : 'enabled',
-                updated_at: new Date().toISOString(),
-              }, { onConflict: 'workspace_id' });
-            }
+        if (cronExpr && !isPaused) {
+          const nextDate = getNextCronDate(cronExpr, jobTimezone);
+          if (nextDate) {
+            activeNextRunIso = nextDate.toISOString();
           }
-        } catch (tokErr: any) {
-          console.warn(`[PinArchive Overview] Fallback token resolve failed for workspace ${ws}:`, tokErr?.message || tokErr);
-        }
-      }
-
-      if (cronExpr && !isPaused) {
-        const nextDate = getNextCronDate(cronExpr, jobTimezone);
-        if (nextDate) {
-          activeNextRunIso = nextDate.toISOString();
         }
       }
     } catch (err: any) {

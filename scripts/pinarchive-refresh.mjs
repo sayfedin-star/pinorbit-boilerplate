@@ -470,10 +470,17 @@ async function main() {
   }
 
   if (!accounts.length) { console.log('No matching accounts found.'); return; }
-  console.log(`Found ${accounts.length} account(s)\n`);
+
+  // Distribute accounts across shard matrix when processing multi-account workspaces
+  const isTargetedRun = Boolean(REFRESH_USERNAME || REFRESH_USERNAMES.length > 0);
+  const shardedAccounts = isTargetedRun
+    ? accounts
+    : accounts.filter((_, idx) => idx % SHARD_COUNT === REFRESH_SHARD);
+
+  console.log(`Found ${accounts.length} account(s) total — processing ${shardedAccounts.length} in shard ${REFRESH_SHARD + 1}/${SHARD_COUNT}\n`);
   const summary = { refreshed: 0, updated: 0, pushed: 0, errors: [] };
 
-  for (const acc of accounts) {
+  for (const acc of shardedAccounts) {
     const wsSetting = settingsMap.get(acc.workspace_id);
     const wsIngestEnabled = wsSetting ? wsSetting.ingest_enabled : true;
     const wsGhScheduleEnabled = wsSetting?.github_schedule_enabled ?? true;
@@ -499,7 +506,7 @@ async function main() {
     }
 
     // Check paused policy gate
-    if (acc.status === 'paused' && pausedPolicy === 'reject') {
+    if (['paused', 'cookie_expired', 'error'].includes(acc.status) && pausedPolicy === 'reject') {
       console.log(`[SKIP] Account @${acc.username} is paused (policy=reject).`);
       continue;
     }
@@ -539,7 +546,7 @@ async function main() {
       offset += chunk.length;
     }
 
-    const pins = allPins.filter((_, idx) => idx % SHARD_COUNT === REFRESH_SHARD);
+    const pins = isTargetedRun ? allPins.filter((_, idx) => idx % SHARD_COUNT === REFRESH_SHARD) : allPins;
 
     if (!pins.length) continue;
     console.log(`${acc.username}: ${pins.length} pins to refresh (shard ${REFRESH_SHARD + 1}/${SHARD_COUNT} of ${allPins.length} total)`);

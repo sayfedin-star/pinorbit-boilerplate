@@ -89,11 +89,10 @@ export const competitorsDb = {
 
     query = query.order('created_at', { ascending: false });
 
-    if (options?.limit) {
-      query = query.limit(options.limit);
-    }
     if (options?.offset) {
       query = query.range(options.offset, options.offset + (options.limit || 50) - 1);
+    } else if (options?.limit) {
+      query = query.limit(options.limit);
     }
 
     const { data, count, error } = await query;
@@ -175,11 +174,12 @@ export const competitorsDb = {
       .from('competitor_daily_snapshots')
       .select('*')
       .eq('competitor_id', competitorId)
-      .order('snapshot_date', { ascending: true })
+      .order('snapshot_date', { ascending: false })
       .limit(days);
 
     if (error) throw error;
-    return (data as CompetitorDailySnapshotRecord[]) || [];
+    const rows = (data as CompetitorDailySnapshotRecord[]) || [];
+    return rows.reverse();
   },
 
   /**

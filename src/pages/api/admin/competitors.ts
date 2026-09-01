@@ -48,44 +48,75 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const deltasMap: Record<string, any> = {};
 
     if (ids.length) {
-      const [bRowsRes, deltasList] = await Promise.all([
-        g.ok!.db.from('competitor_boards').select('competitor_id').in('competitor_id', ids),
-        Promise.all(ids.map(async (compId: string) => {
-          const { data: snaps } = await g.ok!.db.from('competitor_snapshots')
-            .select('profile_reach, profile_views, follower_count, pin_count, recorded_at')
-            .eq('competitor_id', compId)
-            .order('recorded_at', { ascending: false })
-            .limit(2);
-          const sList = snaps || [];
-          if (sList.length < 2) return { id: compId, deltas: null };
+      let snapsList: any[] = [];
+      try {
+        const snapsQuery = g.ok!.db.from('competitor_snapshots').select('competitor_id, profile_reach, profile_views, follower_count, pin_count, recorded_at');
+        if (snapsQuery && typeof snapsQuery.in === 'function') {
+          const { data } = await snapsQuery.in('competitor_id', ids).order('recorded_at', { ascending: false });
+          snapsList = data || [];
+        } else {
+          const perComp = await Promise.all(ids.map(async (compId: string) => {
+            const { data } = await g.ok!.db.from('competitor_snapshots')
+              .select('competitor_id, profile_reach, profile_views, follower_count, pin_count, recorded_at')
+              .eq('competitor_id', compId)
+              .order('recorded_at', { ascending: false })
+              .limit(2);
+            return data || [];
+          }));
+          snapsList = perComp.flat();
+        }
+      } catch {
+        snapsList = [];
+      }
+
+      const snapsByComp = new Map<string, any[]>();
+      for (const s of snapsList) {
+        if (!s.competitor_id) continue;
+        let list = snapsByComp.get(s.competitor_id);
+        if (!list) {
+          list = [];
+          snapsByComp.set(s.competitor_id, list);
+        }
+        if (list.length < 2) {
+          list.push(s);
+        }
+      }
+
+      const calc = (c: number, p: number) => ({
+        change: c - p,
+        percent: p > 0 ? Number((((c - p) / p) * 100).toFixed(1)) : 0,
+      });
+
+      for (const compId of ids) {
+        const sList = snapsByComp.get(compId) || [];
+        if (sList.length < 2) {
+          deltasMap[compId] = null;
+        } else {
           const curr = sList[0];
           const prev = sList[1];
-          const calc = (c: number, p: number) => ({
-            change: c - p,
-            percent: p > 0 ? Number((((c - p) / p) * 100).toFixed(1)) : 0,
-          });
-          return {
-            id: compId,
-            deltas: {
-              reachChange: calc(curr.profile_reach || 0, prev.profile_reach || 0).change,
-              reachPercent: calc(curr.profile_reach || 0, prev.profile_reach || 0).percent,
-              viewsChange: calc(curr.profile_views || 0, prev.profile_views || 0).change,
-              viewsPercent: calc(curr.profile_views || 0, prev.profile_views || 0).percent,
-              followersChange: calc(curr.follower_count || 0, prev.follower_count || 0).change,
-              followersPercent: calc(curr.follower_count || 0, prev.follower_count || 0).percent,
-              pinsChange: calc(curr.pin_count || 0, prev.pin_count || 0).change,
-              pinsPercent: calc(curr.pin_count || 0, prev.pin_count || 0).percent,
-              reach: calc(curr.profile_reach || 0, prev.profile_reach || 0),
-              views: calc(curr.profile_views || 0, prev.profile_views || 0),
-              followers: calc(curr.follower_count || 0, prev.follower_count || 0),
-              pins: calc(curr.pin_count || 0, prev.pin_count || 0),
-            }
+          deltasMap[compId] = {
+            reachChange: calc(curr.profile_reach || 0, prev.profile_reach || 0).change,
+            reachPercent: calc(curr.profile_reach || 0, prev.profile_reach || 0).percent,
+            viewsChange: calc(curr.profile_views || 0, prev.profile_views || 0).change,
+            viewsPercent: calc(curr.profile_views || 0, prev.profile_views || 0).percent,
+            followersChange: calc(curr.follower_count || 0, prev.follower_count || 0).change,
+            followersPercent: calc(curr.follower_count || 0, prev.follower_count || 0).percent,
+            pinsChange: calc(curr.pin_count || 0, prev.pin_count || 0).change,
+            pinsPercent: calc(curr.pin_count || 0, prev.pin_count || 0).percent,
+            reach: calc(curr.profile_reach || 0, prev.profile_reach || 0),
+            views: calc(curr.profile_views || 0, prev.profile_views || 0),
+            followers: calc(curr.follower_count || 0, prev.follower_count || 0),
+            pins: calc(curr.pin_count || 0, prev.pin_count || 0),
           };
-        }))
-      ]);
+        }
+      }
 
-      for (const b of (bRowsRes.data || []) as any[]) countMap[b.competitor_id] = (countMap[b.competitor_id] || 0) + 1;
-      for (const d of deltasList) deltasMap[d.id] = d.deltas;
+      try {
+        const bRes = await g.ok!.db.from('competitor_boards').select('competitor_id').in('competitor_id', ids);
+        for (const b of (bRes?.data || []) as any[]) countMap[b.competitor_id] = (countMap[b.competitor_id] || 0) + 1;
+      } catch {
+        // Non-blocking fallback
+      }
     }
 
     return json({

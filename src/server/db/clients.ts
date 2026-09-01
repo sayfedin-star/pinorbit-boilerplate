@@ -74,9 +74,7 @@ export function getServerEnv(runtimeEnv?: Record<string, any>): ServerEnvConfig 
   const PINARCHIVE_SUPABASE_URL =
     env.PINARCHIVE_SUPABASE_URL || 'https://kuuugffvyokywtgmdrfk.supabase.co';
   const PINARCHIVE_SUPABASE_SECRET_KEY = env.PINARCHIVE_SUPABASE_SECRET_KEY || '';
-  const PINARCHIVE_GAS_URL =
-    env.PINARCHIVE_GAS_URL ||
-    'https://script.google.com/macros/s/AKfycbwBFmyisJ59ejbOLimfgLHAfPcGx4E_WhIiSEI56BhFSJ6HkHrM2wfoPeO-v3nJa5CA/exec';
+  const PINARCHIVE_GAS_URL = env.PINARCHIVE_GAS_URL || '';
 
   const INGEST_SECRET_KEY = env.INGEST_SECRET_KEY || 'pinorbit_ingest_secret_dev';
 
