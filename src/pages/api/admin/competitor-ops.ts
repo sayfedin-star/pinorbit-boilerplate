@@ -97,20 +97,20 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     if (compErr) throw compErr;
 
-    // Auto-heal stale running jobs older than 15 minutes to prevent stuck 'In progress' indicators
+    // Auto-heal stale running jobs older than 45 minutes to prevent stuck 'In progress' indicators
     try {
-      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+      const fortyFiveMinutesAgo = new Date(Date.now() - 45 * 60 * 1000).toISOString();
       const jobTable = competitorsClient.from('competitor_ingestion_jobs');
       if (jobTable && typeof jobTable.update === 'function') {
         await jobTable
           .update({
             status: 'failed',
-            error_message: 'Job timed out after 15 minutes (auto-healed)',
+            error_message: 'Job timed out after 45 minutes (auto-healed)',
             completed_at: new Date().toISOString(),
           })
           .eq('workspace_id', workspaceId)
           .eq('status', 'running')
-          .lt('created_at', fifteenMinutesAgo);
+          .lt('created_at', fortyFiveMinutesAgo);
       }
     } catch (err) {
       // Non-blocking auto-heal
