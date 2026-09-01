@@ -40,7 +40,7 @@ jobs:
           echo "Checking runner egress IP..."
           curl -s --max-time 10 https://api.ipify.org?format=json || true
 
-      - name: Check audit_sweep_enabled Gate & Run Full Sweep
+      - name: Run PinArchive Monthly Audit Sweep
         env:
           PINARCHIVE_SUPABASE_URL: ${{ secrets.PINARCHIVE_SUPABASE_URL }}
           PINARCHIVE_SUPABASE_KEY: ${{ secrets.PINARCHIVE_SUPABASE_KEY }}
@@ -55,36 +55,4 @@ jobs:
           FORCE_RUN: 'true'
           SHARD_COUNT: 1
           DISCOVERY_SHARD: 0
-        run: |
-          node -e '
-          async function checkAuditGate() {
-            const supaUrl = process.env.PINARCHIVE_SUPABASE_URL;
-            const supaKey = process.env.PINARCHIVE_SUPABASE_KEY;
-            const targetWs = process.env.DISCOVERY_WORKSPACE_ID;
-            if (!supaUrl || !supaKey) {
-              console.log("Missing Supabase credentials for audit gate check");
-              return true;
-            }
-            try {
-              const url = `${supaUrl}/rest/v1/pa_workspace_settings?select=workspace_id,audit_sweep_enabled${targetWs ? "&workspace_id=eq." + targetWs : ""}`;
-              const res = await fetch(url, {
-                headers: { apikey: supaKey, Authorization: "Bearer " + supaKey, Accept: "application/json" }
-              });
-              if (res.ok) {
-                const settings = await res.json();
-                if (Array.isArray(settings) && settings.length > 0) {
-                  const anyEnabled = settings.some(s => s.audit_sweep_enabled !== false);
-                  if (!anyEnabled) {
-                    console.log("⏸️ Audit sweep is disabled across all target workspaces. Exiting cleanly (exit 0).");
-                    process.exit(0);
-                  }
-                }
-              }
-            } catch (e) {
-              console.warn("Could not check audit_sweep_enabled gate, proceeding with run:", e.message);
-            }
-          }
-          checkAuditGate().then(() => {
-            import("./scripts/pinarchive-discovery.mjs");
-          });
-          '
+        run: node scripts/pinarchive-discovery.mjs
