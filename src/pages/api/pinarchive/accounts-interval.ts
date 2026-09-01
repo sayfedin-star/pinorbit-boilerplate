@@ -42,9 +42,12 @@ async function handleIntervalUpdate(request: Request, locals: any): Promise<Resp
 
   const username = body.username ? String(body.username).trim() : '';
   const accountId = body.account_id ? String(body.account_id).trim() : '';
+  const accountIds = Array.isArray(body.account_ids)
+    ? body.account_ids.map((id: any) => String(id).trim()).filter((id: string) => UUID_REGEX.test(id))
+    : [];
 
-  if (!username && !accountId) {
-    return json({ success: false, error: 'Either username or account_id is required.' }, 400);
+  if (!username && !accountId && accountIds.length === 0) {
+    return json({ success: false, error: 'Either username, account_id, or account_ids array is required.' }, 400);
   }
 
   let wsCtx;
@@ -66,7 +69,9 @@ async function handleIntervalUpdate(request: Request, locals: any): Promise<Resp
       })
       .eq('workspace_id', wsCtx.workspaceId);
 
-    if (accountId && UUID_REGEX.test(accountId)) {
+    if (accountIds.length > 0) {
+      query = query.in('id', accountIds);
+    } else if (accountId && UUID_REGEX.test(accountId)) {
       query = query.eq('id', accountId);
     } else if (username) {
       query = query.ilike('username', username);
@@ -79,8 +84,7 @@ async function handleIntervalUpdate(request: Request, locals: any): Promise<Resp
 
     return json({
       success: true,
-      username: username || undefined,
-      account_id: accountId || undefined,
+      count: accountIds.length > 0 ? accountIds.length : 1,
       interval_days: intervalDays,
     });
   } catch (err: any) {
