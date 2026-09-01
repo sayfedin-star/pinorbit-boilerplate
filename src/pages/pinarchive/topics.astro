@@ -955,7 +955,7 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  function initTopics() {
     const topicName = new URLSearchParams(window.location.search).get('name')?.trim();
     if (topicName) {
       loadClusterDetail(topicName);
@@ -1027,5 +1027,11 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
         else loadClusterList();
       });
     }
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTopics);
+  } else {
+    initTopics();
+  }
 </script>
