@@ -221,7 +221,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           .select('pin_ref, recorded_at, saves, repins, comments, shares, reactions_total')
           .in('pin_ref', chunk)
           .order('recorded_at', { ascending: false })
-          .limit(chunk.length * 15);
+          .limit(chunk.length * 20);
 
         if (Array.isArray(metricsData)) {
           for (const m of metricsData) {
@@ -233,9 +233,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
 
       const now = Date.now();
-      const oneDayMs = 86400000;
-      const threeDaysMs = oneDayMs * 3;
-      const sevenDaysMs = oneDayMs * 7;
+      const ONE_DAY_MS = 24 * 3600 * 1000;
+      const THREE_DAYS_MS = 3 * ONE_DAY_MS;
+      const SEVEN_DAYS_MS = 7 * ONE_DAY_MS;
 
       for (const p of pins) {
         p.account_username = p.account_id ? accountMap.get(p.account_id) || null : null;
@@ -244,49 +244,70 @@ export const GET: APIRoute = async ({ request, locals }) => {
         const currentRepins = Number(p.repins || 0);
         const velocity = Number(p.velocity || 0);
 
-        let deltaSaves24h = Math.round(velocity * 1);
-        let deltaSaves3d = Math.round(velocity * 3);
-        let deltaSaves7d = Math.round(velocity * 7);
-        let deltaRepins24h = Math.round(velocity * 0.5);
-        let deltaRepins7d = Math.round(velocity * 3.5);
+        let deltaSaves24h = 0;
+        let deltaSaves3d = 0;
+        let deltaSaves7d = 0;
+        let deltaRepins24h = 0;
+        let deltaRepins7d = 0;
 
         if (snaps.length >= 2) {
-          const t0 = new Date(snaps[0].recorded_at).getTime();
-          const s0 = Number(snaps[0].saves || 0);
-          const r0 = Number(snaps[0].repins || 0);
+          const latestSnap = snaps[0];
+          const latestTime = new Date(latestSnap.recorded_at).getTime();
+          const latestS = Number(latestSnap.saves || currentSaves);
+          const latestR = Number(latestSnap.repins || currentRepins);
 
-          // Find snap closest to ~24h ago
-          const snap24h = snaps.find((s) => (t0 - new Date(s.recorded_at).getTime()) >= oneDayMs * 0.75);
-          if (snap24h) {
-            deltaSaves24h = Math.max(0, s0 - Number(snap24h.saves || 0));
-            deltaRepins24h = Math.max(0, r0 - Number(snap24h.repins || 0));
-          } else {
-            const deltaRecent = Math.max(0, s0 - Number(snaps[1].saves || 0));
-            const daysDiff = Math.max(0.01, (t0 - new Date(snaps[1].recorded_at).getTime()) / oneDayMs);
-            deltaSaves24h = Math.max(0, Math.round(deltaRecent / daysDiff));
-            deltaRepins24h = Math.max(0, Math.round((r0 - Number(snaps[1].repins || 0)) / daysDiff));
-          }
+          // Only calculate real-time window if the latest snapshot was taken in the last 48 hours
+          const ageSinceLastSnap = now - latestTime;
 
-          // Find snap closest to ~3d ago
-          const snap3d = snaps.find((s) => (t0 - new Date(s.recorded_at).getTime()) >= threeDaysMs * 0.75);
-          if (snap3d) {
-            deltaSaves3d = Math.max(0, s0 - Number(snap3d.saves || 0));
-          } else {
-            deltaSaves3d = Math.max(deltaSaves24h, Math.round(deltaSaves24h * 3));
-          }
+          if (ageSinceLastSnap <= 48 * 3600 * 1000) {
+            // 1. 24-Hour Delta: earliest snapshot within last 28 hours
+            const snap24h = [...snaps].reverse().find((s) => (now - new Date(s.recorded_at).getTime()) <= 28 * 3600 * 1000);
+            if (snap24h && snap24h !== latestSnap) {
+              deltaSaves24h = Math.max(0, latestS - Number(snap24h.saves || 0));
+              deltaRepins24h = Math.max(0, latestR - Number(snap24h.repins || 0));
+            } else if (snaps.length >= 2 && (latestTime - new Date(snaps[1].recorded_at).getTime()) <= ONE_DAY_MS) {
+              deltaSaves24h = Math.max(0, latestS - Number(snaps[1].saves || 0));
+              deltaRepins24h = Math.max(0, latestR - Number(snaps[1].repins || 0));
+            }
 
-          // Find snap closest to ~7d ago
-          const snap7d = snaps.find((s) => (t0 - new Date(s.recorded_at).getTime()) >= sevenDaysMs * 0.75) || snaps[snaps.length - 1];
-          if (snap7d && snap7d !== snaps[0]) {
-            deltaSaves7d = Math.max(0, s0 - Number(snap7d.saves || 0));
-            deltaRepins7d = Math.max(0, r0 - Number(snap7d.repins || 0));
+            // 2. 3-Day Delta: earliest snapshot within last 76 hours
+            const snap3d = [...snaps].reverse().find((s) => (now - new Date(s.recorded_at).getTime()) <= 76 * 3600 * 1000);
+            if (snap3d && snap3d !== latestSnap) {
+              deltaSaves3d = Math.max(deltaSaves24h, latestS - Number(snap3d.saves || 0));
+            } else {
+              deltaSaves3d = deltaSaves24h;
+            }
+
+            // 3. 7-Day Delta: earliest snapshot within last 172 hours
+            const snap7d = [...snaps].reverse().find((s) => (now - new Date(s.recorded_at).getTime()) <= 172 * 3600 * 1000);
+            if (snap7d && snap7d !== latestSnap) {
+              deltaSaves7d = Math.max(deltaSaves3d, latestS - Number(snap7d.saves || 0));
+              deltaRepins7d = Math.max(deltaRepins24h, latestR - Number(snap7d.repins || 0));
+            } else {
+              deltaSaves7d = deltaSaves3d;
+              deltaRepins7d = deltaRepins24h;
+            }
+          } else if (ageSinceLastSnap <= SEVEN_DAYS_MS) {
+            // Pin refreshed within the past 7 days, but no update in the last 24h/3d
+            deltaSaves24h = 0;
+            deltaSaves3d = 0;
+            const oldestSnap = snaps[snaps.length - 1];
+            deltaSaves7d = Math.max(0, latestS - Number(oldestSnap.saves || 0));
+            deltaRepins7d = Math.max(0, latestR - Number(oldestSnap.repins || 0));
           } else {
-            deltaSaves7d = Math.max(deltaSaves3d, Math.round(deltaSaves24h * 7));
-            deltaRepins7d = Math.max(deltaRepins24h, Math.round(deltaRepins24h * 7));
+            // No recent updates in the last 7 days
+            deltaSaves24h = 0;
+            deltaSaves3d = 0;
+            deltaSaves7d = 0;
           }
         }
 
-        const ageDays = Math.max(0, (now - new Date(p.created_at_pinterest || p.archived_at || now).getTime()) / oneDayMs);
+        // Strict Guarantee: Delta cannot exceed total current saves
+        deltaSaves24h = Math.min(deltaSaves24h, currentSaves);
+        deltaSaves3d = Math.min(deltaSaves3d, currentSaves);
+        deltaSaves7d = Math.min(deltaSaves7d, currentSaves);
+
+        const ageDays = Math.max(0, (now - new Date(p.created_at_pinterest || p.archived_at || now).getTime()) / ONE_DAY_MS);
         const stage = computePinStage(velocity, deltaSaves24h, ageDays);
         const anomaly = computePinAnomaly(deltaSaves24h, velocity, 1);
 

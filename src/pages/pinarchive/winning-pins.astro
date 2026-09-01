@@ -1583,9 +1583,9 @@ import SectionHeader from '../../components/ui/SectionHeader.astro';
       const viralityRatio = saves > 0 ? ((repins / saves) * 100).toFixed(0) : '0';
       const strategy = getPinStrategy(p);
 
-      const d24 = Number(p.delta_saves_24h ?? p.delta_saves ?? Math.round(velocity * 1));
-      const d3d = Number(p.delta_saves_3d ?? Math.round(velocity * 3));
-      const d7d = Number(p.delta_saves_7d ?? Math.round(velocity * 7));
+      const d24 = Number(p.delta_saves_24h ?? 0);
+      const d3d = Number(p.delta_saves_3d ?? 0);
+      const d7d = Number(p.delta_saves_7d ?? 0);
 
       const proj7d = Math.round(saves + velocity * 7);
       const proj30d = Math.round(saves + velocity * 30);
