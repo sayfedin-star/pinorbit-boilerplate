@@ -84,43 +84,92 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return json({ success: false, error: metErr.message }, 500);
     }
 
-    const metricsList = Array.isArray(metrics) ? [...metrics].reverse() : [];
-    let deltaSaves = 0;
-    let deltaRepins = 0;
-    let deltaComments = 0;
-    let deltaShares = 0;
-    let deltaReactions = 0;
+    const snapsDesc = Array.isArray(metrics) ? metrics : [];
+    const metricsList = [...snapsDesc].reverse(); // chronological
+
+    const now = Date.now();
+    const ONE_DAY_MS = 24 * 3600 * 1000;
+    const currentSaves = Number(pin.saves || 0);
+    const currentRepins = Number(pin.repins || 0);
+
+    let deltaSaves24h = 0;
+    let deltaSaves3d = 0;
+    let deltaSaves7d = 0;
+    let deltaRepins24h = 0;
+    let deltaRepins7d = 0;
     let daysBetween = 1;
 
-    if (metricsList.length >= 2) {
-      const latest = metricsList[metricsList.length - 1];
-      const prior = metricsList[metricsList.length - 2];
-      deltaSaves = Number(latest.saves || 0) - Number(prior.saves || 0);
-      deltaRepins = Number(latest.repins || 0) - Number(prior.repins || 0);
-      deltaComments = Number(latest.comments || 0) - Number(prior.comments || 0);
-      deltaShares = Number(latest.shares || 0) - Number(prior.shares || 0);
-      deltaReactions = Number(latest.reactions_total || 0) - Number(prior.reactions_total || 0);
+    if (snapsDesc.length >= 2) {
+      const latestSnap = snapsDesc[0];
+      const latestTime = new Date(latestSnap.recorded_at).getTime();
+      const latestS = Number(latestSnap.saves || currentSaves);
+      const latestR = Number(latestSnap.repins || currentRepins);
+      const ageSinceLastSnap = now - latestTime;
 
-      const t0 = new Date(latest.recorded_at).getTime();
+      if (ageSinceLastSnap <= 48 * 3600 * 1000) {
+        const snap24h = [...snapsDesc].reverse().find((s) => (now - new Date(s.recorded_at).getTime()) <= 28 * 3600 * 1000);
+        if (snap24h && snap24h !== latestSnap) {
+          deltaSaves24h = Math.max(0, latestS - Number(snap24h.saves || 0));
+          deltaRepins24h = Math.max(0, latestR - Number(snap24h.repins || 0));
+        } else if (snapsDesc.length >= 2 && (latestTime - new Date(snapsDesc[1].recorded_at).getTime()) <= ONE_DAY_MS) {
+          deltaSaves24h = Math.max(0, latestS - Number(snapsDesc[1].saves || 0));
+          deltaRepins24h = Math.max(0, latestR - Number(snapsDesc[1].repins || 0));
+        }
+
+        const snap3d = [...snapsDesc].reverse().find((s) => (now - new Date(s.recorded_at).getTime()) <= 76 * 3600 * 1000);
+        if (snap3d && snap3d !== latestSnap) {
+          deltaSaves3d = Math.max(deltaSaves24h, latestS - Number(snap3d.saves || 0));
+        } else {
+          deltaSaves3d = deltaSaves24h;
+        }
+
+        const snap7d = [...snapsDesc].reverse().find((s) => (now - new Date(s.recorded_at).getTime()) <= 172 * 3600 * 1000);
+        if (snap7d && snap7d !== latestSnap) {
+          deltaSaves7d = Math.max(deltaSaves3d, latestS - Number(snap7d.saves || 0));
+          deltaRepins7d = Math.max(deltaRepins24h, latestR - Number(snap7d.repins || 0));
+        } else {
+          deltaSaves7d = deltaSaves3d;
+          deltaRepins7d = deltaRepins24h;
+        }
+      } else if (ageSinceLastSnap <= 7 * ONE_DAY_MS) {
+        deltaSaves24h = 0;
+        deltaSaves3d = 0;
+        const oldestSnap = snapsDesc[snapsDesc.length - 1];
+        deltaSaves7d = Math.max(0, latestS - Number(oldestSnap.saves || 0));
+        deltaRepins7d = Math.max(0, latestR - Number(oldestSnap.repins || 0));
+      }
+
+      const prior = snapsDesc[1];
+      const t0 = new Date(latestSnap.recorded_at).getTime();
       const t1 = new Date(prior.recorded_at).getTime();
       daysBetween = Math.max(0.01, (t0 - t1) / 86400000);
     }
 
-    const ageDays = Math.max(0, (Date.now() - new Date(pin.created_at_pinterest || pin.archived_at || Date.now()).getTime()) / 86400000);
+    // Strict Guarantee: Delta cannot exceed total current saves
+    deltaSaves24h = Math.min(deltaSaves24h, currentSaves);
+    deltaSaves3d = Math.min(deltaSaves3d, currentSaves);
+    deltaSaves7d = Math.min(deltaSaves7d, currentSaves);
+
+    const ageDays = Math.max(0, (now - new Date(pin.created_at_pinterest || pin.archived_at || now).getTime()) / ONE_DAY_MS);
     const velocity = Number(pin.velocity || 0);
 
-    const stage = computePinStage(velocity, deltaSaves, ageDays);
-    const anomaly = computePinAnomaly(deltaSaves, velocity, daysBetween);
+    const stage = computePinStage(velocity, deltaSaves24h, ageDays);
+    const anomaly = computePinAnomaly(deltaSaves24h, velocity, daysBetween);
 
     pin.age_days = Math.round(ageDays * 10) / 10;
     pin.stage = stage;
     pin.anomaly = anomaly;
+    pin.delta_saves_24h = deltaSaves24h;
+    pin.delta_saves_3d = deltaSaves3d;
+    pin.delta_saves_7d = deltaSaves7d;
+    pin.delta_repins_24h = deltaRepins24h;
+    pin.delta_repins_7d = deltaRepins7d;
     pin.deltas = {
-      saves: deltaSaves,
-      repins: deltaRepins,
-      comments: deltaComments,
-      shares: deltaShares,
-      reactions: deltaReactions,
+      saves: deltaSaves24h,
+      repins: deltaRepins24h,
+      comments: 0,
+      shares: 0,
+      reactions: 0,
     };
 
     // c) Fetch canonical siblings and cluster consolidation if canonical_pin_id is present
