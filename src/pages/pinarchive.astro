@@ -61,6 +61,16 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         <span>📖 How It Works</span>
       </button>
 
+      <!-- Track Creator / Add Account Button -->
+      <button
+        id="open-add-creator-modal"
+        type="button"
+        class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Track Creator</span>
+      </button>
+
       <!-- Quick Navigation Toolbar -->
       <div class="flex items-center rounded-xl border border-border/80 bg-card p-0.5 shadow-xs">
         <button id="pa-refresh-btn" title="Refresh PinArchive overview data"
@@ -663,15 +673,25 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
               title="Change scrape interval for selected accounts"
             >
               <option value="" disabled selected>Select…</option>
-              <option value="1">1 day (Daily)</option>
+              <option value="1">1 day (Daily) - Default</option>
               <option value="2">2 days</option>
-              <option value="3">3 days (Default)</option>
+              <option value="3">3 days</option>
               <option value="5">5 days</option>
               <option value="7">7 days (Weekly)</option>
               <option value="14">14 days (Bi-weekly)</option>
               <option value="30">30 days (Monthly)</option>
             </select>
           </div>
+
+          <button
+            id="send-selected-to-competitors-btn"
+            type="button"
+            class="h-8 inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-3 text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+            title="Track Selected in Competitor Intelligence"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+            <span>🎯 Send to Competitors</span>
+          </button>
 
           <button
             id="gas-bulk-pause-btn"
@@ -723,6 +743,94 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         </table>
       </div>
     </section>
+
+    <!-- ═══ Add Creator Account Modal ═══ -->
+    <div id="add-creator-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+      <div class="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between border-b border-border pb-3">
+          <div class="flex items-center gap-3">
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+            </span>
+            <div>
+              <h3 class="text-base font-bold text-foreground">Track Pinterest Creator</h3>
+              <p class="text-xs text-muted-foreground">Add account to PinArchive Ingestion Pipeline</p>
+            </div>
+          </div>
+          <button id="close-add-creator-modal-btn" type="button" class="text-muted-foreground hover:text-foreground text-sm p-1 cursor-pointer">✕</button>
+        </div>
+
+        <form id="add-creator-form" class="space-y-4">
+          <div class="space-y-1.5">
+            <label for="new-creator-username" class="block text-xs font-bold text-foreground">
+              Pinterest Handle or Profile URL <span class="text-rose-500">*</span>
+            </label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-mono text-xs">@</span>
+              <input
+                id="new-creator-username"
+                type="text"
+                required
+                placeholder="pinterest_creator or url"
+                class="w-full rounded-xl border border-border bg-background py-2 pl-7 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
+              />
+            </div>
+            <p class="text-[11px] text-muted-foreground">e.g. <code>cicisafriajit</code> or <code>https://www.pinterest.com/cicisafriajit/</code></p>
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="new-creator-interval" class="block text-xs font-bold text-foreground">
+              Discovery / Ingest Interval
+            </label>
+            <select
+              id="new-creator-interval"
+              class="w-full rounded-xl border border-border bg-background p-2 text-xs font-semibold text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs cursor-pointer"
+            >
+              <option value="1" selected>1 day (Daily) - Recommended</option>
+              <option value="2">2 days</option>
+              <option value="3">3 days</option>
+              <option value="5">5 days</option>
+              <option value="7">7 days (Weekly)</option>
+              <option value="14">14 days (Bi-weekly)</option>
+              <option value="30">30 days (Monthly)</option>
+            </select>
+          </div>
+
+          <!-- Cross-Module Sync Checkbox -->
+          <div class="rounded-xl bg-muted/40 border border-border/80 p-3 flex items-start gap-2.5">
+            <input
+              id="sync-to-competitors-checkbox"
+              type="checkbox"
+              checked
+              class="mt-0.5 rounded accent-primary h-4 w-4 cursor-pointer"
+            />
+            <label for="sync-to-competitors-checkbox" class="text-xs text-foreground cursor-pointer select-none">
+              <span class="font-bold block">Also track in Competitor Intelligence</span>
+              <span class="text-[11px] text-muted-foreground block">Syncs profile reach, follower velocity, and snapshot analytics automatically.</span>
+            </label>
+          </div>
+
+          <div id="add-creator-error" class="hidden text-xs text-rose-500 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-xl font-medium"></div>
+
+          <div class="flex items-center justify-end gap-2 pt-3 border-t border-border">
+            <button
+              id="cancel-add-creator-modal-btn"
+              type="button"
+              class="rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              id="submit-add-creator-btn"
+              type="submit"
+              class="inline-flex items-center gap-1.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 text-xs font-bold shadow-sm transition-all cursor-pointer"
+            >
+              <span>+ Track Creator</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <!-- ═══ Delete Accounts Confirmation Modal ═══ -->
     <div id="delete-accounts-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
@@ -1094,7 +1202,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
 
     // Interval filter
     if (selectedInterval !== 'all') {
-      filtered = filtered.filter(a => String(a.interval_days || 3) === selectedInterval);
+      filtered = filtered.filter(a => String(a.interval_days || 1) === selectedInterval);
     }
 
     // Search filter
@@ -1313,7 +1421,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         }
 
         if (colVisible.interval_days) {
-          const currentDays = Number(acc.interval_days || 3);
+          const currentDays = Number(acc.interval_days || 1);
           dynamicCells += `
             <td class="${padClass} font-medium text-foreground">
               <div class="relative inline-flex items-center">
@@ -1446,6 +1554,14 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
             </td>
             <td class="${padClass} text-right">
               <div class="inline-flex items-center justify-end gap-1.5">
+                <button
+                  type="button"
+                  data-send-to-comp-user="${escapeHtml(acc.username)}"
+                  class="inline-flex items-center justify-center h-7 w-7 rounded-xl border border-border bg-background hover:border-emerald-500/50 hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer shadow-2xs"
+                  title="Track in Competitor Intelligence"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+                </button>
                 <a
                   href="/pinarchive/account/${encodeURIComponent(acc.username)}"
                   class="inline-flex items-center gap-1 rounded-xl border border-border bg-background hover:bg-muted/80 text-foreground px-2.5 py-1 text-xs font-semibold shadow-2xs hover:border-primary/40 transition-all"
@@ -1473,6 +1589,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
     attachAccountIngestToggleListeners();
     attachSingleDeleteListeners();
     attachIntervalChangeListeners();
+    attachSendToCompetitorListeners();
 
     // Copy handle listeners
     tbody.querySelectorAll<HTMLElement>('[data-pa-copy-handle]').forEach(btn => {
@@ -2117,6 +2234,46 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
     });
   }
 
+  // ─── Send to Competitor Intelligence (Single Row) ─────────────────────────
+  function attachSendToCompetitorListeners() {
+    document.querySelectorAll<HTMLButtonElement>('[data-send-to-comp-user]').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const username = btn.getAttribute('data-send-to-comp-user');
+        if (!username) return;
+
+        const confirmed = confirm(`Track @${username} in Competitor Intelligence?`);
+        if (!confirmed) return;
+
+        const root = document.getElementById('pinarchive-page-root');
+        const wsId = root?.getAttribute('data-workspace-id');
+
+        btn.disabled = true;
+        try {
+          const res = await fetch('/api/admin/competitors', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workspace_id: wsId,
+              username,
+              account_type: 'competitor',
+            }),
+          });
+          const json = await res.json();
+          if (res.ok && json.success) {
+            toast(`Sent @${username} to Competitor Intelligence!`);
+          } else {
+            toast(json.error || 'Failed to send account to Competitor Intelligence', 'error');
+          }
+        } catch (err: any) {
+          toast(err.message || 'Network error', 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
   // ─── Delete Accounts Modal ────────────────────────────────────────────────
   let pendingDeleteIds: string[] = [];
 
@@ -2326,6 +2483,49 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       }
     });
 
+    // Send Selected to Competitor Intelligence
+    document.getElementById('send-selected-to-competitors-btn')?.addEventListener('click', async () => {
+      if (selectedAccounts.size === 0) return;
+      const count = selectedAccounts.size;
+      const confirmed = confirm(`Send ${count} selected creator account(s) to Competitor Intelligence?`);
+      if (!confirmed) return;
+
+      const root = document.getElementById('pinarchive-page-root');
+      const wsId = root?.getAttribute('data-workspace-id');
+
+      const selectedUsernames = rawAccounts
+        .filter(a => selectedAccounts.has(a.id))
+        .map(a => a.username)
+        .filter(Boolean);
+
+      if (selectedUsernames.length === 0) return;
+
+      const btn = document.getElementById('send-selected-to-competitors-btn') as HTMLButtonElement | null;
+      if (btn) btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/admin/competitors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspace_id: wsId,
+            competitors: selectedUsernames,
+            account_type: 'competitor',
+          }),
+        });
+        const json = await res.json();
+        if (res.ok && json.success) {
+          toast(`Sent ${json.count || selectedUsernames.length} account(s) to Competitor Intelligence!`);
+        } else {
+          toast(json.error || 'Failed to send accounts to Competitor Intelligence', 'error');
+        }
+      } catch (err: any) {
+        toast(err.message || 'Network error', 'error');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+
     document.getElementById('gas-bulk-pause-btn')?.addEventListener('click', async () => {
       if (selectedAccounts.size === 0) return;
       const count = selectedAccounts.size;
@@ -2522,6 +2722,125 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       tabBtnMatrix?.addEventListener('click', () => switchTab(tabBtnMatrix, tabViewMatrix));
     }
     setupArchitectureGuideModal();
+
+    // ─── Add Creator Account Modal Controls ──────────────────────────────────
+    function cleanPinterestUsername(input: string): string {
+      let u = String(input || '').trim();
+      u = u.replace(/^(https?:\/\/)?(www\.)?pinterest\.[a-z.]+\//i, '');
+      u = u.replace(/\/.*$/, '');
+      u = u.replace(/^@+/, '').trim();
+      return u;
+    }
+
+    function setupAddCreatorModal() {
+      const modal = document.getElementById('add-creator-modal');
+      const openBtn = document.getElementById('open-add-creator-modal');
+      const closeBtn = document.getElementById('close-add-creator-modal-btn');
+      const cancelBtn = document.getElementById('cancel-add-creator-modal-btn');
+      const form = document.getElementById('add-creator-form') as HTMLFormElement | null;
+      const usernameInput = document.getElementById('new-creator-username') as HTMLInputElement | null;
+      const intervalSelect = document.getElementById('new-creator-interval') as HTMLSelectElement | null;
+      const syncCheckbox = document.getElementById('sync-to-competitors-checkbox') as HTMLInputElement | null;
+      const errorDiv = document.getElementById('add-creator-error');
+      const submitBtn = document.getElementById('submit-add-creator-btn') as HTMLButtonElement | null;
+
+      function openModal() {
+        if (form) form.reset();
+        if (intervalSelect) intervalSelect.value = '1';
+        if (syncCheckbox) syncCheckbox.checked = true;
+        if (errorDiv) {
+          errorDiv.textContent = '';
+          errorDiv.classList.add('hidden');
+        }
+        modal?.classList.remove('hidden');
+        modal?.classList.add('flex');
+        usernameInput?.focus();
+      }
+
+      function closeModal() {
+        modal?.classList.add('hidden');
+        modal?.classList.remove('flex');
+      }
+
+      openBtn?.addEventListener('click', openModal);
+      closeBtn?.addEventListener('click', closeModal);
+      cancelBtn?.addEventListener('click', closeModal);
+
+      form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!usernameInput) return;
+        const rawUser = usernameInput.value.trim();
+        const cleanUser = cleanPinterestUsername(rawUser);
+
+        if (!cleanUser) {
+          if (errorDiv) {
+            errorDiv.textContent = 'Please enter a valid Pinterest username or URL.';
+            errorDiv.classList.remove('hidden');
+          }
+          return;
+        }
+
+        const root = document.getElementById('pinarchive-page-root');
+        const wsId = root?.getAttribute('data-workspace-id');
+        const intervalVal = Number(intervalSelect?.value || 1);
+        const syncToComp = Boolean(syncCheckbox?.checked);
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Tracking…';
+        }
+        if (errorDiv) errorDiv.classList.add('hidden');
+
+        try {
+          // 1. Import into PinArchive
+          const paRes = await fetch('/api/pinarchive/accounts-import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workspace_id: wsId,
+              accounts: [{ username: cleanUser, interval_days: intervalVal }],
+              dispatch: false,
+            }),
+          });
+          const paJson = await paRes.json();
+          if (!paRes.ok || !paJson.success) {
+            throw new Error(paJson.error || 'Failed to add account to PinArchive');
+          }
+
+          // 2. Optionally sync to Competitor Intelligence
+          if (syncToComp) {
+            try {
+              await fetch('/api/admin/competitors', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  workspace_id: wsId,
+                  username: cleanUser,
+                  account_type: 'competitor',
+                }),
+              });
+            } catch (compErr) {
+              console.warn('Competitor sync deferred:', compErr);
+            }
+          }
+
+          toast(`Started tracking @${cleanUser} in PinArchive!`);
+          closeModal();
+          loadOverview(1);
+        } catch (err: any) {
+          if (errorDiv) {
+            errorDiv.textContent = err.message || 'Error tracking creator';
+            errorDiv.classList.remove('hidden');
+          }
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span>+ Track Creator</span>';
+          }
+        }
+      });
+    }
+    setupAddCreatorModal();
   }
 
   // ─── Keyboard shortcut ────────────────────────────────────────────────────

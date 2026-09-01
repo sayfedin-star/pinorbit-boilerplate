@@ -786,7 +786,7 @@ async function main() {
     }
 
     // 6. Update pa_accounts metadata & next_run_at
-    const intervalDays = Number(acc.interval_days || 3);
+    const intervalDays = Number(acc.interval_days || 1);
     const nextRunAt = hasMore && cursor && !circuitBroken
       ? new Date().toISOString()
       : new Date(Date.now() + intervalDays * 86400000).toISOString();

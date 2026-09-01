@@ -148,6 +148,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         continue;
       }
 
+      const intervalDays = Number((acc as any).interval_days || 1);
+
       // New Account -> Insert row into Project 4 pa_accounts
       const { data: newRow, error: insErr } = await pinArchive
         .from('pa_accounts')
@@ -157,6 +159,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             username: acc.username,
             status: 'active',
             ingest_enabled: true,
+            interval_days: intervalDays,
           },
           { onConflict: 'workspace_id,username', ignoreDuplicates: true }
         )
@@ -179,6 +182,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         username: acc.username,
         workspace_id: workspaceId,
         user_id: acc.user_id || '',
+        interval_days: intervalDays,
       });
 
       const itemResult: Record<string, any> = {
