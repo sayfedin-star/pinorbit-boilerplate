@@ -40,7 +40,7 @@ async function main() {
   try {
     accounts = await supaQuery(
       'pa_accounts',
-      'select=id,workspace_id,username,status,ingest_enabled,interval_days,last_run_at&ingest_enabled=eq.true&status=eq.active'
+      'select=id,workspace_id,username,status,ingest_enabled,interval_days,last_run_at&ingest_enabled=neq.false&status=eq.active'
     );
   } catch (err) {
     console.warn(`⚠️ Could not query pa_accounts: ${err.message}`);

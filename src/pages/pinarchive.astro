@@ -1189,7 +1189,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       const diffMs = nextMs - Date.now();
       const dateStr = nextDate.toISOString().slice(0, 10);
       if (diffMs <= 0) {
-        return `Overdue — scheduled for ${dateStr} (UTC)`;
+        return `Overdue (${dateStr})`;
       }
       const mins = Math.floor(diffMs / 60000);
       if (mins < 60) return `in ${Math.max(1, mins)}m (${dateStr} UTC)`;
@@ -1199,6 +1199,20 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       return `in ${days} days (${dateStr} UTC)`;
     } catch {
       return 'Scheduled';
+    }
+  }
+
+  function formatTooltipNextRun(isoString?: string | null): string {
+    if (!isoString) return 'No sync scheduled';
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return 'No sync scheduled';
+      const yyyyMmDd = d.toISOString().slice(0, 10);
+      const hh = String(d.getUTCHours()).padStart(2, '0');
+      const mm = String(d.getUTCMinutes()).padStart(2, '0');
+      return `Next scheduled sync: ${yyyyMmDd} ${hh}:${mm} UTC`;
+    } catch {
+      return 'No sync scheduled';
     }
   }
 
@@ -1449,6 +1463,18 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
         const isActive = isIngestActive;
         const isChecked = selectedAccounts.has(acc.id);
         const { bg: avatarBg, initial } = getAvatarStyle(acc.username || '');
+        const isPaused = acc.status === 'paused' || (acc.status === 'active' && acc.ingest_enabled === false);
+        const isError = ['cookie_expired', 'error'].includes(acc.status);
+        const badgeText = isPaused
+          ? 'PAUSED'
+          : escapeHtml(String(acc.status || 'unknown').replace(/_/g, ' ').toUpperCase());
+        const badgeClass = isIngestActive
+          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+          : isPaused
+          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+          : isError
+          ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+          : 'bg-muted text-muted-foreground border border-muted-foreground/20';
         const changed = Number(acc.changed_last_refresh ?? 0);
         const total = Number(acc.checked_last_refresh ?? (acc.db_pins_count !== undefined ? acc.db_pins_count : (acc.pins_count ?? 0)));
         const archCount = acc.db_pins_count !== undefined ? acc.db_pins_count : (acc.pins_count ?? 0);
@@ -1510,7 +1536,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
               <div class="text-[11px] font-medium text-foreground">
                 ${acc.last_run_at ? timeAgo(acc.last_run_at) : '<span class="text-muted-foreground/60">Never</span>'}
               </div>
-              <div class="text-[10px] text-muted-foreground mt-0.5" title="${acc.next_run_at ? `Next scheduled sync: ${acc.next_run_at}` : 'No sync scheduled'}">
+              <div class="text-[10px] text-muted-foreground mt-0.5" title="${escapeHtml(formatTooltipNextRun(acc.next_run_at))}">
                 <span>Next: ${nextStr}</span>
               </div>
             </td>
@@ -1583,12 +1609,8 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     </a>
                     ${compBadge}
-                    <span class="text-[9.5px] font-bold uppercase px-1.5 py-0.2 rounded-full ${
-                      acc.ingest_enabled !== false && acc.status === 'active'
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                    }">
-                      ${acc.ingest_enabled !== false && acc.status === 'active' ? escapeHtml(acc.status) : 'PAUSED'}
+                    <span class="text-[9.5px] font-bold uppercase px-1.5 py-0.2 rounded-full ${badgeClass}">
+                      ${badgeText}
                     </span>
                   </div>
                 </div>
