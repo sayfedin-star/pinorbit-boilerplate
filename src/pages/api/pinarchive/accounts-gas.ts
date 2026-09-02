@@ -181,7 +181,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } else if (action === 'pause') {
       await db
         .from('pa_accounts')
-        .update({ status: 'paused' })
+        .update({ status: 'paused', ingest_enabled: false })
         .eq('workspace_id', wsCtx.workspaceId)
         .in('username', usernames);
 
@@ -191,7 +191,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } else if (action === 'resume') {
       await db
         .from('pa_accounts')
-        .update({ status: 'active' })
+        .update({ status: 'active', ingest_enabled: true })
         .eq('workspace_id', wsCtx.workspaceId)
         .in('username', usernames);
 
@@ -199,9 +199,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         results.push({ username: u, ok: true });
       }
     } else if (action === 'set_interval') {
+      const todayUTC = new Date().toISOString().slice(0, 10);
+      const nextTarget = new Date(`${todayUTC}T00:00:00.000Z`);
+      nextTarget.setUTCDate(nextTarget.getUTCDate() + days);
+
       await db
         .from('pa_accounts')
-        .update({ interval_days: days })
+        .update({ interval_days: days, next_run_at: nextTarget.toISOString() })
         .eq('workspace_id', wsCtx.workspaceId)
         .in('username', usernames);
 

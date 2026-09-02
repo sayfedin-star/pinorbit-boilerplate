@@ -21,6 +21,10 @@ on:
         description: 'Workspace UUID (empty = all workspaces)'
         required: false
         type: string
+      workspace_filter:
+        description: 'Workspace UUID filter (alias for workspace_id)'
+        required: false
+        type: string
       usernames:
         description: 'Comma-separated usernames (optional)'
         required: false
@@ -92,7 +96,7 @@ jobs:
           PINARCHIVE_GAS_URL: ${{ secrets.PINARCHIVE_GAS_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          DISCOVERY_WORKSPACE_ID: ${{ github.event.inputs.workspace_id || '' }}
+          DISCOVERY_WORKSPACE_ID: ${{ github.event.inputs.workspace_filter || github.event.inputs.workspace_id || '' }}
           DISCOVERY_USERNAMES: ${{ github.event.inputs.usernames || '' }}
           DISCOVERY_FORCE: ${{ github.event.inputs.force || '' }}
           FORCE_RUN: ${{ github.event.inputs.force || '' }}
@@ -128,7 +132,7 @@ jobs:
           PINARCHIVE_SUPABASE_KEY: ${{ secrets.PINARCHIVE_SUPABASE_KEY }}
           PINORBIT_WORKER_URL: ${{ secrets.PINORBIT_WORKER_URL }}
           PINARCHIVE_INGEST_SECRET: ${{ secrets.PINARCHIVE_INGEST_SECRET }}
-          REFRESH_WORKSPACE_ID: ${{ github.event.inputs.workspace_id || '' }}
+          REFRESH_WORKSPACE_ID: ${{ github.event.inputs.workspace_filter || github.event.inputs.workspace_id || '' }}
           REFRESH_USERNAMES: ${{ github.event.inputs.usernames || '' }}
           REFRESH_FORCE: ${{ github.event.inputs.force || '' }}
           FORCE_RUN: ${{ github.event.inputs.force || '' }}
@@ -137,3 +141,27 @@ jobs:
           REFRESH_MAX_PINS: '0'
           GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: node scripts/pinarchive-refresh.mjs
+
+  # ── STAGE 3: Monitoring Safety Net ──
+  staleness_check:
+    name: Check for stale workspaces
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [rotation]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install @supabase/supabase-js --no-save
+
+      - name: Check for stale workspaces
+        env:
+          PINARCHIVE_SUPABASE_URL: ${{ secrets.PINARCHIVE_SUPABASE_URL }}
+          PINARCHIVE_SUPABASE_KEY: ${{ secrets.PINARCHIVE_SUPABASE_KEY }}
+        run: node scripts/pinarchive-staleness-check.mjs

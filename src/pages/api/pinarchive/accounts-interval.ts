@@ -86,9 +86,18 @@ async function handleIntervalUpdate(request: Request, locals: any): Promise<Resp
 
     const updatedNextDates: Record<string, string> = {};
 
+    const todayUTC = new Date().toISOString().slice(0, 10);
+
     for (const acc of accountsToUpdate) {
-      const baseMs = acc.last_run_at ? new Date(acc.last_run_at).getTime() : (acc.created_at ? new Date(acc.created_at).getTime() : Date.now());
-      const nextRunIso = new Date(baseMs + intervalDays * 86400000).toISOString();
+      const lastDay = acc.last_run_at ? new Date(acc.last_run_at).toISOString().slice(0, 10) : null;
+      let nextRunIso: string;
+      if (lastDay) {
+        const target = new Date(`${lastDay}T00:00:00.000Z`);
+        target.setUTCDate(target.getUTCDate() + intervalDays);
+        nextRunIso = target.toISOString();
+      } else {
+        nextRunIso = new Date(`${todayUTC}T00:00:00.000Z`).toISOString();
+      }
       updatedNextDates[acc.id] = nextRunIso;
 
       await db

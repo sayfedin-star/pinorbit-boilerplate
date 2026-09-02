@@ -1183,16 +1183,20 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
   function formatNextRun(isoString?: string | null): string {
     if (!isoString) return 'Schedule pending';
     try {
-      const nextMs = new Date(isoString).getTime();
+      const nextDate = new Date(isoString);
+      const nextMs = nextDate.getTime();
       if (isNaN(nextMs)) return 'Schedule pending';
       const diffMs = nextMs - Date.now();
-      if (diffMs <= 0) return 'Due now';
+      const dateStr = nextDate.toISOString().slice(0, 10);
+      if (diffMs <= 0) {
+        return `Overdue — scheduled for ${dateStr} (UTC)`;
+      }
       const mins = Math.floor(diffMs / 60000);
-      if (mins < 60) return `in ${Math.max(1, mins)}m`;
+      if (mins < 60) return `in ${Math.max(1, mins)}m (${dateStr} UTC)`;
       const hrs = Math.floor(mins / 60);
-      if (hrs < 24) return `in ${hrs}h`;
+      if (hrs < 24) return `in ${hrs}h (${dateStr} UTC)`;
       const days = Math.floor(hrs / 24);
-      return `in ${days}d`;
+      return `in ${days} days (${dateStr} UTC)`;
     } catch {
       return 'Scheduled';
     }
@@ -1441,7 +1445,8 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
 
     tbody.innerHTML = accounts
       .map((acc: any) => {
-        const isActive = acc.status === 'active';
+        const isIngestActive = acc.ingest_enabled !== false && acc.status === 'active';
+        const isActive = isIngestActive;
         const isChecked = selectedAccounts.has(acc.id);
         const { bg: avatarBg, initial } = getAvatarStyle(acc.username || '');
         const changed = Number(acc.changed_last_refresh ?? 0);
@@ -1579,13 +1584,11 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
                     </a>
                     ${compBadge}
                     <span class="text-[9.5px] font-bold uppercase px-1.5 py-0.2 rounded-full ${
-                      isActive
+                      acc.ingest_enabled !== false && acc.status === 'active'
                         ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                        : acc.status === 'paused'
-                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                        : 'bg-muted text-muted-foreground'
+                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
                     }">
-                      ${escapeHtml(acc.status)}
+                      ${acc.ingest_enabled !== false && acc.status === 'active' ? escapeHtml(acc.status) : 'PAUSED'}
                     </span>
                   </div>
                 </div>
@@ -1597,7 +1600,7 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
                 <input
                   type="checkbox"
                   data-acc-ingest-toggle="${escapeHtml(acc.id)}"
-                  ${isActive ? 'checked' : ''}
+                  ${acc.ingest_enabled !== false && acc.status === 'active' ? 'checked' : ''}
                   class="sr-only peer"
                   id="toggle-ingest-${escapeHtml(acc.id)}"
                 />
