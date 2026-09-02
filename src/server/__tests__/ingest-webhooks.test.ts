@@ -15,9 +15,11 @@ describe('Pinterest Ingest Webhook Engine Events Suite (boards.list, board.creat
   let boardProvisioningDb: any[] = [];
   let accountsDb: any[] = [];
   let pinDeliveryLogs: any[] = [];
+  let mockUpsertError: any = null;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUpsertError = null;
 
     mockRuntimeEnv = {
       INGEST_SECRET_KEY: ingestSecret,
@@ -135,6 +137,14 @@ describe('Pinterest Ingest Webhook Engine Events Suite (boards.list, board.creat
               return { data: payload, error: null };
             }),
             upsert: vi.fn((items: any | any[], opts?: { onConflict?: string }) => {
+              if (mockUpsertError) {
+                return {
+                  select: vi.fn(() => ({
+                    single: vi.fn(async () => ({ data: null, error: mockUpsertError })),
+                  })),
+                  then: (cb: any) => Promise.resolve(cb({ data: null, error: mockUpsertError })),
+                };
+              }
               const itemsArray = Array.isArray(items) ? items : [items];
               const applyUpsert = () => {
                 if (table === 'boards') {
@@ -467,5 +477,94 @@ describe('Pinterest Ingest Webhook Engine Events Suite (boards.list, board.creat
     // board-existing-1 was removed, board-existing-2 remains intact
     expect(boardsDb.some((b) => b.board_id === 'board-existing-1')).toBe(false);
     expect(boardsDb.some((b) => b.board_id === 'board-existing-2')).toBe(true);
+  });
+
+  it('6. boards.list: returns HTTP 500 when batch upsert fails completely to trigger Make.com retry', async () => {
+    mockUpsertError = { message: 'database connection error' };
+
+    const req = new Request('http://localhost:4321/api/internal/pinterest/ingest', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-ingest-secret': ingestSecret,
+      },
+      body: JSON.stringify({
+        event: 'boards.list',
+        workspace_id: wsId,
+        account_id: accId,
+        boards: [
+          { id: 'board-fail-1', name: 'Failed Board' },
+        ],
+      }),
+    });
+
+    const res = await ingestHandler({ request: req, locals: mockLocals } as any);
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.success).toBe(false);
+    expect(json.synced).toBe(0);
+    expect(json.errors?.[0]).toContain('Batch upsert: database connection error');
+  });
+
+  it('7. board.created: respects explicit forwarded payload.idempotency_key', async () => {
+    boardProvisioningDb.push({
+      id: 'prov-custom-key',
+      workspace_id: wsId,
+      account_id: accId,
+      board_name: 'Custom Key Board',
+      idempotency_key: 'custom-make-key-xyz-123',
+      status: 'provisioning',
+      error_message: null,
+    });
+
+    const req = new Request('http://localhost:4321/api/internal/pinterest/ingest', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-ingest-secret': ingestSecret,
+      },
+      body: JSON.stringify({
+        event: 'board.created',
+        workspace_id: wsId,
+        account_id: accId,
+        idempotency_key: 'custom-make-key-xyz-123',
+        board_id: 'pb-custom-123',
+        board_name: 'Custom Key Board (Pinterest Modified)',
+      }),
+    });
+
+    const res = await ingestHandler({ request: req, locals: mockLocals } as any);
+    expect(res.status).toBe(200);
+
+    const newBoard = boardsDb.find((b) => b.board_id === 'pb-custom-123');
+    expect(newBoard).toBeDefined();
+    expect(newBoard.created_via_idempotency_key).toBe('custom-make-key-xyz-123');
+
+    const prov = boardProvisioningDb.find((p) => p.id === 'prov-custom-key');
+    expect(prov.status).toBe('completed');
+  });
+
+  it('8. pin.posted: rejects template string in payload.id and preserves existing pinterest_pin_id', async () => {
+    pinsDb[0].pinterest_pin_id = 'pin-original-pinterest-id';
+
+    const req = new Request('http://localhost:4321/api/internal/pinterest/ingest', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-ingest-secret': ingestSecret,
+      },
+      body: JSON.stringify({
+        event: 'pin.posted',
+        workspace_id: wsId,
+        pin_id: 'pin-100',
+        id: '{{1.id}}',
+      }),
+    });
+
+    const res = await ingestHandler({ request: req, locals: mockLocals } as any);
+    expect(res.status).toBe(200);
+
+    const pin = pinsDb.find((p) => p.id === 'pin-100');
+    expect(pin.pinterest_pin_id).toBe('pin-original-pinterest-id');
   });
 });

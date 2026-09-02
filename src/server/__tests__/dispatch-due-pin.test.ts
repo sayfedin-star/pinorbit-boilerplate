@@ -286,6 +286,18 @@ describe('Thread-Safe Dispatch Due Pin Concurrency & Hardening Suite', () => {
           return queryBuilder;
         },
         rpc: vi.fn(async (proc: string, args: any) => {
+          if (proc === 'increment_webhook_execution') {
+            const hook = webhooksDb.find((w) => w.id === args.p_webhook_id);
+            if (hook) {
+              const count = args.p_count || 1;
+              hook.executions_used = (hook.executions_used || 0) + count;
+              hook.monthly_usage = (hook.monthly_usage || 0) + count;
+              if (typeof hook.remaining_capacity === 'number') {
+                hook.remaining_capacity = Math.max(0, hook.remaining_capacity - count);
+              }
+            }
+            return { data: null, error: null };
+          }
           if (proc === 'acquire_schedule_dispatch_lease') {
             const sid = args.p_schedule_id;
             if (activeLeaseScheduleId === sid) {
@@ -335,8 +347,8 @@ describe('Thread-Safe Dispatch Due Pin Concurrency & Hardening Suite', () => {
     const dispatchedRuns = results.filter((r) => r.dispatched === 1);
     expect(dispatchedRuns.length).toBe(1);
 
-    // The other 4 concurrent runs must be blocked by the concurrency lease guard
-    const blockedRuns = results.filter((r) => r.reason === 'already_processing');
+    // The other 4 concurrent runs must be blocked by the concurrency lease guard or dispatch debounce
+    const blockedRuns = results.filter((r) => r.reason === 'already_processing' || r.reason === 'recently_dispatched');
     expect(blockedRuns.length).toBe(4);
 
     // Verify webhook was pushed exactly ONCE (zero double-dispatch)
@@ -447,5 +459,29 @@ describe('Thread-Safe Dispatch Due Pin Concurrency & Hardening Suite', () => {
     // Attempts was reverted back so it didn't inflate while waiting for board
     expect(pin.attempts).toBe(1);
     expect(pin.next_retry_at).toBeDefined();
+  });
+
+  it('5. Rapid Sequential Retry: Rejects calls within 15s debounce window after dispatch', async () => {
+    // Set schedule.last_dispatched_at to 3 seconds ago
+    schedulesDb[0].last_dispatched_at = new Date(Date.now() - 3000).toISOString();
+
+    const body = { schedule_id: scheduleId, dispatch_token: dispatchToken };
+    const res = await handleDispatch(body, mockLocals).then((r) => r.json());
+
+    expect(res.success).toBe(true);
+    expect(res.dispatched).toBe(0);
+    expect(res.reason).toBe('recently_dispatched');
+    expect(webhookCalls.length).toBe(0);
+  });
+
+  it('6. Atomic Webhook Counter: Correctly updates executions_used and capacity', async () => {
+    const body = { schedule_id: scheduleId, dispatch_token: dispatchToken };
+    const res = await handleDispatch(body, mockLocals).then((r) => r.json());
+
+    expect(res.dispatched).toBe(1);
+    const hook = webhooksDb.find((w) => w.id === webhookId);
+    expect(hook.executions_used).toBe(1);
+    expect(hook.monthly_usage).toBe(1);
+    expect(hook.remaining_capacity).toBe(99);
   });
 });

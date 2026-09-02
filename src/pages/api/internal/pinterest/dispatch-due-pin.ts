@@ -30,6 +30,14 @@ export async function handleDispatch(body: any, locals: any) {
   if (!force && schedule.status !== 'active') return json({ success: true, dispatched: false, reason: 'paused' });
   if (!force && schedule.started_at && new Date(schedule.started_at).getTime() > Date.now()) return json({ success: true, dispatched: false, reason: 'not_started' });
 
+  // Debounce rapid sequential FastCron retries within 15 seconds of a successful dispatch
+  if (!force && schedule.last_dispatched_at) {
+    const msSinceLast = Date.now() - new Date(schedule.last_dispatched_at).getTime();
+    if (msSinceLast < 15000) {
+      return json({ success: true, dispatched: 0, skipped: 0, reason: 'recently_dispatched' });
+    }
+  }
+
   // Timezone-aware window and active days enforcement (skipped when explicit cron_expression is configured or force=true)
   if (!force) {
     const windowCheck = checkScheduleWindow(schedule);
@@ -40,6 +48,8 @@ export async function handleDispatch(body: any, locals: any) {
 
   // 1b) Concurrency Lease Guard: Acquire atomic lock on posting_schedules to block concurrent FastCron calls with the same token
   let leaseAcquired = false;
+  let dispatched = 0;
+  let skipped = 0;
   if (!force) {
     const { data: leaseOk, error: leaseErr } = await admin.rpc('acquire_schedule_dispatch_lease', {
       p_schedule_id: scheduleId,
@@ -132,8 +142,6 @@ export async function handleDispatch(body: any, locals: any) {
     }
 
     // 6) Board resolution + push tickets to Make
-    let dispatched = 0; let skipped = 0;
-
     const pinIds = claimed.map((c: any) => c.id);
     const { data: pinsList } = await admin
       .from('pins')
@@ -272,25 +280,41 @@ export async function handleDispatch(body: any, locals: any) {
       }
     }
 
-    // Update webhook counter once after loop
+    // Update webhook counter atomically via increment_webhook_execution RPC
     if (successfulExecutions > 0) {
-      hook.executions_used = (hook.executions_used ?? 0) + successfulExecutions;
-      await admin.from('account_webhooks').update({
-        executions_used: hook.executions_used,
-        last_used_at: new Date().toISOString(),
-      }).eq('id', hook.id).then(() => {});
+      const { error: incErr } = await admin.rpc('increment_webhook_execution', {
+        p_webhook_id: hook.id,
+        p_count: successfulExecutions,
+      });
+      if (incErr) {
+        // Fallback if RPC unavailable
+        hook.executions_used = (hook.executions_used ?? 0) + successfulExecutions;
+        hook.monthly_usage = (hook.monthly_usage ?? 0) + successfulExecutions;
+        if (typeof hook.remaining_capacity === 'number') {
+          hook.remaining_capacity = Math.max(0, hook.remaining_capacity - successfulExecutions);
+        }
+        await admin.from('account_webhooks').update({
+          executions_used: hook.executions_used,
+          monthly_usage: hook.monthly_usage,
+          remaining_capacity: hook.remaining_capacity,
+          last_used_at: new Date().toISOString(),
+        }).eq('id', hook.id).then(() => {});
+      }
     }
 
     if (dispatched > 0) {
+      // Keep locked_until for 20s as a debounce buffer to prevent concurrent/retry duplicate dispatch
       await admin.from('posting_schedules').update({
         last_dispatched_at: new Date().toISOString(),
-        locked_until: null,
+        locked_until: new Date(Date.now() + 20000).toISOString(),
       }).eq('id', scheduleId).eq('workspace_id', workspaceId).then(() => {});
     }
 
     return json({ success: true, dispatched, skipped });
   } finally {
-    if (leaseAcquired) {
+    // Only release the lease immediately if nothing was dispatched (error or no due pins).
+    // If a pin was dispatched, the 20s debounce locked_until buffer protects against overlapping retries.
+    if (leaseAcquired && dispatched === 0) {
       try {
         await admin.rpc('release_schedule_dispatch_lease', { p_schedule_id: scheduleId });
       } catch {}

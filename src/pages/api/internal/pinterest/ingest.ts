@@ -78,10 +78,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
           })()
         : new Date().toISOString();
 
+      const rawPinId = typeof payload.id === 'string' ? payload.id.trim() : (payload.id ? String(payload.id).trim() : '');
+      const isPinIdTemplate =
+        rawPinId.includes('{{') ||
+        rawPinId.includes('%7B%7B') ||
+        ['undefined', 'null', '[object object]'].includes(rawPinId.toLowerCase());
+      const effectivePinId = (rawPinId && !isPinIdTemplate) ? rawPinId : (pin.pinterest_pin_id || null);
+
       const updateFields: any = {
         status: 'posted',
         posted_at: postedAt,
-        pinterest_pin_id: payload.id || pin.pinterest_pin_id || null,
+        pinterest_pin_id: effectivePinId,
         pinterest_pin_created_at: payload.created_at || null,
         processing_started_at: null,
         last_error_message: null,
@@ -141,7 +148,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const boardPinsModifiedAt = parseCoerceDate(payload.board_pins_modified_at || payload.pins_modified_at);
       const nowIso = new Date().toISOString();
 
-      const idemKey = buildBoardCreateIdempotencyKey(accId, bName);
+      const forwardedKey = typeof payload.idempotency_key === 'string' ? payload.idempotency_key.trim() : '';
+      const idemKey = (forwardedKey && !forwardedKey.includes('{{')) ? forwardedKey : buildBoardCreateIdempotencyKey(accId, bName);
 
       const { data: upsertedBoard, error: insErr } = await admin.from('boards').upsert({
         account_id: accId,
@@ -253,13 +261,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       }
 
+      const isOk = errors.length === 0 || syncedCount > 0;
       return new Response(JSON.stringify({
-        success: errors.length === 0 || syncedCount > 0,
+        success: isOk,
         handled: 'boards.list',
         synced: syncedCount,
         total: rawBoards.length,
         errors: errors.length > 0 ? errors : undefined,
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }), { status: isOk ? 200 : 500, headers: { 'Content-Type': 'application/json' } });
     }
 
     // D) board.deleted
