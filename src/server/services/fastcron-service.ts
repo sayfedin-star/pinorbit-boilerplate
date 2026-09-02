@@ -1,6 +1,7 @@
 import { analyticsDb } from '../db/analytics';
 import { getServerEnv } from '../db/clients';
 import { decryptToken } from '../lib/token-crypto';
+import { evaluateTokenCandidates, maskToken } from '../lib/token-resolver';
 import { getEffectiveSecret } from './webhook-secrets';
 import type {
   ScheduleSyncResponse,
@@ -153,16 +154,11 @@ export const fastcronService = {
       return null;
     };
 
-    const res1 = await checkToken(channelToken);
-    if (res1) return res1;
+    const c1 = await checkToken(channelToken);
+    const c2 = await checkToken(wsTok);
+    const c3 = await checkToken(env.FASTCRON_API_TOKEN);
 
-    const res2 = await checkToken(wsTok);
-    if (res2) return res2;
-
-    const res3 = await checkToken(env.FASTCRON_API_TOKEN);
-    if (res3) return res3;
-
-    return null;
+    return evaluateTokenCandidates([c1, c2, c3]);
   },
 
   /**
@@ -1006,6 +1002,8 @@ export async function resolveScheduleToken(schedule: any, runtimeEnv: Record<str
     {
       workspaceId: schedule?.workspace_id,
       tokenId: schedule?.fastcron_token_id,
+      encryptedToken: schedule?.fastcron_token_encrypted,
+      schedule,
     },
     'scheduling',
     runtimeEnv

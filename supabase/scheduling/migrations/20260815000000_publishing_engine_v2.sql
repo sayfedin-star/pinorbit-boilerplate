@@ -37,7 +37,7 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
   RETURN QUERY
   UPDATE public.pins p
-  SET status='processing', processing_started_at=now(), attempts=p.attempts+1, last_attempt_at=now(), updated_at=now()
+  SET status='processing', processing_started_at=now(), claimed_at=now(), attempts=p.attempts+1, last_attempt_at=now(), updated_at=now()
   WHERE p.id IN (
     SELECT q.id FROM public.pins q
     WHERE q.status='pending' AND q.account_id=p_account_id

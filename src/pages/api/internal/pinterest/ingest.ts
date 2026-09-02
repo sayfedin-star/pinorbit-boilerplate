@@ -5,6 +5,7 @@ import { dbClients, isKnownDefaultIngestSecret, isProductionEnv } from '../../..
 import { getEffectiveSecret } from '../../../../server/services/webhook-secrets';
 import { pinnerETL } from '../../../../server/services/pinner-etl';
 import { timingSafeEqual } from '../../../../server/lib/timing-safe';
+import { buildBoardCreateIdempotencyKey } from '../../../../server/services/scheduling-logic';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const runtimeEnv = (locals as { runtime?: { env?: Record<string, any> }; runtimeEnv?: Record<string, any> })?.runtime?.env || (locals as { runtimeEnv?: Record<string, any> })?.runtimeEnv || {};
@@ -77,18 +78,32 @@ export const POST: APIRoute = async ({ request, locals }) => {
           })()
         : new Date().toISOString();
 
+      const rawPinId = typeof payload.id === 'string' ? payload.id.trim() : (payload.id ? String(payload.id).trim() : '');
+      const isPinIdTemplate =
+        rawPinId.includes('{{') ||
+        rawPinId.includes('%7B%7B') ||
+        ['undefined', 'null', '[object object]'].includes(rawPinId.toLowerCase());
+      const effectivePinId = (rawPinId && !isPinIdTemplate) ? rawPinId : (pin.pinterest_pin_id || null);
+
       const updateFields: any = {
         status: 'posted',
         posted_at: postedAt,
-        pinterest_pin_id: payload.id || pin.pinterest_pin_id || null,
+        pinterest_pin_id: effectivePinId,
         pinterest_pin_created_at: payload.created_at || null,
         processing_started_at: null,
         last_error_message: null,
         updated_at: new Date().toISOString(),
       };
 
-      if (typeof payload.image_url === 'string' && payload.image_url.trim().length > 0 && !payload.image_url.includes('{{')) {
-        updateFields.image_url = payload.image_url.trim();
+      const rawImg = typeof payload.image_url === 'string' ? payload.image_url.trim() : '';
+      const isTemplateLeak =
+        rawImg.includes('{{') ||
+        rawImg.includes('%7B%7B') ||
+        ['undefined', 'null', '[object object]'].includes(rawImg.toLowerCase());
+      const isValidUrl = /^https?:\/\//i.test(rawImg);
+
+      if (rawImg.length > 0 && !isTemplateLeak && isValidUrl) {
+        updateFields.image_url = rawImg;
       }
 
       await admin.from('pins').update(updateFields).eq('id', internalId).eq('workspace_id', wsId);
@@ -133,6 +148,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const boardPinsModifiedAt = parseCoerceDate(payload.board_pins_modified_at || payload.pins_modified_at);
       const nowIso = new Date().toISOString();
 
+      const forwardedKey = typeof payload.idempotency_key === 'string' ? payload.idempotency_key.trim() : '';
+      const idemKey = (forwardedKey && !forwardedKey.includes('{{')) ? forwardedKey : buildBoardCreateIdempotencyKey(accId, bName);
+
       const { data: upsertedBoard, error: insErr } = await admin.from('boards').upsert({
         account_id: accId,
         workspace_id: acc.workspace_id,
@@ -140,18 +158,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
         board_id: bId,
         pinterest_board_id: bId,
         created_via: 'webhook_auto_create',
+        created_via_idempotency_key: idemKey,
         pin_count: pinCount,
         follower_count: followerCount,
         board_created_at: boardCreatedAt,
         board_pins_modified_at: boardPinsModifiedAt,
         last_synced_at: nowIso,
-      }, { onConflict: 'account_id, board_id' }).select('id, board_id, board_name, pin_count, follower_count, last_synced_at').single();
+      }, { onConflict: 'account_id,board_id' }).select('id, board_id, board_name, pin_count, follower_count, last_synced_at').single();
 
       await admin.from('board_provisioning_requests').update({
         status: insErr ? 'failed' : 'completed',
         error_message: insErr?.message || null,
         completed_at: new Date().toISOString(),
-      }).eq('idempotency_key', `create:${accId}:${String(bName).toLowerCase()}`).then(() => {});
+      }).eq('idempotency_key', idemKey).then(() => {});
 
       return new Response(JSON.stringify({
         success: !insErr,
@@ -181,24 +200,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       const nowIso = new Date().toISOString();
-      const boardsToUpsert = rawBoards
+      const candidateBoards = rawBoards
         .map((b: any) => {
-          const bId = String(b.id || b.board_id || '');
-          const bName = String(b.name || b.board_name || '');
+          const bId = String(b.id || b.board_id || '').trim();
+          const bName = String(b.name || b.board_name || '').trim();
           if (!bId) return null;
 
           return {
-            account_id: accId,
-            workspace_id: acc.workspace_id,
-            board_id: bId,
-            pinterest_board_id: bId,
-            board_name: bName || 'Untitled Board',
-            created_via: 'webhook_sync',
-            pin_count: parseCoerceInt(b.pin_count),
-            follower_count: parseCoerceInt(b.follower_count),
-            board_created_at: parseCoerceDate(b.board_created_at || b.created_at),
-            board_pins_modified_at: parseCoerceDate(b.board_pins_modified_at || b.pins_modified_at),
-            last_synced_at: nowIso,
+            bId,
+            bName: bName || 'Untitled Board',
+            pinCount: parseCoerceInt(b.pin_count),
+            followerCount: parseCoerceInt(b.follower_count),
+            boardCreatedAt: parseCoerceDate(b.board_created_at || b.created_at),
+            boardPinsModifiedAt: parseCoerceDate(b.board_pins_modified_at || b.pins_modified_at),
           };
         })
         .filter(Boolean);
@@ -206,7 +220,35 @@ export const POST: APIRoute = async ({ request, locals }) => {
       let syncedCount = 0;
       const errors: string[] = [];
 
-      if (boardsToUpsert.length > 0) {
+      if (candidateBoards.length > 0) {
+        const bIds = candidateBoards.map((c: any) => c.bId);
+        const { data: existingBoards } = await admin
+          .from('boards')
+          .select('board_id, created_via, pin_count, follower_count, board_created_at, board_pins_modified_at')
+          .eq('account_id', accId)
+          .in('board_id', bIds);
+
+        const existingMap = new Map<string, any>(
+          (existingBoards || []).map((eb: any) => [eb.board_id, eb])
+        );
+
+        const boardsToUpsert = candidateBoards.map((c: any) => {
+          const existing = existingMap.get(c.bId);
+          return {
+            account_id: accId,
+            workspace_id: acc.workspace_id,
+            board_id: c.bId,
+            pinterest_board_id: c.bId,
+            board_name: c.bName,
+            created_via: existing?.created_via || 'webhook_sync',
+            pin_count: c.pinCount !== null ? c.pinCount : (existing?.pin_count ?? null),
+            follower_count: c.followerCount !== null ? c.followerCount : (existing?.follower_count ?? null),
+            board_created_at: c.boardCreatedAt !== null ? c.boardCreatedAt : (existing?.board_created_at ?? null),
+            board_pins_modified_at: c.boardPinsModifiedAt !== null ? c.boardPinsModifiedAt : (existing?.board_pins_modified_at ?? null),
+            last_synced_at: nowIso,
+          };
+        });
+
         const { error: upErr } = await admin.from('boards').upsert(
           boardsToUpsert,
           { onConflict: 'account_id,board_id' }
@@ -219,13 +261,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       }
 
+      const isOk = errors.length === 0 || syncedCount > 0;
       return new Response(JSON.stringify({
-        success: errors.length === 0 || syncedCount > 0,
+        success: isOk,
         handled: 'boards.list',
         synced: syncedCount,
         total: rawBoards.length,
         errors: errors.length > 0 ? errors : undefined,
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }), { status: isOk ? 200 : 500, headers: { 'Content-Type': 'application/json' } });
     }
 
     // D) board.deleted

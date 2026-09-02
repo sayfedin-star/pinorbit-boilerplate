@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../server/auth/workspace-guard';
 import { dbClients, isKnownDefaultKek, isProductionEnv } from '../../../server/db/clients';
 import { encryptToken, decryptToken, resolveTokenKek } from '../../../server/lib/token-crypto';
+import { maskToken } from '../../../server/lib/token-resolver';
 import { maskSecret } from '../../../server/services/webhook-secrets';
 import { syncPublishingSchedule } from '../../../server/services/fastcron-service';
 
@@ -74,7 +75,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
           const decrypted = await decryptToken(schedule.fastcron_token_encrypted, kek);
           if (decrypted) {
             result.has_fastcron_token = true;
-            result.fastcron_token_masked = maskSecret(decrypted);  // Returns '••••XXXX'
+            result.fastcron_token_masked = maskToken(decrypted);  // Returns '••••XXXX'
           } else {
             result.has_fastcron_token = false;
           }
