@@ -16,7 +16,7 @@ export interface ScheduleConfig {
   interval_minutes?: number | null;
   window_start?: string | null;
   window_end?: string | null;
-  active_days?: string[] | string | null;
+  active_days?: string[] | number[] | string | null;
   timezone?: string | null;
   cron_expression?: string | null;
 }
@@ -24,6 +24,63 @@ export interface ScheduleConfig {
 export interface WindowCheckResult {
   allowed: boolean;
   reason?: 'day_off' | 'window_closed';
+}
+
+export const DAY_NAME_TO_NUM: Record<string, number> = {
+  sun: 0, sunday: 0,
+  mon: 1, monday: 1,
+  tue: 2, tuesday: 2,
+  wed: 3, wednesday: 3,
+  thu: 4, thursday: 4,
+  fri: 5, friday: 5,
+  sat: 6, saturday: 6,
+};
+
+export const NUM_TO_DAY_NAME = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/**
+ * Normalizes active days from arrays, strings, or Postgres array representations
+ * into a sorted unique list of integers (0=Sun .. 6=Sat).
+ */
+export function parseActiveDayNumbers(activeDays?: any): number[] {
+  if (!activeDays) return [];
+
+  let rawList: any[] = [];
+  if (Array.isArray(activeDays)) {
+    rawList = activeDays;
+  } else if (typeof activeDays === 'string') {
+    rawList = activeDays.replace(/[{}"']/g, '').split(',').map((x) => x.trim()).filter(Boolean);
+  }
+
+  const dayNums = new Set<number>();
+  for (const item of rawList) {
+    if (typeof item === 'number' && Number.isInteger(item)) {
+      if (item >= 0 && item <= 6) dayNums.add(item);
+      else if (item === 7) dayNums.add(0); // 7 is Sunday in standard cron notation
+    } else if (typeof item === 'string') {
+      const clean = item.trim().toLowerCase();
+      if (/^[0-7]$/.test(clean)) {
+        const n = parseInt(clean, 10);
+        dayNums.add(n === 7 ? 0 : n);
+      } else {
+        const num = DAY_NAME_TO_NUM[clean] ?? DAY_NAME_TO_NUM[clean.slice(0, 3)];
+        if (num !== undefined) dayNums.add(num);
+      }
+    }
+  }
+
+  return Array.from(dayNums).sort((a, b) => a - b);
+}
+
+/**
+ * Extracts and clamps an hour value [0, 23] from HH:MM string representations.
+ */
+export function parseHour(val?: string | null, defaultHour: number = 0): number {
+  if (!val || typeof val !== 'string') return defaultHour;
+  const match = val.trim().match(/^(\d{1,2})/);
+  if (!match) return defaultHour;
+  const h = parseInt(match[1], 10);
+  return isNaN(h) ? defaultHour : Math.max(0, Math.min(23, h));
 }
 
 /**
@@ -34,9 +91,10 @@ export interface WindowCheckResult {
  * - Days: explicit 0-6 comma list based on active_days (0=Sun .. 6=Sat) or * if all 7 days
  */
 export function buildPortableCron(s?: ScheduleConfig | null): string {
-  const interval = Math.max(1, s?.interval_minutes || 36);
-  const startH = parseInt(String(s?.window_start || '09:00').slice(0, 2), 10) || 0;
-  const endH = parseInt(String(s?.window_end || '21:00').slice(0, 2), 10) || 0;
+  const rawInterval = Number(s?.interval_minutes);
+  const interval = (!rawInterval || isNaN(rawInterval) || rawInterval <= 0) ? 36 : Math.round(rawInterval);
+  const startH = parseHour(s?.window_start, 9);
+  const endH = parseHour(s?.window_end, 21);
 
   // 1. Build window hours list (explicit comma list, NO / in hours)
   const windowHours: number[] = [];
@@ -71,38 +129,71 @@ export function buildPortableCron(s?: ScheduleConfig | null): string {
   }
 
   // 2. Active days (0=Sun .. 6=Sat)
-  const dayMap: Record<string, number> = {
-    sun: 0, sunday: 0,
-    mon: 1, monday: 1,
-    tue: 2, tuesday: 2,
-    wed: 3, wednesday: 3,
-    thu: 4, thursday: 4,
-    fri: 5, friday: 5,
-    sat: 6, saturday: 6,
-  };
-
-  let activeDaysArr: string[] = [];
-  if (Array.isArray(s?.active_days)) {
-    activeDaysArr = s.active_days;
-  } else if (typeof s?.active_days === 'string') {
-    activeDaysArr = s.active_days.replace(/[{}"']/g, '').split(',').map((x) => x.trim()).filter(Boolean);
-  }
-
+  const activeDayNums = parseActiveDayNumbers(s?.active_days);
   let dayField = '*';
-  if (activeDaysArr.length > 0 && activeDaysArr.length < 7) {
-    const dayNums = Array.from(
-      new Set(
-        activeDaysArr
-          .map((d) => dayMap[d.toLowerCase()])
-          .filter((n) => n !== undefined)
-      )
-    ).sort((a, b) => a - b);
-    if (dayNums.length > 0 && dayNums.length < 7) {
-      dayField = dayNums.join(',');
-    }
+  if (activeDayNums.length > 0 && activeDayNums.length < 7) {
+    dayField = activeDayNums.join(',');
   }
 
   return `${minuteField} ${hourField} * * ${dayField}`;
+}
+
+/**
+ * Companion parser for buildPortableCron output.
+ * Ensures the generated cron expression is reversible and reconstructs configuration.
+ */
+export function parsePortableCron(cron: string): Partial<ScheduleConfig> | null {
+  if (!cron || typeof cron !== 'string') return null;
+  const parts = cron.trim().split(/\s+/);
+  if (parts.length !== 5) return null;
+
+  const [minuteField, hourField, , , dayField] = parts;
+
+  // Reconstruct interval_minutes
+  let interval_minutes = 36;
+  if (minuteField.startsWith('*/')) {
+    interval_minutes = parseInt(minuteField.slice(2), 10) || 36;
+  } else if (minuteField.includes(',')) {
+    const mins = minuteField.split(',').map((m) => parseInt(m, 10)).filter((n) => !isNaN(n));
+    if (mins.length >= 2) {
+      interval_minutes = mins[1] - mins[0];
+    }
+  } else if (minuteField === '0') {
+    const hours = hourField.split(',').map((h) => parseInt(h, 10)).filter((n) => !isNaN(n));
+    if (hours.length >= 2) {
+      interval_minutes = (hours[1] - hours[0]) * 60;
+    } else {
+      interval_minutes = 60;
+    }
+  }
+
+  // Reconstruct window_start & window_end
+  const hours = hourField === '*'
+    ? [0, 23]
+    : hourField.split(',').map((h) => parseInt(h, 10)).filter((n) => !isNaN(n));
+
+  let window_start = '09:00';
+  let window_end = '21:00';
+  if (hours.length > 0) {
+    const firstH = hours[0];
+    const lastH = hours[hours.length - 1];
+    window_start = `${String(firstH).padStart(2, '0')}:00`;
+    window_end = `${String(lastH).padStart(2, '0')}:00`;
+  }
+
+  // Reconstruct active_days
+  let active_days: string[] | null = null;
+  if (dayField !== '*') {
+    const dNums = dayField.split(',').map((d) => parseInt(d, 10)).filter((n) => !isNaN(n));
+    active_days = dNums.map((n) => NUM_TO_DAY_NAME[n] || String(n));
+  }
+
+  return {
+    interval_minutes,
+    window_start,
+    window_end,
+    active_days,
+  };
 }
 
 /**
@@ -122,7 +213,7 @@ export function checkScheduleWindow(
   }
 
   const tz = schedule.timezone || 'UTC';
-  let day = '';
+  let dayName = '';
   let hm = '';
 
   try {
@@ -134,11 +225,11 @@ export function checkScheduleWindow(
       hourCycle: 'h23',
     }).formatToParts(now);
 
-    day = parts.find((p) => p.type === 'weekday')?.value || '';
+    dayName = parts.find((p) => p.type === 'weekday')?.value || '';
     let hour = parts.find((p) => p.type === 'hour')?.value || '00';
     if (hour === '24') hour = '00';
     const minute = parts.find((p) => p.type === 'minute')?.value || '00';
-    hm = `${hour}:${minute}`;
+    hm = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
   } catch (tzError) {
     console.warn('[SchedulingLogic] Invalid timezone, falling back to UTC:', tzError);
     const utcParts = new Intl.DateTimeFormat('en-US', {
@@ -149,31 +240,26 @@ export function checkScheduleWindow(
       hourCycle: 'h23',
     }).formatToParts(now);
 
-    day = utcParts.find((p) => p.type === 'weekday')?.value || '';
+    dayName = utcParts.find((p) => p.type === 'weekday')?.value || '';
     let utcHour = utcParts.find((p) => p.type === 'hour')?.value || '00';
     if (utcHour === '24') utcHour = '00';
-    const utcMinute = utcParts.find((p) => p.type === 'minute')?.value || '00';
-    hm = `${utcHour}:${utcMinute}`;
+    const minute = utcParts.find((p) => p.type === 'minute')?.value || '00';
+    hm = `${utcHour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
   }
 
-  let activeDaysArr: string[] = [];
-  if (Array.isArray(schedule.active_days)) {
-    activeDaysArr = schedule.active_days;
-  } else if (typeof schedule.active_days === 'string') {
-    activeDaysArr = schedule.active_days.replace(/[{}"']/g, '').split(',').map((x) => x.trim()).filter(Boolean);
+  // Active days check using unified parseActiveDayNumbers
+  const activeDayNums = parseActiveDayNumbers(schedule.active_days);
+  if (activeDayNums.length > 0 && activeDayNums.length < 7) {
+    const currentDayNum = DAY_NAME_TO_NUM[dayName.toLowerCase()] ?? DAY_NAME_TO_NUM[dayName.toLowerCase().slice(0, 3)];
+    if (currentDayNum !== undefined && !activeDayNums.includes(currentDayNum)) {
+      return { allowed: false, reason: 'day_off' };
+    }
   }
 
-  const normalizedDay = day.toLowerCase().slice(0, 3);
-  const normalizedActiveDays = activeDaysArr.map((d) => String(d).toLowerCase().slice(0, 3));
+  const w0 = String(schedule.window_start || '09:00').trim().slice(0, 5);
+  const w1 = String(schedule.window_end || '21:00').trim().slice(0, 5);
 
-  if (normalizedDay && normalizedActiveDays.length > 0 && !normalizedActiveDays.includes(normalizedDay)) {
-    return { allowed: false, reason: 'day_off' };
-  }
-
-  const w0 = String(schedule.window_start || '09:00').slice(0, 5);
-  const w1 = String(schedule.window_end || '21:00').slice(0, 5);
-
-  if (hm) {
+  if (hm && w0 && w1) {
     const isClosed = w0 <= w1 ? (hm < w0 || hm > w1) : (hm < w0 && hm > w1);
     if (isClosed) {
       return { allowed: false, reason: 'window_closed' };
@@ -183,24 +269,8 @@ export function checkScheduleWindow(
   return { allowed: true };
 }
 
-/**
- * 3. FastCron Token Resolution Hierarchy (Pure Candidate Filter)
- * Evaluates candidate tokens in priority order:
- * 1. Schedule embedded token (b64 decrypted / custom string)
- * 2. Schedule fastcron_token_id row value
- * 3. Workspace default token row value
- * 4. Environment default (FASTCRON_API_TOKEN)
- *
- * Valid token criteria: non-empty string with length >= 16.
- */
-export function evaluateTokenCandidates(candidates: Array<string | null | undefined>): string | null {
-  for (const tok of candidates) {
-    if (tok && typeof tok === 'string' && tok.trim().length >= 16) {
-      return tok.trim();
-    }
-  }
-  return null;
-}
+import { evaluateTokenCandidates, maskToken } from '../lib/token-resolver';
+export { evaluateTokenCandidates, maskToken };
 
 /**
  * 4. Deterministic Idempotency Key Builders
@@ -209,8 +279,18 @@ export function buildPinPostIdempotencyKey(pinId: string, attempts: number | str
   return `pin.post:${pinId}:${attempts}`;
 }
 
+export function buildDeterministicPinPostKey(pinId: string): string {
+  return `pin.post:${pinId}`;
+}
+
+export function isLeaseActive(lockedUntil: string | null | undefined, now: Date = new Date()): boolean {
+  if (!lockedUntil) return false;
+  const lockTime = new Date(lockedUntil).getTime();
+  return !isNaN(lockTime) && lockTime > now.getTime();
+}
+
 export function buildBoardCreateIdempotencyKey(accountId: string, boardName: string): string {
-  return `create:${accountId}:${String(boardName).toLowerCase()}`;
+  return `create:${String(accountId || '').trim()}:${String(boardName || '').trim().toLowerCase()}`;
 }
 
 export function buildBoardListIdempotencyKey(accountId: string, boardId: string): string {

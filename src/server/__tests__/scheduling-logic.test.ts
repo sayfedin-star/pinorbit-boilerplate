@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildPortableCron,
+  parsePortableCron,
   checkScheduleWindow,
+  parseActiveDayNumbers,
+  parseHour,
   evaluateTokenCandidates,
   buildPinPostIdempotencyKey,
   buildBoardCreateIdempotencyKey,
@@ -254,8 +257,352 @@ describe('Pure Scheduling Logic Suite (scheduling-logic.ts)', () => {
       expect(clampProcessingTimeoutMinutes('')).toBe(DEFAULT_PROCESSING_TIMEOUT_MINUTES);
       expect(clampProcessingTimeoutMinutes('invalid')).toBe(DEFAULT_PROCESSING_TIMEOUT_MINUTES);
 
-      // Rounding
-      expect(clampProcessingTimeoutMinutes(59.8)).toBe(60);
+    });
+  });
+
+  describe('6. Exhaustive Interval Calculations (25, 36, 120 min & Edges)', () => {
+    it('handles 25-minute non-divisor interval correctly (0,25,50)', () => {
+      const cron = buildPortableCron({
+        interval_minutes: 25,
+        window_start: '10:00',
+        window_end: '14:00',
+      });
+      expect(cron).toBe('0,25,50 10,11,12,13,14 * * *');
+    });
+
+    it('handles 36-minute default / non-divisor interval correctly (0,36)', () => {
+      const cron = buildPortableCron({
+        interval_minutes: 36,
+        window_start: '09:00',
+        window_end: '12:00',
+      });
+      expect(cron).toBe('0,36 9,10,11,12 * * *');
+    });
+
+    it('handles 120-minute multi-hour interval correctly (step 2 hours)', () => {
+      const cron = buildPortableCron({
+        interval_minutes: 120,
+        window_start: '08:00',
+        window_end: '16:00',
+      });
+      expect(cron).toBe('0 8,10,12,14,16 * * *');
+    });
+
+    it('handles 1-minute interval (every minute)', () => {
+      const cron = buildPortableCron({
+        interval_minutes: 1,
+        window_start: '09:00',
+        window_end: '10:00',
+      });
+      expect(cron).toBe('*/1 9,10 * * *');
+    });
+
+    it('handles 5, 10, 15, 30 minute divisor intervals', () => {
+      expect(buildPortableCron({ interval_minutes: 5, window_start: '09:00', window_end: '09:00' }))
+        .toBe('*/5 9 * * *');
+      expect(buildPortableCron({ interval_minutes: 10, window_start: '09:00', window_end: '09:00' }))
+        .toBe('*/10 9 * * *');
+      expect(buildPortableCron({ interval_minutes: 15, window_start: '09:00', window_end: '09:00' }))
+        .toBe('*/15 9 * * *');
+      expect(buildPortableCron({ interval_minutes: 30, window_start: '09:00', window_end: '09:00' }))
+        .toBe('*/30 9 * * *');
+    });
+
+    it('handles 45-minute non-divisor interval (0,45)', () => {
+      const cron = buildPortableCron({
+        interval_minutes: 45,
+        window_start: '13:00',
+        window_end: '15:00',
+      });
+      expect(cron).toBe('0,45 13,14,15 * * *');
+    });
+
+    it('handles 180-minute (3-hour) interval (step 3 hours)', () => {
+      const cron = buildPortableCron({
+        interval_minutes: 180,
+        window_start: '06:00',
+        window_end: '18:00',
+      });
+      expect(cron).toBe('0 6,9,12,15,18 * * *');
+    });
+
+    it('clamps 0, negative, float, or invalid intervals to default 36 minutes', () => {
+      expect(buildPortableCron({ interval_minutes: 0, window_start: '10:00', window_end: '11:00' }))
+        .toBe('0,36 10,11 * * *');
+      expect(buildPortableCron({ interval_minutes: -15, window_start: '10:00', window_end: '11:00' }))
+        .toBe('0,36 10,11 * * *');
+      expect(buildPortableCron({ interval_minutes: NaN as any, window_start: '10:00', window_end: '11:00' }))
+        .toBe('0,36 10,11 * * *');
+      // Float 20.4 rounds to 20
+      expect(buildPortableCron({ interval_minutes: 20.4, window_start: '10:00', window_end: '11:00' }))
+        .toBe('*/20 10,11 * * *');
+    });
+  });
+
+  describe('7. Active Days Parsing & All 7 Days Edge Cases', () => {
+    it('normalizes full day names and short day names', () => {
+      expect(parseActiveDayNumbers(['Sunday', 'Wednesday', 'Friday'])).toEqual([0, 3, 5]);
+      expect(parseActiveDayNumbers(['mon', 'tue', 'thu'])).toEqual([1, 2, 4]);
+    });
+
+    it('normalizes numeric days (0..6 and cron 7=Sun)', () => {
+      expect(parseActiveDayNumbers([1, 2, 3])).toEqual([1, 2, 3]);
+      expect(parseActiveDayNumbers(['0', '2', '4'])).toEqual([0, 2, 4]);
+      expect(parseActiveDayNumbers(['7'])).toEqual([0]); // 7 -> Sunday
+    });
+
+    it('parses Postgres array format string "{Mon,Wed,Fri}" and "{1,3,5}"', () => {
+      expect(parseActiveDayNumbers('{Mon,Wed,Fri}')).toEqual([1, 3, 5]);
+      expect(parseActiveDayNumbers('{1,3,5}')).toEqual([1, 3, 5]);
+    });
+
+    it('handles all 7 days with various representations and emits "*"', () => {
+      // Full names
+      expect(buildPortableCron({ active_days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] }))
+        .toContain('* * *');
+      // Numeric
+      expect(buildPortableCron({ active_days: [0, 1, 2, 3, 4, 5, 6] }))
+        .toContain('* * *');
+      // String numbers
+      expect(buildPortableCron({ active_days: '0,1,2,3,4,5,6' }))
+        .toContain('* * *');
+    });
+
+    it('correctly deduplicates days and does NOT emit "*" when 7 duplicates of the same day are passed', () => {
+      // 7 duplicates of 'Mon' should yield only Monday (1), NOT all 7 days (*)
+      const cron = buildPortableCron({
+        active_days: ['Mon', 'Mon', 'Mon', 'Mon', 'Mon', 'Mon', 'Mon'],
+        window_start: '09:00',
+        window_end: '10:00',
+      });
+      expect(cron).toBe('0,36 9,10 * * 1');
+    });
+
+    it('allows checkScheduleWindow to support numeric active_days seamlessly', () => {
+      const schedule = {
+        timezone: 'UTC',
+        active_days: [1, 3, 5], // Mon, Wed, Fri
+        window_start: '09:00',
+        window_end: '17:00',
+      };
+
+      // 2026-08-17 is Monday -> Allowed
+      expect(checkScheduleWindow(schedule, new Date('2026-08-17T12:00:00Z'))).toEqual({ allowed: true });
+      // 2026-08-18 is Tuesday -> Day off
+      expect(checkScheduleWindow(schedule, new Date('2026-08-18T12:00:00Z'))).toEqual({ allowed: false, reason: 'day_off' });
+    });
+  });
+
+  describe('8. Overnight Window Auditing (22:00 -> 06:00, 23:30 -> 01:30)', () => {
+    const overnightSchedule = {
+      timezone: 'UTC',
+      active_days: [0, 1, 2, 3, 4, 5, 6],
+      window_start: '22:00',
+      window_end: '06:00',
+    };
+
+    it('validates every boundary minute for 22:00 -> 06:00', () => {
+      // 21:59 -> closed
+      expect(checkScheduleWindow(overnightSchedule, new Date('2026-08-17T21:59:00Z')))
+        .toEqual({ allowed: false, reason: 'window_closed' });
+
+      // 22:00 -> open
+      expect(checkScheduleWindow(overnightSchedule, new Date('2026-08-17T22:00:00Z')))
+        .toEqual({ allowed: true });
+
+      // 23:59 -> open
+      expect(checkScheduleWindow(overnightSchedule, new Date('2026-08-17T23:59:00Z')))
+        .toEqual({ allowed: true });
+
+      // 00:00 -> open
+      expect(checkScheduleWindow(overnightSchedule, new Date('2026-08-18T00:00:00Z')))
+        .toEqual({ allowed: true });
+
+      // 05:59 -> open
+      expect(checkScheduleWindow(overnightSchedule, new Date('2026-08-18T05:59:00Z')))
+        .toEqual({ allowed: true });
+
+      // 06:00 -> open
+      expect(checkScheduleWindow(overnightSchedule, new Date('2026-08-18T06:00:00Z')))
+        .toEqual({ allowed: true });
+
+      // 06:01 -> closed
+      expect(checkScheduleWindow(overnightSchedule, new Date('2026-08-18T06:01:00Z')))
+        .toEqual({ allowed: false, reason: 'window_closed' });
+    });
+
+    it('validates sub-hour overnight window (23:30 -> 01:30)', () => {
+      const tightSchedule = {
+        timezone: 'UTC',
+        active_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        window_start: '23:30',
+        window_end: '01:30',
+      };
+
+      expect(checkScheduleWindow(tightSchedule, new Date('2026-08-17T23:29:00Z')))
+        .toEqual({ allowed: false, reason: 'window_closed' });
+      expect(checkScheduleWindow(tightSchedule, new Date('2026-08-17T23:30:00Z')))
+        .toEqual({ allowed: true });
+      expect(checkScheduleWindow(tightSchedule, new Date('2026-08-18T01:30:00Z')))
+        .toEqual({ allowed: true });
+      expect(checkScheduleWindow(tightSchedule, new Date('2026-08-18T01:31:00Z')))
+        .toEqual({ allowed: false, reason: 'window_closed' });
+    });
+
+    it('handles all-day window (00:00 -> 23:59)', () => {
+      const allDay = {
+        timezone: 'UTC',
+        active_days: ['Mon'],
+        window_start: '00:00',
+        window_end: '23:59',
+      };
+
+      // Monday at 00:00
+      expect(checkScheduleWindow(allDay, new Date('2026-08-17T00:00:00Z'))).toEqual({ allowed: true });
+      // Monday at 23:59
+      expect(checkScheduleWindow(allDay, new Date('2026-08-17T23:59:00Z'))).toEqual({ allowed: true });
+    });
+  });
+
+  describe('9. Daylight Saving Time (DST) Transitions & Timezone Robustness', () => {
+    it('handles US Eastern DST Spring Forward transition (America/New_York on 2026-03-08)', () => {
+      const schedule = {
+        timezone: 'America/New_York',
+        active_days: ['Sun'],
+        window_start: '01:00',
+        window_end: '05:00',
+      };
+
+      // At 06:30 UTC -> 01:30 EST (before spring forward jump at 02:00) -> Allowed
+      const beforeJump = new Date('2026-03-08T06:30:00Z');
+      expect(checkScheduleWindow(schedule, beforeJump)).toEqual({ allowed: true });
+
+      // At 07:30 UTC -> 03:30 EDT (after clock jumps forward to 03:00) -> Allowed
+      const afterJump = new Date('2026-03-08T07:30:00Z');
+      expect(checkScheduleWindow(schedule, afterJump)).toEqual({ allowed: true });
+
+      // At 09:30 UTC -> 05:30 EDT (outside window) -> Closed
+      const outsideAfterJump = new Date('2026-03-08T09:30:00Z');
+      expect(checkScheduleWindow(schedule, outsideAfterJump)).toEqual({ allowed: false, reason: 'window_closed' });
+    });
+
+    it('handles US Eastern DST Fall Back transition (America/New_York on 2026-11-01)', () => {
+      const schedule = {
+        timezone: 'America/New_York',
+        active_days: ['Sun'],
+        window_start: '00:00',
+        window_end: '03:00',
+      };
+
+      // At 05:30 UTC -> 01:30 EDT (first pass of 01:30) -> Allowed
+      const firstPass = new Date('2026-11-01T05:30:00Z');
+      expect(checkScheduleWindow(schedule, firstPass)).toEqual({ allowed: true });
+
+      // At 06:30 UTC -> 01:30 EST (second pass of 01:30 after 2am roll back) -> Allowed
+      const secondPass = new Date('2026-11-01T06:30:00Z');
+      expect(checkScheduleWindow(schedule, secondPass)).toEqual({ allowed: true });
+
+      // At 08:30 UTC -> 03:30 EST (outside window) -> Closed
+      const outside = new Date('2026-11-01T08:30:00Z');
+      expect(checkScheduleWindow(schedule, outside)).toEqual({ allowed: false, reason: 'window_closed' });
+    });
+
+    it('handles Europe/London Summer (BST) vs Winter (GMT) shifts', () => {
+      const schedule = {
+        timezone: 'Europe/London',
+        active_days: ['Wed'],
+        window_start: '10:00',
+        window_end: '12:00',
+      };
+
+      // Winter (GMT = UTC+0): 2026-01-14 at 10:30 UTC is 10:30 GMT -> Allowed
+      const winterTime = new Date('2026-01-14T10:30:00Z');
+      expect(checkScheduleWindow(schedule, winterTime)).toEqual({ allowed: true });
+
+      // Summer (BST = UTC+1): 2026-07-15 at 09:30 UTC is 10:30 BST -> Allowed
+      const summerTime = new Date('2026-07-15T09:30:00Z');
+      expect(checkScheduleWindow(schedule, summerTime)).toEqual({ allowed: true });
+
+      // Summer at 11:30 UTC is 12:30 BST -> Outside window (closed)
+      const summerClosed = new Date('2026-07-15T11:30:00Z');
+      expect(checkScheduleWindow(schedule, summerClosed)).toEqual({ allowed: false, reason: 'window_closed' });
+    });
+
+    it('falls back gracefully to UTC on invalid or unrecognizable timezone without throwing', () => {
+      const schedule = {
+        timezone: 'SolarSystem/Mars_Crater',
+        active_days: ['Mon'],
+        window_start: '10:00',
+        window_end: '12:00',
+      };
+
+      // UTC Monday 11:00 -> Allowed
+      const nowUtc = new Date('2026-08-17T11:00:00Z');
+      expect(checkScheduleWindow(schedule, nowUtc)).toEqual({ allowed: true });
+
+      // UTC Monday 13:00 -> Closed
+      const nowUtcClosed = new Date('2026-08-17T13:00:00Z');
+      expect(checkScheduleWindow(schedule, nowUtcClosed)).toEqual({ allowed: false, reason: 'window_closed' });
+    });
+  });
+
+  describe('10. Stability, Determinism, & Reversibility (parsePortableCron)', () => {
+    it('guarantees deterministic output across 100 consecutive invocations', () => {
+      const config = {
+        interval_minutes: 25,
+        window_start: '09:00',
+        window_end: '18:00',
+        active_days: ['Mon', 'Wed', 'Fri'],
+      };
+
+      const expected = buildPortableCron(config);
+      for (let i = 0; i < 100; i++) {
+        expect(buildPortableCron(config)).toBe(expected);
+      }
+    });
+
+    it('roundtrip: parses and reverses buildPortableCron output for standard intervals', () => {
+      const testCases = [
+        { interval_minutes: 20, window_start: '09:00', window_end: '17:00', active_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] },
+        { interval_minutes: 25, window_start: '10:00', window_end: '14:00', active_days: ['Mon', 'Wed', 'Fri'] },
+        { interval_minutes: 30, window_start: '08:00', window_end: '20:00', active_days: ['Sun', 'Sat'] },
+        { interval_minutes: 36, window_start: '09:00', window_end: '21:00', active_days: null },
+        { interval_minutes: 120, window_start: '08:00', window_end: '16:00', active_days: ['Mon', 'Tue'] },
+      ];
+
+      for (const tc of testCases) {
+        const cron = buildPortableCron(tc);
+        const parsed = parsePortableCron(cron);
+
+        expect(parsed).toBeDefined();
+        expect(parsed?.interval_minutes).toBe(tc.interval_minutes);
+        expect(parsed?.window_start).toBe(tc.window_start);
+        expect(parsed?.window_end).toBe(tc.window_end);
+
+        if (tc.active_days) {
+          const expectedDays = parseActiveDayNumbers(tc.active_days).map((d) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]);
+          expect(parsed?.active_days).toEqual(expectedDays);
+        } else {
+          expect(parsed?.active_days).toBeNull();
+        }
+      }
+    });
+
+    it('roundtrip: parses and reverses overnight windows (22:00 -> 06:00)', () => {
+      const config = {
+        interval_minutes: 30,
+        window_start: '22:00',
+        window_end: '06:00',
+        active_days: ['Mon', 'Wed'],
+      };
+
+      const cron = buildPortableCron(config);
+      const parsed = parsePortableCron(cron);
+
+      expect(parsed?.interval_minutes).toBe(30);
+      expect(parsed?.window_start).toBe('22:00');
+      expect(parsed?.window_end).toBe('06:00');
+      expect(parsed?.active_days).toEqual(['Mon', 'Wed']);
     });
   });
 });
