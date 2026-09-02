@@ -124,7 +124,7 @@ export const GET: APIRoute = async ({ locals }) => {
               try {
                 const { data: adoptedRow } = await compAdmin
                   .from('competitor_schedules')
-                  .insert({
+                  .upsert({
                     workspace_id: workspaceId,
                     label: adoptLabel,
                     cron_expression: rJob.expression || rJob.cron_expression || '0 2 * * *',
@@ -132,9 +132,9 @@ export const GET: APIRoute = async ({ locals }) => {
                     fastcron_token_id: defaultToken.id || null,
                     fastcron_job_id: rJobIdStr,
                     status: isFastCronJobPaused(rJob) ? 'paused' : 'active',
-                  })
+                  }, { onConflict: 'workspace_id,fastcron_job_id', ignoreDuplicates: true })
                   .select('*')
-                  .single();
+                  .maybeSingle();
 
                 if (adoptedRow) {
                   dbSchedules.push(adoptedRow);

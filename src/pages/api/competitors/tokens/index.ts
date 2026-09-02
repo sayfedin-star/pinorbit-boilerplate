@@ -116,12 +116,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (!existingSchedules || existingSchedules.length === 0) {
         const effSecret = await getEffectiveSecret(workspaceId, runtimeEnv);
         if (effSecret?.value) {
-          const { data: ws } = await client
-            .from('workspaces')
-            .select('name')
-            .eq('id', workspaceId)
-            .maybeSingle();
-          const wsName = (ws?.name || 'workspace').replace(/[—\r\n\t]+/g, ' ').trim().slice(0, 40) || 'workspace';
+          let wsName = 'workspace';
+          try {
+            const schedulingAdmin = dbClients.getSchedulingAdmin(runtimeEnv);
+            if (schedulingAdmin && typeof schedulingAdmin.from === 'function') {
+              const { data: ws } = await schedulingAdmin
+                .from('workspaces')
+                .select('name')
+                .eq('id', workspaceId)
+                .maybeSingle();
+              if (ws?.name) {
+                wsName = ws.name.replace(/[—\r\n\t]+/g, ' ').trim().slice(0, 40) || 'workspace';
+              }
+            }
+          } catch {}
 
           const dispatchUrl = getDispatchEndpointUrl(runtimeEnv, workspaceId, effSecret.value.trim());
           const postDataStr = JSON.stringify({ workspace_id: workspaceId, pipeline: 'competitors', label: 'Default Daily', trigger: 'cron' });

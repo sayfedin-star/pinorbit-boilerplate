@@ -109,6 +109,27 @@ export async function runRetentionCleanup(
     warnings.push(`Sweep failed: ${err.message}`);
   }
 
+  // 1b. Mark expired processing pins with exhausted retries (attempts >= 2) as failed
+  try {
+    const builder = schedulingAdmin.from('pins');
+    if (builder && typeof builder.update === 'function') {
+      const q = builder
+        .update({
+          status: 'failed',
+          error_message: 'Processing timed out after maximum retry attempts.',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('workspace_id', workspaceId)
+        .eq('status', 'processing')
+        .lt('claimed_at', sweepCutoff);
+      if (q && typeof q.gte === 'function') {
+        await q.gte('attempts', 2);
+      }
+    }
+  } catch (err: any) {
+    warnings.push(`Terminal sweep failed: ${err.message}`);
+  }
+
   // 2. Gate P1 (Posted pins, terminal pins, delivery logs, import sessions)
   let deletedPinsCount = 0;
   let deletedTerminalPinsCount = 0;
@@ -306,9 +327,12 @@ export async function runRetentionCleanup(
       updated_at: new Date().toISOString(),
     };
 
-    await schedulingAdmin
-      .from('workspace_retention_settings')
-      .upsert(telemetryPayload, { onConflict: 'workspace_id' });
+    if (schedulingAdmin && typeof schedulingAdmin.from === 'function') {
+      const builder = schedulingAdmin.from('workspace_retention_settings');
+      if (builder && typeof builder.upsert === 'function') {
+        await builder.upsert(telemetryPayload, { onConflict: 'workspace_id' });
+      }
+    }
   } catch (e) {
     console.warn('[Retention] telemetry write failed:', e);
   }

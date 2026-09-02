@@ -77,6 +77,7 @@ vi.mock('../db/clients', () => {
           }),
           eq: vi.fn(() => q),
           lt: vi.fn(() => q),
+          gte: vi.fn(() => q),
           in: vi.fn(() => q),
           limit: vi.fn().mockImplementation((n: number) => {
             return Promise.resolve({

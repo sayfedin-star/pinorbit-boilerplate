@@ -760,6 +760,7 @@ export interface PurgeResultCounts {
   rollups_rebuilt: number;
   top_pins_deleted: number;
   url_perf_deleted: number;
+  url_perf_rebuilt?: number;
 }
 
 export interface PurgeResponse {

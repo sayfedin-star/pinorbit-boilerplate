@@ -91,21 +91,43 @@ export async function handleDispatch(body: any, locals: any) {
     const processingTimeoutMinutes = clampProcessingTimeoutMinutes(wsSettings?.processing_timeout_minutes);
     const staleCut = new Date(Date.now() - processingTimeoutMinutes * 60000).toISOString();
 
-    // Scope sweep to pins claimed by this schedule (or account fallback if null), handling SQL NULL trap on claimed_at
-    await admin
-      .from('pins')
-      .update({
-        status: 'pending',
-        processing_started_at: null,
-        claimed_at: null,
-        claimed_by_schedule_id: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('status', 'processing')
-      .or(`claimed_by_schedule_id.eq.${scheduleId},and(claimed_by_schedule_id.is.null,account_id.eq.${accountId})`)
-      .or(`claimed_at.lt.${staleCut},and(claimed_at.is.null,processing_started_at.lt.${staleCut})`)
-      .lt('attempts', 2)
-      .then(() => {});
+    // 2a) Stale recovery: reset timed-out processing pins with remaining retries back to pending
+    try {
+      await admin
+        .from('pins')
+        .update({
+          status: 'pending',
+          processing_started_at: null,
+          claimed_at: null,
+          claimed_by_schedule_id: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('workspace_id', workspaceId)
+        .eq('account_id', accountId)
+        .eq('status', 'processing')
+        .or(`claimed_at.lt.${staleCut},and(claimed_at.is.null,processing_started_at.lt.${staleCut})`)
+        .lt('attempts', 2);
+    } catch (sweepErr) {
+      console.warn('[Dispatch] Stale pin recovery warning:', sweepErr);
+    }
+
+    // 2b) Terminal transition: mark timed-out processing pins that exhausted retries (attempts >= 2) as failed
+    try {
+      await admin
+        .from('pins')
+        .update({
+          status: 'failed',
+          error_message: 'Processing timed out after maximum retry attempts.',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('workspace_id', workspaceId)
+        .eq('account_id', accountId)
+        .eq('status', 'processing')
+        .or(`claimed_at.lt.${staleCut},and(claimed_at.is.null,processing_started_at.lt.${staleCut})`)
+        .gte('attempts', 2);
+    } catch (termErr) {
+      console.warn('[Dispatch] Terminal pin transition warning:', termErr);
+    }
 
     // 3) Account + daily cap
     const { data: account } = await admin.from('accounts').select('*').eq('id', accountId).maybeSingle();
