@@ -3,6 +3,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../server/auth/workspace-guard';
 import { dbClients } from '../../../server/db/clients';
+import { cleanupWorkspaceAnalytics } from '../../../server/services/workspace-cleanup';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
@@ -98,7 +99,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Clean up cross-project settings and runs before deleting workspace
+    // Clean up cross-project settings, FastCron jobs, and KV secret overrides before deleting workspace
     try {
       const p4Admin = dbClients.getPinArchive(runtimeEnv);
       await Promise.allSettled([
@@ -106,6 +107,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         p4Admin?.from?.('pa_runs')?.delete?.()?.eq?.('workspace_id', workspaceId),
         p3Admin?.from?.('workspace_analytics_settings')?.delete?.()?.eq?.('workspace_id', workspaceId),
         p1Admin?.from?.('workspace_retention_settings')?.delete?.()?.eq?.('workspace_id', workspaceId),
+        cleanupWorkspaceAnalytics(workspaceId, runtimeEnv),
       ]);
     } catch {}
 

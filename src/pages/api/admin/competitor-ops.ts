@@ -355,6 +355,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const dryRun = Boolean(body.dry_run === true || body.dry_run === 'true');
   const targetUsername = typeof body.username === 'string' ? body.username.trim() : (typeof body.target_username === 'string' ? body.target_username.trim() : '');
 
+  let jobRecord: any = null;
   try {
     // 2. Insert Ingestion Job record with 'running' status (not queued) and trigger origin
     const trigger = (selectedIds.length === 1 || body.competitor_id) ? 'run_now' : 'full';
@@ -372,6 +373,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .single();
 
     if (jobErr || !job) throw jobErr || new Error('Failed to create ingestion job record');
+    jobRecord = job;
 
     // 3. Dispatch to GitHub Actions workflow directly
     const githubRepo =
@@ -452,6 +454,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       502
     );
   } catch (err: any) {
+    if (jobRecord?.id && competitorsClient) {
+      try {
+        await competitorsClient
+          .from('competitor_ingestion_jobs')
+          .update({
+            status: 'failed',
+            error_message: err?.message || 'Failed to dispatch competitor update',
+            completed_at: new Date().toISOString(),
+          })
+          .eq('id', jobRecord.id);
+      } catch (markErr) {
+        console.warn('[CompetitorOps] Failed to mark job failed:', markErr);
+      }
+    }
     return jsonResponse({ success: false, error: err.message || 'Failed to dispatch competitor update' }, 500);
   }
 };

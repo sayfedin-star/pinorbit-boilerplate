@@ -145,7 +145,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     const { data: updated, error: updateErr } = await compAdmin
       .from('competitor_schedules')
       .update(updatePayload)
-      .eq('id', id)
+      .eq('id', schedule.id)
       .eq('workspace_id', workspaceId)
       .select('*')
       .single();
