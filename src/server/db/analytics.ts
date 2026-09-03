@@ -331,7 +331,11 @@ export const analyticsDb = {
       });
 
     if (error) throw error;
-    return count ?? rows.length;
+    if (count === null || count === undefined) {
+      console.warn('[AnalyticsDB] count was null on upsertAccountDailyMetrics, defaulting to 0');
+      return 0;
+    }
+    return count;
   },
 
   /**
@@ -394,7 +398,11 @@ export const analyticsDb = {
       });
 
     if (error) throw error;
-    return count ?? pins.length;
+    if (count === null || count === undefined) {
+      console.warn('[AnalyticsDB] count was null on upsertTopPinsSnapshots, defaulting to 0');
+      return 0;
+    }
+    return count;
   },
 
   /**
@@ -425,7 +433,11 @@ export const analyticsDb = {
       });
 
     if (error) throw error;
-    return count ?? metrics.length;
+    if (count === null || count === undefined) {
+      console.warn('[AnalyticsDB] count was null on upsertDailyWorkspaceMetrics, defaulting to 0');
+      return 0;
+    }
+    return count;
   },
 
   // ============================================================================
@@ -444,18 +456,24 @@ export const analyticsDb = {
       throw new Error('Tenant Boundary Violation: workspaceId and connectionId are required.');
     }
 
+    const clampedDays = Math.min(Math.max(windowDays || 30, 1), 365);
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - windowDays);
+    startDate.setDate(startDate.getDate() - clampedDays);
     const startDateStr = startDate.toISOString().split('T')[0];
-
     const analyticsClient = dbClients.getAnalytics();
-    const { data, error } = await analyticsClient
+    let q: any = analyticsClient
       .from('account_analytics_daily')
       .select('*')
       .eq('workspace_id', workspaceId)
       .eq('connection_id', connectionId)
       .gte('metric_date', startDateStr)
       .order('metric_date', { ascending: true });
+
+    if (typeof q?.limit === 'function') {
+      q = q.limit(1000);
+    }
+
+    const { data, error } = await q;
 
     if (error) throw error;
     return (data as AccountAnalyticsDaily[]) || [];
@@ -537,6 +555,7 @@ export const analyticsDb = {
       p_days: days,
       p_limit: Math.min(Math.max((limit || 25) * 40, 1000), 5000),
       p_search: cleanSearch,
+      p_workspace_id: workspaceId,
     });
 
     let allItems: PinLeaderboardItem[] = [];
@@ -749,10 +768,11 @@ export const analyticsDb = {
       throw new Error('Tenant Boundary Violation: workspaceId, connectionId, and pinId are required.');
     }
 
+    const clampedDays = Math.min(Math.max(days || 90, 1), 365);
     const analyticsClient = dbClients.getAnalytics();
-    const cutoff = new Date(Date.now() - days * 86400000).toISOString();
+    const cutoff = new Date(Date.now() - clampedDays * 86400000).toISOString();
 
-    const { data, error } = await analyticsClient
+    let q: any = analyticsClient
       .from('top_pins_snapshots')
       .select('window_end, rank_position, impressions, engagement, saves, outbound_clicks, pin_clicks, engagement_rate, outbound_click_rate, pin_click_rate, save_rate, title, image_url, destination_url')
       .eq('workspace_id', workspaceId)
@@ -761,6 +781,12 @@ export const analyticsDb = {
       .eq('sort_by', sortBy)
       .gte('window_end', cutoff)
       .order('window_end', { ascending: true });
+
+    if (typeof q?.limit === 'function') {
+      q = q.limit(1000);
+    }
+
+    const { data, error } = await q;
 
     if (error || !data) {
       return [];
@@ -810,12 +836,13 @@ export const analyticsDb = {
       throw new Error('Tenant Boundary Violation: workspaceId and connectionId are required.');
     }
 
+    const clampedDays = Math.min(Math.max(windowDays || 30, 1), 365);
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - windowDays);
+    startDate.setDate(startDate.getDate() - clampedDays);
     const startDateStr = startDate.toISOString().split('T')[0];
 
     const analyticsClient = dbClients.getAnalytics();
-    const { data: dailyRows, error: dailyError } = await analyticsClient
+    let qDaily: any = analyticsClient
       .from('account_analytics_daily')
       .select('*')
       .eq('workspace_id', workspaceId)
@@ -823,6 +850,12 @@ export const analyticsDb = {
       .eq('data_status', 'READY')
       .gte('metric_date', startDateStr)
       .order('metric_date', { ascending: true });
+
+    if (typeof qDaily?.limit === 'function') {
+      qDaily = qDaily.limit(1000);
+    }
+
+    const { data: dailyRows, error: dailyError } = await qDaily;
 
     if (dailyError) throw dailyError;
 
@@ -1025,21 +1058,27 @@ export const analyticsDb = {
     if (fromDate) totalsQuery = totalsQuery.gte('metric_date', fromDate);
     if (toDate) totalsQuery = totalsQuery.lte('metric_date', toDate);
 
-    const { data: totalsData } = await totalsQuery;
-    const totalsRows = totalsData || [];
-
     let impressions = 0;
     let engagements = 0;
     let outbound_clicks = 0;
     let pin_clicks = 0;
     let saves = 0;
 
-    for (const row of totalsRows) {
-      impressions += Number(row.impressions || 0);
-      engagements += Number(row.engagements || 0);
-      outbound_clicks += Number(row.outbound_clicks || 0);
-      pin_clicks += Number(row.pin_clicks || 0);
-      saves += Number(row.saves || 0);
+    let totalsOffset = 0;
+    const totalsBatchSize = 1000;
+    while (true) {
+      const { data: chunk, error: totalsErr } = await totalsQuery.range(totalsOffset, totalsOffset + totalsBatchSize - 1);
+      if (totalsErr) throw totalsErr;
+      const rows = chunk || [];
+      for (const row of rows) {
+        impressions += Number(row.impressions || 0);
+        engagements += Number(row.engagements || 0);
+        outbound_clicks += Number(row.outbound_clicks || 0);
+        pin_clicks += Number(row.pin_clicks || 0);
+        saves += Number(row.saves || 0);
+      }
+      if (rows.length < totalsBatchSize) break;
+      totalsOffset += totalsBatchSize;
     }
 
     const engagement_rate = impressions > 0 ? engagements / impressions : 0.0;
@@ -1283,21 +1322,25 @@ export const analyticsDb = {
     if (startDate) query = query.gte('metric_date', startDate);
     if (endDate) query = query.lte('metric_date', endDate);
 
-    const { data, error } = await query;
-    if (error) throw error;
-
     let total_impressions = 0;
     let total_engagements = 0;
     let total_saves = 0;
     let total_clicks = 0;
 
-    if (data && data.length > 0) {
-      for (const row of data) {
+    let offset = 0;
+    const batchSize = 1000;
+    while (true) {
+      const { data, error } = await query.range(offset, offset + batchSize - 1);
+      if (error) throw error;
+      const rows = data || [];
+      for (const row of rows) {
         total_impressions += Number(row.total_impressions || 0);
         total_engagements += Number(row.total_engagements || 0);
         total_saves += Number(row.total_saves || 0);
         total_clicks += Number(row.total_pin_clicks || 0);
       }
+      if (rows.length < batchSize) break;
+      offset += batchSize;
     }
 
     const engagement_rate =

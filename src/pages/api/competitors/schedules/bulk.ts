@@ -101,7 +101,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
           results.push({ id: sched.id, action, success: true });
         } else if (action === 'delete') {
           if (sched.fastcron_job_id && targetTokenObj?.token) {
-            await fastcronCall('cron_delete', { id: Number(sched.fastcron_job_id) }, targetTokenObj.token).catch(() => {});
+            try {
+              const delRes = await fastcronCall('cron_delete', { id: Number(sched.fastcron_job_id) }, targetTokenObj.token);
+              if (!delRes || !delRes.success) {
+                failedCount++;
+                results.push({ id: sched.id, action, success: false, error: delRes?.error || 'Remote FastCron delete failed' });
+                continue;
+              }
+            } catch (delErr: any) {
+              failedCount++;
+              results.push({ id: sched.id, action, success: false, error: delErr?.message || 'Remote FastCron delete failed' });
+              continue;
+            }
           }
           await compAdmin
             .from('competitor_schedules')

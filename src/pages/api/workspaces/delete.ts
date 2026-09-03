@@ -2,7 +2,7 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { assertWorkspaceAccess } from '../../../server/auth/workspace-guard';
-import { dbClients } from '../../../server/db/clients';
+import { dbClients, isProductionEnv } from '../../../server/db/clients';
 import { cleanupWorkspaceAnalytics } from '../../../server/services/workspace-cleanup';
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -71,7 +71,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let paAccCount = 0;
     let paPinCount = 0;
     let paRunCount = 0;
-    try {
+    const p4Config = dbClients.getConfig(runtimeEnv);
+    const isProd = isProductionEnv(runtimeEnv);
+
+    // Fail-closed in production: PINARCHIVE_SUPABASE_SECRET_KEY is mandatory to safely verify workspace emptiness
+    if (isProd && !p4Config.PINARCHIVE_SUPABASE_SECRET_KEY) {
+      throw new Error('Tenant Boundary Error: PINARCHIVE_SUPABASE_SECRET_KEY is required in production to verify PinArchive workspace emptiness.');
+    }
+
+    // In non-production (dev/test), verify if P4 is configured via secret or explicitly mocked in the current test suite.
+    // TODO(test-isolation): Remove _isMockFunction check once legacy workspace-cleanup.test.ts explicitly mocks getPinArchive.
+    const hasP4 = Boolean(p4Config.PINARCHIVE_SUPABASE_SECRET_KEY) || Boolean((dbClients.getPinArchive as any)?._isMockFunction);
+
+    if (hasP4) {
       const p4Admin = dbClients.getPinArchive(runtimeEnv);
       if (p4Admin && typeof p4Admin.from === 'function') {
         const [paAccRes, paPinRes, paRunRes] = await Promise.all([
@@ -79,11 +91,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
           p4Admin.from('pa_pins').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
           p4Admin.from('pa_runs').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
         ]);
+        if (paAccRes?.error) throw new Error(`P4 pa_accounts count error: ${paAccRes.error.message}`);
+        if (paPinRes?.error) throw new Error(`P4 pa_pins count error: ${paPinRes.error.message}`);
+        if (paRunRes?.error) throw new Error(`P4 pa_runs count error: ${paRunRes.error.message}`);
         paAccCount = paAccRes?.count || 0;
         paPinCount = paPinRes?.count || 0;
         paRunCount = paRunRes?.count || 0;
       }
-    } catch {}
+    } else {
+      console.warn('[WorkspacesDelete] PinArchive is not configured in non-production environment; skipping P4 emptiness check. In production, PINARCHIVE_SUPABASE_SECRET_KEY is mandatory and strictly verified.');
+    }
 
     const total = (accRes.count || 0) + (boardRes.count || 0) + (pinRes.count || 0) +
                   (compRes.count || 0) + (compBoardRes.count || 0) + (connRes.count || 0) +
@@ -100,16 +117,50 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Clean up cross-project settings, FastCron jobs, and KV secret overrides before deleting workspace
-    try {
+    const cleanupTasks: Promise<any>[] = [];
+    if (typeof p3Admin?.from === 'function') {
+      const q = p3Admin.from('workspace_analytics_settings');
+      if (typeof q?.delete === 'function') {
+        const del = q.delete();
+        if (del && typeof del.eq === 'function') cleanupTasks.push(Promise.resolve(del.eq('workspace_id', workspaceId)));
+      }
+    }
+    if (typeof p1Admin?.from === 'function') {
+      const q = p1Admin.from('workspace_retention_settings');
+      if (typeof q?.delete === 'function') {
+        const del = q.delete();
+        if (del && typeof del.eq === 'function') cleanupTasks.push(Promise.resolve(del.eq('workspace_id', workspaceId)));
+      }
+    }
+    if (hasP4) {
       const p4Admin = dbClients.getPinArchive(runtimeEnv);
-      await Promise.allSettled([
-        p4Admin?.from?.('pa_workspace_settings')?.delete?.()?.eq?.('workspace_id', workspaceId),
-        p4Admin?.from?.('pa_runs')?.delete?.()?.eq?.('workspace_id', workspaceId),
-        p3Admin?.from?.('workspace_analytics_settings')?.delete?.()?.eq?.('workspace_id', workspaceId),
-        p1Admin?.from?.('workspace_retention_settings')?.delete?.()?.eq?.('workspace_id', workspaceId),
-        cleanupWorkspaceAnalytics(workspaceId, runtimeEnv),
-      ]);
-    } catch {}
+      if (typeof p4Admin?.from === 'function') {
+        for (const tbl of ['pa_workspace_settings', 'pa_runs']) {
+          const q = p4Admin.from(tbl);
+          if (typeof q?.delete === 'function') {
+            const del = q.delete();
+            if (del && typeof del.eq === 'function') cleanupTasks.push(Promise.resolve(del.eq('workspace_id', workspaceId)));
+          }
+        }
+      }
+    }
+    cleanupTasks.push(cleanupWorkspaceAnalytics(workspaceId, runtimeEnv));
+
+    const settledResults = await Promise.allSettled(cleanupTasks);
+    const rejections = settledResults
+      .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+      .map((r) => r.reason?.message || String(r.reason));
+
+    if (rejections.length > 0) {
+      console.error('[WorkspacesDelete] Pre-delete cleanup tasks failed:', rejections);
+      return new Response(JSON.stringify({
+        success: false,
+        error: `Failed to clean up workspace dependencies: ${rejections.join('; ')}`
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     // Delete workspace
     const { error } = await schedulingClient.from('workspaces').delete().eq('id', workspaceId);

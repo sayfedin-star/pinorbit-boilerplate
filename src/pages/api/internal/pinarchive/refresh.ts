@@ -97,14 +97,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
             authPassed = true;
           }
         }
-      } catch {}
+      } catch (err: any) {
+        console.warn('[PinArchiveRefresh] verifyIngestSecret error:', err?.message || err);
+      }
       if (!authPassed && eff?.value) {
         if (await timingSafeEqual(secretHeader, eff.value)) {
           authPassed = true;
         }
       }
-    } catch {
-      // Secret evaluation failed
+    } catch (err: any) {
+      console.warn('[PinArchiveRefresh] Secret evaluation error:', err?.message || err);
     }
   }
 
@@ -122,8 +124,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
         authPassed = true;
-      } catch {
-        // Access denied or insufficient role
+      } catch (err: any) {
+        console.warn('[PinArchiveRefresh] Session admin check failed:', err?.message || err);
       }
     }
   }

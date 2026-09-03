@@ -162,7 +162,7 @@ export async function handleDispatch(body: any, locals: any) {
           updated_at: new Date().toISOString(),
         }).eq('id', c.id).eq('workspace_id', workspaceId).eq('account_id', accountId);
       }
-      return json({ success: true, dispatched: false, reason: 'no_webhook_capacity' });
+      return json({ success: false, dispatched: false, error: 'No active webhook with remaining capacity found.', reason: 'no_webhook_capacity' }, 503);
     }
 
     // 6) Board resolution + push tickets to Make
@@ -342,6 +342,18 @@ export async function handleDispatch(body: any, locals: any) {
       } catch (err: any) {
         console.warn('[Dispatch] debounce lock error:', err?.message || err);
       }
+    }
+
+    if (dispatched === 0 && claimed.length > 0) {
+      return json(
+        {
+          success: false,
+          dispatched: 0,
+          skipped,
+          error: 'All claimed pin dispatches failed to push to webhook.',
+        },
+        502
+      );
     }
 
     return json({ success: true, dispatched, skipped });

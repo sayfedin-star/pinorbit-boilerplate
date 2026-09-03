@@ -12,6 +12,11 @@ export function getAnalyticsKV(localsOrEnv: unknown): EdgeKVNamespace | undefine
     return (localsOrEnv as Record<string, unknown>).ANALYTICS_KV as EdgeKVNamespace | undefined;
   }
 
+  const runtimeEnvKV = (localsOrEnv as { runtimeEnv?: Record<string, unknown> })?.runtimeEnv?.ANALYTICS_KV;
+  if (runtimeEnvKV) {
+    return runtimeEnvKV as EdgeKVNamespace;
+  }
+
   const env = (localsOrEnv as { runtime?: { env?: Record<string, unknown> } })?.runtime?.env;
   return (env?.ANALYTICS_KV as EdgeKVNamespace | undefined) ?? undefined;
 }
