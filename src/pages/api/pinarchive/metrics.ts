@@ -58,12 +58,12 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   try {
     const db = dbClients.getPinArchive(locals.runtime?.env);
-    const { data, error, count } = await db
+    const deleteQuery: any = db
       .from('pa_pin_metrics')
       .delete()
       .eq('workspace_id', wsCtx.workspaceId)
-      .in('id', metricIds)
-      .select('id', { count: 'exact' });
+      .in('id', metricIds);
+    const { data, error, count } = await deleteQuery.select('id', { count: 'exact' });
 
     if (error) {
       return json({ success: false, error: error.message }, 500);

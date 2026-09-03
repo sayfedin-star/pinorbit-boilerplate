@@ -145,7 +145,7 @@ export const fastcronService = {
     const checkToken = async (tok: string | null | undefined) => {
       if (tok && typeof tok === 'string' && tok.trim().length >= 16) {
         if (tok.startsWith('v1:')) {
-          const dec = await decryptToken(tok, env.TOKEN_KEK);
+          const dec = await decryptToken(tok, env.TOKEN_KEK, envObj);
           if (dec) return dec.trim();
         } else {
           return tok.trim();

@@ -6,11 +6,22 @@ import { analyticsDb } from '../../../../server/db/analytics';
 
 function sanitizeConnection(conn: any) {
   if (!conn || typeof conn !== 'object') return conn;
-  const copy = { ...conn };
-  delete copy.fastcron_token;
-  delete copy.analytics_fastcron_token;
-  delete copy.top_pins_fastcron_token;
-  return copy;
+  return {
+    id: conn.id,
+    workspace_id: conn.workspace_id,
+    account_id: conn.account_id,
+    display_name: conn.display_name,
+    pinterest_username: conn.pinterest_username,
+    status: conn.status,
+    is_active: conn.is_active,
+    last_synced_at: conn.last_synced_at,
+    created_at: conn.created_at,
+    updated_at: conn.updated_at,
+    pin_count: conn.pin_count,
+    board_count: conn.board_count,
+    stats: conn.stats,
+    window_days: conn.window_days,
+  };
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
@@ -41,7 +52,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
   try {
     await assertWorkspaceAccess(schedulingClient, workspaceId, user.id);
     const url = new URL(request.url);
-    const windowDays = parseInt(url.searchParams.get('window_days') || '30', 10);
+    const rawWindow = parseInt(url.searchParams.get('window_days') || '30', 10);
+    const windowDays = isNaN(rawWindow) ? 30 : Math.min(Math.max(rawWindow, 1), 365);
 
     const connections = await analyticsDb.getWorkspaceConnectionsWithStats(
       workspaceId,

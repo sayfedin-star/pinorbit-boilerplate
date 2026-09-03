@@ -61,15 +61,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const db = dbClients.getPinArchive(locals.runtime?.env);
 
     const newStatus = body.ingest_enabled ? 'active' : 'paused';
-    const { data, error, count } = await db
+    const updateQuery: any = db
       .from('pa_accounts')
       .update({
         ingest_enabled: body.ingest_enabled,
         status: newStatus,
       })
       .eq('workspace_id', wsCtx.workspaceId)
-      .in('id', accountIds)
-      .select('id', { count: 'exact' });
+      .in('id', accountIds);
+    const { data, error, count } = await updateQuery.select('id', { count: 'exact' });
 
     if (error) {
       return json({ success: false, error: error.message }, 500);

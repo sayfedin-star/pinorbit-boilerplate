@@ -89,7 +89,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (action === 'pause' || action === 'resume') {
           if (sched.fastcron_job_id && targetTokenObj?.token) {
             const apiAction = action === 'pause' ? 'cron_disable' : 'cron_enable';
-            await fastcronCall(apiAction, { id: Number(sched.fastcron_job_id) }, targetTokenObj.token);
+            const actionRes = await fastcronCall(apiAction, { id: Number(sched.fastcron_job_id) }, targetTokenObj.token);
+            if (!actionRes || actionRes.success === false) {
+              failedCount++;
+              results.push({
+                id: sched.id,
+                action,
+                success: false,
+                error: actionRes?.error || `Remote FastCron ${action} failed`,
+              });
+              continue;
+            }
           }
           await compAdmin
             .from('competitor_schedules')
