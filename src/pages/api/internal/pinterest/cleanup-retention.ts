@@ -62,7 +62,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const verification = await (webhookSecrets as any).verifyIngestSecret(secret, workspaceId, runtimeEnv);
       authValid = Boolean(verification?.valid);
     }
-  } catch {}
+  } catch (err: any) {
+    console.warn('[CleanupRetention] verifyIngestSecret error:', err?.message || err);
+  }
   if (!authValid && secret && expected?.value) {
     authValid = await timingSafeEqual(secret, expected.value);
   }

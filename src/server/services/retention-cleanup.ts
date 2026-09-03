@@ -17,17 +17,24 @@ interface BatchedDeleteOptions {
   batchSize?: number;
 }
 
+export interface BatchedDeleteResult {
+  deleted: number;
+  hitCap: boolean;
+}
+
 export async function batchedDelete(
   client: any,
   table: string,
   options: BatchedDeleteOptions
-): Promise<number> {
+): Promise<BatchedDeleteResult> {
   let totalDeleted = 0;
   const batchSize = options.batchSize || 500;
   const MAX_BATCH_ITERATIONS = 50;
   let iterations = 0;
+  let hitCap = false;
 
-  while (iterations++ < MAX_BATCH_ITERATIONS) {
+  while (iterations < MAX_BATCH_ITERATIONS) {
+    iterations++;
     let query = client
       .from(table)
       .select('id')
@@ -62,11 +69,16 @@ export async function batchedDelete(
 
     if (batchDeleted < batchSize) break;
 
+    if (iterations >= MAX_BATCH_ITERATIONS && batchDeleted >= batchSize) {
+      hitCap = true;
+      break;
+    }
+
     // Small delay to reduce DB load
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((r) => setTimeout(r, 10));
   }
 
-  return totalDeleted;
+  return { deleted: totalDeleted, hitCap };
 }
 
 export async function runRetentionCleanup(
@@ -155,11 +167,12 @@ export async function runRetentionCleanup(
   let deletedTerminalPinsCount = 0;
   let deletedDeliveryLogs = 0;
   let deletedImportSessions = 0;
+  let wasTruncated = false;
 
   if (effectiveP1) {
     try {
       // 1. Purge posted pins older than workspace retention days using batchedDelete
-      deletedPinsCount = await batchedDelete(schedulingAdmin, 'pins', {
+      const resPosted = await batchedDelete(schedulingAdmin, 'pins', {
         column: 'workspace_id',
         value: workspaceId,
         workspaceId,
@@ -167,6 +180,8 @@ export async function runRetentionCleanup(
         cutoff: postedCutoff,
         extraFilter: { column: 'status', value: 'posted' },
       });
+      deletedPinsCount = resPosted.deleted;
+      if (resPosted.hitCap) wasTruncated = true;
 
       // 2. Terminal pins: failed & cancelled using batchedDelete
       const terminalDays = typeof wsSettings?.retention_terminal_days === 'number' ? wsSettings.retention_terminal_days : 90;
@@ -179,6 +194,8 @@ export async function runRetentionCleanup(
         cutoff: terminalCutoff,
         extraFilter: { column: 'status', value: 'failed' },
       });
+      if (delFailed.hitCap) wasTruncated = true;
+
       const delCancelled = await batchedDelete(schedulingAdmin, 'pins', {
         column: 'workspace_id',
         value: workspaceId,
@@ -187,7 +204,9 @@ export async function runRetentionCleanup(
         cutoff: terminalCutoff,
         extraFilter: { column: 'status', value: 'cancelled' },
       });
-      deletedTerminalPinsCount = delFailed + delCancelled;
+      if (delCancelled.hitCap) wasTruncated = true;
+
+      deletedTerminalPinsCount = delFailed.deleted + delCancelled.deleted;
 
       // 3. Pin delivery logs RPC
       const logsDays = typeof wsSettings?.retention_logs_days === 'number' ? wsSettings.retention_logs_days : 14;
@@ -202,13 +221,15 @@ export async function runRetentionCleanup(
       // 4. Import sessions using batchedDelete
       const importDays = typeof wsSettings?.import_sessions_days === 'number' ? wsSettings.import_sessions_days : 30;
       const sessionsCutoff = new Date(Date.now() - importDays * 86400000).toISOString();
-      deletedImportSessions = await batchedDelete(schedulingAdmin, 'import_sessions', {
+      const resSessions = await batchedDelete(schedulingAdmin, 'import_sessions', {
         column: 'workspace_id',
         value: workspaceId,
         workspaceId,
         dateColumn: 'created_at',
         cutoff: sessionsCutoff,
       });
+      deletedImportSessions = resSessions.deleted;
+      if (resSessions.hitCap) wasTruncated = true;
     } catch (p1Err: any) {
       console.error('[Retention] P1 prune failed:', p1Err);
       warnings.push(`P1 prune failed: ${p1Err.message || String(p1Err)}`);
@@ -252,13 +273,15 @@ export async function runRetentionCleanup(
       const topPinsRawDays = typeof wsSettings?.top_pins_raw_days === 'number' ? wsSettings.top_pins_raw_days : 180;
       const snapshotCutoff = new Date(Date.now() - topPinsRawDays * 86400000).toISOString().split('T')[0];
 
-      deletedSnapshotsCount = await batchedDelete(analyticsClient, 'top_pins_snapshots', {
+      const resSnapshots = await batchedDelete(analyticsClient, 'top_pins_snapshots', {
         column: 'workspace_id',
         value: workspaceId,
         workspaceId,
         dateColumn: 'window_end',
         cutoff: snapshotCutoff,
       });
+      deletedSnapshotsCount = resSnapshots.deleted;
+      if (resSnapshots.hitCap) wasTruncated = true;
 
       if (wsSettings?.top_pins_downsample_enabled) {
         console.warn('[Retention] Top pins downsampling requested for workspace:', workspaceId);
@@ -272,7 +295,7 @@ export async function runRetentionCleanup(
   // Construct consolidated payload
   const payload: Record<string, any> = {
     success: true,
-    truncated: false,
+    truncated: wasTruncated,
     workspace_id: workspaceId,
     auto_prune_enabled: Boolean(wsSettings?.auto_prune_enabled ?? false),
     p2_prune_enabled: Boolean(wsSettings?.p2_prune_enabled ?? false),

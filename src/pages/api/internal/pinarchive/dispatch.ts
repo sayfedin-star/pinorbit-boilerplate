@@ -262,12 +262,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     try {
       payload = JSON.parse(text);
     } catch {
-      if (!hasQueryParams) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Malformed JSON payload.' }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
+      return new Response(
+        JSON.stringify({ success: false, error: 'Malformed JSON payload.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
   }
 

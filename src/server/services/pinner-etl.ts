@@ -762,7 +762,7 @@ export const pinnerETL = {
         // Offload raw JSONB after 7 days to reclaim space
         const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
         const analyticsClient = dbClients.getAnalytics(runtimeEnv);
-        await analyticsClient
+        const { error: reclaimErr } = await analyticsClient
           .from('top_pins_snapshots')
           .update({
             raw_pin: null,
@@ -770,20 +770,20 @@ export const pinnerETL = {
             raw_metrics: null,
           })
           .eq('workspace_id', workspaceId)
-          .lt('window_end', sevenDaysAgo)
-          .then(() => {});
+          .lt('window_end', sevenDaysAgo);
+        if (reclaimErr) {
+          console.warn('[PinnerETL] raw reclaim failed:', reclaimErr.message);
+        }
       }
 
       const rollupsUpsertCount = await upsertBatch('workspace_rollups', workspaceRollupRows, (r) =>
         analyticsDb.upsertDailyWorkspaceMetrics(workspaceId, r)
       );
 
-
-
       // =========================================================================
       // Operational Ingestion Run Completion in Project 3 (R5.1)
       // =========================================================================
-      const totalRowsCount = dailyRows.length + topPinRows.length + (summaryRow ? 1 : 0);
+      const totalRowsCount = dailyUpsertCount + topPinsUpsertCount + (summaryRow ? 1 : 0);
       await analyticsDb.completeIngestionRun(runRecord.id, totalRowsCount);
 
       // =========================================================================

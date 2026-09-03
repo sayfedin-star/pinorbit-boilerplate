@@ -145,7 +145,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     isAuthed = wsVerif.valid;
   } else {
     // If connection not found, verify whether the caller has the valid server ingest secret
-    const globalVerif = await verifyIngestSecret(providedSecret, undefined, runtimeEnv);
+    const globalVerif = await verifyIngestSecret(providedSecret, '', runtimeEnv);
     isAuthed = globalVerif.valid;
   }
 
@@ -166,7 +166,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: `Connection "${body.connection_id}" not found or has been deleted.`,
+        error: 'Connection not found or has been deleted.',
       }),
       {
         status: 404,

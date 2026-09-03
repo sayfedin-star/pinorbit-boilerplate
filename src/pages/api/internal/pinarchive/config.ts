@@ -13,8 +13,11 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
  *
  * Header: x-ingest-secret: <PINARCHIVE_SECRET>
  *
- * Fail-Lazy: Returns 200 with fallback {0,0,14,34} on any DB error so GAS collector
- * always receives a valid payload and never crashes.
+ * Contract Split (P2-06 & Forensic Audit Follow-Up):
+ * - Database Query Errors / Unhandled Exceptions: Returns HTTP 503 so external GAS collectors
+ *   can detect temporary infrastructure failure and retry rather than executing with false zeroes.
+ * - Absent Settings Row: Returns HTTP 200 with default fallback settings {0,0,14,34,0,3,true,false,true}
+ *   when the settings row is legitimately unconfigured in the database.
  */
 export const GET: APIRoute = async ({ request, locals }) => {
   const runtimeEnv =
@@ -103,22 +106,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
-  } catch {
-    // Fail-lazy fallback
+  } catch (err: any) {
+    console.warn('[PinArchiveConfig] Exception in config endpoint, returning 503:', err?.message || err);
     return new Response(
       JSON.stringify({
-        success: true,
-        pin_filter_min_saves: 0,
-        pin_filter_min_repins: 0,
-        pin_filter_rising_age_days: 14,
-        pin_filter_rising_saves: 34,
-        refresh_max_pins: 0,
-        discovery_stop_pages: 3,
-        audit_sweep_enabled: true,
-        daily_sheet_sync_enabled: false,
-        github_schedule_enabled: true,
+        success: false,
+        error: `Database service unavailable: ${err?.message || 'Unknown error'}`,
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
     );
   }
 };

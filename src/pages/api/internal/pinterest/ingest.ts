@@ -69,7 +69,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           last_attempt_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }).eq('id', internalId).eq('workspace_id', wsId);
-        await admin.from('pin_delivery_logs').insert({ pin_id: internalId, attempt_no: rc, event_type: 'dispatch_failed', error_message: payload.error || null, metadata: { source: 'make_callback' } }).catch(() => {});
+        try {
+          await admin.from('pin_delivery_logs').insert({ pin_id: internalId, attempt_no: rc, event_type: 'dispatch_failed', error_message: payload.error || null, metadata: { source: 'make_callback' } });
+        } catch (err: any) {
+          console.warn('[IngestAPI] dispatch_failed log insert failed:', err?.message || err);
+        }
         return new Response(JSON.stringify({ success: true, handled: 'pin_failed', exhausted }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
       const postedAt = payload.created_at
