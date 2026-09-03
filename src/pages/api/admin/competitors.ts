@@ -52,7 +52,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       try {
         const snapsQuery = g.ok!.db.from('competitor_snapshots').select('competitor_id, profile_reach, profile_views, follower_count, pin_count, recorded_at');
         if (snapsQuery && typeof snapsQuery.in === 'function') {
-          const { data } = await snapsQuery.in('competitor_id', ids).order('recorded_at', { ascending: false });
+          const { data } = await snapsQuery.in('competitor_id', ids).order('recorded_at', { ascending: false }).limit(1000);
           snapsList = data || [];
         } else {
           const perComp = await Promise.all(ids.map(async (compId: string) => {

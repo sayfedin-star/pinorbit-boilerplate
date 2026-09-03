@@ -12,6 +12,7 @@ interface BatchedDeleteOptions {
   value: string;
   dateColumn: string;
   cutoff: string;
+  workspaceId?: string;
   extraFilter?: { column: string; value: string };
   batchSize?: number;
 }
@@ -42,10 +43,17 @@ export async function batchedDelete(
     if (!rows || rows.length === 0) break;
 
     const ids = rows.map((r: any) => r.id);
-    const { count, error: deleteErr } = await client
+    let delQuery = client
       .from(table)
       .delete({ count: 'exact' })
       .in('id', ids);
+
+    const ws = options.workspaceId || (options.column === 'workspace_id' ? options.value : undefined);
+    if (ws) {
+      delQuery = delQuery.eq('workspace_id', ws);
+    }
+
+    const { count, error: deleteErr } = await delQuery;
 
     if (deleteErr) throw deleteErr;
 
@@ -90,18 +98,23 @@ export async function runRetentionCleanup(
   const sweepCutoff = new Date(Date.now() - processingTimeoutMinutes * 60000).toISOString();
   let sweptPinsCount = 0;
   try {
-    const { count, error: sweepErr } = await schedulingAdmin
+    const sweepQuery = schedulingAdmin
       .from('pins')
       .update({
         status: 'pending',
         processing_started_at: null,
         claimed_at: null,
+        claimed_by_schedule_id: null,
         updated_at: new Date().toISOString(),
       })
       .eq('workspace_id', workspaceId)
-      .eq('status', 'processing')
-      .lt('claimed_at', sweepCutoff)
-      .lt('attempts', 2);
+      .eq('status', 'processing');
+
+    const effectiveSweepQuery = typeof sweepQuery.or === 'function'
+      ? sweepQuery.or(`claimed_at.lt.${sweepCutoff},and(claimed_at.is.null,processing_started_at.lt.${sweepCutoff})`)
+      : sweepQuery.lt('claimed_at', sweepCutoff);
+
+    const { count, error: sweepErr } = await effectiveSweepQuery.lt('attempts', 2);
 
     if (sweepErr) throw sweepErr;
     sweptPinsCount = count ?? 0;
@@ -116,14 +129,21 @@ export async function runRetentionCleanup(
       const q = builder
         .update({
           status: 'failed',
-          error_message: 'Processing timed out after maximum retry attempts.',
+          last_failure_reason: 'Processing timed out after maximum retry attempts.',
+          processing_started_at: null,
+          claimed_at: null,
+          claimed_by_schedule_id: null,
           updated_at: new Date().toISOString(),
         })
         .eq('workspace_id', workspaceId)
-        .eq('status', 'processing')
-        .lt('claimed_at', sweepCutoff);
-      if (q && typeof q.gte === 'function') {
-        await q.gte('attempts', 2);
+        .eq('status', 'processing');
+
+      const effectiveQ = typeof q.or === 'function'
+        ? q.or(`claimed_at.lt.${sweepCutoff},and(claimed_at.is.null,processing_started_at.lt.${sweepCutoff})`)
+        : q.lt('claimed_at', sweepCutoff);
+
+      if (effectiveQ && typeof effectiveQ.gte === 'function') {
+        await effectiveQ.gte('attempts', 2);
       }
     }
   } catch (err: any) {
@@ -142,6 +162,7 @@ export async function runRetentionCleanup(
       deletedPinsCount = await batchedDelete(schedulingAdmin, 'pins', {
         column: 'workspace_id',
         value: workspaceId,
+        workspaceId,
         dateColumn: 'posted_at',
         cutoff: postedCutoff,
         extraFilter: { column: 'status', value: 'posted' },
@@ -153,6 +174,7 @@ export async function runRetentionCleanup(
       const delFailed = await batchedDelete(schedulingAdmin, 'pins', {
         column: 'workspace_id',
         value: workspaceId,
+        workspaceId,
         dateColumn: 'updated_at',
         cutoff: terminalCutoff,
         extraFilter: { column: 'status', value: 'failed' },
@@ -160,6 +182,7 @@ export async function runRetentionCleanup(
       const delCancelled = await batchedDelete(schedulingAdmin, 'pins', {
         column: 'workspace_id',
         value: workspaceId,
+        workspaceId,
         dateColumn: 'updated_at',
         cutoff: terminalCutoff,
         extraFilter: { column: 'status', value: 'cancelled' },
@@ -182,6 +205,7 @@ export async function runRetentionCleanup(
       deletedImportSessions = await batchedDelete(schedulingAdmin, 'import_sessions', {
         column: 'workspace_id',
         value: workspaceId,
+        workspaceId,
         dateColumn: 'created_at',
         cutoff: sessionsCutoff,
       });
@@ -228,29 +252,10 @@ export async function runRetentionCleanup(
       const topPinsRawDays = typeof wsSettings?.top_pins_raw_days === 'number' ? wsSettings.top_pins_raw_days : 180;
       const snapshotCutoff = new Date(Date.now() - topPinsRawDays * 86400000).toISOString().split('T')[0];
 
-      const rollupCutoff = new Date(Date.now() - topPinsRawDays * 86400000);
-      const { data: oldSnapshots } = await analyticsClient
-        .from('top_pins_snapshots')
-        .select('*')
-        .eq('workspace_id', workspaceId)
-        .lt('window_end', rollupCutoff.toISOString())
-        .limit(10000);
-
-      if (oldSnapshots && oldSnapshots.length > 0) {
-        const monthlyRollups = new Map<string, any>();
-        for (const snap of oldSnapshots) {
-          if (!snap.window_end) continue;
-          const monthKey = `${snap.workspace_id}_${snap.connection_id}_${snap.sort_by}_${snap.window_end.slice(0, 7)}`;
-          const existing = monthlyRollups.get(monthKey) || { pins: [] };
-          existing.pins.push(snap);
-          monthlyRollups.set(monthKey, existing);
-        }
-        console.warn(`[Cleanup] ${oldSnapshots.length} snapshots >${topPinsRawDays}d - would create ${monthlyRollups.size} monthly rollups`);
-      }
-
       deletedSnapshotsCount = await batchedDelete(analyticsClient, 'top_pins_snapshots', {
         column: 'workspace_id',
         value: workspaceId,
+        workspaceId,
         dateColumn: 'window_end',
         cutoff: snapshotCutoff,
       });
@@ -267,6 +272,7 @@ export async function runRetentionCleanup(
   // Construct consolidated payload
   const payload: Record<string, any> = {
     success: true,
+    truncated: false,
     workspace_id: workspaceId,
     auto_prune_enabled: Boolean(wsSettings?.auto_prune_enabled ?? false),
     p2_prune_enabled: Boolean(wsSettings?.p2_prune_enabled ?? false),

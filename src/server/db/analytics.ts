@@ -70,8 +70,8 @@ export const analyticsDb = {
 
     const analyticsClient = dbClients.getAnalytics();
 
-    // R5.2 Stale Sweeper: update prior processing runs older than 30 minutes to failed
     try {
+      // R5.2 Stale Sweeper: update prior processing runs older than 30 minutes to failed across all channels
       const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
       await analyticsClient
         .from('analytics_ingestion_runs')
@@ -81,7 +81,6 @@ export const analyticsDb = {
           completed_at: new Date().toISOString(),
         })
         .eq('connection_id', run.connection_id)
-        .eq('channel', run.channel)
         .eq('status', 'processing')
         .lt('started_at', thirtyMinutesAgo);
     } catch (sweepErr) {
@@ -323,15 +322,16 @@ export const analyticsDb = {
       recorded_at: new Date().toISOString(),
     }));
 
-    const { error } = await analyticsClient
+    const { error, count } = await analyticsClient
       .from('account_analytics_daily')
       .upsert(payload, {
         onConflict: 'workspace_id,connection_id,metric_date',
         ignoreDuplicates: false,
+        count: 'exact',
       });
 
     if (error) throw error;
-    return rows.length;
+    return count ?? rows.length;
   },
 
   /**
@@ -385,15 +385,16 @@ export const analyticsDb = {
       recorded_at: new Date().toISOString(),
     }));
 
-    const { error } = await analyticsClient
+    const { error, count } = await analyticsClient
       .from('top_pins_snapshots')
       .upsert(payload, {
         onConflict: 'workspace_id,connection_id,pin_id,window_start,window_end,sort_by',
         ignoreDuplicates: false,
+        count: 'exact',
       });
 
     if (error) throw error;
-    return pins.length;
+    return count ?? pins.length;
   },
 
   /**
@@ -415,51 +416,16 @@ export const analyticsDb = {
       recorded_at: new Date().toISOString(),
     }));
 
-    const { error } = await analyticsClient
+    const { error, count } = await analyticsClient
       .from('daily_workspace_metrics')
       .upsert(payload, {
         onConflict: 'workspace_id,metric_date',
         ignoreDuplicates: false,
+        count: 'exact',
       });
 
     if (error) throw error;
-    return metrics.length;
-  },
-
-  /**
-   * Upserts URL performance metrics (Project 3 url_performance_history).
-   */
-  async upsertUrlPerformance(
-    workspaceId: string,
-    urls: Array<{
-      destination_url: string;
-      period_date: string;
-      total_impressions: number;
-      total_clicks: number;
-      total_pins_active: number;
-    }>
-  ): Promise<number> {
-    if (!workspaceId) {
-      throw new Error('Tenant Boundary Violation: workspaceId is required.');
-    }
-    if (!urls || urls.length === 0) return 0;
-
-    const analyticsClient = dbClients.getAnalytics();
-    const payload = urls.map((u) => ({
-      ...u,
-      workspace_id: workspaceId,
-      created_at: new Date().toISOString(),
-    }));
-
-    const { error } = await analyticsClient
-      .from('url_performance_history')
-      .upsert(payload, {
-        onConflict: 'workspace_id,destination_url,period_date',
-        ignoreDuplicates: false,
-      });
-
-    if (error) throw error;
-    return urls.length;
+    return count ?? metrics.length;
   },
 
   // ============================================================================
@@ -569,7 +535,7 @@ export const analyticsDb = {
       p_connection_id: connectionId,
       p_sort_by: sortBy,
       p_days: days,
-      p_limit: 1000,
+      p_limit: Math.min(Math.max((limit || 25) * 40, 1000), 5000),
       p_search: cleanSearch,
     });
 
@@ -1573,12 +1539,11 @@ export const analyticsDb = {
 
   /**
    * Preview data purge record counts and affected rollup dates.
-   * Scoped across the 5 analytics data layers:
+   * Scoped across the analytics data layers:
    * - D1: account_analytics_daily (daily metrics per connection)
    * - D2: account_analytics_summaries (period summaries per connection)
    * - D3: daily_workspace_metrics (workspace rollups recalculated across remaining connections)
    * - D4: top_pins_snapshots (ranked top pins snapshots)
-   * - D5: url_performance_history (destination URL performance history)
    */
   async previewPurge(
     workspaceId: string,
@@ -1603,7 +1568,6 @@ export const analyticsDb = {
     let daily_count = 0;
     let summaries_count = 0;
     let top_pins_count = 0;
-    let url_perf_count = 0;
     let affected_rollup_dates: string[] = [];
 
     if (p_daily) {
@@ -1636,33 +1600,23 @@ export const analyticsDb = {
     }
 
     if (p_top_pins) {
-      const [pinsRes, urlRes] = await Promise.all([
-        analyticsClient
-          .from('top_pins_snapshots')
-          .select('*', { count: 'exact', head: true })
-          .eq('workspace_id', workspaceId)
-          .eq('connection_id', connectionId)
-          .gte('window_end', fromTs)
-          .lt('window_start', toExclTs),
-        analyticsClient
-          .from('url_performance_history')
-          .select('*', { count: 'exact', head: true })
-          .eq('workspace_id', workspaceId)
-          .gte('period_date', fromDate)
-          .lte('period_date', toDate),
-      ]);
+      const pinsRes = await analyticsClient
+        .from('top_pins_snapshots')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId)
+        .eq('connection_id', connectionId)
+        .gte('window_end', fromTs)
+        .lt('window_start', toExclTs);
 
       top_pins_count = pinsRes.count ?? 0;
-      url_perf_count = urlRes.count ?? 0;
     }
 
-    const total_records = daily_count + summaries_count + top_pins_count + url_perf_count;
+    const total_records = daily_count + summaries_count + top_pins_count;
 
     return {
       daily_count,
       summaries_count,
       top_pins_count,
-      url_perf_count,
       affected_rollup_dates,
       total_records,
     };

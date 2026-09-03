@@ -55,18 +55,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const { data: pin } = await admin.from('pins').select('*').eq('id', internalId).eq('workspace_id', wsId).maybeSingle();
       if (!pin) return new Response(JSON.stringify({ success: false, error: 'Pin not found.' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
       if (ev === 'pin.failed' || payload.success === false) {
-        const rc = (pin.retry_count ?? 0) + 1;
+        const rc = (pin.attempts ?? pin.retry_count ?? 0) + 1;
         const exhausted = rc >= (pin.max_retries ?? 2);
         await admin.from('pins').update({
           status: exhausted ? 'failed' : 'pending',
           processing_started_at: null,
+          claimed_at: null,
+          claimed_by_schedule_id: null,
+          attempts: rc,
           retry_count: rc,
           failure_type: 'permanent',
           last_failure_reason: payload.error || 'Make reported failure',
           last_attempt_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }).eq('id', internalId).eq('workspace_id', wsId);
-        await admin.from('pin_delivery_logs').insert({ pin_id: internalId, attempt_no: pin.attempts, event_type: 'dispatch_failed', error_message: payload.error || null, metadata: { source: 'make_callback' } }).then(() => {});
+        await admin.from('pin_delivery_logs').insert({ pin_id: internalId, attempt_no: rc, event_type: 'dispatch_failed', error_message: payload.error || null, metadata: { source: 'make_callback' } }).catch(() => {});
         return new Response(JSON.stringify({ success: true, handled: 'pin_failed', exhausted }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
       const postedAt = payload.created_at
@@ -74,7 +77,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
             try {
               const d = new Date(payload.created_at);
               return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
-            } catch { return new Date().toISOString(); }
+            } catch (err: any) {
+              console.warn('[IngestAPI] Invalid created_at format:', err?.message || err);
+              return new Date().toISOString();
+            }
           })()
         : new Date().toISOString();
 
@@ -107,7 +113,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       await admin.from('pins').update(updateFields).eq('id', internalId).eq('workspace_id', wsId);
-      await admin.from('pin_delivery_logs').insert({ pin_id: internalId, attempt_no: pin.attempts, event_type: 'dispatch_success', provider: 'pinterest', metadata: { pinterest_pin_id: payload.id || pin.pinterest_pin_id, board_id: payload.board_id, source: 'make_callback' } }).then(() => {});
+      const { error: logErr } = await admin.from('pin_delivery_logs').insert({
+        pin_id: internalId,
+        attempt_no: pin.attempts,
+        event_type: 'dispatch_success',
+        provider: 'pinterest',
+        metadata: { pinterest_pin_id: payload.id || pin.pinterest_pin_id, board_id: payload.board_id, source: 'make_callback' }
+      });
+      if (logErr) {
+        console.warn('[IngestAPI] Failed to record pin delivery log:', logErr.message);
+      }
       return new Response(JSON.stringify({ success: true, handled: 'pin_posted' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -115,7 +130,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const parseCoerceInt = (val: any): number | null => {
       if (val === undefined || val === null || val === '') return null;
       const n = parseInt(String(val), 10);
-      return Number.isNaN(n) ? 0 : n;
+      return Number.isNaN(n) ? null : n;
     };
 
     const parseCoerceDate = (val: any): string | null => {
@@ -166,11 +181,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         last_synced_at: nowIso,
       }, { onConflict: 'account_id,board_id' }).select('id, board_id, board_name, pin_count, follower_count, last_synced_at').single();
 
-      await admin.from('board_provisioning_requests').update({
+      const { error: provErr } = await admin.from('board_provisioning_requests').update({
         status: insErr ? 'failed' : 'completed',
         error_message: insErr?.message || null,
         completed_at: new Date().toISOString(),
-      }).eq('idempotency_key', idemKey).then(() => {});
+      }).eq('idempotency_key', idemKey);
+      if (provErr) {
+        console.warn('[IngestAPI] Failed to update board_provisioning_requests:', provErr.message);
+      }
 
       return new Response(JSON.stringify({
         success: !insErr,
@@ -267,6 +285,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         handled: 'boards.list',
         synced: syncedCount,
         total: rawBoards.length,
+        partial: errors.length > 0,
         errors: errors.length > 0 ? errors : undefined,
       }), { status: isOk ? 200 : 500, headers: { 'Content-Type': 'application/json' } });
     }

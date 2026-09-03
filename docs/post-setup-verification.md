@@ -32,7 +32,7 @@ Verify time-series and reporting tables:
 SELECT table_name 
 FROM information_schema.tables 
 WHERE table_schema = 'public' 
-  AND table_name IN ('import_sessions', 'pin_metrics_history', 'url_performance_history', 'board_analytics_rollups', 'daily_workspace_analytics');
+  AND table_name IN ('import_sessions', 'pin_metrics_history', 'top_pins_snapshots', 'board_analytics_rollups', 'daily_workspace_analytics');
 ```
 
 ---

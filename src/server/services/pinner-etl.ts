@@ -482,13 +482,6 @@ export const pinnerETL = {
       const dailyRows: AccountAnalyticsDaily[] = [];
       let summaryRow: AccountAnalyticsSummary | null = null;
       const topPinRows: TopPinSnapshot[] = [];
-      const destinationUrlsToTrack: Array<{
-        destination_url: string;
-        period_date: string;
-        total_impressions: number;
-        total_clicks: number;
-        total_pins_active: number;
-      }> = [];
 
       // -------------------------------------------------------------------------
       // Parse Pipeline A: Account Daily Time Series & Summaries (Allowlist filtered)
@@ -676,17 +669,6 @@ export const pinnerETL = {
           ) as TopPinSnapshot;
 
           topPinRows.push(filteredTopPin);
-
-          const destUrl = pin.destination_url || pin.link;
-          if (destUrl) {
-            destinationUrlsToTrack.push({
-              destination_url: destUrl,
-              period_date: windowEnd.split('T')[0],
-              total_impressions: metrics.impressions,
-              total_clicks: metrics.outbound_clicks + metrics.pin_clicks,
-              total_pins_active: 1,
-            });
-          }
         });
       }
 
@@ -796,9 +778,7 @@ export const pinnerETL = {
         analyticsDb.upsertDailyWorkspaceMetrics(workspaceId, r)
       );
 
-      if (destinationUrlsToTrack.length > 0) {
-        await analyticsDb.upsertUrlPerformance(workspaceId, destinationUrlsToTrack);
-      }
+
 
       // =========================================================================
       // Operational Ingestion Run Completion in Project 3 (R5.1)

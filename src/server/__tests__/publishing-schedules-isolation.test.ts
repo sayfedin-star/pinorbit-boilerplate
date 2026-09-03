@@ -49,10 +49,6 @@ describe('Publishing Schedules Multi-Tenant Isolation (Service Layer)', () => {
           entry.chained.push({ method: 'insert', args });
           return builder;
         }),
-        select: vi.fn((...args: any[]) => {
-          entry.chained.push({ method: 'select', args });
-          return builder;
-        }),
         limit: vi.fn((...args: any[]) => {
           entry.chained.push({ method: 'limit', args });
           return Promise.resolve({

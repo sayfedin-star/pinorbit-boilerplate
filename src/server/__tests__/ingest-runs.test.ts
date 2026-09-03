@@ -14,7 +14,6 @@ vi.mock('../db/analytics', () => ({
     upsertAccountSummary: vi.fn().mockResolvedValue(undefined),
     upsertTopPinsSnapshots: vi.fn().mockResolvedValue(1),
     upsertDailyWorkspaceMetrics: vi.fn().mockResolvedValue(1),
-    upsertUrlPerformance: vi.fn().mockResolvedValue(1),
     updateConnectionLastSync: vi.fn().mockResolvedValue(undefined),
   },
 }));

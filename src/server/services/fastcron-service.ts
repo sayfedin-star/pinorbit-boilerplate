@@ -1035,7 +1035,9 @@ export async function syncPublishingSchedule(
   } catch (e: any) {
     return { success: false, error: e.message };
   }
-  const base = (typeof process !== 'undefined' && process.env.DISPATCH_BASE_URL)
+  const base = runtimeEnv?.DISPATCH_BASE_URL
+    ? String(runtimeEnv.DISPATCH_BASE_URL).replace(/\/$/, '')
+    : (typeof process !== 'undefined' && process.env.DISPATCH_BASE_URL)
     ? process.env.DISPATCH_BASE_URL.replace(/\/$/, '')
     : 'https://pinorbit-v2.o-i.workers.dev';
   const dispatchUrl = `${base}/api/internal/pinterest/dispatch-due-pin`;
@@ -1291,6 +1293,7 @@ export async function triggerBoardAction(
         .from('account_webhooks')
         .select('id, webhook_url')
         .eq('id', targetWhId)
+        .eq('account_id', accountId)
         .maybeSingle();
       if (wh?.webhook_url) {
         webhookUrl = wh.webhook_url;
@@ -1345,19 +1348,11 @@ export async function triggerBoardAction(
     });
 
     if (res.ok && resolvedWebhookId) {
-      const { data: curHook } = await schedulingClient
-        .from('account_webhooks')
-        .select('executions_used')
-        .eq('id', resolvedWebhookId)
-        .maybeSingle();
-
-      await schedulingClient
-        .from('account_webhooks')
-        .update({
-          executions_used: (curHook?.executions_used ?? 0) + 1,
-          last_used_at: new Date().toISOString(),
-        })
-        .eq('id', resolvedWebhookId);
+      await schedulingClient.rpc('increment_webhook_execution', {
+        p_webhook_id: resolvedWebhookId,
+        p_count: 1,
+        p_workspace_id: account.workspace_id,
+      });
     }
 
     return {

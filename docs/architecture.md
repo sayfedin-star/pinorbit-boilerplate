@@ -21,7 +21,7 @@ By decoupling concerns across three isolated database instances, the system achi
  ├──────────────────────────────┤ ├──────────────────────────────┤ ├──────────────────────────────┤
  │ • auth.users                 │ │ • competitors                │ │ • import_sessions            │
  │ • workspaces                 │ │ • competitor_boards          │ │ • pin_metrics_history        │
- │ • workspace_memberships      │ │ • competitor_snapshots       │ │ • url_performance_history   │
+ │ • workspace_memberships      │ │ • competitor_snapshots       │ │ • top_pins_snapshots         │
  │ • admin_users                │ │ • competitor_daily_snapshots │ │ • board_analytics_rollups   │
  │ • accounts                   │ │ • competitor_ingestion_jobs  │ │ • daily_workspace_analytics │
  │ • account_webhooks           │ └──────────────────────────────┘ └──────────────────────────────┘

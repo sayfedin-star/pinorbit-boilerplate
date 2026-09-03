@@ -357,17 +357,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   let jobRecord: any = null;
   try {
-    // 2. Insert Ingestion Job record with 'running' status (not queued) and trigger origin
+    // 2. Insert Ingestion Job record with 'queued' status
     const trigger = (selectedIds.length === 1 || body.competitor_id) ? 'run_now' : 'full';
     const { data: job, error: jobErr } = await competitorsClient
       .from('competitor_ingestion_jobs')
       .insert({
         workspace_id: workspaceId,
         competitor_id: selectedIds.length === 1 ? selectedIds[0] : (body.competitor_id || null),
-        status: 'running',
+        status: 'queued',
         trigger,
         items_processed: 0,
-        started_at: new Date().toISOString(),
       })
       .select('id, workspace_id, competitor_id, status, trigger, created_at')
       .single();
@@ -391,7 +390,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // If dispatch token is missing, fail job in DB and return error
       await competitorsClient
         .from('competitor_ingestion_jobs')
-        .update({ status: 'failed', error_message: 'GitHub dispatch token not configured on server', completed_at: new Date().toISOString() })
+        .update({
+          status: 'failed',
+          error_message: 'GitHub dispatch token not configured on server',
+          completed_at: new Date().toISOString(),
+        })
         .eq('id', job.id);
 
       return jsonResponse({ success: false, error: 'GitHub dispatch token not configured on server' }, 503);
@@ -424,6 +427,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (ghRes.status === 204 || (ghRes.status >= 200 && ghRes.status < 300)) {
+      try {
+        const uBuilder = competitorsClient.from('competitor_ingestion_jobs');
+        if (typeof uBuilder.update === 'function') {
+          await uBuilder
+            .update({ status: 'running', started_at: new Date().toISOString() })
+            .eq('id', job.id);
+        }
+      } catch (markRunningErr) {
+        console.warn('[CompetitorOps] Failed to mark job running:', markRunningErr);
+      }
+
       return jsonResponse(
         {
           success: true,
@@ -456,14 +470,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (err: any) {
     if (jobRecord?.id && competitorsClient) {
       try {
-        await competitorsClient
-          .from('competitor_ingestion_jobs')
-          .update({
-            status: 'failed',
-            error_message: err?.message || 'Failed to dispatch competitor update',
-            completed_at: new Date().toISOString(),
-          })
-          .eq('id', jobRecord.id);
+        const uBuilder = competitorsClient.from('competitor_ingestion_jobs');
+        if (typeof uBuilder.update === 'function') {
+          await uBuilder
+            .update({
+              status: 'failed',
+              error_message: err?.message || 'Failed to dispatch competitor update',
+              completed_at: new Date().toISOString(),
+            })
+            .eq('id', jobRecord.id);
+        }
       } catch (markErr) {
         console.warn('[CompetitorOps] Failed to mark job failed:', markErr);
       }

@@ -189,6 +189,7 @@ export async function removeWorkspaceOverride(
   const kv = runtimeEnv?.INGEST_SECRETS_KV;
   if (kv && wsId && UUID_REGEX.test(wsId)) {
     await kv.delete(wsKey(wsId));
+    await kv.delete(`${wsKey(wsId)}:prev`);
   }
 }
 

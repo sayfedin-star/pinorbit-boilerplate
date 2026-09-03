@@ -146,7 +146,6 @@ describe('Data Purge Suite (V27)', () => {
         daily_count: 5,
         summaries_count: 1,
         top_pins_count: 50,
-        url_perf_count: 0,
         affected_rollup_dates: ['2026-08-01', '2026-08-02'],
         total_records: 56,
       };
@@ -218,7 +217,6 @@ describe('Data Purge Suite (V27)', () => {
           summaries_deleted: 1,
           rollups_rebuilt: 2,
           top_pins_deleted: 50,
-          url_perf_deleted: 0,
         },
       });
 
@@ -257,7 +255,7 @@ describe('Data Purge Suite (V27)', () => {
     it('passes runtime.env.ANALYTICS_KV to edgeCache.invalidateConnection on purge execution', async () => {
       (analyticsDb.purgeAnalyticsData as any).mockResolvedValue({
         purge_log_id: 'purge-log-uuid-101',
-        counts: { daily_deleted: 2, summaries_deleted: 1, rollups_rebuilt: 1, top_pins_deleted: 10, url_perf_deleted: 0 },
+        counts: { daily_deleted: 2, summaries_deleted: 1, rollups_rebuilt: 1, top_pins_deleted: 10 },
       });
 
       const mockKvNamespace = { list: vi.fn(), delete: vi.fn(), get: vi.fn(), put: vi.fn() };

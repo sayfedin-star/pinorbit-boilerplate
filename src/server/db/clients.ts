@@ -304,8 +304,11 @@ export const dbClients = {
    * Returns the server-only administrative client for Project 1 (Scheduling).
    */
   getSchedulingAdmin(runtimeEnv?: Record<string, any>): SupabaseClient {
-    if (!schedulingAdminClientInstance || runtimeEnv) {
-      schedulingAdminClientInstance = createSchedulingAdminClient(runtimeEnv);
+    if (runtimeEnv) {
+      return createSchedulingAdminClient(runtimeEnv);
+    }
+    if (!schedulingAdminClientInstance) {
+      schedulingAdminClientInstance = createSchedulingAdminClient();
     }
     return schedulingAdminClientInstance;
   },
@@ -315,8 +318,11 @@ export const dbClients = {
    * MUST only be called after verifying workspace membership via Project 1.
    */
   getCompetitors(runtimeEnv?: Record<string, any>): SupabaseClient {
-    if (!competitorsClientInstance || runtimeEnv) {
-      competitorsClientInstance = createCompetitorsClient(runtimeEnv);
+    if (runtimeEnv) {
+      return createCompetitorsClient(runtimeEnv);
+    }
+    if (!competitorsClientInstance) {
+      competitorsClientInstance = createCompetitorsClient();
     }
     return competitorsClientInstance;
   },
@@ -333,8 +339,11 @@ export const dbClients = {
    * MUST only be called after verifying workspace membership via Project 1.
    */
   getAnalytics(runtimeEnv?: Record<string, any>): SupabaseClient {
-    if (!analyticsClientInstance || runtimeEnv) {
-      analyticsClientInstance = createAnalyticsClient(runtimeEnv);
+    if (runtimeEnv) {
+      return createAnalyticsClient(runtimeEnv);
+    }
+    if (!analyticsClientInstance) {
+      analyticsClientInstance = createAnalyticsClient();
     }
     return analyticsClientInstance;
   },
@@ -351,8 +360,11 @@ export const dbClients = {
    * MUST only be called after verifying workspace membership via Project 1.
    */
   getPinArchive(runtimeEnv?: Record<string, any>): SupabaseClient {
-    if (!pinArchiveClientInstance || runtimeEnv) {
-      pinArchiveClientInstance = createPinArchiveClient(runtimeEnv);
+    if (runtimeEnv) {
+      return createPinArchiveClient(runtimeEnv);
+    }
+    if (!pinArchiveClientInstance) {
+      pinArchiveClientInstance = createPinArchiveClient();
     }
     return pinArchiveClientInstance;
   },

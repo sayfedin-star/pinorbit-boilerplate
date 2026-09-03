@@ -913,6 +913,103 @@ describe('PinArchive Module Test Suite', () => {
       expect(upsertedPins.find((p) => p.pin_id === 'duplicate_1')?.title).toBe('Second Version');
     });
 
+    it('P0-11: poison batch with null and undefined elements is handled safely without throwing 500', async () => {
+      mockAdminClient.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: { id: mockWsId }, error: null }),
+          }),
+        }),
+      });
+      mockKvStore.set(`ingest_secret:ws:${mockWsId}`, mockSecret);
+
+      let upsertedPins: any[] = [];
+      mockPinArchiveClient.from.mockImplementation((table: string) => {
+        if (table === 'pa_workspace_settings') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'pa_accounts') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+                }),
+              }),
+            }),
+            upsert: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { id: 'mock-account-id', workspace_id: mockWsId, username: 'testuser' },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        if (table === 'pa_pins') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                in: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+            upsert: vi.fn().mockImplementation((pinsArray: any[]) => {
+              upsertedPins = pinsArray;
+              return {
+                select: vi.fn().mockResolvedValue({
+                  data: pinsArray.map((p) => ({ ...p, id: 'ref-1' })),
+                  error: null,
+                }),
+              };
+            }),
+          };
+        }
+        if (table === 'pa_pin_metrics') {
+          return {
+            upsert: vi.fn().mockResolvedValue({ data: [], error: null, count: 0 }),
+          };
+        }
+        if (table === 'pa_runs') {
+          return {
+            insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+          };
+        }
+        return {};
+      });
+
+      const req = new Request('http://localhost:4321/api/internal/pinarchive/ingest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-ingest-secret': mockSecret,
+        },
+        body: JSON.stringify({
+          workspace_id: mockWsId,
+          username: 'testuser',
+          pins: [
+            null,
+            undefined,
+            {},
+            { pin_id: 'poison_survivor', title: 'Healthy Pin', saves: 42 },
+          ],
+        }),
+      });
+
+      const res = await ingestHandler({ request: req, locals: { runtime: { env: mockRuntimeEnv } } } as any);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.accepted).toBe(1);
+      expect(json.archived_pin_ids).toEqual(['poison_survivor']);
+    });
+
     it('Config GET returns refresh_max_pins (default 0)', async () => {
       mockAdminClient.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
