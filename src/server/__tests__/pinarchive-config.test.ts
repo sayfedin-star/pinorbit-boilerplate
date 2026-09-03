@@ -115,13 +115,36 @@ describe('PinArchive Internal Config Endpoint Suite (/api/internal/pinarchive/co
     expect(json.pin_filter_max_age_days).toBeUndefined();
   });
 
-  it('FAIL-LAZY: returns 200 with fallback {0,0,14,34,3,true,false} when row is absent or on any DB query error', async () => {
+  it('P2-06: returns 503 when DB query fails', async () => {
     mockPinArchiveClient.from.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
           maybeSingle: vi.fn().mockResolvedValue({
             data: null,
             error: { message: 'relation pa_workspace_settings does not exist' },
+          }),
+        }),
+      }),
+    });
+
+    const req = new Request(`http://localhost:4321/api/internal/pinarchive/config?workspace_id=${mockWsId}`, {
+      headers: { 'x-ingest-secret': mockSecret },
+    });
+    const res = await configHandler({ request: req, locals: { runtime: { env: mockRuntimeEnv } } } as any);
+
+    expect(res.status).toBe(503);
+    const json = await res.json();
+    expect(json.success).toBe(false);
+    expect(json.error).toContain('Database error reading settings');
+  });
+
+  it('returns 200 with fallback {0,0,14,34,3,true,false} when settings row is absent in DB', async () => {
+    mockPinArchiveClient.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: null,
+            error: null,
           }),
         }),
       }),

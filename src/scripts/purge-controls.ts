@@ -198,10 +198,6 @@ if (purgeConnId) {
         <td class="py-2.5 px-3 font-medium text-foreground">top_pins_snapshots</td>
         <td class="py-2.5 px-3 text-right font-mono font-bold ${preview.top_pins_count > 0 ? 'text-amber-500' : 'text-muted-foreground'}">${preview.top_pins_count}</td>
       </tr>
-      <tr class="border-b border-border/50">
-        <td class="py-2.5 px-3 font-medium text-foreground">url_performance_history</td>
-        <td class="py-2.5 px-3 text-right font-mono font-bold ${preview.url_perf_count > 0 ? 'text-amber-500' : 'text-muted-foreground'}">${preview.url_perf_count}</td>
-      </tr>
     `;
 
     if (previewTotalEl) {
@@ -252,7 +248,7 @@ if (purgeConnId) {
       });
 
       const c = json.counts || {};
-      const totalDeleted = (c.daily_deleted || 0) + (c.summaries_deleted || 0) + (c.top_pins_deleted || 0) + (c.url_perf_deleted || 0);
+      const totalDeleted = (c.daily_deleted || 0) + (c.summaries_deleted || 0) + (c.top_pins_deleted || 0);
 
       showStatus(
         `✓ Data Purged Successfully! Deleted ${totalDeleted} records (${c.daily_deleted || 0} daily, ${c.top_pins_deleted || 0} top pins, ${c.summaries_deleted || 0} summaries). Rebuilt ${c.rollups_rebuilt || 0} rollup dates. (Audit Log ID: ${json.purge_log_id || 'recorded'})`,

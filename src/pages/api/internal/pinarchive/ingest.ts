@@ -142,13 +142,16 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
     const rawPinsList: any[] = Array.isArray(payload.pins) ? payload.pins : [];
     const dedupedMap = new Map<string, any>();
     for (const p of rawPinsList) {
+      if (!p || typeof p !== 'object') continue;
       const pid = String(p.pin_id || p.id || '').trim();
       if (!pid) continue;
       const prev = dedupedMap.get(pid);
       if (!prev) {
         dedupedMap.set(pid, p);
       } else {
-        const mergedAnnotations = [...(prev.annotations || []), ...(p.annotations || [])];
+        const prevAnn = Array.isArray(prev.annotations) ? prev.annotations : [];
+        const curAnn = Array.isArray(p.annotations) ? p.annotations : [];
+        const mergedAnnotations = [...prevAnn, ...curAnn];
         dedupedMap.set(pid, {
           ...prev,
           ...p,
@@ -156,7 +159,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
           repins: Math.max(Number(p.repins || 0), Number(prev.repins || 0)),
           comments: Math.max(Number(p.comments || 0), Number(prev.comments || 0)),
           share_count: Math.max(Number(p.share_count || 0), Number(prev.share_count || 0)),
-          annotations: mergedAnnotations.length > 0 ? mergedAnnotations : (p.annotations || prev.annotations),
+          annotations: mergedAnnotations.length > 0 ? mergedAnnotations : (Array.isArray(p.annotations) ? p.annotations : prev.annotations),
         });
       }
     }
@@ -194,11 +197,11 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
     }
 
     // Gating 4: max_batch_pins truncation
-    let pins = rawPins;
+    let pins = rawPins.filter((p: any) => p && typeof p === 'object' && Boolean(p.pin_id || p.id));
     let truncatedCount: number | undefined;
-    if (rawPins.length > maxBatchPins) {
-      truncatedCount = rawPins.length;
-      pins = rawPins.slice(0, maxBatchPins);
+    if (pins.length > maxBatchPins) {
+      truncatedCount = pins.length;
+      pins = pins.slice(0, maxBatchPins);
     }
 
     const promotedCount = pins.filter((p: any) => Boolean(p.promoted)).length;
@@ -253,6 +256,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
     let rpcHandled = false;
     let pinsAddedCount = 0;
     let pinsUpdatedCount = 0;
+    let metricsRecordedCount = 0;
 
     if (pins.length > 0 && typeof pinArchive.rpc === 'function') {
       try {
@@ -537,9 +541,10 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
       }
 
       if (metricsToInsert.length > 0) {
-        await pinArchive
+        const { count: mCount } = await pinArchive
           .from('pa_pin_metrics')
-          .upsert(metricsToInsert, { onConflict: 'pin_ref,recorded_at', ignoreDuplicates: true });
+          .upsert(metricsToInsert, { onConflict: 'pin_ref,recorded_at', ignoreDuplicates: true, count: 'exact' });
+        metricsRecordedCount = mCount ?? 0;
       }
     }
 
@@ -563,10 +568,30 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
       message: payload.run_id ? String(payload.run_id) : null,
     };
 
-    await pinArchive.from('pa_runs').insert(runRow);
+    let insertedRunId: string | null = null;
+    try {
+      const insertResult: any = pinArchive.from('pa_runs').insert(runRow);
+      if (insertResult && typeof insertResult.select === 'function') {
+        const { data: insertedRun, error: runErr } = await insertResult.select('id').maybeSingle();
+        if (runErr) {
+          console.warn('[PinArchive Ingest] Could not record pa_runs row:', runErr.message);
+        } else {
+          insertedRunId = insertedRun?.id || null;
+        }
+      } else {
+        await insertResult;
+      }
+    } catch (runErr: any) {
+      console.warn('[PinArchive Ingest] pa_runs insert caught error:', runErr?.message || runErr);
+    }
 
     const responseData: Record<string, any> = {
       success: true,
+      run_id: insertedRunId,
+      pins_added: pinsAddedCount,
+      pins_updated: pinsUpdatedCount,
+      pins_promoted: promotedCount,
+      metrics_recorded: metricsRecordedCount,
       accepted: pins.length,
       archived_pin_ids: pinIds,
     };

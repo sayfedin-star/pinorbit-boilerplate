@@ -170,9 +170,9 @@ window.__PWS_RELAY_REGISTER_COMPLETED_REQUEST__("/resource/PinResource/get/", {
     expect(result!.board_last_modified_at).toBe('2024-06-01T18:00:00Z');
     expect(result!.seo_category).toBe('Food And Drinks');
     expect(result!.annotations).toHaveLength(9);
-    expect(result!.annotations[0].url).toBe('/ideas/sliced-zucchini-recipes/953453835255/');
-    expect(result!.annotations[0].name).toBe('Sliced Zucchini Recipes');
-    expect(result!.annotations[0].idea_id).toBe('953453835255');
+    expect(result!.annotations![0].url).toBe('/ideas/sliced-zucchini-recipes/953453835255/');
+    expect(result!.annotations![0].name).toBe('Sliced Zucchini Recipes');
+    expect(result!.annotations![0].idea_id).toBe('953453835255');
     expect(result!.canonical_pin_id).toBe('878201996107217996');
     expect(result!.utm_link).toContain('utm_campaign=MCapp13');
   });

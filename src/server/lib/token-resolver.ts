@@ -143,14 +143,15 @@ export async function resolveToken(
 
   // 2. Explicit tokenId row in project table
   if (tokenId && kek) {
-    let tokenQuery = client
+    if (!workspaceId) {
+      throw new Error('Tenant isolation violation: workspaceId is required when resolving by tokenId');
+    }
+
+    const tokenQuery = client
       .from(table)
       .select('id, name, token_encrypted, token_masked, is_default')
-      .eq('id', tokenId);
-
-    if (workspaceId) {
-      tokenQuery = tokenQuery.eq('workspace_id', workspaceId);
-    }
+      .eq('id', tokenId)
+      .eq('workspace_id', workspaceId);
 
     const { data: row } = await tokenQuery.maybeSingle();
 
@@ -220,7 +221,9 @@ export async function resolveToken(
           };
         }
       }
-    } catch {}
+    } catch (regErr: any) {
+      console.warn('[TokenResolver] Non-fatal registry token lookup error:', regErr?.message || regErr);
+    }
   }
 
   // 4. Environment variable fallback
@@ -349,6 +352,9 @@ export async function saveWorkspaceToken(
       .single();
 
     if (error || !inserted) {
+      if (error?.code === '23505') {
+        return { success: false, error: 'A default token already exists for this workspace. Please unset the current default token or refresh and retry.' };
+      }
       return { success: false, error: error?.message || 'Failed to save token' };
     }
 

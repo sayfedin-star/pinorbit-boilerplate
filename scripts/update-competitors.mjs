@@ -375,4 +375,24 @@ async function main() {
   process.exit(anyFatal && grandProcessed === 0 ? 1 : 0);
 }
 
-main().catch(e => { console.error('💥 Fatal:', e); process.exit(1); });
+main().catch(async (e) => {
+  console.error('💥 Fatal:', e);
+  const inputJobId = process.env.JOB_ID || null;
+  if (inputJobId) {
+    try {
+      const SUPABASE_URL = process.env.SUPABASE_URL;
+      const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (SUPABASE_URL && SERVICE_KEY) {
+        const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+        await db.from('competitor_ingestion_jobs').update({
+          status: 'failed',
+          error_message: `Workflow crash: ${e.message || String(e)}`,
+          completed_at: new Date().toISOString(),
+        }).eq('id', inputJobId);
+      }
+    } catch (fatalDbErr) {
+      console.error('❌ Failed to update job status on fatal error:', fatalDbErr?.message || fatalDbErr);
+    }
+  }
+  process.exit(1);
+});

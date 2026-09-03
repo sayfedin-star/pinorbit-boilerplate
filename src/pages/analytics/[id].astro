@@ -953,12 +953,9 @@ const accountName = connection.display_name || 'Account';
         <p class="text-[11px] leading-relaxed">
           Deletes are permanent and removed from the database. Ingestion run history is kept for audit.
         </p>
-        <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+        <div class="mt-2 text-[11px]">
           <div class="rounded-lg bg-background/60 p-2 border border-amber-500/20" title="D3 (daily_workspace_metrics): Recalculated atomically from remaining active connections">
             <strong class="font-bold text-foreground">D3 Workspace Rollups:</strong> <code class="font-mono bg-muted px-1 py-0.5 rounded text-[10px]">daily_workspace_metrics</code> are atomically recalculated & rebuilt across all remaining connection data for the purged range.
-          </div>
-          <div class="rounded-lg bg-background/60 p-2 border border-amber-500/20" title="D5 (url_performance_history): Purged when Top Pins target is selected">
-            <strong class="font-bold text-foreground">D5 URL Performance:</strong> <code class="font-mono bg-muted px-1 py-0.5 rounded text-[10px]">url_performance_history</code> records for the selected period are permanently deleted alongside Top Pins snapshots.
           </div>
         </div>
       </div>

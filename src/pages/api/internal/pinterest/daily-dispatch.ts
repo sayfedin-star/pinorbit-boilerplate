@@ -116,31 +116,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
   let connection: any = null;
   try {
     const analyticsClient = dbClients.getAnalytics(runtimeEnv);
-    const { data, error } = await analyticsClient
+    const { data } = await analyticsClient
       .from('analytics_connections')
-      .select('*')
+      .select('id, workspace_id, display_name, analytics_enabled, analytics_webhook_url, top_pins_webhook_url, analytics_start_offset_days, analytics_end_offset_days, top_pins_start_offset_days, top_pins_end_offset_days, top_pins_num_of_pins, top_pins_sort_modes, deleted_at, revoked_at')
       .eq('id', body.connection_id)
       .is('deleted_at', null)
       .maybeSingle();
 
-    if (error || !data) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: `Connection "${body.connection_id}" not found or has been deleted.`,
-        }),
-        {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
     connection = data;
   } catch (err: any) {
+    console.error('[DailyDispatch] Connection query error:', err);
     return new Response(
       JSON.stringify({
         success: false,
-        error: `Database lookup error: ${err.message}`,
+        error: 'Internal error querying connection.',
       }),
       {
         status: 500,
@@ -149,20 +138,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
   }
 
-  // 5. Resolve expected secret via getEffectiveSecret for the connection's workspace
-  const effectiveSecretResult = await getEffectiveSecret(
-    connection.workspace_id,
-    runtimeEnv
-  );
-  const expectedSecret = effectiveSecretResult?.value;
-
-  if (isProductionEnv(runtimeEnv) && effectiveSecretResult?.source === 'env' && isKnownDefaultIngestSecret(expectedSecret)) {
-    return new Response(JSON.stringify({ success: false, error: 'Service unavailable: ingest secret not configured on server.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+  // 5. Unified Timing-Safe Authentication & Existence Oracle Protection
+  let isAuthed = false;
+  if (connection) {
+    const wsVerif = await verifyIngestSecret(providedSecret, connection.workspace_id, runtimeEnv);
+    isAuthed = wsVerif.valid;
+  } else {
+    // If connection not found, verify whether the caller has the valid server ingest secret
+    const globalVerif = await verifyIngestSecret(providedSecret, undefined, runtimeEnv);
+    isAuthed = globalVerif.valid;
   }
 
-  // 6. Timing-safe authentication across all candidates
-  const verification = await verifyIngestSecret(providedSecret, connection.workspace_id, runtimeEnv);
-  if (!verification.valid) {
+  if (!isAuthed) {
     return new Response(
       JSON.stringify({
         success: false,
@@ -173,6 +160,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
         headers: { 'Content-Type': 'application/json' },
       }
     );
+  }
+
+  if (!connection) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: `Connection "${body.connection_id}" not found or has been deleted.`,
+      }),
+      {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+
+  // 6. Fail-lazy check for production defaults
+  const effectiveSecretResult = await getEffectiveSecret(
+    connection.workspace_id,
+    runtimeEnv
+  );
+  const expectedSecret = effectiveSecretResult?.value;
+
+  if (isProductionEnv(runtimeEnv) && effectiveSecretResult?.source === 'env' && isKnownDefaultIngestSecret(expectedSecret)) {
+    return new Response(JSON.stringify({ success: false, error: 'Service unavailable: ingest secret not configured on server.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
   }
 
   // 7. Check if connection is disabled (bypassed if force=true)
@@ -322,6 +333,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       body: JSON.stringify(forwardPayload),
       signal: AbortSignal.timeout(8000),
     });
+
+    if (!res.ok) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Upstream webhook returned HTTP ${res.status}`,
+          webhook_status: res.status,
+          forwarded_payload: forwardPayload,
+        }),
+        {
+          status: 502,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
     return new Response(
       JSON.stringify({

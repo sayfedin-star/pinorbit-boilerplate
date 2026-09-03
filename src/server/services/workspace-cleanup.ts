@@ -13,7 +13,7 @@ import { fastcronService } from './fastcron-service';
 export async function cleanupWorkspaceAnalytics(
   wsId: string,
   runtimeEnv: Record<string, any>
-): Promise<{ success: boolean; disabledJobsCount: number }> {
+): Promise<{ success: boolean; disabledJobsCount: number; complete: boolean; failedJobsCount: number }> {
   if (!wsId) {
     throw new Error('Workspace ID is required for cleanup.');
   }
@@ -22,6 +22,7 @@ export async function cleanupWorkspaceAnalytics(
   await removeWorkspaceOverride(wsId, runtimeEnv);
 
   let disabledJobsCount = 0;
+  let failedJobsCount = 0;
 
   // 2. Disable FastCron jobs for all workspace connections (best effort)
   try {
@@ -36,6 +37,7 @@ export async function cleanupWorkspaceAnalytics(
           );
           disabledJobsCount++;
         } catch (e) {
+          failedJobsCount++;
           console.warn(
             `[WorkspaceCleanup] Failed to disable analytics cron job ${conn.analytics_fastcron_job_id}:`,
             e
@@ -52,6 +54,7 @@ export async function cleanupWorkspaceAnalytics(
           );
           disabledJobsCount++;
         } catch (e) {
+          failedJobsCount++;
           console.warn(
             `[WorkspaceCleanup] Failed to disable top_pins cron job ${conn.top_pins_fastcron_job_id}:`,
             e
@@ -60,11 +63,14 @@ export async function cleanupWorkspaceAnalytics(
       }
     }
   } catch (err) {
+    failedJobsCount++;
     console.warn(`[WorkspaceCleanup] Error listing connections for workspace ${wsId}:`, err);
   }
 
   return {
     success: true,
+    complete: failedJobsCount === 0,
     disabledJobsCount,
+    failedJobsCount,
   };
 }

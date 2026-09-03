@@ -207,16 +207,30 @@ describe('Competitor Ops Console API Endpoints', () => {
       expect(body.jobs).toHaveLength(1);
     });
 
-    it('POST dispatches job and returns 202 dispatched:true', async () => {
-      mockCompetitorsClient.from.mockReturnValue({
-        insert: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({
-              data: { id: 'job-uuid-123', status: 'running' },
-              error: null,
-            }),
+    it('P0-07: POST inserts job as "queued" and updates to "running" upon GitHub Actions 204 dispatch', async () => {
+      let insertedJobStatus = '';
+      let updatedJobStatus = '';
+
+      mockCompetitorsClient.from.mockImplementation((table: string) => {
+        return {
+          insert: vi.fn().mockImplementation((payload: any) => {
+            insertedJobStatus = payload.status;
+            return {
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { id: 'job-uuid-123', status: payload.status },
+                  error: null,
+                }),
+              }),
+            };
           }),
-        }),
+          update: vi.fn().mockImplementation((payload: any) => {
+            updatedJobStatus = payload.status;
+            return {
+              eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+            };
+          }),
+        };
       });
 
       const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
@@ -246,6 +260,8 @@ describe('Competitor Ops Console API Endpoints', () => {
       expect(body.job_id).toBe('job-uuid-123');
       expect(body.dispatched).toBe(true);
       expect(body.target_scope).toBe('All Active');
+      expect(insertedJobStatus).toBe('queued');
+      expect(updatedJobStatus).toBe('running');
 
       fetchSpy.mockRestore();
     });

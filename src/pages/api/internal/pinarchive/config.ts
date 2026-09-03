@@ -59,7 +59,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
       .eq('workspace_id', workspaceId)
       .maybeSingle();
 
-    if (error || !settings) {
+    if (error) {
+      console.warn('[PinArchive Config] Database error reading settings:', error.message);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Database error reading settings: ${error.message}`,
+        }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!settings) {
       return new Response(
         JSON.stringify({
           success: true,

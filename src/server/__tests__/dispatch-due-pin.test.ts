@@ -19,12 +19,14 @@ describe('Thread-Safe Dispatch Due Pin Concurrency & Hardening Suite', () => {
   let webhooksDb: any[] = [];
   let boardsDb: any[] = [];
   let simulatePinDisappearedBeforeFetch = false;
+  let lastClaimLimit: number | null = null;
 
   beforeEach(() => {
     vi.clearAllMocks();
     activeLeaseScheduleId = null;
     webhookCalls = [];
     simulatePinDisappearedBeforeFetch = false;
+    lastClaimLimit = null;
 
     mockRuntimeEnv = {
       SCHEDULING_SUPABASE_SECRET_KEY: 'test-secret-key-123',
@@ -315,6 +317,7 @@ describe('Thread-Safe Dispatch Due Pin Concurrency & Hardening Suite', () => {
             return { data: null, error: null };
           }
           if (proc === 'claim_due_pins_simple') {
+            lastClaimLimit = args.p_limit;
             const due = pinsDb.filter((p) => p.status === 'pending' && p.account_id === args.p_account_id).slice(0, args.p_limit || 1);
             for (const p of due) {
               p.status = 'processing';
@@ -485,5 +488,16 @@ describe('Thread-Safe Dispatch Due Pin Concurrency & Hardening Suite', () => {
     expect(hook.executions_used).toBe(1);
     expect(hook.monthly_usage).toBe(1);
     expect(hook.remaining_capacity).toBe(99);
+  });
+
+  it('7. P1-03: Clamps batch limit to 50 when schedule.batch exceeds 50', async () => {
+    const sched = schedulesDb.find((s) => s.id === scheduleId);
+    if (sched) sched.batch = 100;
+
+    const body = { schedule_id: scheduleId, dispatch_token: dispatchToken, force: true };
+    const res = await handleDispatch(body, mockLocals).then((r) => r.json());
+
+    expect(res.success).toBe(true);
+    expect(lastClaimLimit).toBe(50);
   });
 });

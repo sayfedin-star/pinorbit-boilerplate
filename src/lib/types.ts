@@ -749,7 +749,6 @@ export interface PurgePreviewCounts {
   daily_count: number;
   summaries_count: number;
   top_pins_count: number;
-  url_perf_count: number;
   affected_rollup_dates: string[];
   total_records: number;
 }
@@ -759,8 +758,6 @@ export interface PurgeResultCounts {
   summaries_deleted: number;
   rollups_rebuilt: number;
   top_pins_deleted: number;
-  url_perf_deleted: number;
-  url_perf_rebuilt?: number;
 }
 
 export interface PurgeResponse {

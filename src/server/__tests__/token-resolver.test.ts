@@ -243,6 +243,16 @@ describe('Unified FastCron Token Resolver Suite (token-resolver.ts)', () => {
         )
       ).rejects.toThrow('No fastcron API token configured for workspace in scheduling project or server environment.');
     });
+
+    it('P0-01: strictly rejects resolution by tokenId when workspaceId is omitted', async () => {
+      await expect(
+        resolveToken(
+          { tokenId: 'some-stolen-token-id' },
+          'scheduling',
+          { FASTCRON_API_TOKEN: '' }
+        )
+      ).rejects.toThrow('Tenant isolation violation: workspaceId is required when resolving by tokenId');
+    });
   });
 
   describe('4. Caller Verification (fastcronService & resolveScheduleToken)', () => {

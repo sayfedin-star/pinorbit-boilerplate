@@ -37,7 +37,7 @@ A modern, production-hardened multi-project Supabase SaaS starter built with Ast
 ├──────────────────────────┤ ├──────────────────────────┤ ├──────────────────────────┤
 │ • auth.users             │ │ • competitors            │ │ • import_sessions        │
 │ • workspaces             │ │ • competitor_boards      │ │ • pin_metrics_history    │
-│ • workspace_memberships  │ │ • competitor_snapshots   │ │ • url_performance_history│
+│ • workspace_memberships  │ │ • competitor_snapshots   │ │ • top_pins_snapshots     │
 │ • accounts & webhooks    │ │ • daily_snapshots        │ │ • board_analytics_rollups│
 │ • boards & pins queue    │ │ • ingestion_jobs         │ │ • daily_workspace_metrics│
 │ • pin_delivery_logs      │ └──────────────────────────┘ └──────────────────────────┘

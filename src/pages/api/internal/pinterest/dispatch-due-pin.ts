@@ -54,6 +54,7 @@ export async function handleDispatch(body: any, locals: any) {
     const { data: leaseOk, error: leaseErr } = await admin.rpc('acquire_schedule_dispatch_lease', {
       p_schedule_id: scheduleId,
       p_lease_seconds: 45,
+      p_workspace_id: schedule.workspace_id,
     });
 
     if (leaseErr) {
@@ -62,6 +63,7 @@ export async function handleDispatch(body: any, locals: any) {
         .from('posting_schedules')
         .update({ locked_until: new Date(Date.now() + 45000).toISOString(), updated_at: new Date().toISOString() })
         .eq('id', scheduleId)
+        .eq('workspace_id', schedule.workspace_id)
         .or(`locked_until.is.null,locked_until.lte.${new Date().toISOString()}`)
         .select('id')
         .maybeSingle();
@@ -140,7 +142,7 @@ export async function handleDispatch(body: any, locals: any) {
     // 4) Atomic claim: claimed_at and claimed_by_schedule_id are set atomically inside the RPC
     const { data: claimed, error: rpcErr } = await admin.rpc('claim_due_pins_simple', {
       p_account_id: accountId,
-      p_limit: schedule.batch ?? 1,
+      p_limit: Math.min(schedule.batch ?? 1, 50),
       p_schedule_id: scheduleId,
     });
     if (rpcErr) return json({ success: false, error: 'claim RPC failed: ' + rpcErr.message }, 500);
@@ -158,7 +160,7 @@ export async function handleDispatch(body: any, locals: any) {
           claimed_at: null,
           claimed_by_schedule_id: null,
           updated_at: new Date().toISOString(),
-        }).eq('id', c.id);
+        }).eq('id', c.id).eq('workspace_id', workspaceId).eq('account_id', accountId);
       }
       return json({ success: true, dispatched: false, reason: 'no_webhook_capacity' });
     }
@@ -200,7 +202,7 @@ export async function handleDispatch(body: any, locals: any) {
           claimed_at: null,
           claimed_by_schedule_id: null,
           updated_at: new Date().toISOString(),
-        }).eq('id', c.id);
+        }).eq('id', c.id).eq('workspace_id', workspaceId).eq('account_id', accountId);
         skipped++; continue;
       }
       let boardId = pin.board_name ? (boardMap.get(String(pin.board_name).toLowerCase()) || null) : null;
@@ -227,20 +229,23 @@ export async function handleDispatch(body: any, locals: any) {
             .maybeSingle();
 
           if (!existingProv || existingProv.status !== 'provisioning') {
-            await admin.from('board_provisioning_requests').upsert({
+            const { error: provErr } = await admin.from('board_provisioning_requests').upsert({
               workspace_id: workspaceId,
               account_id: accountId,
               board_name: pin.board_name,
               idempotency_key: idem,
               status: 'provisioning',
               webhook_id: hook.id,
-            }, { onConflict: 'idempotency_key' }).then(() => {});
+            }, { onConflict: 'idempotency_key' });
+            if (provErr) {
+              console.warn('[Dispatch] Board provisioning request error:', provErr.message);
+            }
             await triggerBoardAction(accountId, 'create', {
               board_name: pin.board_name,
               workspace_id: workspaceId,
               webhook_id: hook.id,
               idempotency_key: idem,
-            }, runtimeEnv).catch(() => {});
+            }, runtimeEnv).catch((err) => console.warn('[Dispatch] triggerBoardAction error:', err?.message || err));
           }
         }
         // Revert attempt increment and backoff to avoid spinning or inflating attempts
@@ -252,7 +257,7 @@ export async function handleDispatch(body: any, locals: any) {
           attempts: Math.max(0, (pin.attempts || 1) - 1),
           next_retry_at: new Date(Date.now() + 120000).toISOString(),
           updated_at: new Date().toISOString(),
-        }).eq('id', c.id);
+        }).eq('id', c.id).eq('workspace_id', workspaceId);
         skipped++; continue;
       }
 
@@ -261,7 +266,9 @@ export async function handleDispatch(body: any, locals: any) {
         .from('pins')
         .select('id, status, attempts')
         .eq('id', pin.id)
+        .eq('workspace_id', workspaceId)
         .eq('status', 'processing')
+        .eq('claimed_by_schedule_id', scheduleId)
         .maybeSingle();
 
       if (!verifiedPin) {
@@ -297,7 +304,7 @@ export async function handleDispatch(body: any, locals: any) {
           next_retry_at: new Date(Date.now() + 60000).toISOString(),
           last_failure_reason: pushRes ? `Webhook responded HTTP ${pushRes.status}` : 'Webhook push timed out or connection failed',
           updated_at: new Date().toISOString(),
-        }).eq('id', pin.id);
+        }).eq('id', pin.id).eq('workspace_id', workspaceId);
         skipped++;
       }
     }
@@ -307,29 +314,34 @@ export async function handleDispatch(body: any, locals: any) {
       const { error: incErr } = await admin.rpc('increment_webhook_execution', {
         p_webhook_id: hook.id,
         p_count: successfulExecutions,
+        p_workspace_id: workspaceId,
       });
       if (incErr) {
-        // Fallback if RPC unavailable
+        console.warn('[Dispatch] increment_webhook_execution RPC failed, falling back:', incErr.message);
         hook.executions_used = (hook.executions_used ?? 0) + successfulExecutions;
         hook.monthly_usage = (hook.monthly_usage ?? 0) + successfulExecutions;
-        if (typeof hook.remaining_capacity === 'number') {
-          hook.remaining_capacity = Math.max(0, hook.remaining_capacity - successfulExecutions);
+        try {
+          await admin.from('account_webhooks').update({
+            executions_used: hook.executions_used,
+            monthly_usage: hook.monthly_usage,
+            last_used_at: new Date().toISOString(),
+          }).eq('id', hook.id).eq('account_id', accountId);
+        } catch (err: any) {
+          console.warn('[Dispatch] fallback hook counter error:', err?.message || err);
         }
-        await admin.from('account_webhooks').update({
-          executions_used: hook.executions_used,
-          monthly_usage: hook.monthly_usage,
-          remaining_capacity: hook.remaining_capacity,
-          last_used_at: new Date().toISOString(),
-        }).eq('id', hook.id).then(() => {});
       }
     }
 
     if (dispatched > 0) {
       // Keep locked_until for 20s as a debounce buffer to prevent concurrent/retry duplicate dispatch
-      await admin.from('posting_schedules').update({
-        last_dispatched_at: new Date().toISOString(),
-        locked_until: new Date(Date.now() + 20000).toISOString(),
-      }).eq('id', scheduleId).eq('workspace_id', workspaceId).then(() => {});
+      try {
+        await admin.from('posting_schedules').update({
+          last_dispatched_at: new Date().toISOString(),
+          locked_until: new Date(Date.now() + 20000).toISOString(),
+        }).eq('id', scheduleId).eq('workspace_id', workspaceId);
+      } catch (err: any) {
+        console.warn('[Dispatch] debounce lock error:', err?.message || err);
+      }
     }
 
     return json({ success: true, dispatched, skipped });
@@ -338,8 +350,13 @@ export async function handleDispatch(body: any, locals: any) {
     // If a pin was dispatched, the 20s debounce locked_until buffer protects against overlapping retries.
     if (leaseAcquired && dispatched === 0) {
       try {
-        await admin.rpc('release_schedule_dispatch_lease', { p_schedule_id: scheduleId });
-      } catch {}
+        await admin.rpc('release_schedule_dispatch_lease', {
+          p_schedule_id: scheduleId,
+          p_workspace_id: workspaceId,
+        });
+      } catch (relErr: any) {
+        console.warn('[Dispatch] release lease failed:', relErr?.message || relErr);
+      }
     }
   }
 }
