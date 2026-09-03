@@ -43,6 +43,8 @@ describe('Thread-Safe Dispatch Due Pin Concurrency & Hardening Suite', () => {
         status: 'active',
         batch: 1,
         locked_until: null,
+        window_start: '00:00',
+        window_end: '23:59',
       },
     ];
 

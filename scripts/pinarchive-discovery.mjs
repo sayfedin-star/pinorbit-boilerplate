@@ -43,7 +43,7 @@ const {
   PINARCHIVE_GAS_URL,
 } = process.env;
 
-const DISCOVERY_WORKSPACE_ID = (process.env.DISCOVERY_WORKSPACE_ID || process.env.WORKSPACE_ID || '').trim();
+const DISCOVERY_WORKSPACE_ID = (process.env.DISCOVERY_WORKSPACE_ID || process.env.WORKSPACE_ID || process.env.WORKSPACE_FILTER || process.env.DISCOVERY_WORKSPACE_FILTER || '').trim();
 const DISCOVERY_USERNAME = (process.env.DISCOVERY_USERNAME || process.env.USERNAME || '').trim().toLowerCase();
 const DISCOVERY_USERNAMES = (process.env.DISCOVERY_USERNAMES || process.env.USERNAMES || '')
   .split(',')
@@ -408,6 +408,31 @@ async function writeToGas(gasUrl, secret, payload, maxRetries = 1) {
   }
 }
 
+// ── Calendar-Aligned Eligibility Helpers (Tier 1) ──
+function checkCalendarEligibility(acc, todayUTC = new Date().toISOString().slice(0, 10)) {
+  const lastProcessedDay = acc.last_run_at ? new Date(acc.last_run_at).toISOString().slice(0, 10) : null;
+  const intervalDays = Math.max(1, parseInt(acc.interval_days ?? 1, 10) || 1);
+  const dayDiff = lastProcessedDay
+    ? Math.floor((Date.parse(todayUTC) - Date.parse(lastProcessedDay)) / 86400000)
+    : Infinity;
+  const isEligible = dayDiff >= intervalDays;
+  const isSelfHeal = dayDiff > intervalDays + 1 && dayDiff !== Infinity;
+
+  return {
+    isEligible,
+    dayDiff,
+    intervalDays,
+    isSelfHeal,
+    lastProcessedDay,
+  };
+}
+
+function computeNextRunDate(todayUTC = new Date().toISOString().slice(0, 10), intervalDays = 1) {
+  const nextTarget = new Date(`${todayUTC}T00:00:00.000Z`);
+  nextTarget.setUTCDate(nextTarget.getUTCDate() + Math.max(1, intervalDays));
+  return nextTarget.toISOString();
+}
+
 // ── Main Process ──
 async function main() {
   checkEnv();
@@ -508,6 +533,22 @@ async function main() {
     }
   }
 
+  // Group accounts by workspace for passengers summary
+  const wsGroups = new Map();
+  for (const a of accounts) {
+    const ws = a.workspace_id;
+    if (!wsGroups.has(ws)) wsGroups.set(ws, { total: 0, intervals: new Set() });
+    const g = wsGroups.get(ws);
+    g.total++;
+    g.intervals.add(`${a.interval_days || 1}d`);
+  }
+
+  console.log('🚌 Today\'s passengers:');
+  for (const [wsId, g] of wsGroups.entries()) {
+    console.log(`- Workspace ${wsId.slice(0, 8)}: ${g.total} accounts (interval=${Array.from(g.intervals).join('/')})`);
+  }
+  console.log('');
+
   // Sharding across runner matrix
   const shardedAccounts = accounts.filter((_, idx) => idx % SHARD_COUNT === DISCOVERY_SHARD);
   console.log(`Shard ${DISCOVERY_SHARD + 1}/${SHARD_COUNT}: Processing ${shardedAccounts.length} of ${accounts.length} total accounts.\n`);
@@ -520,6 +561,7 @@ async function main() {
   const grandSummary = { accounts: 0, pages: 0, newPins: 0, qualifyingPins: 0, sheetPushed: 0, errors: [] };
 
   for (const acc of shardedAccounts) {
+    const wsPrefix = `[ws:${acc.workspace_id.slice(0, 8)}]`;
     const wsSetting = settingsMap.get(acc.workspace_id) || {};
     const wsIngestEnabled = wsSetting.ingest_enabled ?? true;
     const wsGhScheduleEnabled = wsSetting.github_schedule_enabled ?? true;
@@ -535,33 +577,39 @@ async function main() {
 
     // Gating checks
     if (IS_AUDIT_SWEEP && !wsAuditSweepEnabled) {
-      console.log(`[SKIP] Workspace ${acc.workspace_id.slice(0, 8)} monthly audit sweep is disabled in settings.`);
+      console.log(`[SKIP]${wsPrefix} Monthly audit sweep is disabled in settings.`);
       continue;
     }
     if (isGhScheduledEvent && !wsGhScheduleEnabled) {
-      console.log(`[SKIP] Workspace ${acc.workspace_id.slice(0, 8)} GitHub Actions 07:00 UTC schedule is disabled (delegated to FastCron).`);
+      console.log(`[SKIP]${wsPrefix} GitHub Actions 07:00 UTC schedule is disabled (delegated to FastCron).`);
       continue;
     }
     if (!wsIngestEnabled) {
-      console.log(`[SKIP] Workspace ${acc.workspace_id} ingest is disabled.`);
+      console.log(`[SKIP]${wsPrefix} Ingest is disabled at workspace level.`);
       continue;
     }
     if (acc.ingest_enabled === false) {
-      console.log(`[SKIP] Account @${acc.username} ingest is disabled.`);
+      console.log(`[SKIP]${wsPrefix} Account @${acc.username} ingest is disabled (ingest_enabled=false).`);
       continue;
     }
     if (['paused', 'cookie_expired', 'error'].includes(acc.status) && pausedPolicy === 'reject') {
-      console.log(`[SKIP] Account @${acc.username} is inactive (status=${acc.status}, policy=reject).`);
+      console.log(`[SKIP]${wsPrefix} Account @${acc.username} is inactive (status=${acc.status}, policy=reject).`);
       continue;
     }
 
-    // Schedule eligibility check unless FORCE_RUN or AUDIT_SWEEP or backfill in progress
+    // Schedule eligibility check (Calendar-Aligned UTC Date Difference)
+    const todayUTC = new Date().toISOString().slice(0, 10);
+    const eligibility = checkCalendarEligibility(acc, todayUTC);
+
     if (FORCE_RUN) {
-      console.log(`[FORCE] Account @${acc.username} forced (bypassing next_run_at check).`);
-    } else if (!IS_AUDIT_SWEEP && acc.next_run_at && acc.backfill_status !== 'in_progress') {
-      const nextRunMs = new Date(acc.next_run_at).getTime();
-      if (Date.now() < nextRunMs) {
-        console.log(`[SKIP] Account @${acc.username} not eligible yet (next_run_at: ${acc.next_run_at}).`);
+      console.log(`[FORCE]${wsPrefix} Account @${acc.username} forced (bypassing schedule check).`);
+    } else if (acc.backfill_status === 'in_progress') {
+      console.log(`[RESUME]${wsPrefix} Account @${acc.username} backfill in progress (bypassing schedule check).`);
+    } else if (!IS_AUDIT_SWEEP) {
+      if (eligibility.isSelfHeal) {
+        console.log(`[SELF-HEAL]${wsPrefix} @${acc.username} processed ${eligibility.lastProcessedDay}, interval=${eligibility.intervalDays}d, diff=${eligibility.dayDiff}d — immediately eligible.`);
+      } else if (!eligibility.isEligible) {
+        console.log(`[SKIP]${wsPrefix} @${acc.username} processed ${eligibility.lastProcessedDay}, interval=${eligibility.intervalDays}d, diff=${eligibility.dayDiff}d`);
         continue;
       }
     }
@@ -786,10 +834,10 @@ async function main() {
     }
 
     // 6. Update pa_accounts metadata & next_run_at
-    const intervalDays = Number(acc.interval_days || 1);
+    const intervalDays = Math.max(1, Number(acc.interval_days || 1));
     const nextRunAt = hasMore && cursor && !circuitBroken
       ? new Date().toISOString()
-      : new Date(Date.now() + intervalDays * 86400000).toISOString();
+      : computeNextRunDate(todayUTC, intervalDays);
 
     const lastResult = `pages=${pageCount} +${newPinsCount} qual=${newPinsCount} sheet=${sheetPushed}${circuitBroken ? ' (circuit-broken)' : ''}`;
 
@@ -837,6 +885,8 @@ export {
   decryptCookieValue,
   resolveKek,
   writeToGas,
+  checkCalendarEligibility,
+  computeNextRunDate,
 };
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {

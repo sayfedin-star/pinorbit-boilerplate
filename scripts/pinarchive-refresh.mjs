@@ -31,7 +31,7 @@ const HEADERS = {
 
 const { PINARCHIVE_SUPABASE_URL, PINARCHIVE_SUPABASE_KEY, PINORBIT_WORKER_URL, PINARCHIVE_INGEST_SECRET } = process.env;
 
-const REFRESH_WORKSPACE_ID = (process.env.REFRESH_WORKSPACE_ID || '').trim();
+const REFRESH_WORKSPACE_ID = (process.env.REFRESH_WORKSPACE_ID || process.env.WORKSPACE_ID || process.env.WORKSPACE_FILTER || process.env.REFRESH_WORKSPACE_FILTER || '').trim();
 const REFRESH_USERNAME = (process.env.REFRESH_USERNAME || '').trim().toLowerCase();
 const REFRESH_USERNAMES = (process.env.REFRESH_USERNAMES || '')
   .split(',')
@@ -470,6 +470,22 @@ async function main() {
 
   if (!accounts.length) { console.log('No matching accounts found.'); return; }
 
+  // Group accounts by workspace for passengers summary
+  const wsGroups = new Map();
+  for (const a of accounts) {
+    const ws = a.workspace_id;
+    if (!wsGroups.has(ws)) wsGroups.set(ws, { total: 0, intervals: new Set() });
+    const g = wsGroups.get(ws);
+    g.total++;
+    g.intervals.add(`${a.interval_days || 1}d`);
+  }
+
+  console.log('🚌 Today\'s passengers:');
+  for (const [wsId, g] of wsGroups.entries()) {
+    console.log(`- Workspace ${wsId.slice(0, 8)}: ${g.total} accounts (interval=${Array.from(g.intervals).join('/')})`);
+  }
+  console.log('');
+
   // Distribute accounts across shard matrix when processing multi-account workspaces
   const isTargetedRun = Boolean(REFRESH_USERNAME || REFRESH_USERNAMES.length > 0);
   const shardedAccounts = isTargetedRun
@@ -480,6 +496,7 @@ async function main() {
   const summary = { refreshed: 0, updated: 0, pushed: 0, errors: [] };
 
   for (const acc of shardedAccounts) {
+    const wsPrefix = `[ws:${acc.workspace_id.slice(0, 8)}]`;
     const wsSetting = settingsMap.get(acc.workspace_id);
     const wsIngestEnabled = wsSetting ? wsSetting.ingest_enabled : true;
     const wsGhScheduleEnabled = wsSetting?.github_schedule_enabled ?? true;
@@ -488,33 +505,33 @@ async function main() {
 
     // Check GitHub schedule gate
     if (isGhScheduledEvent && !wsGhScheduleEnabled) {
-      console.log(`[SKIP] Workspace ${acc.workspace_id.slice(0, 8)} GitHub Actions 07:00 UTC schedule is disabled (delegated to FastCron).`);
+      console.log(`[SKIP]${wsPrefix} GitHub Actions 07:00 UTC schedule is disabled (delegated to FastCron).`);
       continue;
     }
 
     // Check workspace-level ingest gate
     if (wsIngestEnabled === false) {
-      console.log(`[SKIP] Workspace ${acc.workspace_id} ingest is disabled.`);
+      console.log(`[SKIP]${wsPrefix} Ingest is disabled at workspace level.`);
       continue;
     }
 
     // Check account-level ingest gate
     if (acc.ingest_enabled === false) {
-      console.log(`[SKIP] Account @${acc.username} ingest is disabled (ingest_enabled=false).`);
+      console.log(`[SKIP]${wsPrefix} Account @${acc.username} ingest is disabled (ingest_enabled=false).`);
       continue;
     }
 
     // Check paused policy gate
     if (['paused', 'cookie_expired', 'error'].includes(acc.status) && pausedPolicy === 'reject') {
-      console.log(`[SKIP] Account @${acc.username} is paused (policy=reject).`);
+      console.log(`[SKIP]${wsPrefix} Account @${acc.username} is paused (policy=reject).`);
       continue;
     }
 
     if (REFRESH_WORKSPACE_ID && acc.workspace_id !== REFRESH_WORKSPACE_ID) {
-      console.log(`[SKIP] ${acc.username}: outside requested workspace.`); continue;
+      console.log(`[SKIP]${wsPrefix} ${acc.username}: outside requested workspace.`); continue;
     }
     if (REFRESH_USERNAME && acc.username.toLowerCase() !== REFRESH_USERNAME) {
-      console.log(`[SKIP] ${acc.username}: outside requested account.`); continue;
+      console.log(`[SKIP]${wsPrefix} ${acc.username}: outside requested account.`); continue;
     }
 
     // X2: Precedence: env REFRESH_MAX_PINS if set -> else DB setting -> else 0 (unlimited with pagination)
