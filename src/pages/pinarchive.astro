@@ -1802,7 +1802,11 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
       filterAndRenderAccounts();
       updateCostEstimate();
     } catch (e: any) {
-      if (retries > 0) { setTimeout(() => loadOverview(retries - 1), 1500); return; }
+      if (retries > 0) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="12" class="p-8 text-center text-xs text-muted-foreground animate-pulse">Retrying… (attempt ${3 - retries}/2)</td></tr>`;
+        setTimeout(() => loadOverview(retries - 1), 1500);
+        return;
+      }
       console.error('Error loading PinArchive overview:', e);
 
       if (kpiAccounts) kpiAccounts.textContent = '—';
@@ -3022,17 +3026,44 @@ const isMasterWorkspace = Boolean(currentWorkspace?.is_master);
   });
 
   // ─── Initialization ───────────────────────────────────────────────────────
+  let loadingWatchdogFired = false;
+  function armLoadingWatchdog() {
+    setTimeout(() => {
+      const tbody = document.getElementById('accounts-table-body');
+      const stillLoading = tbody && tbody.textContent.includes('Loading tracked accounts');
+      const badge = document.getElementById('refresh-meta-text');
+      const badgeStuck = badge && badge.textContent.includes('Loading sync schedule');
+      if ((stillLoading || badgeStuck) && !loadingWatchdogFired) {
+        loadingWatchdogFired = true;
+        console.error('[PinArchive] watchdog: loaders did not settle in 30s, forcing error UI');
+        if (tbody) tbody.innerHTML =
+          `<tr><td colspan="12" class="p-8 text-center text-xs text-rose-500">
+             Failed to load accounts. <button id="retry-load-btn" class="underline font-bold cursor-pointer ml-1">Retry</button>
+           </td></tr>`;
+        document.getElementById('retry-load-btn')?.addEventListener('click', () => {
+          loadingWatchdogFired = false;
+          if (tbody) tbody.innerHTML = `<tr><td colspan="12" class="p-8 text-center text-xs text-muted-foreground animate-pulse">Loading tracked accounts…</td></tr>`;
+          loadOverview(2); armLoadingWatchdog();
+        });
+        if (badge) badge.textContent = 'Sync schedule unavailable';
+      }
+    }, 30000);
+  }
+
   function initPinArchivePage() {
-    buildColVisibilityMenu();
-    setupColVisibilityToggle();
-    setupSettingsCollapse();
-    setupLogicBarListeners();
-    setupToggleSwitchListeners();
-    setupReevaluateButton();
-    setupBulkActionButtons();
-    document.getElementById('save-ingest-settings-btn')?.addEventListener('click', saveSettings);
+    console.info('[PinArchive] init start', { href: location.href, t: new Date().toISOString() });
+    const safe = (name: string, fn: () => void) => { try { fn(); } catch (e) { console.error(`[PinArchive] init step failed: ${name}`, e); } };
+    safe('buildColVisibilityMenu', buildColVisibilityMenu);
+    safe('setupColVisibilityToggle', setupColVisibilityToggle);
+    safe('setupSettingsCollapse', setupSettingsCollapse);
+    safe('setupLogicBarListeners', setupLogicBarListeners);
+    safe('setupToggleSwitchListeners', setupToggleSwitchListeners);
+    safe('setupReevaluateButton', setupReevaluateButton);
+    safe('setupBulkActionButtons', setupBulkActionButtons);
+    safe('saveBtn', () => document.getElementById('save-ingest-settings-btn')?.addEventListener('click', saveSettings));
     loadSettings();
     loadOverview(2);
+    armLoadingWatchdog();
   }
 
   if (document.readyState === 'loading') {
