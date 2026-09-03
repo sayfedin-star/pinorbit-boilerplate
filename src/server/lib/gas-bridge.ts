@@ -34,6 +34,9 @@ export async function gasCall(
 
     const eff = await getEffectiveSecret(workspaceId, runtimeEnv || {});
     const secret = eff.value || '';
+    if (!secret || secret.trim().length === 0) {
+      return { ok: false, error: 'Ingest secret is not configured for workspace.' };
+    }
 
     const cmd_id = crypto.randomUUID();
     const bodyPayload = {
@@ -82,7 +85,7 @@ export async function gasCall(
       }
       return { ok: true, data: parsed };
     } catch {
-      return { ok: true, message: text };
+      return { ok: false, error: 'GAS returned non-JSON/HTML response: ' + text.slice(0, 300) };
     }
   } catch (err: any) {
     return {

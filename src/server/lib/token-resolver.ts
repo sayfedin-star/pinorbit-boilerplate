@@ -124,7 +124,7 @@ export async function resolveToken(
   // 1. Schedule-encrypted token (AES-GCM decrypted via TOKEN_KEK)
   if (encryptedToken && kek) {
     try {
-      const dec = await decryptToken(encryptedToken, kek);
+      const dec = await decryptToken(encryptedToken, kek, runtimeEnv);
       if (dec && dec.trim().length >= 8) {
         return {
           token: dec.trim(),
@@ -156,7 +156,7 @@ export async function resolveToken(
     const { data: row } = await tokenQuery.maybeSingle();
 
     if (row?.token_encrypted) {
-      const dec = await decryptToken(row.token_encrypted, kek);
+      const dec = await decryptToken(row.token_encrypted, kek, runtimeEnv);
       if (dec && dec.trim().length >= 8) {
         return {
           token: dec.trim(),
@@ -179,7 +179,7 @@ export async function resolveToken(
       .maybeSingle();
 
     if (defRow) {
-      let dec = defRow.token_encrypted && kek ? await decryptToken(defRow.token_encrypted, kek) : null;
+      let dec = defRow.token_encrypted && kek ? await decryptToken(defRow.token_encrypted, kek, runtimeEnv) : null;
       if (!dec && (defRow as any).token) dec = (defRow as any).token;
       if (!dec && envToken) dec = envToken;
       if (dec && dec.trim().length >= 8) {
@@ -195,14 +195,12 @@ export async function resolveToken(
 
     // 3b. Any first active token in project workspace registry
     try {
-      let anyQuery: any = client
+      let anyQuery = client
         .from(table)
         .select('id, name, token_encrypted, token_masked, is_default')
-        .eq('workspace_id', workspaceId);
+        .eq('workspace_id', workspaceId)
+        .order('created_at', { ascending: false });
 
-      if (typeof anyQuery?.order === 'function') {
-        anyQuery = anyQuery.order('created_at', { ascending: true });
-      }
       if (typeof anyQuery?.limit === 'function') {
         anyQuery = anyQuery.limit(1);
       }
@@ -210,7 +208,7 @@ export async function resolveToken(
       const { data: anyRows } = await anyQuery;
 
       if (anyRows && anyRows.length > 0 && anyRows[0].token_encrypted) {
-        const dec = await decryptToken(anyRows[0].token_encrypted, kek);
+        const dec = await decryptToken(anyRows[0].token_encrypted, kek, runtimeEnv);
         if (dec && dec.trim().length >= 8) {
           return {
             token: dec.trim(),
@@ -274,7 +272,7 @@ export async function listWorkspaceTokens(
       for (const row of rows) {
         let plain: string | null = null;
         if (row.token_encrypted && kek) {
-          plain = await decryptToken(row.token_encrypted, kek);
+          plain = await decryptToken(row.token_encrypted, kek, runtimeEnv);
         }
 
         if (plain && plain.trim().length > 0) {
@@ -331,7 +329,7 @@ export async function saveWorkspaceToken(
       return { success: false, error: 'Encryption KEK is not configured on server' };
     }
 
-    const encrypted = await encryptToken(token.trim(), kek);
+    const encrypted = await encryptToken(token.trim(), kek, runtimeEnv);
     const masked = '••••' + token.trim().slice(-4);
     const { client, table } = getClientAndTable(project, runtimeEnv);
 

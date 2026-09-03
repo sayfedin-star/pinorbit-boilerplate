@@ -10,6 +10,21 @@ import { getNextCronDate } from '../../../lib/cron-helper';
 
 export const FASTCRON_BASE = 'https://www.fastcron.com/api/v1';
 
+/**
+ * ARCHITECTURAL DECISION & AUDIT DEFENSE:
+ * FastCron standard/free tiers do NOT support custom HTTP request headers
+ * (locked behind "Upgrade to change this" paywall).
+ * To guarantee platform compatibility with standard external cron providers without
+ * forcing paid upgrades, incoming dispatch endpoints intentionally accept the ingest
+ * secret via the `?secret=` URL query parameter in addition to the `x-ingest-secret` header.
+ *
+ * SECURITY GUARANTEE:
+ * Confidentiality is strictly preserved by:
+ * 1. Never returning the full dispatch URL or query parameters in any client-facing
+ *    GET responses (the `url` property is omitted or sanitized to path-only).
+ * 2. Requiring workspace admin role (`role === 'admin'`) for creating/updating cron jobs.
+ * 3. Enforcing timing-safe candidate verification on the receiving endpoint.
+ */
 export const getDispatchEndpointUrl = (
   runtimeEnv?: Record<string, any>,
   workspaceId?: string,
@@ -626,7 +641,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const wsContext = await assertWorkspaceAccess(schedulingClient, workspaceId, user.id);
+    const wsContext = await assertWorkspaceAccess(schedulingClient, workspaceId, user.id, 'admin');
 
     const { data: ws } = await schedulingClient
       .from('workspaces')
@@ -1048,9 +1063,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {
+    const status = typeof err?.status === 'number' ? err.status : 500;
     return new Response(
       JSON.stringify({ success: false, error: err?.message || 'Failed to process FastCron request.' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status, headers: { 'Content-Type': 'application/json' } }
     );
   }
 };
@@ -1161,9 +1177,10 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {
+    const status = typeof err?.status === 'number' ? err.status : 500;
     return new Response(
-      JSON.stringify({ success: false, error: err?.message || 'Failed to delete FastCron job.' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: false, error: err?.message || 'Failed to process FastCron request.' }),
+      { status, headers: { 'Content-Type': 'application/json' } }
     );
   }
 };

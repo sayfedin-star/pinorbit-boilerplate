@@ -217,6 +217,7 @@ export interface Competitor {
   account_type?: 'own' | 'competitor' | string;
   tags?: string[];
   created_at: string;
+  updated_at?: string | null;
   boards_count?: number;
   strategy_age_days?: number;
   oldest_board_date?: string | null;

@@ -138,8 +138,9 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
     const username = rawUsername;
     const fetchedAt = payload.fetched_at || new Date().toISOString();
     
-    // Deduplicate incoming pins by pin_id (merging fields within the batch)
-    const rawPinsList: any[] = Array.isArray(payload.pins) ? payload.pins : [];
+    // Early pre-truncation to maxBatchPins before in-memory deduplication and sorting to prevent Cloudflare Worker OOM
+    const totalIncomingPins = Array.isArray(payload.pins) ? payload.pins.length : 0;
+    const rawPinsList: any[] = (Array.isArray(payload.pins) ? payload.pins : []).slice(0, maxBatchPins);
     const dedupedMap = new Map<string, any>();
     for (const p of rawPinsList) {
       if (!p || typeof p !== 'object') continue;
@@ -199,8 +200,8 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
     // Gating 4: max_batch_pins truncation
     let pins = rawPins.filter((p: any) => p && typeof p === 'object' && Boolean(p.pin_id || p.id));
     let truncatedCount: number | undefined;
-    if (pins.length > maxBatchPins) {
-      truncatedCount = pins.length;
+    if (totalIncomingPins > maxBatchPins) {
+      truncatedCount = totalIncomingPins;
       pins = pins.slice(0, maxBatchPins);
     }
 

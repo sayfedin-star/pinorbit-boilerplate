@@ -107,9 +107,11 @@ export const GET: APIRoute = async ({ locals }) => {
               ? listRes.data.jobs
               : [];
 
+        const expectedDispatchBase = getDispatchEndpointUrl(runtimeEnv).split('?')[0];
         for (const rJob of rawJobs) {
           const pd = extractPostData(rJob);
-          if (pd?.pipeline === 'competitors' && pd?.workspace_id === workspaceId) {
+          const isUrlValid = typeof rJob.url === 'string' && rJob.url.startsWith(expectedDispatchBase);
+          if (pd?.pipeline === 'competitors' && pd?.workspace_id === workspaceId && isUrlValid) {
             const rJobIdStr = String(rJob.id);
             if (!knownJobIds.has(rJobIdStr)) {
               const segs = (rJob.name || '').split(' — ');

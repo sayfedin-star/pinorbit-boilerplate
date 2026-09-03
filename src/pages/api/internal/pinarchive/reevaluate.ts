@@ -6,6 +6,7 @@ import { validateUserSession } from '../../../../server/auth/session';
 import { getEffectiveSecret, verifyIngestSecret } from '../../../../server/services/webhook-secrets';
 import { timingSafeEqual } from '../../../../server/lib/timing-safe';
 import { promoteCandidates } from '../../../../server/services/promotion-service';
+import { USERNAME_REGEX } from '../../../../lib/validation/pinterest';
 import { dbClients } from '../../../../server/db/clients';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -114,9 +115,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .eq('workspace_id', workspaceId)
       .eq('status', 'active');
 
-    const usernames: string[] = (body?.usernames && Array.isArray(body.usernames) && body.usernames.length > 0)
-      ? body.usernames.map(String).map((s: string) => s.trim()).filter(Boolean)
-      : (accounts || []).map((a: any) => a.username).filter(Boolean);
+    let usernames: string[] = [];
+    if (body?.usernames && Array.isArray(body.usernames)) {
+      const parsed: string[] = [];
+      for (const u of body.usernames) {
+        if (typeof u === 'string') {
+          const trimmed = u.trim().toLowerCase();
+          if (USERNAME_REGEX.test(trimmed)) {
+            parsed.push(trimmed);
+          }
+        }
+      }
+      usernames = Array.from(new Set<string>(parsed)).slice(0, 50);
+    } else {
+      usernames = (accounts || [])
+        .map((a: any) => a.username)
+        .filter((u: any) => typeof u === 'string' && USERNAME_REGEX.test(u))
+        .slice(0, 50);
+    }
 
     const gasUrl = (
       runtimeEnv.PINARCHIVE_GAS_URL ||
@@ -136,6 +152,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
             'Content-Type': 'application/json',
             'x-ingest-secret': secretForGas,
           },
+          // Architectural Asymmetry Defense:
+          // Inbound (GAS -> server) uses the x-ingest-secret header, but outbound (server -> GAS)
+          // requires `secret` inside the JSON body because Google Apps Script Web Apps (doPost(e))
+          // cannot access arbitrary incoming HTTP request headers and authenticates strictly via b.secret || b.payload.secret.
           body: JSON.stringify({
             action: 'sheet_sync',
             workspace_id: workspaceId,
@@ -186,7 +206,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       promoted: result.promoted,
       checked: result.checked,
       workspace_id: workspaceId,
-      gas_result: gasResult,
     });
   } catch (err: any) {
     return json(

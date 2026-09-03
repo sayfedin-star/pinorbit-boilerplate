@@ -10,6 +10,11 @@ declare global {
       user: User | null;
       isAuthenticated: boolean;
       activeWorkspaceId?: string;
+      runtime?: {
+        env?: Record<string, any>;
+        [key: string]: any;
+      };
+      runtimeEnv?: Record<string, any>;
     }
   }
 }

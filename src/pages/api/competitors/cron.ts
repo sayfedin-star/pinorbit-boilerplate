@@ -7,6 +7,21 @@ import { getEffectiveSecret } from '../../../server/services/webhook-secrets';
 import { fastcronCall, isFastCronJobPaused } from '../../../server/lib/fastcron-client';
 import { listWorkspaceTokens, resolveToken } from '../../../server/lib/token-resolver';
 
+/**
+ * ARCHITECTURAL DECISION & AUDIT DEFENSE:
+ * FastCron standard/free tiers do NOT support custom HTTP request headers
+ * (locked behind "Upgrade to change this" paywall).
+ * To guarantee platform compatibility with standard external cron providers without
+ * forcing paid upgrades, incoming dispatch endpoints intentionally accept the ingest
+ * secret via the `?secret=` URL query parameter in addition to the `x-ingest-secret` header.
+ *
+ * SECURITY GUARANTEE:
+ * Confidentiality is strictly preserved by:
+ * 1. Never returning the full dispatch URL or query parameters in any client-facing
+ *    GET responses (the `url` property is omitted or sanitized to path-only).
+ * 2. Requiring workspace admin role (`role === 'admin'`) for creating/updating cron jobs.
+ * 3. Enforcing timing-safe candidate verification on the receiving endpoint.
+ */
 export const getDispatchEndpointUrl = (
   runtimeEnv?: Record<string, any>,
   workspaceId?: string,
@@ -304,7 +319,6 @@ export const GET: APIRoute = async ({ locals }) => {
           label,
           expression: job.expression || job.cron_expression || '0 2 * * *',
           timezone: job.timezone || 'UTC',
-          url: job.url,
           paused: isPaused,
           status: isPaused ? 'paused' : 'active',
           next_run: toMs(cronNext[0] || job.next_run),

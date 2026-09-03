@@ -210,14 +210,30 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
           runtimeEnv
         );
         if (targetTokenObj?.token) {
-          await fastcronCall('cron_delete', { id: Number(targetJobId) }, targetTokenObj.token);
+          const delRes = await fastcronCall('cron_delete', { id: Number(targetJobId) }, targetTokenObj.token);
+          if (!delRes || delRes.success === false) {
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: `Remote FastCron delete failed: ${delRes?.error || 'Unknown error'}. Database record preserved to prevent orphan firing.`,
+              }),
+              { status: 502, headers: { 'Content-Type': 'application/json' } }
+            );
+          }
         }
-      } catch (delErr) {
-        console.warn(`[Competitors Schedule DELETE] Remote FastCron delete warning:`, delErr);
+      } catch (delErr: any) {
+        console.warn(`[Competitors Schedule DELETE] Remote FastCron delete error:`, delErr);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Remote FastCron delete network failure: ${delErr?.message || delErr}. Database record preserved to prevent orphan firing.`,
+          }),
+          { status: 502, headers: { 'Content-Type': 'application/json' } }
+        );
       }
     }
 
-    // 3. Delete from DB
+    // 3. Delete from DB only after verified remote deletion
     await compAdmin
       .from('competitor_schedules')
       .delete()

@@ -32,8 +32,8 @@ export async function resolveTokenKek(runtimeEnv: Record<string, any>): Promise<
   return env.TOKEN_KEK || null;
 }
 
-export async function encryptToken(plain: string, kek: string) {
-  if (isProductionEnv() && isKnownDefaultKek(kek)) {
+export async function encryptToken(plain: string, kek: string, runtimeEnv?: Record<string, any>) {
+  if (isProductionEnv(runtimeEnv) && isKnownDefaultKek(kek)) {
     throw new Error("Refusing to encrypt with default TOKEN_KEK in production. Set via 'wrangler secret put TOKEN_KEK'.");
   }
   if (!kek || typeof kek !== 'string' || kek.trim().length < 16) {
@@ -44,8 +44,8 @@ export async function encryptToken(plain: string, kek: string) {
   return `v1:${b64(iv)}:${b64(ct)}`;
 }
 
-export async function decryptToken(stored: string, kek: string): Promise<string | null> {
-  if (isProductionEnv() && isKnownDefaultKek(kek)) return null;
+export async function decryptToken(stored: string, kek: string, runtimeEnv?: Record<string, any>): Promise<string | null> {
+  if (isProductionEnv(runtimeEnv) && isKnownDefaultKek(kek)) return null;
   if (!kek || typeof kek !== 'string' || kek.trim().length < 16) {
     console.error('TOKEN_KEK is too short for decryption (must be >= 16 chars)');
     return null;
